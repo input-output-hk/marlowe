@@ -158,9 +158,10 @@ generate_option (UncommittedCC cc2) t com obs st con acc (o:oa) =
     (oa, Just (o, ("Commit cash " ++ (show cc2), commit_cc cc2 com obs st con ((reverse acc) ++ ((CommittedCC cc2):t)))))
 generate_option (UncommittedCV cv2 vals) t com obs st con acc (o:oa) =
     (oa, Just (o, ("Commit value " ++ (show cv2), commit_cv cv2 com obs st con ((reverse acc) ++ ((CommittedCV cv2 vals):t)))))
-generate_option (CommittedCC cc2@(CC ident _ _ _)) t com obs st con acc (o:oa) =
+generate_option (CommittedCC cc2@(CC ident p _ e)) t com obs st con acc (o:oa) =
         case Map.lookup ident ccs of
-             Just (_,NotRedeemed val _) -> (oa, Just (o, ("Redeem cash commit" ++ (show cc2),
+             Just (_,NotRedeemed val _) -> (oa, Just (o, ("Redeem cash commit" ++
+                                           (show (CC ident p val e)),
                                            reveal_cc cc2 com obs st con ((reverse acc) ++ ((CommittedCC cc2):t)) val)))
              _ -> (o:oa, Nothing)       --   we can try to redeem several times --^
         where

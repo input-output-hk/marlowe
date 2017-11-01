@@ -1,6 +1,7 @@
 module SemanticsProp where
 
 import Semantics6
+import Interactive
 import qualified Data.Map as Map
 import Test.QuickCheck.Property
 import Test.QuickCheck.Arbitrary
@@ -100,7 +101,8 @@ arbitrary_contract_aux s =
                     do y <- arbitraryCVid 
                        z <- choose (1, 20)
                        sc <- arbitrary_contract_aux (s - 1)
-                       return $ CommitValue y z sc
+                       vl <- choose (1, 20)
+                       return $ CommitValue y z [1..vl] sc
                  ]
 
 arbitrary_commits =

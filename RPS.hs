@@ -144,6 +144,7 @@ rps = deposit_p1 (IdentCV 1) (IdentCV 2) (IdentCC 1) (IdentCC 2)
 
 -- check timeout --
 
+check_timeout :: BlockNumber -> Contract -> Contract
 check_timeout t c = Choice (BelowTimeout t) c Null
 
  -- Testing the semantics function

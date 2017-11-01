@@ -207,12 +207,12 @@ step _ st (Choice obs conT conF) os =
         then (st,conT,[])
         else (st,conF,[])
 
-step _ st (When obs exp con con2) os =
-    if (expired (blockNumber os) exp)
+step _ st (When obs expi con con2) os =
+    if (expired (blockNumber os) expi)
     then (st,con2,[])
     else (if interpretObs st obs os
           then (st,con,[])
-          else (st,(When obs exp con con2),[]))
+          else (st,(When obs expi con con2),[]))
 
 step commits st c@(CommitValue ident person values con) _ =
     if
@@ -286,10 +286,10 @@ step commits st c@(RevealCV ident con) _ =
 full_step :: Commits -> State -> Contract -> OS -> (State,Contract,AS)
 
 full_step com (cvst, ccst) con os = (rs, rcon, pas ++ ras)
-  where (exp, nccst) = Map.partition (isExpiredNotRedeemed et) ccst 
-        pas = [SuccessfulPay p p val | (_, (p, NotRedeemed val _)) <- Map.toList exp]
+  where (expi, nccst) = Map.partition (isExpiredNotRedeemed et) ccst 
+        pas = [SuccessfulPay p p val | (_, (p, NotRedeemed val _)) <- Map.toList expi]
         et = blockNumber os
-        uexp = Map.map (auto_expire) exp
+        uexp = Map.map (auto_expire) expi
         (rs, rcon, ras) = step com (cvst, Map.union (uexp) (nccst)) con os
 
 auto_expire :: CCstatus -> CCstatus

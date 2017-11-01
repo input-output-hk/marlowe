@@ -59,12 +59,12 @@ interact_contract_loop comsta sta com obs c =
 print_options :: Map.Map String (String, a) -> IO ()
 
 print_options opts = mapM_ (print_option) labels
-    where labels = [(str, exp) | (str, (exp, ac)) <- Map.toList opts]
+    where labels = [(str, expi) | (str, (expi, _)) <- Map.toList opts]
 
 -- Prints a single option (first element is the trigger, second is the description)
 print_option :: (String, String) -> IO ()
 
-print_option (str, exp) = putStrLn (nstr ++ ") " ++ exp)
+print_option (str, expi) = putStrLn (nstr ++ ") " ++ expi)
     where nstr = if (str == "") then "<ENTER>" else str
 
 -- Prints a list of actions
@@ -165,11 +165,12 @@ generate_option (CommittedCC cc2@(CC ident p _ e)) t com obs st con acc (o:oa) =
                                            reveal_cc cc2 com obs st con ((reverse acc) ++ ((CommittedCC cc2):t)) val)))
              _ -> (o:oa, Nothing)       --   we can try to redeem several times --^
         where
-          (cvs,ccs) = st
+          (_,ccs) = st
 generate_option (CommittedCV cv2 vals) t com obs st con acc (o:oa) =
     (oa, Just (o, ("Reveal value " ++ (show cv2), reveal_cv cv2 com obs st vals con ((reverse acc) ++ ((RedeemedCV cv2):t)))))
 --generate_option (RedeemedCC cc2) t com obs st con acc oa = (oa, Nothing)
 generate_option (RedeemedCV _) _ _ _ _ _ _ oa = (oa, Nothing)
+generate_option _ _ _ _ _ _ _ [] = error "Option list is not infinite in generate_option"
 
 -- Inserts a cash commit in the state
 commit_cc :: CC -> Commits -> OS -> State -> Contract -> CommitStates ->
@@ -189,7 +190,7 @@ commit_cv cv2 com obs st con comst =
 reveal_cc :: CC -> Commits -> OS -> State -> Contract -> CommitStates -> Value ->
              IO (Maybe (CommitStates, Commits, Contract, OS, State, AS))
 
-reveal_cc (CC ident per _ exp) com obs st con comst val =
+reveal_cc (CC ident _ _ _) com obs st con comst val =
      return (Just (comst, (com {rc = (Set.insert (RC ident val) (rc com))}), con, obs, st, []))
 
 -- Asks for a value and inserts it as a value reveal
@@ -240,7 +241,8 @@ next_step_option comst com st con obs = do (return (Just (comst, com, nc, obs, n
 
 option_accessors :: [String]
 
-option_accessors = [[x] | x <- ['2'..'9'] ++ ['a'..'p'] ++ ['r'..'z']] ++ (map (show) [10..])
+option_accessors = [[x] | x <- ['2'..'9'] ++ ['a'..'p'] ++ ['r'..'z']] ++
+                    (map (show) [(10 :: Integer)..])
 
 -- Extract the commit information from the contract to provide
 -- more concrete options for the prompt
@@ -252,16 +254,16 @@ extract_choices c = extract_choices_aux c Set.empty
 extract_choices_aux :: Contract -> Set.Set CommitState -> Set.Set CommitState
 
 extract_choices_aux Null acc = acc
-extract_choices_aux (Pay from to val con) acc = extract_choices_aux con acc
+extract_choices_aux (Pay _ _ _ con) acc = extract_choices_aux con acc
 extract_choices_aux (Both con1 con2) acc = extract_choices_aux con2 (extract_choices_aux con1 acc)
-extract_choices_aux (Choice obs conT conF) acc = extract_choices_aux conF (extract_choices_aux conT acc)
-extract_choices_aux (When obs exp con con2) acc = extract_choices_aux con2 (extract_choices_aux con acc)
+extract_choices_aux (Choice _ conT conF) acc = extract_choices_aux conF (extract_choices_aux conT acc)
+extract_choices_aux (When _ _ con con2) acc = extract_choices_aux con2 (extract_choices_aux con acc)
 extract_choices_aux (CommitValue ident person values con) acc =
     extract_choices_aux con (Set.insert (UncommittedCV (CV ident person) values) acc)
 extract_choices_aux (CommitCash ident person val timeout con) acc =
     extract_choices_aux con (Set.insert (UncommittedCC (CC ident person val timeout)) acc)
-extract_choices_aux (RedeemCC ident con) acc = extract_choices_aux con acc
-extract_choices_aux (RevealCV ident con) acc = extract_choices_aux con acc
+extract_choices_aux (RedeemCC _ con) acc = extract_choices_aux con acc
+extract_choices_aux (RevealCV _ con) acc = extract_choices_aux con acc
 
 
 {------------------------------
@@ -279,7 +281,7 @@ prettyprint_con_aux x n b
   | otherwise = (take n $ repeat ' ') ++ (prettyprint_con_aux2 x n)
 
 prettyprint_con_aux2 :: Contract -> Int -> String
-prettyprint_con_aux2 (Null) n = "Null"
+prettyprint_con_aux2 (Null) _ = "Null"
 prettyprint_con_aux2 (RedeemCC icc con) n = "RedeemCC (" ++ (show icc) ++ ")\n" ++
                                         (prettyprint_con_aux con (n + 2) True)
 prettyprint_con_aux2 (RevealCV icv con) n = "RevealCV (" ++ (show icv) ++ ")\n" ++
@@ -300,15 +302,15 @@ prettyprint_con_aux2 (CommitValue idcv per vals con) n =
                       (show vals) ++ ") (" ++
                       (show per) ++ ")\n" ++
           (prettyprint_con_aux con (n + 2) True)
-prettyprint_con_aux2 (CommitCash idcc per int time con) n =
+prettyprint_con_aux2 (CommitCash idcc per int extime con) n =
   "CommitCash ("  ++ (show idcc) ++ ") (" ++
                      (show per) ++ ") (" ++
                      (show int) ++ ") (" ++
-                     (show time) ++ ")\n" ++
+                     (show extime) ++ ")\n" ++
           (prettyprint_con_aux con (n + 2) True)
-prettyprint_con_aux2 (When obs time con con2) n =
+prettyprint_con_aux2 (When obs extime con con2) n =
   "When (" ++ (prettyprint_obs_aux2 obs (n + 6)) ++ ") (" ++
-              (show time) ++ ")\n" ++
+              (show extime) ++ ")\n" ++
               (prettyprint_con_aux con (n + 5) True) ++ "\n" ++
               (prettyprint_con_aux con2 (n + 5) True)
 
@@ -330,5 +332,5 @@ prettyprint_obs_aux2 (OrObs obs obs2) n =
               (prettyprint_obs_aux obs2 (n + 6) True)
 prettyprint_obs_aux2 (NotObs obs) n =
   "NotObs (" ++ (prettyprint_obs_aux2 obs (n + 7)) ++ ")"
-prettyprint_obs_aux2 x n = show x
+prettyprint_obs_aux2 x _ = show x
 

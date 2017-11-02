@@ -284,6 +284,24 @@ analyse_one_step (as@ AS {rem_contract = contr,
                                                             random = 42, -- ToDo
                                                             blockNumber = get_one blo})
 
+expand_if_null :: AnalysisState -> AnalysisState
+expand_if_null (as @ AS {rem_contract = Null,
+                         possible_block = blo,
+                         possible_time = tim}) =
+            as {possible_block = extend_dom blo,
+                possible_time = extend_dom tim}
+expand_if_null as = as
+
+-- Analyses possible combinations of timeouts in commits 
+analyse_one_step_commits_aux :: AnalysisState -> [AnalysisState]
+analyse_one_step_commits_aux (as @ AS {state = (_, ccst)}) =
+  split_by_block_list as $ List.sort $ List.nub $
+    Maybe.mapMaybe extract_expdate $ Map.elems ccst
+
+analyse_one_step_commits :: AnalysisState -> [AnalysisState]
+analyse_one_step_commits as = (analyse_one_step_commits_aux as)
+
+
 -- Analyses possible combinations of observables
 
 -- Remove top actions from contract (including those in Both trees)
@@ -351,7 +369,9 @@ analyse_one_step_observables_aux _ as = [as]
 
 analyse_one_step_observables :: AnalysisState -> [AnalysisState]
 analyse_one_step_observables as =
-  analyse_one_step_observables_aux (remove_actions (rem_contract as)) as
+  List.concatMap (analyse_one_step_commits) $
+    analyse_one_step_observables_aux (remove_actions (rem_contract as)) as
+
 
 -- Analyses possible combinations of actions regarding the root node
 analyse_one_step_action_aux :: AnalysisState -> [AnalysisState]
@@ -427,12 +447,6 @@ analyse_one_step_action :: AnalysisState -> [AnalysisState]
 analyse_one_step_action as = List.concatMap (analyse_one_step_observables)
                                (analyse_one_step_action_aux as)
 
--- Analyses possible combinations of timeouts in commits 
-analyse_one_step_commits_aux :: AnalysisState -> [AnalysisState]
-analyse_one_step_commits_aux (as @ AS {state = (_, ccst)}) =
-  split_by_block_list as $ List.sort $ List.nub $
-    Maybe.mapMaybe extract_expdate $ Map.elems ccst
-
 split_by_block_list :: AnalysisState -> [Int] -> [AnalysisState]
 split_by_block_list as [] = [as]
 split_by_block_list as (h:t) = (this:split_by_block_list rest t)
@@ -444,21 +458,9 @@ extract_expdate :: CCstatus -> Maybe ExpiryTime
 extract_expdate (_, NotRedeemed _ ee) = Just ee
 extract_expdate _ = Nothing
 
-analyse_one_step_commits :: AnalysisState -> [AnalysisState]
-analyse_one_step_commits as = List.concatMap (analyse_one_step_action)
-                                (analyse_one_step_commits_aux as)
-
 analyse_one_step_split :: AnalysisState -> [AnalysisState]
 analyse_one_step_split as = map analyse_one_step $
-                                   List.concatMap (analyse_one_step_commits) [as]
-
-expand_if_null :: AnalysisState -> AnalysisState
-expand_if_null (as @ AS {rem_contract = Null,
-                         possible_block = blo,
-                         possible_time = tim}) =
-            as {possible_block = extend_dom blo,
-                possible_time = extend_dom tim}
-expand_if_null as = as
+                                   List.concatMap (analyse_one_step_action) [as]
 
 analysis_step :: [AnalysisState] -> [AnalysisState]
 analysis_step as = filter (not . has_empty_domain) $

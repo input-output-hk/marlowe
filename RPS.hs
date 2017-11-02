@@ -3,7 +3,7 @@ module RPS where
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
-import Semantics6    
+import Semantics    
 
 -------------------------------------------------------------
 -- Implementation of a single round of rock-paper-scissors --

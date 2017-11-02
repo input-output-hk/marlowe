@@ -1,4 +1,4 @@
-module Semantics6 where
+module Semantics where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map

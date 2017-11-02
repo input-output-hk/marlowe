@@ -1,7 +1,7 @@
 
 module Interactive where
 
-import Semantics6
+import Semantics
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map

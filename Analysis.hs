@@ -1,6 +1,6 @@
 module Analysis where
 
-import Semantics6
+import Semantics
 
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set

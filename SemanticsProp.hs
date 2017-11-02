@@ -1,6 +1,6 @@
 module SemanticsProp where
 
-import Semantics6
+import Semantics
 import Interactive
 import qualified Data.Map as Map
 import Test.QuickCheck.Property

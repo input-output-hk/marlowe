@@ -377,14 +377,17 @@ analyse_one_step_observables as =
 analyse_one_step_action_aux :: AnalysisState -> [AnalysisState]
 analyse_one_step_action_aux (as@ AS {rem_contract = (CommitCash ident per cash tout _),
                                      commits = comm@Commits {cc = cc_old}, -- CommitCash
-                                     possible_block = blo
+                                     possible_block = blo,
+                                     possible_time = tim
                                     }) =
        [ -- the commit is done on time
-        as {possible_block = below tout blo,
-            commits = comm {cc = Set.insert cc_new cc_old},
-            curr_event = Just $ CashCommit cc_new},
+        as {commits = comm {cc = Set.insert cc_new cc_old},
+            curr_event = Just $ CashCommit cc_new,
+            possible_block = below tout $ extend_dom blo,
+            possible_time = extend_dom tim},
          -- the commit is not done on time
-        as {possible_block = not_below tout blo,
+        as {possible_block = not_below tout $ extend_dom blo,
+            possible_time = extend_dom tim,
             commits = comm }
        ]
     where cc_new = (CC ident per cash tout)
@@ -399,7 +402,9 @@ analyse_one_step_action_aux (as@ AS {rem_contract = (CommitValue ident per _ _),
             curr_event = Just $ ValueCommit cv_new,
             possible_block = extend_dom blo,
             possible_time = extend_dom tim},
-        as
+        as {
+            possible_block = extend_dom blo,
+            possible_time = extend_dom tim}
          -- the commit is not done on time (not possible yet)
        ]
     where cv_new = (CV ident per)
@@ -416,7 +421,9 @@ analyse_one_step_action_aux (as@ AS {rem_contract = (RevealCV ident _),
             curr_event = if is_new_reveal
                          then Just $ ValueReveal ident val
                          else Nothing}
-        | val <- values] ++ [as]
+        | val <- values] ++ [as {
+            possible_block = extend_dom blo,
+            possible_time = extend_dom tim}]
     where (is_new_reveal, ev) = case Map.lookup ident rv_old of
                                   Nothing -> (True, error "It is new RevealCV in analysis!")
                                   Just x -> (False, x)
@@ -428,14 +435,20 @@ analyse_one_step_action_aux (as@ AS {rem_contract = (RevealCV ident _),
           (cvs,_) = sta
 analyse_one_step_action_aux (as@ AS {rem_contract = (RedeemCC ident _),
                                      commits = comm@Commits {rc = rc_old}, -- RedeemCC
-                                     state = sta
+                                     state = sta,
+                                     possible_block = blo,
+                                     possible_time = tim
                                     }) =
     case Map.lookup ident ccs of
       Just (_, NotRedeemed val _) ->
                  let rc_new  = (RC ident val) in 
                    [as { commits = comm {rc = Set.insert rc_new rc_old },
-                         curr_event = Just $ CashRedeem rc_new}, as]
-      _ -> [as]
+                         curr_event = Just $ CashRedeem rc_new,
+                         possible_block = extend_dom blo,
+                         possible_time = extend_dom tim}, as]
+      _ -> [as {
+            possible_block = extend_dom blo,
+            possible_time = extend_dom tim}]
     where (_,ccs) = sta
 analyse_one_step_action_aux (as@ AS {rem_contract = contr@(Both con1 con2)}) = -- Both
     map (\x -> x {rem_contract = contr}) $
@@ -483,6 +496,9 @@ get_unique_action_seqs x = List.nub $
 get_actions :: AnalysisState -> [Action]
 get_actions y = concat $ concat [map actions (event_record y), [curr_actions y]]
 
+get_events :: AnalysisState -> [Event]
+get_events y = concat [map event (event_record y), Maybe.maybeToList $ curr_event y]
+
 filter_by_action_seq :: [Action] -> [AnalysisState] -> [AnalysisState]
 filter_by_action_seq x = filter (\y -> get_actions y == x)
 
@@ -498,6 +514,4 @@ only_not_null x = filter (\y -> rem_contract y /= Null) x
 only_stable :: [AnalysisState] -> [AnalysisState]
 only_stable = filter fil
      where fil y = (unbound_top (possible_block y)) && (unbound_top (possible_time y))
-
-
 

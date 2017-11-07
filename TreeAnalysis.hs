@@ -11,7 +11,7 @@ import qualified Data.List as List
 -----------------------
 
 type ATran = Maybe Event 
-type ANode = [Action]
+type ANode = (Domain, [Action])
 
 data Acc = Acc {
                  node_info :: Map.Map Int AnalysisState,
@@ -50,7 +50,8 @@ get_tree_aux ((parent, curr_as):t) (acc@(Acc {transitions = tra,
         is_rep x = Map.member x nirev 
         new_node_acc = acc {last_node_id = new_node_id,
                             transitions = ((parent, new_node_id, list_to_maybe diff):tra),
-                            nodes = ((new_node_id, diff_act):nods),
+                            nodes = ((new_node_id, (possible_block curr_as,
+                                                    diff_act)):nods),
                             node_info = Map.insert new_node_id curr_as ni}
         new_acc = acc {node_info_rev = Map.insert curr_as new_node_id nirev}
         new_node_id = lnid + 1
@@ -65,16 +66,28 @@ get_tree c = get_tree_aux [(initial_st, initial_as)]
                                 node_info = Map.singleton initial_st initial_as,
                                 node_info_rev = Map.empty,
                                 transitions = [],
-                                nodes = [(initial_st, [])],
+                                nodes = [(initial_st, (possible_block initial_as, []))],
                                 last_node_id = initial_st
                               }
   where initial_st = 0
         initial_as = empty_analysis_state c
 
+show_sidel :: Maybe Int -> String
+show_sidel Nothing = "-∞"
+show_sidel (Just x) = (show x)
+
+show_side :: Maybe Int -> String
+show_side Nothing = "∞"
+show_side (Just x) = (show x)
+
+show_sing_domain :: Domain -> String
+show_sing_domain [(a, b)] = show_sidel a ++ " to " ++ show_side b
+show_sing_domain _ = error "Domain is complex in show_sing_domain!"
+
 acc_to_gd :: Acc -> GraphData
-acc_to_gd acc = (List.nub $ map (\(x,y) -> (x, List.concat
-                                               $ List.intersperse "\n"
-                                               $ map (show) y))
+acc_to_gd acc = (List.nub $ map (\(x, (d, y)) -> (x, List.concat
+                                                  $ List.intersperse "\n"
+                                                  $ ((show_sing_domain d):(map (show) y))))
                           $ nodes acc,
                  List.nub $ map (\(x, y, z) -> (x, y, tran_show z)) $ transitions acc)
 

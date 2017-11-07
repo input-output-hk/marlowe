@@ -1,4 +1,4 @@
-module TreeVisualise(GraphData, visualise) where
+module TreeVisualise(GraphData, visualise, renderToFile) where
 
 import Data.Graph.Inductive.PatriciaTree
 import Data.Graph.Inductive.Graph
@@ -37,11 +37,13 @@ ncp = nonClusteredParams { fmtNode = \(_, n) -> decorateNode n
 visualise :: GraphData -> IO ()
 visualise gd = runGraphvizCanvas' (graphToDot ncp $ toGr gd) Xlib
 
-
+renderToFile :: FilePath -> GraphData -> IO FilePath
+renderToFile path gd = runGraphvizCommand Dot (graphToDot ncp $ toGr gd) DotOutput path
 
 decorateEdge :: DTran -> Attributes
 decorateEdge (DTran x) = [ Label $ StrLabel $ pack x ]
 
 decorateNode :: DNode -> Attributes
 decorateNode (DNode x) = [ Label $ StrLabel $ pack x ]
+
 

@@ -94,3 +94,8 @@ acc_to_gd acc = (List.nub $ map (\(x, (d, y)) -> (x, List.concat
 visualise_tree :: Contract -> IO ()
 visualise_tree c = visualise $ acc_to_gd $ get_tree c
 
+tree_to_file :: FilePath -> Contract -> IO FilePath
+tree_to_file path c = renderToFile path $ acc_to_gd $ get_tree c
+
+
+

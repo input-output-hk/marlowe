@@ -215,14 +215,14 @@ data Event = CashCommit CC
 data EventRecord = PER {
                      block_number :: Domain,
                      etime :: Domain,
-                     event :: Event,
+                     event :: [Event],
                      actions :: [Action]
                      --contract_here :: Contract
                    }
                    deriving (Eq,Ord,Show,Read)
 
 data AnalysisState = AS {
-                      curr_event :: Maybe Event,
+                      curr_event :: [Event],
                       curr_actions :: [Action],
                       possible_block :: Domain,
                       possible_time :: Domain,
@@ -242,7 +242,7 @@ has_empty_domain x = (possible_block x == []) || (possible_time x == [])
 
 empty_analysis_state :: Contract -> AnalysisState
 empty_analysis_state c = AS {
-                          curr_event = Nothing,
+                          curr_event = [],
                           curr_actions = [],
                           possible_block = inf_domain,
                           possible_time = inf_domain,
@@ -253,14 +253,14 @@ empty_analysis_state c = AS {
                          }
 
 add_to_log :: AnalysisState -> AnalysisState
-add_to_log (as @ AS {curr_event = Nothing}) = as
-add_to_log (as @ AS {curr_event = Just x,
+add_to_log (as @ AS {curr_event = []}) = as
+add_to_log (as @ AS {curr_event = x,
                      curr_actions = cacts,
                      event_record = old_er,
                      possible_time = ptim,
                      possible_block = pblock}) =
     as {event_record = old_er ++ [new_er],
-        curr_event = Nothing,
+        curr_event = [],
         curr_actions = []}
   where new_er = PER {block_number = pblock,
                       etime = ptim,
@@ -377,12 +377,13 @@ analyse_one_step_observables as =
 analyse_one_step_action_aux :: AnalysisState -> [AnalysisState]
 analyse_one_step_action_aux (as@ AS {rem_contract = (CommitCash ident per cash tout _),
                                      commits = comm@Commits {cc = cc_old}, -- CommitCash
+                                     curr_event = ce,
                                      possible_block = blo,
                                      possible_time = tim
                                     }) =
        [ -- the commit is done on time
         as {commits = comm {cc = Set.insert cc_new cc_old},
-            curr_event = Just $ CashCommit cc_new,
+            curr_event = ce ++ [CashCommit cc_new],
             possible_block = below tout $ extend_dom blo,
             possible_time = extend_dom tim},
          -- the commit is not done on time
@@ -393,13 +394,14 @@ analyse_one_step_action_aux (as@ AS {rem_contract = (CommitCash ident per cash t
     where cc_new = (CC ident per cash tout)
 analyse_one_step_action_aux (as@ AS {rem_contract = (CommitValue ident per _ _),
                                      commits = comm@Commits {cv = cv_old}, -- CommitValue
+                                     curr_event = ce,
                                      possible_block = blo,
                                      possible_time = tim
                                    }) =
        [ -- the commit is done on time
         as { -- no timeout
             commits = comm {cv = Set.insert cv_new cv_old},
-            curr_event = Just $ ValueCommit cv_new,
+            curr_event = ce ++ [ValueCommit cv_new],
             possible_block = extend_dom blo,
             possible_time = extend_dom tim},
         as {
@@ -410,6 +412,7 @@ analyse_one_step_action_aux (as@ AS {rem_contract = (CommitValue ident per _ _),
     where cv_new = (CV ident per)
 analyse_one_step_action_aux (as@ AS {rem_contract = (RevealCV ident _),
                                      commits = comm@Commits {rv = rv_old}, -- RevealCV
+                                     curr_event = ce,
                                      possible_block = blo,
                                      possible_time = tim,
                                      state = sta
@@ -419,8 +422,8 @@ analyse_one_step_action_aux (as@ AS {rem_contract = (RevealCV ident _),
             possible_block = extend_dom blo,
             possible_time = extend_dom tim,
             curr_event = if is_new_reveal
-                         then Just $ ValueReveal ident val
-                         else Nothing}
+                         then ce ++ [ValueReveal ident val]
+                         else ce}
         | val <- values] ++ [as {
             possible_block = extend_dom blo,
             possible_time = extend_dom tim}]
@@ -435,6 +438,7 @@ analyse_one_step_action_aux (as@ AS {rem_contract = (RevealCV ident _),
           (cvs,_) = sta
 analyse_one_step_action_aux (as@ AS {rem_contract = (RedeemCC ident _),
                                      commits = comm@Commits {rc = rc_old}, -- RedeemCC
+                                     curr_event = ce,
                                      state = sta,
                                      possible_block = blo,
                                      possible_time = tim
@@ -443,7 +447,7 @@ analyse_one_step_action_aux (as@ AS {rem_contract = (RedeemCC ident _),
       Just (_, NotRedeemed val _) ->
                  let rc_new  = (RC ident val) in 
                    [as { commits = comm {rc = Set.insert rc_new rc_old },
-                         curr_event = Just $ CashRedeem rc_new,
+                         curr_event = ce ++ [CashRedeem rc_new],
                          possible_block = extend_dom blo,
                          possible_time = extend_dom tim}, as]
       _ -> [as {
@@ -496,8 +500,8 @@ get_unique_action_seqs x = List.nub $
 get_actions :: AnalysisState -> [Action]
 get_actions y = concat $ concat [map actions (event_record y), [curr_actions y]]
 
-get_events :: AnalysisState -> [Event]
-get_events y = concat [map event (event_record y), Maybe.maybeToList $ curr_event y]
+get_events :: AnalysisState -> [[Event]]
+get_events y = concat [map event (event_record y), [curr_event y]]
 
 filter_by_action_seq :: [Action] -> [AnalysisState] -> [AnalysisState]
 filter_by_action_seq x = filter (\y -> get_actions y == x)

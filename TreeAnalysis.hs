@@ -10,7 +10,7 @@ import qualified Data.List as List
 -- Tree construction --
 -----------------------
 
-type ATran = Maybe Event 
+type ATran = [Event]
 type ANode = (Domain, [Action])
 
 data Acc = Acc {
@@ -22,10 +22,10 @@ data Acc = Acc {
                }
            deriving (Eq,Ord,Show,Read)
 
-list_to_maybe :: [a] -> Maybe a
-list_to_maybe [] = Nothing
-list_to_maybe [x] = Just x
-list_to_maybe _ = error "Several elements in list_to_maybe!"
+only_element_or_nothing :: [[Event]] -> [Event]
+only_element_or_nothing [] = []
+only_element_or_nothing [x] = x 
+only_element_or_nothing _ = error ("Several elements in only_element_or_nothing!")
 
 get_tree_aux :: [(Int, AnalysisState)] -> Acc -> Acc
 get_tree_aux [] acc = acc
@@ -49,7 +49,7 @@ get_tree_aux ((parent, curr_as):t) (acc@(Acc {transitions = tra,
         err = (error "Parent does not exist in get_tree_aux!")
         is_rep x = Map.member x nirev 
         new_node_acc = acc {last_node_id = new_node_id,
-                            transitions = ((parent, new_node_id, list_to_maybe diff):tra),
+                            transitions = ((parent, new_node_id, (only_element_or_nothing diff)):tra),
                             nodes = ((new_node_id, (possible_block curr_as,
                                                     diff_act)):nods),
                             node_info = Map.insert new_node_id curr_as ni}
@@ -57,8 +57,7 @@ get_tree_aux ((parent, curr_as):t) (acc@(Acc {transitions = tra,
         new_node_id = lnid + 1
 
 tran_show :: ATran -> String
-tran_show Nothing = ""
-tran_show (Just x) = show x
+tran_show tran = List.concat $ List.intersperse "\n" (map (show) tran)
 
 get_tree :: Contract -> Acc
 get_tree c = get_tree_aux [(initial_st, initial_as)]

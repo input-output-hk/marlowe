@@ -123,7 +123,7 @@ inf_domain = [inf_interval]
 -- Interval truncating
 
 not_below_int :: Int -> Interval -> Interval
-not_below_int i (low, high) = (mmax_l i low, high) 
+not_below_int i (low, high) = (mmax_l i low, high)
 
 not_above_int :: Int -> Interval -> Interval
 not_above_int i (low, high) = (low, mmin_h i high)
@@ -182,6 +182,14 @@ wait_interval ((x, y):t) ((x2, y2):t2)
 wait_interval [] _ = []
 wait_interval _ [] = []
 
+-- Is the point in the interval or before the interval?
+is_point_before_or_in_int :: Int -> Interval -> Bool
+is_point_before_or_in_int _ (_, Nothing) = True
+is_point_before_or_in_int x (_, Just y) = y >= x
+
+is_point_before_or_in :: Int -> Domain -> Bool
+is_point_before_or_in x y = any (is_point_before_or_in_int x) y
+
 -- Does the domain include +inf?
 unbound_top :: Domain -> Bool
 unbound_top d = any (unbound_top_int) d
@@ -198,9 +206,9 @@ intersect_dom a@((x, y):t) b@((x2, y2):t2)
 intersect_dom [] _ = []
 intersect_dom _ [] = []
 
-intersect_dom2 :: [(Domain, Domain)] -> [(Domain, Domain)] -> [(Domain, Domain)]
-intersect_dom2 x y = [(intersect_dom a a2, intersect_dom b b2)
-                       | (a,b) <- x, (a2, b2) <- y]
+intersect_dom2 :: [Domain] -> [Domain] -> [Domain]
+intersect_dom2 x y = [intersect_dom a a2
+                       | (a) <- x, (a2) <- y]
 
 -------------------------
 -- Analysis data types --
@@ -208,13 +216,12 @@ intersect_dom2 x y = [(intersect_dom a a2, intersect_dom b b2)
 
 data Event = CashCommit CC
            | CashRedeem RC
-           | ValueCommit CV
-           | ValueReveal IdentCV Value
+           | RequestPay IdentPay Person Person Cash
+           | ValueChoice IdentChoice ConcreteChoice
            deriving (Eq,Ord,Show,Read)
 
 data EventRecord = PER {
                      block_number :: Domain,
-                     etime :: Domain,
                      event :: [Event],
                      actions :: [Action]
                      --contract_here :: Contract
@@ -225,31 +232,53 @@ data AnalysisState = AS {
                       curr_event :: [Event],
                       curr_actions :: [Action],
                       possible_block :: Domain,
-                      possible_time :: Domain,
                       rem_contract :: Contract,
                       event_record :: [EventRecord],
-                      commits :: Commits,
-                      state :: State
+                      commits :: Input,
+                      state :: State,
+                      unique_choice :: Int
                     }
                    deriving (Eq,Ord,Show,Read)
+
+
+-- Find unique choice
+findChoiceObs :: Observation -> Int
+findChoiceObs (BelowTimeout _) = 0
+findChoiceObs (AndObs obs1 obs2) = minimum (map (findChoiceObs) [obs1, obs2])
+findChoiceObs (OrObs obs1 obs2) = minimum (map (findChoiceObs) [obs1, obs2])
+findChoiceObs (NotObs obs) = findChoiceObs obs
+findChoiceObs (PersonChoseThis _ _ x) = (x - 1)
+findChoiceObs (PersonChoseSomething _ _) = 0
+findChoiceObs TrueObs = 0
+findChoiceObs FalseObs = 0
+
+findChoice :: Contract -> Int
+findChoice (Null) = 0
+findChoice (RedeemCC _ con) = findChoice con
+findChoice (Pay _ _ _ _ _ con) = findChoice con
+findChoice (Both con1 con2) = minimum (map (findChoice) [con1, con2])
+findChoice (Choice obs con1 con2) = minimum ((findChoiceObs obs):(map (findChoice) [con1, con2]))
+findChoice (CommitCash _ _ _ _ _ con) = findChoice con
+findChoice (When obs _ con1 con2) = minimum ((findChoiceObs obs):(map (findChoice) [con1, con2]))
+
 
 ------------------------
 -- Analysis procedure --
 ------------------------
 
 has_empty_domain :: AnalysisState -> Bool
-has_empty_domain x = (possible_block x == []) || (possible_time x == [])
+has_empty_domain x = (possible_block x == [])
 
 empty_analysis_state :: Contract -> AnalysisState
 empty_analysis_state c = AS {
                           curr_event = [],
                           curr_actions = [],
                           possible_block = inf_domain,
-                          possible_time = inf_domain,
                           rem_contract = c,
                           event_record = [],
-                          commits = Commits Set.empty Set.empty Map.empty Set.empty,
-                          state = (Map.empty, Map.empty)
+                          commits = Input Set.empty Set.empty Map.empty Map.empty,
+                          state = State {sc = Map.empty, sch = Map.empty},
+                          unique_choice = findChoice c
                          }
 
 add_to_log :: AnalysisState -> AnalysisState
@@ -257,13 +286,11 @@ add_to_log (as @ AS {curr_event = []}) = as
 add_to_log (as @ AS {curr_event = x,
                      curr_actions = cacts,
                      event_record = old_er,
-                     possible_time = ptim,
                      possible_block = pblock}) =
     as {event_record = old_er ++ [new_er],
         curr_event = [],
         curr_actions = []}
   where new_er = PER {block_number = pblock,
-                      etime = ptim,
                       event = x,
 --                      contract_here = rem_contract as,
                       actions = cacts}
@@ -273,28 +300,24 @@ analyse_one_step (as@ AS {rem_contract = contr,
                       commits = comm,
                       state = sta,
                       possible_block = blo,
-                      possible_time = tim,
                       curr_actions = acts
                      }) =
    add_to_log (as {rem_contract = ncontr,
                    state = nsta,
                    curr_actions = acts ++ nacts})
     where
-      (nsta, ncontr, nacts) = full_step comm sta contr (OS {time = get_one tim,
-                                                            random = 42, -- ToDo
-                                                            blockNumber = get_one blo})
+      (nsta, ncontr, nacts) = fullStep comm sta contr (OS {random = 42, -- ToDo
+                                                           blockNumber = get_one blo})
 
 expand_if_null :: AnalysisState -> AnalysisState
 expand_if_null (as @ AS {rem_contract = Null,
-                         possible_block = blo,
-                         possible_time = tim}) =
-            as {possible_block = extend_dom blo,
-                possible_time = extend_dom tim}
+                         possible_block = blo}) =
+            as {possible_block = extend_dom blo}
 expand_if_null as = as
 
--- Analyses possible combinations of timeouts in commits 
+-- Analyses possible combinations of timeouts in commits
 analyse_one_step_commits_aux :: AnalysisState -> [AnalysisState]
-analyse_one_step_commits_aux (as @ AS {state = (_, ccst)}) =
+analyse_one_step_commits_aux (as @ AS {state = State {sc = ccst}}) =
   split_by_block_list as $ List.sort $ List.nub $
     Maybe.mapMaybe extract_expdate $ Map.elems ccst
 
@@ -307,63 +330,79 @@ analyse_one_step_commits as = (analyse_one_step_commits_aux as)
 -- Remove top actions from contract (including those in Both trees)
 remove_actions :: Contract -> Contract
 remove_actions (Both contr1 contr2) = (Both (remove_actions contr1) (remove_actions contr2))
-remove_actions (CommitValue _ _ _ contr) = contr
-remove_actions (CommitCash _ _ _ _ contr) = contr
-remove_actions (RevealCV _ contr) = contr
+remove_actions (CommitCash _ _ _ _ _ contr) = contr
 remove_actions (RedeemCC _ contr) = contr
 remove_actions contr = contr
 
-interval_from_obs :: Map.Map IdentCV Value -> Observation -> [(Domain, Domain)]
-interval_from_obs _ (TimeAbove n) = [(inf_domain, above n inf_domain)]
-interval_from_obs _ (BelowTimeout n) = [(below n inf_domain, inf_domain)]
+interval_from_obs :: Map.Map (IdentChoice, Person) ConcreteChoice -> Observation -> [Domain]
+interval_from_obs _ (BelowTimeout n) = [below n inf_domain]
 interval_from_obs m (AndObs obs1 obs2) = intersect_dom2 (interval_from_obs m obs1)
                                                         (interval_from_obs m obs2)
 interval_from_obs m (OrObs obs1 obs2) = (interval_from_obs m obs1) ++
                                         (interval_from_obs m obs2)
-interval_from_obs m (CVRevealedAs ident v) =
+interval_from_obs m (PersonChoseThis ident p v) =
    if x == Just v then interval_from_obs m TrueObs else interval_from_obs m FalseObs
-  where x = Map.lookup ident m
-interval_from_obs _ (TrueObs) = [(inf_domain, inf_domain)]
+  where x = Map.lookup (ident, p) m
+interval_from_obs m (PersonChoseSomething ident p) =
+   case x of
+     Just _ -> interval_from_obs m TrueObs
+     _ -> interval_from_obs m FalseObs
+  where x = Map.lookup (ident, p) m
+interval_from_obs _ (TrueObs) = [inf_domain]
 interval_from_obs _ (FalseObs) = []
 interval_from_obs m (NotObs o) = interval_from_obs_inv m o
 
-interval_from_obs_inv :: Map.Map IdentCV Value -> Observation -> [(Domain, Domain)]
-interval_from_obs_inv _ (TimeAbove n) = [(inf_domain, not_above n inf_domain)]
-interval_from_obs_inv _ (BelowTimeout n) = [(not_below n inf_domain, inf_domain)]
+interval_from_obs_inv :: Map.Map (IdentChoice, Person) ConcreteChoice -> Observation -> [Domain]
+interval_from_obs_inv _ (BelowTimeout n) = [not_below n inf_domain]
 interval_from_obs_inv m (AndObs obs1 obs2) = (interval_from_obs m obs1) ++
-                                             (interval_from_obs m obs2)
+                                           (interval_from_obs m obs2)
 interval_from_obs_inv m (OrObs obs1 obs2) = intersect_dom2 (interval_from_obs m obs1)
-                                                           (interval_from_obs m obs2)
-interval_from_obs_inv m (CVRevealedAs ident v) =
-   if x == Just v then interval_from_obs_inv m TrueObs else interval_from_obs_inv m FalseObs
-  where x = Map.lookup ident m
-interval_from_obs_inv _ (FalseObs) = [(inf_domain, inf_domain)]
+                                                         (interval_from_obs m obs2)
+interval_from_obs_inv m (PersonChoseThis ident p v) =
+   if x == Just v then interval_from_obs m FalseObs else interval_from_obs m TrueObs
+  where x = Map.lookup (ident, p) m
+interval_from_obs_inv m (PersonChoseSomething ident p) =
+   case x of
+     Just _ -> interval_from_obs m FalseObs
+     _ -> interval_from_obs m TrueObs
+  where x = Map.lookup (ident, p) m
+interval_from_obs_inv _ (FalseObs) = [inf_domain]
 interval_from_obs_inv _ (TrueObs) = []
 interval_from_obs_inv m (NotObs o) = interval_from_obs m o
 
 
 analyse_one_step_observables_aux :: Contract -> AnalysisState -> [AnalysisState]
-analyse_one_step_observables_aux (Choice (TimeAbove tim) _ _)    -- TimeAbove
-                                 (as@ AS {possible_time = ptime}) =
-   [as {possible_time = above tim ptime},
-    as {possible_time = not_above tim ptime}]
 analyse_one_step_observables_aux (Choice (BelowTimeout tim) _ _) -- BelowTimeout
                                  (as@ AS {possible_block = pblo}) =
    [as {possible_block = below tim pblo},
     as {possible_block = not_below tim pblo}]
+analyse_one_step_observables_aux (Choice (PersonChoseThis ident p v) _ _)
+                                 (as@ AS {state = s,
+                                          commits = c,
+                                          unique_choice = u}) = -- PersonChoseThis
+   case Map.lookup (ident, p) (sch s) of
+       Just _ -> [as]
+       Nothing -> [as {commits = c {ic = Map.insert (ident, p) v (ic c)}},
+                   as {commits = c {ic = Map.insert (ident, p) u (ic c)}}]
+analyse_one_step_observables_aux (Choice (PersonChoseSomething ident p) _ _)
+                                 (as@ AS {state = s,
+                                          commits = c,
+                                          unique_choice = u}) = -- PersonChoseSomething
+   case Map.lookup (ident, p) (sch s) of
+       Just _ -> [as]
+       Nothing -> [as, as {commits = c {ic = Map.insert (ident, p) u (ic c)}}]
+
 analyse_one_step_observables_aux (Choice (AndObs obs1 obs2) c1 c2) as = -- AndObx
    List.concatMap (analyse_one_step_observables_aux (Choice obs2 c1 c2)) $
         analyse_one_step_observables_aux (Choice obs1 c1 c2) as
 analyse_one_step_observables_aux (Choice (OrObs obs1 obs2) c1 c2) as = -- OrObs
    List.concatMap ((flip analyse_one_step_observables_aux) as)
                   [Choice obs1 c1 c2, Choice obs2 c1 c2]
-analyse_one_step_observables_aux (When obs tim _ _) -- When 
-                                 as@ AS {possible_time = ptime,
-                                         possible_block = pblock,
-                                         commits = Commits {rv = rv_old}} =
-    [as {possible_time = wait_interval ptime pt,
-         possible_block = below tim (wait_interval (below tim pblock) pb)}
-      | (pt, pb) <- interval_from_obs rv_old obs] ++ [aft]
+analyse_one_step_observables_aux (When obs tim c1 c2) -- When
+                                 as@ AS {possible_block = pblock,
+                                         state = State {sch = m}} =
+    concat ([(analyse_one_step_observables_aux c1) (as {possible_block = below tim (wait_interval (below tim pblock) pb)})
+            | pb <- interval_from_obs m obs] ++ [analyse_one_step_observables_aux c2 aft])
    where aft = as {possible_block = not_below tim pblock}
 analyse_one_step_observables_aux _ as = [as]
 
@@ -375,94 +414,68 @@ analyse_one_step_observables as =
 
 -- Analyses possible combinations of actions regarding the root node
 analyse_one_step_action_aux :: AnalysisState -> [AnalysisState]
-analyse_one_step_action_aux (as@ AS {rem_contract = (CommitCash ident per cash tout _),
-                                     commits = comm@Commits {cc = cc_old}, -- CommitCash
+analyse_one_step_action_aux (as@ AS {rem_contract = (CommitCash ident per cash tout _ _),
+                                     commits = comm@Input {cc = cc_old}, -- CommitCash
                                      curr_event = ce,
-                                     possible_block = blo,
-                                     possible_time = tim
+                                     possible_block = blo
                                     }) =
        [ -- the commit is done on time
         as {commits = comm {cc = Set.insert cc_new cc_old},
             curr_event = ce ++ [CashCommit cc_new],
-            possible_block = below tout $ extend_dom blo,
-            possible_time = extend_dom tim},
+            possible_block = below tout $ extend_dom blo},
          -- the commit is not done on time
-        as {possible_block = not_below tout $ extend_dom blo,
-            possible_time = extend_dom tim,
-            commits = comm }
+        as {possible_block = not_below tout $ extend_dom blo}
        ]
     where cc_new = (CC ident per cash tout)
-analyse_one_step_action_aux (as@ AS {rem_contract = (CommitValue ident per _ _),
-                                     commits = comm@Commits {cv = cv_old}, -- CommitValue
+
+analyse_one_step_action_aux (as@ AS {rem_contract = (Pay ide pf pt cash tim _),
+                                     commits = comm@Input {rp = rp_old}, -- Pay
                                      curr_event = ce,
-                                     possible_block = blo,
-                                     possible_time = tim
-                                   }) =
-       [ -- the commit is done on time
-        as { -- no timeout
-            commits = comm {cv = Set.insert cv_new cv_old},
-            curr_event = ce ++ [ValueCommit cv_new],
-            possible_block = extend_dom blo,
-            possible_time = extend_dom tim},
-        as {
-            possible_block = extend_dom blo,
-            possible_time = extend_dom tim}
-         -- the commit is not done on time (not possible yet)
-       ]
-    where cv_new = (CV ident per)
-analyse_one_step_action_aux (as@ AS {rem_contract = (RevealCV ident _),
-                                     commits = comm@Commits {rv = rv_old}, -- RevealCV
-                                     curr_event = ce,
-                                     possible_block = blo,
-                                     possible_time = tim,
-                                     state = sta
+                                     possible_block = blo
                                     }) =
-       [let rv_new = Map.insert ident val rv_old in -- if not is_reveal this does nothing
-        as {commits = comm {rv = rv_new},
-            possible_block = extend_dom blo,
-            possible_time = extend_dom tim,
-            curr_event = if is_new_reveal
-                         then ce ++ [ValueReveal ident val]
-                         else ce}
-        | val <- values] ++ [as {
-            possible_block = extend_dom blo,
-            possible_time = extend_dom tim}]
-    where (is_new_reveal, ev) = case Map.lookup ident rv_old of
-                                  Nothing -> (True, error "It is new RevealCV in analysis!")
-                                  Just x -> (False, x)
-          values = case Map.lookup ident cvs of
-                     Just (Unrevealed vals) -> if is_new_reveal
-                                               then vals
-                                               else [ev]
-                     _ -> []
-          (cvs,_) = sta
+    [as { commits = comm {rp = Map.insert (ide, pt) cash rp_old},
+          curr_event = ce ++ [RequestPay ide pf pt cash],
+          possible_block = extend_dom blo},
+     as {possible_block = not_below tim $ extend_dom blo}
+    ]
 analyse_one_step_action_aux (as@ AS {rem_contract = (RedeemCC ident _),
-                                     commits = comm@Commits {rc = rc_old}, -- RedeemCC
+                                     commits = comm@Input {rc = rc_old}, -- RedeemCC
                                      curr_event = ce,
                                      state = sta,
-                                     possible_block = blo,
-                                     possible_time = tim
+                                     possible_block = blo
                                     }) =
     case Map.lookup ident ccs of
-      Just (_, NotRedeemed val _) ->
-                 let rc_new  = (RC ident val) in 
+      Just (p, NotRedeemed val _) ->
+                 let rc_new = (RC ident p val) in
                    [as { commits = comm {rc = Set.insert rc_new rc_old },
                          curr_event = ce ++ [CashRedeem rc_new],
-                         possible_block = extend_dom blo,
-                         possible_time = extend_dom tim}, as]
+                         possible_block = extend_dom blo}, as]
       _ -> [as {
-            possible_block = extend_dom blo,
-            possible_time = extend_dom tim}]
-    where (_,ccs) = sta
+            possible_block = extend_dom blo}]
+    where State {sc = ccs} = sta
 analyse_one_step_action_aux (as@ AS {rem_contract = contr@(Both con1 con2)}) = -- Both
     map (\x -> x {rem_contract = contr}) $
     List.concatMap (analyse_one_step_action_aux . (\x -> x {rem_contract = con2}))
                    (analyse_one_step_action_aux (as {rem_contract = con1}))
 analyse_one_step_action_aux as = [as]
-        
+
 analyse_one_step_action :: AnalysisState -> [AnalysisState]
 analyse_one_step_action as = List.concatMap (analyse_one_step_observables)
                                (analyse_one_step_action_aux as)
+
+analyse_one_step_expiration_aux :: AnalysisState -> [AnalysisState]
+analyse_one_step_expiration_aux (as@AS {state = State { sc = sci },
+                                        possible_block = dom,
+                                        curr_event = ce,
+                                        commits = inp@(Input {rc = rci})}) =
+   [let new_rc = (RC i p c) in
+     as {commits = inp {rc = Set.insert new_rc rci},
+        curr_event = ce ++ [CashRedeem new_rc]}
+    | (i ,(p, NotRedeemed c t)) <- (Map.toList sci), is_point_before_or_in t dom] ++ [as]
+
+analyse_one_step_expiration :: AnalysisState -> [AnalysisState]
+analyse_one_step_expiration as = List.concatMap (analyse_one_step_action)
+                               (analyse_one_step_expiration_aux as)
 
 split_by_block_list :: AnalysisState -> [Int] -> [AnalysisState]
 split_by_block_list as [] = [as]
@@ -471,7 +484,7 @@ split_by_block_list as (h:t) = (this:split_by_block_list rest t)
         this = apply_to_as (below h)
         apply_to_as f = (as {possible_block = f (possible_block as)})
 
-extract_expdate :: CCstatus -> Maybe ExpiryTime
+extract_expdate :: CCStatus -> Maybe Timeout
 extract_expdate (_, NotRedeemed _ ee) = Just ee
 extract_expdate _ = Nothing
 
@@ -517,5 +530,5 @@ only_not_null x = filter (\y -> rem_contract y /= Null) x
 -- Finds states that will not be changed by the action of time
 only_stable :: [AnalysisState] -> [AnalysisState]
 only_stable = filter fil
-     where fil y = (unbound_top (possible_block y)) && (unbound_top (possible_time y))
+     where fil y = (unbound_top (possible_block y))
 

@@ -4,7 +4,6 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Data.List as List
 
-
  -------------------------------------------------------------------------------------------------
  --                                                                                             --
  -- Prototype implementation of a small DSL for commit/redeem based contracts on blockchain     --
@@ -17,7 +16,7 @@ import qualified Data.List as List
  --     - type of State (of the internal state of a DSL contract evaluation)                    --
  --     - type of Observations (of values of Observables)                                       --
  --     - type of Contracts                                                                     --
- --     - single step evaluation (the step function) which is wrapped by full_step …            --
+ --     - single step evaluation (the step function) which is wrapped by fullStep …            --
  --     - … which expires and refunds cash commitments                                          --
  --                                                                                             --
  -- Further discussion in accompanying document.                                                --
@@ -30,23 +29,8 @@ import qualified Data.List as List
 type Key = Int -- Public key
 
 type Person      = Key
-type Time        = Int -- computation steps
 type Random      = Int
 type BlockNumber = Int
-
--- Actions are things that have an effect on the blockchain.
--- The current implementation doesn't properly reflect this.
--- TO BE DONE
-
-data Action =   SuccessfulPay Person Person Cash |
-                FailedPay Person Person Cash |
-                SuccessfulCommit Person Cash |
-                ExpiredRedeem Person |
-                DuplicateRedeem Person |
-                DuplicateReveal IdentCV 
-                    deriving (Eq,Ord,Show,Read)
-
-type AS = [Action]
 
 -- Observables are things which are recorded on the blockchain.
 --  e.g. "a random choice", the value of GBP/BTC exchange rate, …
@@ -55,16 +39,15 @@ type AS = [Action]
 --  - We assume that some mechanism exists which will ensure that the value is looked up and recorded, or …
 --  - … we actually provide that mechanism explicitly, e.g. with inter-contract comms or transaction generation or something.
 
-data Observable = Time | Random | BlockNumber
+data Observable = Random | BlockNumber
                     deriving (Eq,Ord,Show,Read)
 
-data OS =  OS { time         :: Time,
-                random       :: Random,
-                blockNumber  :: BlockNumber}
+data OS =  OS { random       :: Random,
+                blockNumber  :: BlockNumber }
                     deriving (Eq,Ord,Show,Read)
 
--- Commitments
---  Types for cash and value commits and reveals.
+-- Inputs
+--  Types for cash commits, money redeems, and choices.
 --  The type CR collects the sets of commits/reveals at a given point
 --  during execution.
 
@@ -72,27 +55,48 @@ type Value    = Int
  
 type Cash     = Int
 
-type ExpiryTime = BlockNumber
+type ConcreteChoice = Int
 
-data IdentCV = IdentCV Int
-               deriving (Eq,Ord,Show,Read)
-data IdentCC = IdentCC Int
-               deriving (Eq,Ord,Show,Read)
+type Timeout = BlockNumber
 
-data CV = CV IdentCV Person
-               deriving (Eq,Ord,Show,Read)
-data CC = CC IdentCC Person Cash ExpiryTime
-               deriving (Eq,Ord,Show,Read)
-data RC = RC IdentCC Cash
+newtype IdentCC = IdentCC Int
                deriving (Eq,Ord,Show,Read)
 
-data Commits = Commits {
-                cv  :: Set.Set CV,
+newtype IdentChoice = IdentChoice Int
+               deriving (Eq,Ord,Show,Read)
+
+newtype IdentPay = IdentPay Int
+               deriving (Eq,Ord,Show,Read)
+
+data CC = CC IdentCC Person Cash Timeout
+               deriving (Eq,Ord,Show,Read)
+data RC = RC IdentCC Person Cash
+               deriving (Eq,Ord,Show,Read)
+
+data Input = Input {
                 cc  :: Set.Set CC,
-                rv  :: Map.Map IdentCV Value,
-                rc  :: Set.Set RC
+                rc  :: Set.Set RC,
+                rp  :: Map.Map (IdentPay, Person) Cash,
+                ic  :: Map.Map (IdentChoice, Person) ConcreteChoice
               }
                deriving (Eq,Ord,Show,Read)
+
+-- Actions are things that have an effect on the blockchain.
+-- The current implementation doesn't properly reflect this.
+-- TO BE DONE
+
+data Action =   SuccessfulPay IdentPay Person Person Cash |
+                ExpiredPay IdentPay Person Person Cash |
+                FailedPay IdentPay Person Person Cash |
+                SuccessfulCommit IdentCC Person Cash |
+                CommitRedeemed IdentCC Person Cash |
+                ExpiredCommitRedeemed IdentCC Person Cash |
+                DuplicateRedeem IdentCC Person |
+                ChoiceMade IdentChoice Person ConcreteChoice
+                    deriving (Eq,Ord,Show,Read)
+
+type AS = [Action]
+
 
 -- A type of states; this represents part of the state that needs to be
 -- stored on the blockchain.
@@ -101,15 +105,15 @@ data Commits = Commits {
 -- so that computations can be re-run. Recording these should be seen as
 -- a side-effect of their evaluation.
 
-type State = (Map.Map IdentCV CVstatus, Map.Map IdentCC CCstatus)
-
-data CVstatus = Unrevealed [Value] | Revealed Value
+data State = State {
+               sc  :: Map.Map IdentCC CCStatus,
+               sch :: Map.Map (IdentChoice, Person) ConcreteChoice
+             }
                deriving (Eq,Ord,Show,Read)
 
-type CCstatus = (Person,CCredeemStatus)
-data CCredeemStatus = NotRedeemed Cash ExpiryTime | TimedOut | ManuallyRedeemed
+type CCStatus = (Person,CCRedeemStatus)
+data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
                deriving (Eq,Ord,Show,Read)
-
 
 -- Representation of observations over observables and the state.
 -- Rendered into predicates by interpretObs.
@@ -117,22 +121,19 @@ data CCredeemStatus = NotRedeemed Cash ExpiryTime | TimedOut | ManuallyRedeemed
 -- TO DO: add enough operations to make complete for arithmetic etc.
 -- as well as enough primitive observations over the primitive values.
 
-
-data Observation =  TimeAbove Int |
-                    BelowTimeout BlockNumber | -- is this number below the actual block number?
+data Observation =  BelowTimeout Timeout | -- is this number below the actual block number?
                     AndObs Observation Observation |
                     OrObs Observation Observation |
                     NotObs Observation |
-                    CVRevealedAs IdentCV Value |
+                    PersonChoseThis IdentChoice Person ConcreteChoice |
+                    PersonChoseSomething IdentChoice Person |
                     TrueObs | FalseObs
                     deriving (Eq,Ord,Show,Read)
 
 -- Semantics of observations
-                    
+
 interpretObs :: State -> Observation -> OS -> Bool
 
-interpretObs _ (TimeAbove n) os
-    = time os > n
 interpretObs _ (BelowTimeout n) os
     = not $ expired (blockNumber os) n
 interpretObs st (AndObs obs1 obs2) os
@@ -141,14 +142,15 @@ interpretObs st (OrObs obs1 obs2) os
     = interpretObs st obs1 os || interpretObs st obs2 os
 interpretObs st (NotObs obs) os
     = not (interpretObs st obs os)
-interpretObs st (CVRevealedAs ident m) _
-    = case Map.lookup ident (fst st) of
+interpretObs st (PersonChoseThis choice_id person reference_choice) _
+    = case Map.lookup (choice_id, person) (sch st) of
+        Just actual_choice -> actual_choice == reference_choice
         Nothing -> False
-        Just (Unrevealed _) -> False
-        Just (Revealed n)   -> n==m
-interpretObs _ (TrueObs) _
+interpretObs st (PersonChoseSomething choice_id person) _
+    = Map.member (choice_id, person) (sch st)
+interpretObs _ TrueObs _
     = True
-interpretObs _ (FalseObs) _
+interpretObs _ FalseObs _
     = False
 
 -- The type of contracts
@@ -156,13 +158,11 @@ interpretObs _ (FalseObs) _
 data Contract =
     Null |
     RedeemCC IdentCC Contract |
-    RevealCV IdentCV Contract |
-    Pay Person Person Int Contract |
+    Pay IdentPay Person Person Cash Timeout Contract |
     Both Contract Contract |
     Choice Observation Contract Contract |
-    CommitValue IdentCV Person [Value] Contract |
-    CommitCash IdentCC Person Cash Time Contract |
-    When Observation Time Contract Contract
+    CommitCash IdentCC Person Cash Timeout Timeout Contract |
+    When Observation Timeout Contract Contract
                deriving (Eq,Ord,Show,Read)
 
 
@@ -172,20 +172,24 @@ data Contract =
 
 -- A single computation step in evaluating a contract.
 
-step :: Commits -> State -> Contract -> OS -> (State,Contract,AS)
+step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
 
 step _ st Null _ = (st, Null, [])
 
-step _ st (Pay from to val con) os =
-    if
-        committed st from bn >= val
-    then
-        (newstate,con,[SuccessfulPay from to val])
-    else
-        (st,con,[FailedPay from to val])
+step inp st c@(Pay idpay from to val expi con) os
+    | expired (blockNumber os) expi =
+         (st,con,[ExpiredPay idpay from to val])
+    | right_claim =
+        (if committed st from bn >= val
+         then (newstate,con,[SuccessfulPay idpay from to val])
+         else (st,con,[FailedPay idpay from to val]))
+    | otherwise = (st,c,[])
     where
         newstate = stateUpdate st from to bn val
         bn = blockNumber os
+        right_claim = case Map.lookup (idpay, to) (rp inp) of
+                         Just claimed_val -> claimed_val == val
+                         Nothing -> False
 
 
 -- CHECK: the clause for Both could use a commitment twice,
@@ -194,11 +198,9 @@ step _ st (Pay from to val con) os =
 step comms st (Both con1 con2) os =
     (st2, result, ac1 ++ ac2)
     where
-        result = if res1==Null
-                    then res2
-                    else if res2==Null
-                        then res1
-                        else Both res1 res2
+        result | res1 == Null = res2
+               | res2 == Null = res1
+               | otherwise = Both res1 res2
         (st1,res1,ac1) = step comms st con1 os
         (st2,res2,ac2) = step comms st1 con2 os
 
@@ -207,41 +209,25 @@ step _ st (Choice obs conT conF) os =
         then (st,conT,[])
         else (st,conF,[])
 
-step _ st (When obs expi con con2) os =
-    if (expired (blockNumber os) expi)
-    then (st,con2,[])
-    else (if interpretObs st obs os
-          then (st,con,[])
-          else (st,(When obs expi con con2),[]))
-
-step commits st c@(CommitValue ident person values con) _ =
-    if
-        Set.member (CV ident person) (cv commits)
-    then
-        (newstate,con,[])
-    else
-        (st,c,[])
-    where
-        (cvs,ccs) = st
-        newstate  = (Map.insert ident (Unrevealed values) cvs, ccs)
+step _ st (When obs expi con con2) os
+  | expired (blockNumber os) expi = (st,con2,[])
+  | interpretObs st obs os = (st,con,[])
+  | otherwise = (st, When obs expi con con2, [])
 
 -- Note that conformance of the commitment here is exact
 -- May want to relax this
 
-step commits st c@(CommitCash ident person val timeout con) os =
-    if (cex)
-    then (ust, con, [SuccessfulCommit person val,
-                     SuccessfulPay person person val])
-    else if Set.member (CC ident person val timeout) (cc commits)
-         then (ust, con, [SuccessfulCommit person val])
-         else (st, c, [])
-    where
-         (cvs, ccs) = st
-         cex = (expired (blockNumber os) (timeout))
-         cns = (person, (if cex
-                         then TimedOut
-                         else (NotRedeemed val timeout)))
-         ust = (cvs, Map.insert ident cns ccs)
+step commits st c@(CommitCash ident person val start_timeout end_timeout con) os
+  | cexe || cexs = (st {sc = ust}, con, [SuccessfulCommit ident person 0,
+                                         CommitRedeemed ident person 0])
+  | Set.member (CC ident person val end_timeout) (cc commits)
+        = (st {sc = ust}, con, [SuccessfulCommit ident person val])
+  | otherwise = (st, c, [])
+  where ccs = sc st
+        cexs = expired (blockNumber os) start_timeout
+        cexe = expired (blockNumber os) end_timeout
+        cns = (person, if cexe || cexs then ManuallyRedeemed else NotRedeemed val end_timeout)
+        ust = Map.insert ident cns ccs
 
 -- Note: there is no possibility of payment failure here: is that correct?
 -- Also: look at partial redemption: currently it is all or nothing.
@@ -249,99 +235,124 @@ step commits st c@(CommitCash ident person val timeout con) os =
 step commits st c@(RedeemCC ident con) _ =
     case Map.lookup ident ccs of
       Just (person, NotRedeemed val _) ->
-        let newstate = (cvs, Map.insert ident (person, ManuallyRedeemed) ccs) in
-        if (Set.member (RC ident val) (rc commits))
-        then (newstate, con, [SuccessfulPay person person val])
+        let newstate = st {sc = Map.insert ident (person, ManuallyRedeemed) ccs} in
+        if Set.member (RC ident person val) (rc commits)
+        then (newstate, con, [CommitRedeemed ident person val])
         else (st, c, [])
       Just (person, ManuallyRedeemed) ->
-        (st, con, [DuplicateRedeem person])
-      Just (person, TimedOut) ->
-        let newstate = (cvs, Map.insert ident (person, ManuallyRedeemed) ccs) in
-        (newstate, con, [ExpiredRedeem person])
+        (st, con, [DuplicateRedeem ident person])
       Nothing -> (st,c,[])
     where
-        (cvs,ccs) = st
+        ccs = sc st
 
-step commits st c@(RevealCV ident con) _ =
-    case
-        Map.lookup ident (rv commits)
-    of
-        Just val -> case
-                      Map.lookup ident cvs
-                    of
-                      Just (Unrevealed vals) ->
-                          let newstate = (Map.insert ident (Revealed val) cvs, ccs) in
-                               if (elem val vals)
-                               then (newstate, con, [])
-                               else (st,c,[])
-                      Just (Revealed _) ->
-                                 (st,con,[DuplicateReveal ident])         
-                      Nothing -> (st,c,[])
-        Nothing  -> (st,c,[])
-      where
-        (cvs,ccs) = st
+
+addNewChoices :: (Map.Map (IdentChoice, Person) ConcreteChoice, [Action])
+                -> (IdentChoice, Person) -> ConcreteChoice
+                -> (Map.Map (IdentChoice, Person) ConcreteChoice, [Action])
+
+addNewChoices acc@(recorded_choices, action_list) (choice_id, person) choice_int
+  | Map.member (choice_id, person) recorded_choices = acc
+  | otherwise = (Map.insert (choice_id, person) choice_int recorded_choices,
+                 ChoiceMade choice_id person choice_int : action_list)
+
+recordChoices :: Input -> Map.Map (IdentChoice, Person) Int -> (Map.Map (IdentChoice, Person) Int, [Action])
+
+recordChoices input recorded_choices = Map.foldlWithKey addNewChoices (recorded_choices, []) (ic input)
+
+isClaimed :: Input -> IdentCC -> CCStatus -> Bool
+isClaimed inp ident status
+  = case status of
+      (p, NotRedeemed val _) -> Set.member (RC ident p val) (rc inp)
+      _ -> False
+
+expiredAndClaimed :: Input -> Timeout -> IdentCC -> CCStatus -> Bool
+expiredAndClaimed inp et k v = isExpiredNotRedeemed et v && isClaimed inp k v
+
+expireCommits :: Input -> Map.Map IdentCC CCStatus -> OS -> (Map.Map IdentCC CCStatus, [Action])
+
+expireCommits inp scf os = (Map.union uexp nsc, pas)
+  where (expi, nsc) = Map.partitionWithKey (expiredAndClaimed inp et) scf
+        pas = [ExpiredCommitRedeemed ident p val | (ident, (p, NotRedeemed val _)) <- Map.toList expi]
+        et = blockNumber os
+        uexp = Map.map markRedeemed expi
 
 -- Wraps step function to refund expired cash commitments
 
-full_step :: Commits -> State -> Contract -> OS -> (State,Contract,AS)
+fullStep :: Input -> State -> Contract -> OS -> (State, Contract, AS)
 
-full_step com (cvst, ccst) con os = (rs, rcon, pas ++ ras)
-  where (expi, nccst) = Map.partition (isExpiredNotRedeemed et) ccst 
-        pas = [SuccessfulPay p p val | (_, (p, NotRedeemed val _)) <- Map.toList expi]
-        et = blockNumber os
-        uexp = Map.map (auto_expire) expi
-        (rs, rcon, ras) = step com (cvst, Map.union (uexp) (nccst)) con os
+fullStep inp st con os = (rs, rcon, nas)
+  where (nsch, chas) = recordChoices inp (sch st)
+        (nsc, pas) = expireCommits inp (sc st) os
+        nst = st { sc = nsc, sch = nsch }
+        nas = chas ++ pas ++ ras
+        (rs, rcon, ras) = step inp nst con os
 
-auto_expire :: CCstatus -> CCstatus
+-- Repeatedly calls the step function (fullStep function actually) until
+-- it does not change anything or produces any actions
 
-auto_expire (p, NotRedeemed _ _) = (p, TimedOut)
-auto_expire (p, x) = (p, x)
+compute_all :: Input -> State -> Contract -> OS -> (State, Contract, AS)
+
+compute_all com st con os = compute_all_aux com st con os []
+
+compute_all_aux :: Input -> State -> Contract -> OS -> AS -> (State, Contract, AS)
+
+compute_all_aux com st con os ac
+  | (nst == st) && (ncon == con) && (nac == []) = (st, con, ac)
+  | otherwise = compute_all_aux com nst ncon os (nac ++ ac)
+  where (nst, ncon, nac) = fullStep com st con os
+
+
+
+markRedeemed :: CCStatus -> CCStatus
+
+markRedeemed (p, NotRedeemed _ _) = (p, ManuallyRedeemed)
+markRedeemed (p, x) = (p, x)
 
 
 -- Auxiliary functions on the state
 
 -- How much money is committed by a person, and is still unexpired?
 
-committed :: State -> Person -> BlockNumber -> Cash
+committed :: State -> Person -> Timeout -> Cash
 
-committed (_,ccl) per current_block = sum [ v | c@(_, NotRedeemed v _) <- Map.elems ccl, isRedeemable per current_block c ]
+committed st per current_block = sum [ v | c@(_, NotRedeemed v _) <- Map.elems ccl, isRedeemable per current_block c ]
+  where ccl = sc st
 
 -- Assume this is only called when there is enough cash available.
 
-stateUpdate :: State -> Person -> Person -> ExpiryTime -> Cash -> State
+stateUpdate :: State -> Person -> Person -> Timeout -> Cash -> State
 
-stateUpdate st from _ bn val =
-    (cvs,newccs)
+stateUpdate st from _ bn val = st { sc = newccs}
     where
-        (cvs,ccs) = st
+        ccs = sc st
         newccs = updateMap ccs from bn val
 
--- Take Cash amount from Person commitments unexpired at time ExpiryTime, giving
+-- Take Cash amount from Person commitments unexpired at time Timeout, giving
 -- priority to those that expire earliest.
 
-updateMap :: Map.Map IdentCC CCstatus -> Person -> ExpiryTime -> Cash -> Map.Map IdentCC CCstatus
-updateMap mx p e v = discountFromValid (isRedeemable p e) v (mx)
+updateMap :: Map.Map IdentCC CCStatus -> Person -> Timeout -> Cash -> Map.Map IdentCC CCStatus
+updateMap mx p e v = discountFromValid (isRedeemable p e) v mx
 
 -- Does this particular map-record for a commitment belong to the person,
 -- and is it unexpired?
 
-isRedeemable :: Person -> ExpiryTime -> CCstatus -> Bool
-isRedeemable p e (ep, NotRedeemed _ ee) = (ep == p) && (not (expired e ee))
+isRedeemable :: Person -> Timeout -> CCStatus -> Bool
+isRedeemable p e (ep, NotRedeemed _ ee) = (ep == p) && not (expired e ee)
 isRedeemable _ _ _  = False 
 
 -- Is this particular map-record for a commitment not-redeemed but expired?
-isExpiredNotRedeemed :: ExpiryTime -> CCstatus -> Bool
-isExpiredNotRedeemed e (_, NotRedeemed _ ee) = (expired e ee)
+isExpiredNotRedeemed :: Timeout -> CCStatus -> Bool
+isExpiredNotRedeemed e (_, NotRedeemed _ ee) = expired e ee
 isExpiredNotRedeemed _ (_, _) = False 
 
 -- Defines if expiry time ee has come if current time is e
-expired :: ExpiryTime -> ExpiryTime -> Bool
-expired e ee = (ee <= e)
+expired :: Timeout -> Timeout -> Bool
+expired e ee = ee <= e
 
 -- Removes the total Cash from those entries in the map that
 -- meet the filter function, passed as first argument.
 
-discountFromValid :: (CCstatus -> Bool) -> Cash -> Map.Map IdentCC CCstatus -> Map.Map IdentCC CCstatus
+discountFromValid :: (CCStatus -> Bool) -> Cash -> Map.Map IdentCC CCStatus -> Map.Map IdentCC CCStatus
 discountFromValid f v m = updated_map
   where redeemable_submap = Map.filter f m
         ordered_redeemable_list = sortByExpirationDate (Map.toList redeemable_submap)
@@ -350,53 +361,53 @@ discountFromValid f v m = updated_map
 
 -- Discounts the Cash from an initial segment of the list of pairs.
 
-discountFromPairList :: Cash -> [(IdentCC, CCstatus)] -> [(IdentCC, CCstatus)]
+discountFromPairList :: Cash -> [(IdentCC, CCStatus)] -> [(IdentCC, CCStatus)]
 discountFromPairList v ((ident, (p, NotRedeemed ve e)):t)
   | v <= ve = [(ident, (p, NotRedeemed (ve - v) e))]
-  | ve < v = (ident, (p, NotRedeemed 0 e)):(discountFromPairList (v - ve) t)
+  | ve < v = (ident, (p, NotRedeemed 0 e)) : discountFromPairList (v - ve) t
 discountFromPairList _ (_:t) = t 
 discountFromPairList _ _ = error "attempt to discount when insufficient cash available"
 
 -- Sorts a list of pairs by expiration date.
 
-sortByExpirationDate :: [(IdentCC, CCstatus)] -> [(IdentCC, CCstatus)]
-sortByExpirationDate l = List.sortBy (lower_expiration_date_but_not_expired) l
+sortByExpirationDate :: [(IdentCC, CCStatus)] -> [(IdentCC, CCStatus)]
+sortByExpirationDate = List.sortBy lowerExpirationDateButNotExpired
 
-lower_expiration_date_but_not_expired :: (IdentCC, CCstatus) -> (IdentCC, CCstatus) -> Ordering
+lowerExpirationDateButNotExpired :: (IdentCC, CCStatus) -> (IdentCC, CCStatus) -> Ordering
 
-lower_expiration_date_but_not_expired (_, (_, NotRedeemed _ e)) (_, (_, NotRedeemed _ e2)) = compare e e2
-lower_expiration_date_but_not_expired (_, (_, NotRedeemed _ _)) _ = LT 
-lower_expiration_date_but_not_expired _ (_, (_, NotRedeemed _ _)) = GT
-lower_expiration_date_but_not_expired _ _ = EQ 
+lowerExpirationDateButNotExpired (_, (_, NotRedeemed _ e)) (_, (_, NotRedeemed _ e2)) = compare e e2
+lowerExpirationDateButNotExpired (_, (_, NotRedeemed _ _)) _ = LT
+lowerExpirationDateButNotExpired _ (_, (_, NotRedeemed _ _)) = GT
+lowerExpirationDateButNotExpired _ _ = EQ
 
 {----------
  - Driver -
  ----------}
 
--- Driver for a single step of execution, using the full_step function
+-- Driver for a single step of execution, using the fullStep function
 -- This first performs any repayments due because of an expired commit,
 -- then calls the step function.
 
 -- Given a start state, a contract and a stream of commits and observables,
 -- produces a list of actions to perform at each step.
 
-driver :: State -> Contract -> [(Commits,OS)] -> [AS]
+driver :: State -> Contract -> [(Input,OS)] -> [AS]
 
 driver start_state contract input =
-    aset:rest
-    where
-        (com1,os1):rest_input   = input
-        (next_st,next_con,aset) = full_step com1 start_state contract os1
-        rest                    = driver next_st next_con rest_input
+ case input of
+  [] -> error "Input should be infinite in driver"
+  (com1,os1):rest_input ->
+    let (next_st,next_con,aset) = fullStep com1 start_state contract os1 in
+    let rest                    = driver next_st next_con rest_input in aset:rest
+
 
 --
 
-input_stream :: Commits -> [(Commits,OS)]
+inputStream :: Input -> [(Input,OS)]
 
-input_stream commits =
-    result
-    where
-        result         = zip commits_stream os_stream
-        commits_stream = repeat commits
-        os_stream      = zipWith3 OS [1..] (repeat 42) (concat (map (replicate 100) [1..]))
+inputStream commits = result
+  where
+    result = zip commits_stream os_stream
+    commits_stream = repeat commits
+    os_stream = map (OS 42) (concatMap (replicate 100) [1 ..])
 

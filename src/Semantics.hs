@@ -47,9 +47,7 @@ data OS =  OS { random       :: Random,
                     deriving (Eq,Ord,Show,Read)
 
 -- Inputs
---  Types for cash commits, money redeems, and choices.
---  The type CR collects the sets of commits/reveals at a given point
---  during execution.
+-- Types for cash commits, money redeems, and choices.
 
 type Value    = Int
  
@@ -245,6 +243,8 @@ step commits st c@(RedeemCC ident con) _ =
     where
         ccs = sc st
 
+-- Given a choice, if no previous choice for its id has been recorded,
+-- it records it in the map, and adds an action ChoiceMade to the list.
 
 addNewChoices :: (Map.Map (IdentChoice, Person) ConcreteChoice, [Action])
                 -> (IdentChoice, Person) -> ConcreteChoice
@@ -255,18 +255,28 @@ addNewChoices acc@(recorded_choices, action_list) (choice_id, person) choice_int
   | otherwise = (Map.insert (choice_id, person) choice_int recorded_choices,
                  ChoiceMade choice_id person choice_int : action_list)
 
+-- It records all the choices in the input that have not been recorded before
+
 recordChoices :: Input -> Map.Map (IdentChoice, Person) Int -> (Map.Map (IdentChoice, Person) Int, [Action])
 
 recordChoices input recorded_choices = Map.foldlWithKey addNewChoices (recorded_choices, []) (ic input)
 
+-- Checks whether the provided cash commit is claimed in the input
 isClaimed :: Input -> IdentCC -> CCStatus -> Bool
+
 isClaimed inp ident status
   = case status of
       (p, NotRedeemed val _) -> Set.member (RC ident p val) (rc inp)
       _ -> False
 
+-- Checks whether the provided cash commit is expired, not redeemed, and claimed.
+-- (That is, whether the conditions apply for marking it as redeemed even without RedeemCC.)
+
 expiredAndClaimed :: Input -> Timeout -> IdentCC -> CCStatus -> Bool
+
 expiredAndClaimed inp et k v = isExpiredNotRedeemed et v && isClaimed inp k v
+
+-- Looks for expired and claimed commits in the list of commits of the state (scf)
 
 expireCommits :: Input -> Map.Map IdentCC CCStatus -> OS -> (Map.Map IdentCC CCStatus, [Action])
 

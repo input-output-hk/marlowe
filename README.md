@@ -2,7 +2,7 @@
 
 This repository contains a preliminary design of a DSL for describing smart-contracts that can be enforced by scripts deployed on a cryptocurrency's blockchain, and some tools for analysing and simulating the execution of contracts written in the DSL.
 
-- `Semantics.hs` —  contains the small-step semantics of DSL (`full_step` function), together with a simple driver (`driver` function).
+- `Semantics.hs` —  contains the small-step semantics of DSL (`fullStep` function), together with a simple driver (`driver` function).
 - `DepositIncentive.hs` —  contains an example contract for incentivising saving.
 - `Analysis.hs` —  contains functions for analysing all the possible outcomes of running the DSL (`analysis` function).
 

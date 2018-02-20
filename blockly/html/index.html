@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Marlowe - Blockly</title>
+  <script src="blockly/blockly_compressed.js"></script>
+  <script src="blockly/blocks_compressed.js"></script>
+  <script src="blockly/en.js"></script>
+  <script src="jquery/jquery.min.js"></script>
+  <script src="jquery_resize/jquery.elementresize.js"></script>
+    <style type="text/css">
+      * {
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+      }
+      html, body {
+        height: 100%;
+        width: 100%;
+        margin: 0px;
+        padding: 0px;
+        display: table;
+      }
+      #main {
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        height: 100%;
+        width: 100%;
+      }
+      #blocklyArea {
+        position: relative;
+        float: left;
+        left: 0px;
+        top: 0px;
+        height: 100%;
+        width: 50%;
+        resize: horizontal;
+        overflow: hidden;
+        border-right: 2px solid;
+      }
+      #ui {
+        position: relative;
+        height: 100%;
+        overflow: auto;
+      }
+      #codeArea {
+        overflow: auto;
+        height: 25%;
+        width: 100%;
+      }
+      #c2b {
+        width: 25%;
+      }
+      #b2c {
+        width: 25%;
+      }
+      #clear {
+        width: 25%;
+      }
+      #execute {
+        width: 25%;
+      }
+      textarea {
+        font-family: Consolas,monaco,monospace; 
+        resize: vertical;
+	overflow: auto;
+      }
+    </style>
+<body>
+  <div id="main">
+    <div id="blocklyArea"></div>
+    <div id="ui">
+<textarea id="codeArea">
+CommitCash (IdentCC 1) 1 100 10 200
+  (Choice (BelowTimeout 10)
+          (CommitCash (IdentCC 2) 2 20 20 200
+            (Choice (BelowTimeout 20)
+                    (When (PersonChoseSomething (IdentChoice 1) 1) 100
+                          (Both (RedeemCC (IdentCC 1) Null)
+                                (RedeemCC (IdentCC 2) Null))
+                          (Pay (IdentPay 1) 2 1 20 200
+                               (Both (RedeemCC (IdentCC 1) Null)
+                                     (RedeemCC (IdentCC 2) Null))))
+                    (RedeemCC (IdentCC 1) Null)))
+          Null)
+</textarea>
+<button id="b2c" onclick="Haste.b2c()">-&gt; Blockly to Code</button><button id="c2b" onclick="Haste.c2b()">Code to Blockly &lt;-</button><button id="clear" onclick="Haste.clear_workspace()">Clear</button><button id="execute" onclick="Haste.execute()">Execute</button>
+<br /><br />
+    <div><p style="display:inline;">Current block: </p><input style="display:inline;" type="text" id="currBlock" value="0"></input></div>
+    <div><h3>Contract state:</h3></div>
+	 <textarea id="contractState" style="width: 100%; height: 10%; ">([], [])</textarea>
+    <div><h3>Input:</h3></div>
+	 <textarea id="contractInput" style="width: 100%; height: 10%; ">([], [], [], [])</textarea>
+    <div>
+      <ul>
+	<li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="commitsPerson" value="1"></input><p style="display:inline;"> <b>commits</b> </p><input style="display:inline; width: 50px" type="text" id="commitsAmmount" value="0"></input><p style="display:inline;"> ADA with ID </p><input style="display:inline; width: 50px" type="text" id="commitsID" value="1"><p style="display:inline;"> to expire by </p><input style="display:inline; width: 50px" type="text" id="commitsExpiry" value="1"></input><button id="commit" onclick="Haste.commit(document.getElementById('commitsPerson').value,document.getElementById('commitsAmmount').value,document.getElementById('commitsID').value,document.getElementById('commitsExpiry').value)">Add to input</button></li>
+	<li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="redeemsPerson" value="1"></input><p style="display:inline;"> <b>redeems</b> </p><input style="display:inline; width: 50px" type="text" id="redeemsAmmount" value="0"></input><p style="display:inline;"> ADA from ID </p><input style="display:inline; width: 50px" type="text" id="redeemsID" value="1"></input><button id="redeem" onclick="Haste.redeem(document.getElementById('redeemsPerson').value,document.getElementById('redeemsAmmount').value,document.getElementById('redeemsID').value)">Add to input</button></li>
+	<li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="claimsPerson" value="1"></input><p style="display:inline;"> <b>claims</b> </p><input style="display:inline; width: 50px" type="text" id="claimsAmmount" value="0"></input><p style="display:inline;"> ADA from ID </p><input style="display:inline; width: 50px" type="text" id="claimsID" value="1"></input><button id="claim" onclick="Haste.claim(document.getElementById('claimsPerson').value,document.getElementById('claimsAmmount').value,document.getElementById('claimsID').value)">Add to input</button></li>
+	<li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="choosesPerson" value="1"></input><p style="display:inline;"> <b>chooses value</b> </p><input style="display:inline; width: 50px" type="text" id="choosesAmmount" value="0"></input><p style="display:inline;"> for ID </p><input style="display:inline; width: 50px" type="text" id="choosesID" value="1"></input><button id="choice" onclick="Haste.choose(document.getElementById('choosesPerson').value,document.getElementById('choosesAmmount').value,document.getElementById('choosesID').value)">Add to input</button></li>
+      </ul>
+     </div>
+    <div><h3>Output:</h3></div>
+	 <textarea id="contractOutput" style="width: 100%; height: 10%; "></textarea>
+    </div>
+  </div>
+  <div id="blocklyDiv" style="position: absolute"></div>
+  <xml xmlns="http://www.w3.org/1999/xhtml" id="toolbox" style="display: none;">
+    <category name="Observation">
+      <block type="observation_trueobs"></block>
+      <block type="observation_falseobs"></block>
+      <block type="observation_notobs"></block>
+      <block type="observation_orobs"></block>
+      <block type="observation_andobs"></block>
+      <block type="observation_belowtimeout">
+        <field name="block_number">0</field>
+      </block>
+      <block type="observation_personchosesomething">
+        <field name="choice_id">1</field>
+        <field name="person">1</field>
+      </block>
+      <block type="observation_personchosethis">
+        <field name="choice_id">1</field>
+        <field name="person">1</field>
+        <field name="choice_value">0</field>
+      </block>
+    </category>
+    <category name="Contract">
+      <block type="contract_null"></block>
+      <block type="contract_pay">
+        <field name="pay_id">1</field>
+        <field name="payer_id">1</field>
+        <field name="ammount">0</field>
+        <field name="payee_id">1</field>
+        <field name="expiration">1</field>
+      </block>
+      <block type="contract_both"></block>
+      <block type="contract_choice"></block>
+      <block type="contract_when">
+        <field name="timeout">0</field>
+      </block>
+      <block type="contract_commitcash">
+        <field name="ccommit_id">1</field>
+        <field name="person_id">1</field>
+        <field name="ammount">0</field>
+        <field name="start_expiration">0</field>
+        <field name="end_expiration">0</field>
+      </block>
+      <block type="contract_redeemcc">
+        <field name="ccommit_id">1</field>
+      </block>
+    </category>
+  </xml>
+  <xml xmlns="http://www.w3.org/1999/xhtml" id="workspaceBlocks" style="display:none">
+    <variables></variables>
+    <block type="base_contract" id="brFRgBBnfL!JVLIp:jc#" x="13" y="187"></block>
+  </xml>
+  <script>
+    var blocklyArea = document.getElementById('blocklyArea');
+    var blocklyDiv = document.getElementById('blocklyDiv');
+    var workspaceBlocks = document.getElementById("workspaceBlocks");
+    var demoWorkspace = Blockly.inject(blocklyDiv,
+        {media: 'blockly/media/',
+         toolbox: document.getElementById('toolbox')});
+    var onresize = function(e) {
+      // Compute the absolute coordinates and dimensions of blocklyArea.
+      var element = blocklyArea;
+      var x = 0;
+      var y = 0;
+      do {
+        x += element.offsetLeft;
+        y += element.offsetTop;
+        element = element.offsetParent;
+      } while (element);
+      // Position blocklyDiv over blocklyArea.
+      blocklyDiv.style.left = x + 'px';
+      blocklyDiv.style.top = y + 'px';
+      blocklyDiv.style.width = (blocklyArea.offsetWidth - 20) + 'px';
+      blocklyDiv.style.height = blocklyArea.offsetHeight + 'px';
+      Blockly.svgResize(demoWorkspace);
+    };
+    onresize();
+    window.addEventListener('resize', onresize, false);
+    $("#blocklyArea").on('elementResize', function () { onresize(null);} );
+    var blocks = [{"type": "observation_andobs",
+                   "message0": "AndObs %1 %2 and %3 %4",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "input_value",
+                       "name": "observation1",
+                       "check": "observation",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_value",
+                       "name": "observation2",
+                       "check": "observation",
+                       "align": "RIGHT"
+                     }
+                   ],
+                   "inputsInline": true,
+                   "output": "observation",
+                   "colour": 230,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "observation_belowtimeout",
+                   "lastDummyAlign0": "RIGHT",
+                   "message0": "BelowTimeout %1 block %2",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "field_input",
+                       "name": "block_number",
+                       "text": "0"
+                     }
+                   ],
+                   "inputsInline": false,
+                   "output": "observation",
+                   "colour": 230,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "observation_falseobs",
+                   "lastDummyAlign0": "CENTRE",
+                   "message0": "FalseObs",
+                   "output": "observation",
+                   "colour": 230,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "observation_notobs",
+                   "message0": "NotObs %1 %2",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "input_value",
+                       "name": "observation",
+                       "check": "observation",
+                       "align": "RIGHT"
+                     }
+                   ],
+                   "inputsInline": true,
+                   "output": "observation",
+                   "colour": 230,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "observation_orobs",
+                   "message0": "OrObs %1 %2 or %3 %4",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "input_value",
+                       "name": "observation1",
+                       "check": "observation",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_value",
+                       "name": "observation2",
+                       "check": "observation",
+                       "align": "RIGHT"
+                     }
+                   ],
+                   "inputsInline": true,
+                   "output": "observation",
+                   "colour": 230,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "observation_personchosesomething",
+                   "lastDummyAlign0": "CENTRE",
+                   "message0": "PersonChoseSomething %1 for choice with id %2 ... %3 person %4 %5 chose something",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "field_input",
+                       "name": "choice_id",
+                       "text": "1"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "field_input",
+                       "name": "person",
+                       "text": "1"
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
+                     }
+                   ],
+                   "output": "observation",
+                   "colour": 230,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "observation_personchosethis",
+                   "lastDummyAlign0": "RIGHT",
+                   "message0": "PersonChoseThis %1 for choice with id %2 ... %3 person %4 %5 chose %6 num %7",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "field_input",
+                       "name": "choice_id",
+                       "text": "1"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "field_input",
+                       "name": "person",
+                       "text": "1"
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "field_input",
+                       "name": "choice_value",
+                       "text": "0"
+                     }
+                   ],
+                   "output": "observation",
+                   "colour": 230,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "observation_trueobs",
+                   "lastDummyAlign0": "CENTRE",
+                   "message0": "TrueObs",
+                   "output": "observation",
+                   "colour": 230,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "base_contract",
+                   "message0": "%1 CONTRACT %2 %3",
+                   "args0": [
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_statement",
+                       "name": "base_contract",
+                       "check": "contract",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "input_dummy"
+                     }
+                   ],
+                   "inputsInline": false,
+                   "colour": 0,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "contract_null",
+                   "message0": "Null",
+                   "previousStatement": "contract",
+                   "colour": 0,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "contract_redeemcc",
+                   "message0": "RedeemCC %1 allow the commit %2 with id %3 %4 to be redeemed then %5 continue as %6",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "ccommit_id",
+                       "value": 0,
+                       "min": 1
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_statement",
+                       "name": "contract",
+                       "check": "contract"
+                     }
+                   ],
+                   "previousStatement": "contract",
+                   "colour": 0,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "contract_pay",
+                   "message0": "Pay %1 with id %2 %3 use money commited by %4 person with id %5 %6 to pay %7 ADA %8 to person with id %9 %10 if claimed before block %11 %12 continue as %13",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "pay_id",
+                       "value": 1,
+                       "min": 1
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "payer_id",
+                       "value": 1,
+                       "min": 1
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "ammount",
+                       "value": 0,
+                       "min": 0
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "payee_id",
+                       "value": 1,
+                       "min": 1
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "expiration",
+                       "value": 1,
+                       "min": 0
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "input_statement",
+                       "name": "contract",
+                       "check": "contract"
+                     }
+                   ],
+                   "previousStatement": "contract",
+                   "colour": 0,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "contract_both",
+                   "message0": "Both %1 enforce both %2 %3 and %4 %5",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_statement",
+                       "name": "contract1",
+                       "check": "contract",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_statement",
+                       "name": "contract2",
+                       "check": "contract",
+                       "align": "RIGHT"
+                     }
+                   ],
+                   "previousStatement": "contract",
+                   "colour": 0,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "contract_choice",
+                   "message0": "Choice %1 if observation %2 then continue as %3 %4 otherwise continue as %5 %6",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "input_value",
+                       "name": "observation",
+                       "check": "observation"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_statement",
+                       "name": "contract1",
+                       "check": "contract",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_statement",
+                       "name": "contract2",
+                       "check": "contract",
+                       "align": "RIGHT"
+                     }
+                   ],
+                   "previousStatement": "contract",
+                   "colour": 0,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "contract_commitcash",
+                   "message0": "CommitCash %1 with id %2 %3 person with id %4 %5 may deposit %6 ADA before block %7 %8 money can be redeemed on block %9 or after, %10 if money is committed or it is too late to commit %11 continue as %12",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "ccommit_id",
+                       "value": 1,
+                       "min": 1
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "person_id",
+                       "value": 1,
+                       "min": 1
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "ammount",
+                       "value": 0,
+                       "min": 0
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "start_expiration",
+                       "value": 0,
+                       "min": 0
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "end_expiration",
+                       "value": 0,
+                       "min": 0
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_statement",
+                       "name": "contract",
+                       "check": "contract"
+                     }
+                   ],
+                   "previousStatement": "contract",
+                   "colour": 0,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "contract_when",
+                   "message0": "When %1 as soon as observation %2 continue as %3 %4 if block is  %5 or higher continue as %6 %7",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "input_value",
+                       "name": "observation",
+                       "check": "observation"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_statement",
+                       "name": "contract1",
+                       "check": "contract",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "timeout",
+                       "value": 0,
+                       "min": 0
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_statement",
+                       "name": "contract2",
+                       "check": "contract",
+                       "align": "RIGHT"
+                     }
+                   ],
+                   "previousStatement": "contract",
+                   "colour": 0,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 }];
+    blocks.forEach(function (block) { Blockly.Blocks[block["type"]] = {init: function() {this.jsonInit(block)}}; });
+    Blockly.Marlowe = new Blockly.Generator('Marlowe');
+    Blockly.Marlowe.init = function(workspace) {};
+    Blockly.Marlowe.replace = function(a,b) {};
+    Blockly.Marlowe.finish = function(code) { return code; };
+    Blockly.Marlowe.scrub_ = function(block, code) { return code; };
+    Blockly.Marlowe['observation_andobs'] = function(block) {
+      var value_observation1 = Blockly.Marlowe.valueToCode(block, 'observation1', Blockly.Marlowe.ORDER_ATOMIC);
+      var value_observation2 = Blockly.Marlowe.valueToCode(block, 'observation2', Blockly.Marlowe.ORDER_ATOMIC);
+      var code = '(AndObs ' + value_observation1 + ' ' + value_observation2 + ')';
+      return [code, 0];
+    };
+    
+    Blockly.Marlowe['observation_belowtimeout'] = function(block) {
+      var text_block_number = block.getFieldValue('block_number');
+      var code = '(BelowTimeout ' + text_block_number + ')';
+      return [code, 0];
+    };
+    
+    Blockly.Marlowe['observation_falseobs'] = function(block) {
+      var code = 'FalseObs';
+      return [code, 0];
+    };
+    
+    Blockly.Marlowe['observation_notobs'] = function(block) {
+      var value_observation = Blockly.Marlowe.valueToCode(block, 'observation', Blockly.Marlowe.ORDER_ATOMIC);
+      var code = '(NotObs ' + value_observation + ')';
+      return [code, 0];
+    };
+    
+    Blockly.Marlowe['observation_orobs'] = function(block) {
+      var value_observation1 = Blockly.Marlowe.valueToCode(block, 'observation1', Blockly.Marlowe.ORDER_ATOMIC);
+      var value_observation2 = Blockly.Marlowe.valueToCode(block, 'observation2', Blockly.Marlowe.ORDER_ATOMIC);
+      var code = '(OrObs ' + value_observation1 + ' ' + value_observation2 +')';
+      return [code, 0];
+    };
+    
+    Blockly.Marlowe['observation_personchosesomething'] = function(block) {
+      var text_choice_id = block.getFieldValue('choice_id');
+      var text_person = block.getFieldValue('person');
+      var code = '(PersonChoseSomething (IdentChoice ' + text_choice_id + ') ' +  text_person + ')';
+      return [code, 0];
+    };
+    
+    Blockly.Marlowe['observation_personchosethis'] = function(block) {
+      var text_choice_id = block.getFieldValue('choice_id');
+      var text_person = block.getFieldValue('person');
+      var text_choice_value = block.getFieldValue('choice_value');
+      var code = '(PersonChoseThis (IdentChoice ' + text_choice_id + ') ' + text_person + ' ' + text_choice_value + ')';
+      return [code, 0];
+    };
+    
+    Blockly.Marlowe['observation_trueobs'] = function(block) {
+      var code = 'TrueObs';
+      return [code, 0];
+    };
+    
+    Blockly.Marlowe['base_contract'] = function(block) {
+      var statements_name = Blockly.Marlowe.statementToCode(block, 'base_contract');
+      var code = statements_name;
+      return code;
+    };
+    
+    Blockly.Marlowe['contract_null'] = function(block) {
+      var code = 'Null';
+      return code;
+    };
+    
+    Blockly.Marlowe['contract_redeemcc'] = function(block) {
+      var number_ccommit_id = block.getFieldValue('ccommit_id');
+      var statements_contract = Blockly.Marlowe.statementToCode(block, 'contract');
+      var code = '(RedeemCC (IdentCC ' + number_ccommit_id + ') ' + statements_contract + ')';
+      return code;
+    };
+    
+    Blockly.Marlowe['contract_pay'] = function(block) {
+      var number_pay_id = block.getFieldValue('pay_id');
+      var number_payer_id = block.getFieldValue('payer_id');
+      var number_ammount = block.getFieldValue('ammount');
+      var number_payee_id = block.getFieldValue('payee_id');
+      var number_expiration = block.getFieldValue('expiration');
+      var statements_contract = Blockly.Marlowe.statementToCode(block, 'contract');
+      var code = '(Pay (IdentPay ' + number_pay_id + ') ' + number_payer_id + ' ' + number_payee_id +
+                 ' ' + number_ammount + ' ' + number_expiration + ' ' + statements_contract + ')';
+      return code;
+    };
+    
+    Blockly.Marlowe['contract_both'] = function(block) {
+      var statements_contract1 = Blockly.Marlowe.statementToCode(block, 'contract1');
+      var statements_contract2 = Blockly.Marlowe.statementToCode(block, 'contract2');
+      var code = '(Both ' + statements_contract1 + ' ' + statements_contract2 + ')';
+      return code;
+    };
+    
+    Blockly.Marlowe['contract_choice'] = function(block) {
+      var value_observation = Blockly.Marlowe.valueToCode(block, 'observation', Blockly.Marlowe.ORDER_ATOMIC);
+      var statements_contract1 = Blockly.Marlowe.statementToCode(block, 'contract1');
+      var statements_contract2 = Blockly.Marlowe.statementToCode(block, 'contract2');
+      var code = '(Choice ' + value_observation + ' ' + statements_contract1 + ' ' + statements_contract2 + ')';
+      return code;
+    };
+    
+    Blockly.Marlowe['contract_commitcash'] = function(block) {
+      var number_ccommit_id = block.getFieldValue('ccommit_id');
+      var number_person_id = block.getFieldValue('person_id');
+      var number_ammount = block.getFieldValue('ammount');
+      var number_start_expiration = block.getFieldValue('start_expiration');
+      var number_end_expiration = block.getFieldValue('end_expiration');
+      var statements_contract = Blockly.Marlowe.statementToCode(block, 'contract');
+      var code = '(CommitCash (IdentCC ' + number_ccommit_id + ') ' + number_person_id + ' ' + number_ammount +
+                 ' ' + number_start_expiration + ' ' + number_end_expiration + ' ' + statements_contract + ')';
+      return code;
+    };
+    
+    Blockly.Marlowe['contract_when'] = function(block) {
+      var value_observation = Blockly.Marlowe.valueToCode(block, 'observation', Blockly.Marlowe.ORDER_ATOMIC);
+      var statements_contract1 = Blockly.Marlowe.statementToCode(block, 'contract1');
+      var number_timeout = block.getFieldValue('timeout');
+      var statements_contract2 = Blockly.Marlowe.statementToCode(block, 'contract2');
+      var code = '(When ' + value_observation + ' ' + number_timeout +
+                 ' ' + statements_contract1 + ' ' + statements_contract2 + ')';
+      return code;
+    };
+        /* Load blocks to workspace. */
+    Blockly.Xml.domToWorkspace(workspaceBlocks, demoWorkspace);
+    demoWorkspace.getAllBlocks()[0].setDeletable(false);
+  </script>
+  <script src="marlowe.js"></script>
+</body>
+</html>

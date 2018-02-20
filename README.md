@@ -6,6 +6,14 @@ This repository contains a preliminary design of a DSL for describing smart-cont
 - `DepositIncentive.hs` —  contains an example contract for incentivising saving.
 - `Analysis.hs` —  contains functions for analysing all the possible outcomes of running the DSL (`analysis` function).
 
+## Interactive demo
+
+A browser-based demo prototype is available that supports graphical editing of smart-contracts (thanks to the Blockly library) and block by block simulation of their execution (translated from the semantics thanks to the Haste compiler).
+
+The demo is available at: https://input-output-hk.github.io/scdsl/
+
+The sources are available in the blockly folder.
+
 ## Analysis
 
 For analysing all the possible outcomes of a contract we run the function `analysis`. The number of possible outcomes can be large so we can filter them using some criteria. For example, for executing analysis on the rock-paper-scissors contract we may run:

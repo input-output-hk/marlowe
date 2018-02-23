@@ -124,6 +124,7 @@ CommitCash (IdentCC 1) 1 100 10 200
         <field name="person">1</field>
         <field name="choice_value">0</field>
       </block>
+      <block type="observation_value_ge"></block>
     </category>
     <category name="Contract">
       <block type="contract_null"></block>
@@ -148,6 +149,15 @@ CommitCash (IdentCC 1) 1 100 10 200
       </block>
       <block type="contract_redeemcc">
         <field name="ccommit_id">1</field>
+      </block>
+    </category>
+    <category name="Money">
+      <block type="value_available_money">
+        <field name="commit_id">1</field>
+      </block>
+      <block type="value_add_money"></block>
+      <block type="value_const_money">
+        <field name="money">0</field>
       </block>
     </category>
   </xml>
@@ -357,6 +367,26 @@ CommitCash (IdentCC 1) 1 100 10 200
                      {
                        "type": "field_input",
                        "name": "choice_value",
+                       "text": "0"
+                     }
+                   ],
+                   "output": "observation",
+                   "colour": 230,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "observation_timeabove",
+                   "lastDummyAlign0": "RIGHT",
+                   "message0": "TimeAbove %1 block %2",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "field_input",
+                       "name": "block_number",
                        "text": "0"
                      }
                    ],
@@ -689,6 +719,112 @@ CommitCash (IdentCC 1) 1 100 10 200
                    "colour": 0,
                    "tooltip": "",
                    "helpUrl": ""
+                 },
+                 {
+                   "type": "observation_value_ge",
+                   "message0": "ValueGE %1 %2 is greater or equal than %3 %4",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "input_value",
+                       "name": "value1",
+                       "check": "value",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_value",
+                       "name": "value2",
+                       "check": "value",
+                       "align": "RIGHT"
+                     }
+                   ],
+                   "inputsInline": true,
+                   "output": "observation",
+                   "colour": 230,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "value_available_money",
+                   "lastDummyAlign0": "CENTRE",
+                   "message0": "AvailableMoney %1 money available from the commit with id: %2 %3",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "commit_id",
+                       "value": 1
+                     }
+                   ],
+                   "inputsInline": true,
+                   "output": "value",
+                   "colour": 135,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "value_add_money",
+                   "message0": "AddMoney %1 %2 + %3 %4",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "input_value",
+                       "name": "value1",
+                       "check": "value"
+                     },
+                     {
+                       "type": "input_dummy"
+                     },
+                     {
+                       "type": "input_value",
+                       "name": "value2",
+                       "check": "value"
+                     }
+                   ],
+                   "inputsInline": true,
+                   "output": "value",
+                   "colour": 135,
+                   "tooltip": "",
+                   "helpUrl": ""
+                 },
+                 {
+                   "type": "value_const_money",
+                   "message0": "ConstMoney %1 %2 %3 ADA",
+                   "args0": [
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     },
+                     {
+                       "type": "field_number",
+                       "name": "money",
+                       "value": 0
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "CENTRE"
+                     }
+                   ],
+                   "inputsInline": true,
+                   "output": "value",
+                   "colour": 135,
+                   "tooltip": "",
+                   "helpUrl": ""
                  }];
     blocks.forEach(function (block) { Blockly.Blocks[block["type"]] = {init: function() {this.jsonInit(block)}}; });
     Blockly.Marlowe = new Blockly.Generator('Marlowe');
@@ -813,10 +949,38 @@ CommitCash (IdentCC 1) 1 100 10 200
                  ' ' + statements_contract1 + ' ' + statements_contract2 + ')';
       return code;
     };
-        /* Load blocks to workspace. */
+
+    Blockly.Marlowe['observation_value_ge'] = function(block) {
+      var value_value1 = Blockly.Marlowe.valueToCode(block, 'value1', Blockly.Marlowe.ORDER_ATOMIC);
+      var value_value2 = Blockly.Marlowe.valueToCode(block, 'value2', Blockly.Marlowe.ORDER_ATOMIC);
+      var code = '(ValueGE ' + value_value1 + ' ' + value_value2 + ')';
+      return [code, 0];
+    };
+
+    Blockly.Marlowe['value_available_money'] = function(block) {
+      var number_commit_id = block.getFieldValue('commit_id');
+      var code = '(AvailableMoney (IdentCC ' + number_commit_id + '))';
+      return [code, 0];
+    };
+
+    Blockly.Marlowe['value_add_money'] = function(block) {
+      var value_value1 = Blockly.Marlowe.valueToCode(block, 'value1', Blockly.Marlowe.ORDER_ATOMIC);
+      var value_value2 = Blockly.Marlowe.valueToCode(block, 'value2', Blockly.Marlowe.ORDER_ATOMIC);
+      var code = '(AddMoney ' + value_value1 + ' ' + value_value2 + ')';
+      return [code, 0];
+    };
+
+    Blockly.Marlowe['value_const_money'] = function(block) {
+      var number_money = block.getFieldValue('money');
+      var code = '(ConstMoney ' + number_money + ')';
+      return [code, 0];
+    };
+
+    /* Load blocks to workspace. */
     Blockly.Xml.domToWorkspace(workspaceBlocks, demoWorkspace);
     demoWorkspace.getAllBlocks()[0].setDeletable(false);
   </script>
   <script src="marlowe.js"></script>
 </body>
 </html>
+

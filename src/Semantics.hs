@@ -119,14 +119,29 @@ data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
 -- TO DO: add enough operations to make complete for arithmetic etc.
 -- as well as enough primitive observations over the primitive values.
 
+data Money = AvailableMoney IdentCC |
+             AddMoney Money Money |
+             ConstMoney Cash
+                    deriving (Eq,Ord,Show,Read)
+
 data Observation =  BelowTimeout Timeout | -- is this number below the actual block number?
                     AndObs Observation Observation |
                     OrObs Observation Observation |
                     NotObs Observation |
                     PersonChoseThis IdentChoice Person ConcreteChoice |
                     PersonChoseSomething IdentChoice Person |
+                    ValueGE Money Money |
                     TrueObs | FalseObs
                     deriving (Eq,Ord,Show,Read)
+
+-- Semantics of money
+reduceMoney :: State -> Money -> Cash
+reduceMoney (State {sc = scv}) (AvailableMoney id) =
+  case Map.lookup id scv of
+    Just (_, NotRedeemed c _) -> c
+    _ -> 0
+reduceMoney s (AddMoney a b) = (reduceMoney s a) + (reduceMoney s b)
+reduceMoney _ (ConstMoney c) = c
 
 -- Semantics of observations
 
@@ -146,6 +161,8 @@ interpretObs st (PersonChoseThis choice_id person reference_choice) _
         Nothing -> False
 interpretObs st (PersonChoseSomething choice_id person) _
     = Map.member (choice_id, person) (sch st)
+interpretObs st (ValueGE a b) _
+    = (reduceMoney st a) >= (reduceMoney st b)
 interpretObs _ TrueObs _
     = True
 interpretObs _ FalseObs _

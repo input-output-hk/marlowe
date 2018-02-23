@@ -183,6 +183,26 @@
   "helpUrl": ""
 },
 {
+  "type": "observation_timeabove",
+  "lastDummyAlign0": "RIGHT",
+  "message0": "TimeAbove %1 block %2",
+  "args0": [
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "field_input",
+      "name": "block_number",
+      "text": "0"
+    }
+  ],
+  "output": "observation",
+  "colour": 230,
+  "tooltip": "",
+  "helpUrl": ""
+},
+{
   "type": "observation_trueobs",
   "lastDummyAlign0": "CENTRE",
   "message0": "TrueObs",
@@ -504,6 +524,112 @@
   ],
   "previousStatement": "contract",
   "colour": 0,
+  "tooltip": "",
+  "helpUrl": ""
+},
+{
+  "type": "observation_value_ge",
+  "message0": "ValueGE %1 %2 is greater or equal than %3 %4",
+  "args0": [
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "input_value",
+      "name": "value1",
+      "check": "value",
+      "align": "RIGHT"
+    },
+    {
+      "type": "input_dummy"
+    },
+    {
+      "type": "input_value",
+      "name": "value2",
+      "check": "value",
+      "align": "RIGHT"
+    }
+  ],
+  "inputsInline": true,
+  "output": "observation",
+  "colour": 230,
+  "tooltip": "",
+  "helpUrl": ""
+},
+{
+  "type": "value_available_money",
+  "lastDummyAlign0": "CENTRE",
+  "message0": "AvailableMoney %1 money available from the commit with id: %2 %3",
+  "args0": [
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "input_dummy"
+    },
+    {
+      "type": "field_number",
+      "name": "commit_id",
+      "value": 1
+    }
+  ],
+  "inputsInline": true,
+  "output": "value",
+  "colour": 135,
+  "tooltip": "",
+  "helpUrl": ""
+},
+{
+  "type": "value_add_money",
+  "message0": "AddMoney %1 %2 + %3 %4",
+  "args0": [
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "input_value",
+      "name": "value1",
+      "check": "value"
+    },
+    {
+      "type": "input_dummy"
+    },
+    {
+      "type": "input_value",
+      "name": "value2",
+      "check": "value"
+    }
+  ],
+  "inputsInline": true,
+  "output": "value",
+  "colour": 135,
+  "tooltip": "",
+  "helpUrl": ""
+},
+{
+  "type": "value_const_money",
+  "message0": "ConstMoney %1 %2 %3 ADA",
+  "args0": [
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "field_number",
+      "name": "money",
+      "value": 0
+    },
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    }
+  ],
+  "inputsInline": true,
+  "output": "value",
+  "colour": 135,
   "tooltip": "",
   "helpUrl": ""
 }]

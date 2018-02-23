@@ -86,6 +86,14 @@ connect_obs_as_input str p y =
      ip <- get_input_with_name str il
      connect_to_output y ip
 
+connect_value_as_input :: String -> Block -> Block -> IO ()
+connect_value_as_input str p y =
+  do il <- get_input_list p
+     ip <- get_input_with_name str il
+     connect_to_output y ip
+
+
+
 -- get fieldrow list
 
 get_fieldrow_list_length :: BInput -> IO Int
@@ -130,9 +138,35 @@ set_field_value b n v =
   do fr <- get_fieldrow_with_name_from_block n b
      set_fieldrow_text fr (show v)
 
+
+-- money to Blockly
+money_to_blockly :: Money -> IO Block
+money_to_blockly (AvailableMoney (IdentCC id)) =
+  do tb <- create_block "value_available_money"
+     set_field_value tb "commit_id" id
+     return tb
+money_to_blockly (AddMoney v1 v2) =
+  do vb1 <- money_to_blockly v1
+     vb2 <- money_to_blockly v2
+     tb <- create_block "value_add_money"
+     connect_value_as_input "value1" tb vb1
+     connect_value_as_input "value2" tb vb2
+     return tb
+money_to_blockly (ConstMoney cv) =
+  do tb <- create_block "value_const_money"
+     set_field_value tb "money" cv
+     return tb
+
 -- block to blockly
 
 obs_to_blockly :: Observation -> IO Block
+obs_to_blockly (ValueGE v1 v2) =
+  do vb1 <- money_to_blockly v1
+     vb2 <- money_to_blockly v2
+     tb <- create_block "observation_value_ge"
+     connect_value_as_input "value1" tb vb1
+     connect_value_as_input "value2" tb vb2
+     return tb
 obs_to_blockly (AndObs obs1 obs2) =
   do ob1 <- obs_to_blockly obs1
      ob2 <- obs_to_blockly obs2

@@ -17,6 +17,7 @@
       <field name="person">1</field>
       <field name="choice_value">0</field>
     </block>
+    <block type="observation_value_ge"></block>
   </category>
   <category name="Contract">
     <block type="contract_null"></block>
@@ -41,6 +42,15 @@
     </block>
     <block type="contract_redeemcc">
       <field name="ccommit_id">1</field>
+    </block>
+  </category>
+  <category name="Money">
+    <block type="value_available_money">
+      <field name="commit_id">1</field>
+    </block>
+    <block type="value_add_money"></block>
+    <block type="value_const_money">
+      <field name="money">0</field>
     </block>
   </category>
 </xml>

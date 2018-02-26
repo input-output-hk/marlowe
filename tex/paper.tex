@@ -46,6 +46,7 @@
 \usepackage{pbox}
 \usepackage{tikz}
 \usepackage{url}
+\usepackage{alltt}
 
 % Must come after hyperref
 \usepackage[capitalise]{cleveref}
@@ -117,6 +118,496 @@
 \section{Introduction}
 
 No introduction \cite{garfield1996cite}.
+
+\section{Contract DSL model discussion, Version 1.1, September 2017}
+The aim of this document is to set out the assumptions behind the Haskell model of a contract DSL blockchain. Code for this model is in the repository \url{https://github.com/input-output-hk/scdsl}
+
+
+The document is structured like this:
+
+\begin{enumerate}
+\item An overview of the model, including the assumptions made in designing it, the types of the principal functions and a description of the DSL as an algebraic type, constructor by constructor. The section aims to give a high level overview, and some of the concrete details are to be found in the repo.
+\item A discussion of the kinds of formal analysis which might be made for the DSL.
+\item A set of questions raised by the process of modelling.
+\item A response to some particular points relevant to this work and raised in the email discussion on ``Some Thoughts on Smart Contracts'' initiated by Charles, and taken up by Duncan and Phil.
+\item Background: an overview of the Rock-Paper-Scissors example from the repo and the discussion.
+\item A response to Charles’ comments as posted to slack.
+\end{enumerate}
+
+\subsection{The model}
+The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
+A running contract will interact with its environment in two ways.
+  
+
+First, it will need to observe different kinds of varying quantities including, for example, the current time, the current block number and, random numbers, as well as ``real world'' quantities like ``the price of oil'' or ``the exchange rate between currencies A and B''. Each instance of such an observable will be recorded on the blockchain to allow the computation to be repeated for verification purposes. It is assumed that at each step of the execution of the contract, the values of some observables will be needed.
+
+
+Second, it will be necessary to ensure that commitments of various kinds have been made by the participants in a contract. We have included two kinds of commitments here:
+\begin{itemize}
+\item A commitment to a value: this would include a choice of a play in a game, which would be chosen and concealed from the other players until a later point in play, when it is revealed.
+
+
+\item A commitment to a certain amount of cash: while a commitment to a value is indefinite, a cash commitment needs to have a timeout so that progress can be forced in a game. After the timeout period the cash is automatically refunded; in practice this might require the user explicitly to create a transaction to reclaim the cash.
+\end{itemize}
+
+At each step, a number of commitments may be made. This information constitutes an input to the execution of each step. Moreover, information about the commitments currently in force forms the state, which is (potentially) modified at each execution step.
+
+
+Finally, a running contract will initiate a number of payment actions on the blockchain at each step, represented by a list of actions.
+
+
+This analysis justifies the type of the step function:
+
+\begin{verbatim}
+step :: Commits -> State -> Contract -> OS -> (State,Contract,AS)
+\end{verbatim}
+
+
+Where \verb+OS+ contains the current values for observables, and \verb+AS+ is a list of actions (currently payments) that are carried out as a result of executing the step.
+
+
+The model is based on a number of assumptions.
+
+\begin{itemize}
+\item It is assumed that cryptographic ``services'' or operations are provided by a wrapper layer external to the system, and are not modelled explicitly here.
+\item Making a commitment is not something that a contract can perform; rather, it can require that a commitment is made, but that then has to be established externally: hence the input of (a set of) commitments at each step. The same applies to revealing a value commitment, and to manually redeeming a cash commitment.
+\item Observables are observed at a particular time and in a particular context. We assume that the recording and identification of each (instance of an) observation is provided by the infrastructure of the system. We provide a ``little language'' for describing observations: Observation\footnote{Why doesn't Observation appear in the type of step? I would expect a contract would need to yield a request for observations to be made, and accept the value of those observations.}\footnote{The current values of *observables* required at each step are the input OS to the step function. We assume that the infrastructure is designed to record these, but that is not part of the DSL itself. The *observations* over OS are part of the contract (e.g. the Choice constructor).}
+\item The fact of making commitments also needs to be recorded.
+\item It is important to be aware that there may be different instances of contracts executed, and for each instance there will typically be different instances of observables (and commitments) observed and recorded.
+\item The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the full\_step function below).
+\end{itemize}
+
+The type of contracts is given by
+
+\begin{alltt}
+data Contract =
+   Null |
+   RedeemCC IdentCC Contract |
+   RevealCV IdentCV Contract |
+   Pay Person Person Int Contract |
+   Both Contract Contract |
+   Choice Observation\footnote{Doesn't the step function need to record what observations are made, so they can be archived in the blockchain? I don't see how your design will support doing so.}\footnote{Yes, we assume that it is part of the infrastructure of this language to record the values of *observables* that are used. However, we have chosen no to make it part of the language itself.} Contract Contract |
+   CommitValue IdentCV Person [Value] Contract |
+   CommitCash IdentCC Person Cash Time Contract |
+   When Observation Time Contract Contract
+\end{alltt}
+
+
+The step function is total, so that for every contract a result of stepping is defined. However, for some kinds of contracts – commits, redeems or time-shifted contracts – it is possible that the result of a step is to produce the same contract as the result; such a step is called quiescent whereas all other steps make progress. We use this distinction in the explanation that follows.
+
+
+At each computational step, the step function is wrapped by a call to full\_step which in addition will cause expired cash commitments to be refunded.
+
+
+The constructors should be interpreted thus:
+
+\begin{description} 
+\item[\texttt Null] is the null contract; it will always be quiescent.
+\item[\texttt RedeemCC idCC k] (CC stands for cash commitment.) For this contract to make progress, the creator of the cash commitment with identifier idCC is required to redeem the unspent funds in that commitment; the contract then continues as k. If the cash commitment with identifier idCC has expired, the remaining funds will be redeemed automatically by the full\_step function and a ExpiredRedeem action will be produced\footnote{How does the contract determine what actions resulted from a given step? Or is this not required?}\footnote{
+If it is required, restructuring the DSL so that the result action appears as the 'value' of executing a step (using a monadic interface as described for id generation below) would be a good idea.}\footnote{We specify the actions generated by each kind of constructor; at each step the list of such actions, of type AS, is a component of the result.}. Using RedeemCC to redeem the same identifier idCC twice will result in the issue of a DuplicateRedeem action. Otherwise the contract is quiescent, waiting for the commitment to be redeemed or to expire.
+\item[\texttt RevealCV idCV k] (CV stands for value commitment.) For this contract to make progress, the creator of the value commitment with identifier idCV is required to reveal the value; the contract then continues as k. Otherwise the contract is quiescent, waiting for the value to be revealed. 
+For the reveal to be valid, the value revealed must be in the vals list provided in the corresponding CommitValue constructor (the one with the same idCV). 
+\item[\texttt Pay p1 p2 int k] requires that int is paid by p1 to p2, and continues as k. It uses the currency allocated by the cash commitments made by p1 that expire the earliest. This contract will result in a FailedPay action if the funds are not available; otherwise a SuccessfulPay action is generated.
+\item[\texttt Both k1 k2] enforces the behaviour of both contracts k1 and k2. Because the model is stateful and produces output actions, to make a step it is necessary to execute a single step of each of  the contracts k1 and k2 in sequence: first k1 then k2.
+\item[\texttt Choice obs k1 k2] behaves as either k1 or k2 depending on the (Boolean) result of obs at the time that the observation is made, k1 if it is True and k2 if False.
+\item[\texttt CommitValue idCV p vals k]  For this contract to make progress, the user p is required to make a value commitment with identifier idCV; the contract then continues as k. In order for the commitment to be valid, the value must be one of the specified in the vals list. Otherwise the contract is quiescent, waiting for the value to be committed.
+\item[\texttt CommitCash idCC p n timeout k]  For this contract to make progress, the user p is required to make a cash commitment of value n and timeout timeout (specified as a block number) with identifier idCC; the contract then continues as k. Otherwise the contract is quiescent, waiting for the cash to be committed. 
+When the timeout is reached, the remaining funds will be redeemed automatically and a SuccessfulPay action will be issued that indicates a self-payment from the person p with the remaining funds. This is performed by the full\_step function, which wraps the step function.
+\item[\texttt When obs timeout k def\_k] This contract will not progress until obs is True or until the current block number is greater than or equal to the one specified by timeout. In case the timeout applies, the contract will continue as def\_k, if the timeout does not apply and obs is True, then the contract continues as k. Otherwise the contract is quiescent.
+\end{description}
+
+
+\subsection{Analysis}
+What questions can we ask? What answers can we give?
+
+
+\subsubsection{What are the valid contracts?}
+
+One possible definition is ``those contracts that do not lead to a FailedPay action''. Does this make sense independently of the inputs to a contract (i.e. observables, commitments, redeems, time, and randomness)?
+Some relevant points (NB discussion incomplete):
+\begin{itemize}
+\item For Pay require a sufficient balance not to produce a FailedPay action. 
+\item For Both require a sufficient balance for both contracts combined. Need to think here whether the two conjuncts should be independent, or whether a commitment in one half can be used in the other.
+\item For Choice require a sufficient balance for the maximum of the requirements of the individual contracts. 
+\item For When, need to ``age'' the existing commitments relative to the new starting point of the continuation contract. 
+\item Are there any constraints on  Commit*, RevealCV and RedeemCC statements? Not directly, but there need to be sufficient funds available to pay if needed, or enough time for the commitments to time out, if not.
+\item Originally we had included that we should include all the ``progress'' requirements from point 2 below; but that’s probably not the right thing here.
+\end{itemize}
+
+\subsubsection{Do all contracts potentially evaluate to Null?}
+
+That is, for each contract do there exist sequences of values of Commit and OS such that stepping the contract with these inputs leads to Null? Might we have to rule out unsatisfiable observations?
+Some relevant points (NB discussion incomplete):
+\begin{itemize}
+\item For When, need to be able to make interpretObs st obs os true. Since there is a timeout to When then there’s no need to impose this condition, as we’ll progress at timeout if not before.
+\item For Commit*, need to have the right commits in the Commit argument.
+\item Similarly for RevealCV and RedeemCC statements.
+\item It would also be possible to put timeouts on to Commit, RevealCV and RedeemCC operations, and if this were to be done there would be no remaining requirements for contract execution to make progress.
+\item There are no constraints on other constructs.
+\end{itemize}
+
+\subsection{Questions}
+
+The model outlined here raises a number of questions, enumerated here.
+
+
+\begin{enumerate}
+\item Identifiers for commitments are part of the model, and supplied as part of each contract. It might well be that these should be generated by the system; this could guarantee uniqueness, freshness etc, and could also lead to a monadic DSL, with bind used for binding names to commitments.
+\item Does the Both constructor potentially produce invalid/misleading contracts, combining a commitment in one half with its use in the other? The problem is that the ``use'' conjunct could potentially be executed, leading to a failed payment.
+\item How do we ensure that contracts can be enforced? Is there a notion of validity for contracts that can be enforced? To which extent is this notion enforced by current constructors?
+\item Should there be a timeout on the process of making or revealing a commitment, or is it sufficient to have timeouts on the commitments themselves?
+\item (Related to 3) Is this also an argument to have timeouts on value commitments too?
+\item The model takes time as an observable. The type Time represents the index of evaluation, and BlockNumber is the number of the current block of the blockchain. We’ve not included a ``real'' time, but should this be included?
+\item (Related to 5) What should denominate the timeouts on commitments: Time or BlockNumber or another notion of time? Currently we are using the latter.
+\item Is it possible for block number to depend on progress of computation? We conjecture not, because otherwise it would be possible to produce timelocks, under which it becomes impossible for time to progress. 
+\item Does a contract expire if a surrounding commitment does? We think not.
+\item The model is deterministic, with all non-determinism being external, and confined to observables. This is surely necessary in order to support computation replay, but does it restrict the expressibility of the model?
+\item Is there a notion of causality for these contracts? Would we be able to characterise it semantically? Syntactically?
+\item We have modelled cash as fungible: we make payments using the cash commitments in order of expiry time, with those expiring earliest being used first. Would there be any reason for using a different approach?
+\item Timeouts are expressed in absolute time: presumably they could be relative (with recording on the blockchain of the times at which they are triggered).\footnote{This contradicts what you've said elsewhere. I think timeouts should be times, not blockchain numbers. I suspect it would be better not to use blockchain numbers. I don't want to have to react more quickly if lots of people are making transactions that day. Also, it avoids question 8.}\footnote{See addition about slot time from Ouroboros paper (as referenced in the body of the paper).}
+\end{enumerate}
+
+Added: we should probably use ``slot time'' https://eprint.iacr.org/2016/889.pdf ``We consider a setting where time is divided into discrete units called slots. A ledger, described in more detail below, associates with each time slot (at most) one ledger block.''
+\begin{enumerate}
+\item Some observables have a ``monotonicity'' property: once something is revealed, it is revealed forever; on the other hand, something unrevealed is only unrevealed so far; do we need to reflect this in the observations that we allow?
+\item The seesaw construction is key to implementing e.g. poker, and it can be described in terms of the existing constructs (modulo the answer to point 4 above). However, should seesaw be a primitive in its own right?\footnote{No. You will have a successful language when you can define seesaw as an abstraction in terms of the other primitives *within the language*}\footnote{And indeed we *did* define it, at least for the RPS example.}
+
+\item Constructs that can time out could have a single continuation (do this next) or two continuations: do this if progressed normally, and do the other continuation if timed out. A candidate for this is a timed out When, where the second option is what we have implemented.
+\item RedeemCC is intended for premature repayment of a cash commitment, i.e. before the commitment has timed out.
+\footnote{Why is RedeemCC a separate construct? Can't it be implemented with Pay?}\footnote{It is for someone to claim their cash back, rather than making a payment to another person.}
+ This is potentially dangerous – leading to a FailedPay, for example – but useful to make a repayment at the end of a contract. 
+\item Alternatively, it would be possible for the underlying model to repay all committed but unspent cash automatically at the end of a contract, but we might want to do the same thing at the end of each ``round'' of  a game, for instance.
+\end{enumerate}
+
+
+\subsection{Response to ``Some Thoughts on Smart Contracts''}
+
+The contracts implemented in the DSL language have an implicit interface defined for what would correspond to the client side of a Dapp, as shown by the interactive interface. 
+
+
+We have designed the contract DSL assuming that each contract would be compiled into
+\begin{itemize} 
+\item one or more smart contracts (potentially written in Plutus) and 
+\item a client side program or interface that has a limited number of choices to be made at each point in time (including an interface for the observables). 
+\end{itemize} 
+
+
+Of course, we probably do not want to give a user a programmatic interface but an actual application with user interface. So there is still some work to be done to create interfaces on top of the client side of the contracts.
+
+
+About cost, there are two types of cost (at least):
+
+\begin{itemize} 
+\item The cost of a single transaction execution (a single Plutus validator).
+\item The cost of the whole contract, which may consists of many transactions.
+\end{itemize} 
+
+
+Even in Ethereum this distinction is important because single contract execution is limited by gas (and is thus finite), whereas the life of the whole contract may be unbounded and consist of an indefinite number of transactions. 
+
+
+So far we are assuming contracts defined in the DSL to be finite in both aspects. They could be infinite if we were to define them – co-inductively – as recursive members of the DSL type.
+
+
+\subsection{Rock-paper-scissors explanation (not re-formatted)}
+In this section, we explain how the DSL can be used for designing a contract that enforces a round of rock-paper-scissors where the winner will receive from the loser 10 units of currency and not revealing your hand also has a penalty of 10 units.
+
+
+We will start top to bottom. First we define identities for the players and the commitments.
+The player 1 will be identified by integer 1:
+player1 = 1
+the cash commitment of player 1 will be identified by:
+p1 = IdentCC 1
+and his value commitment will be identified by:
+v1 = IdentCV 1
+In the same way, player 2 will be identified by integer 2:
+player2 = 2
+the cash commitment player 2 will be identified by:
+p2 = IdentCC 2
+And his value commitment will be identified by:
+v2 = IdentCV 2
+
+
+And because choices must be represented as Int we encode them as follows:
+
+
+data RPS = Rock | Paper | Scissors
+
+
+all\_rps = [Rock, Paper, Scissors]
+
+
+encoding\_rps Rock = 1      -- rock is encoded as 1
+encoding\_rps Paper = 2     -- paper is encoded as 2
+encoding\_rps Scissors = 3  -- scissors is encoded as 3
+
+
+all\_rps\_encoded = map (encoding\_rps) all\_rps
+
+
+We first ask the players to commit money. We will need 20 units from each player since we want 10 units to enforce that the hand is revealed, and 10 units for the prize. Theoretically we could reuse just 10 units, but in practice recommitting payments may limit the applicability of the DSL to certain systems like Bitcoin, so it does not support it at the moment.
+
+
+The commitments are chained as follows:
+* Cash commitment p1 is done by player 1, consists of 20 units and expires on block 42 same for p2 by player 2.
+
+
+CommitCash p1 player1 20 42
+  (CommitCash p2 player2 20 42 
+
+
+* Value commitments are done for two choices of one of the three values that encode rock, paper, or scissors.
+
+
+     (CommitValue v1 (all\_rps\_encoded) player1
+        (CommitValue v2 (all\_rps\_encoded) player2
+
+
+* The see-saw mechanism ensures that both players reveal or none does. This is fundamentally achieved by forcing a player to reveal the other when he reveals. But we need to do this steadily to give players enough time to do the actions required by the rest of the contract, otherwise one player may push the other one to timeout.
+
+    (RevealCV v1
+            (Choice (BelowTimeout 10)
+                    (Pay player2 player1 10
+                       (RevealCV v2
+                              (Choice (BelowTimeout 20)
+                                  (Pay 1 2 10
+                                       reward\_winner)
+                                  Null)))
+                    Null)))))
+
+First RevealCV waits for the owner of value commitment v1 (player 1) to reveal his choice. If the reveal happens before block number 10 (after the start of the contract instance), player 2 pays 10 currency units to player 1. Otherwise we consider the contract timed out and make the contract Null, the existing cash commitments will be automatically refunded on block 42.
+The same is done for player 2. This time he is incentivised to reveal his hand before block number 20, since that is the only way he will recover the 10 currency unit. He might already know that he has lost and decide not to reveal, that will have the same effect than revealing. If desired we could increase the see-saw penalty to make not revealing worse than losing.
+
+
+If the contract remaining becomes reward\_winner, we already have enough information to know who won and we will have exactly 10 currency units committed by each player.
+
+
+So we define reward\_winner as follows. We just use Choice twice, one to check if Player 1 won, one to check if Player 2 won, and the default option is just refunding everything:
+
+
+-- If player 1 won
+Choice (OrObs (AndObs (CVRevealedAs v1 (encoding\_rps Paper))
+                      (CVRevealedAs v2 (encoding\_rps Rock)))
+              (OrObs (AndObs (CVRevealedAs v1 (encoding\_rps Scissors))
+                             (CVRevealedAs v2 (encoding\_rps Paper)))
+                     (AndObs (CVRevealedAs v1 (encoding\_rps Rock))
+                             (CVRevealedAs v2 (encoding\_rps Scissors)))))
+-- player2 pays 10 currency units to player 1
+       (Pay player2 player1 10
+-- and everything else is redeemed
+          (Both (RedeemCC p1 Null)
+                (RedeemCC p2 Null)))
+-- if player 2 won
+       (Choice (OrObs (AndObs (CVRevealedAs v2 (encoding\_rps Paper))
+                              (CVRevealedAs v1 (encoding\_rps Rock)))
+                      (OrObs (AndObs (CVRevealedAs v2 (encoding\_rps Scissors))
+                                     (CVRevealedAs v1 (encoding\_rps Paper)))
+                             (AndObs (CVRevealedAs v2 (encoding\_rps Rock))
+                                     (CVRevealedAs v1 (encoding\_rps Scissors)))))
+-- player1 pays 10 currency units to player 2
+               (Pay player1 player2 10
+-- and everything else is redeemd
+                  (Both (RedeemCC p1 Null)
+                        (RedeemCC p2 Null)))
+-- otherwise everything else is redeemed
+               (Both (RedeemCC p1 Null)
+                     (RedeemCC p2 Null)))
+
+
+It is also worth noting that, because the possible choices are specified, RedeemCV requires that the choice revealed is valid, otherwise it behaves as nothing was revealed. Thus, we know that if no player won it must be a draw.
+
+
+\subsection{Response to comments on the original document made by Charles on Slack}
+
+Legend: {\it a quote from this document}, Charles' response, {\bf our reply}:
+
+
+{\it
+First, it will need to observe different kinds of varying quantities including, for example, the current time, the current block number and, random numbers, as well as ``real world'' quantities like ``the price of oil'' or ``the exchange rate between currencies A and B''. Each instance of such an observable will be recorded on the blockchain to allow the computation to be repeated for verification purposes. It is assumed that at each step of the execution of the contract, the values of some observables will be needed.
+}
+
+We need to get a better notion of observation. 
+
+
+There seem to be two broad categories of events worth observing. One that is derived from the network itself and one that is from an external source. 
+
+
+For example, we could consider a game where the contract executes based upon the value of a block header, this is something known after it occurs and cannot be changed.
+Whereas the price of oil is not.
+
+
+
+{\bf
+Indeed, we agree. The former kind of observations are already artefacts on the blockchain, whereas the latter need to be stored on the blockchain. We have assumed that the infrastructure for the language supports this recording: we would not expect language users to have to do this for themselves.
+}
+
+{\bf
+Apart from this difference in the infrastructure, we see no difference between the two different sorts of observations: is this correct?
+}
+
+The question of commitment to blockchain is interesting as who should have write access and also how do we prevent an enormous amount of bad data from being posted? And is it necessary at all?
+
+
+We could specify the format of an answer and have them commit it to the blockchain as a signed hash and then it could be externally shared for example and everyone would be able to determine it is correct.
+
+{\bf
+We saw that commitments were an integral part of the game playing process, and so we wanted to include them as primitives in the language. Yes, they are usually implemented as hashes, but we wanted to give a more abstract presentation here. 
+
+
+Concerning bad data, a commitment will usually just store the hash, but the problem seems to come at the reveal, when all the data has to be shown, somehow. We don’t have to store the whole data (just the hash) but it does have to be revealed in some way that can be observed, and the naive interpretation of this is that it is made available somehow, thereby using storage on the blockchain.
+
+
+There may be other ways of doing this. Is there some sort of compact proof that can be used here?
+
+
+Or can we devolve to a trusted third party, off chain?
+}
+
+I'm also curious about expectations. For example, say we have an oil contract.
+
+
+We have an expectation of exchange rates or something like that so we'd expect some int to float and then a float to float. Examples:
+
+
+   * 1 barrel for 120.55 dollars.
+   * 22 dollars for 1 ada.
+
+
+Gives us everything we need to act on the contract accordingly in a deterministic way.
+
+
+First, we guess these may be fixed or rational rather than float :-) We would assume that exchange rates are observables, with values recorded at the point of use, so that re-computation is possible (and deterministic). 
+
+{\bf
+In general, we need a more powerful expression language (e.g. through embedding the DSL). Maybe we could use a subset of Plutus.
+}
+
+
+{\it
+Second, it will be necessary to ensure that commitments of various kinds have been made by the participants in a contract.
+}
+
+Ok, Bernardo knows a lot more about this than I do. He's been doing this type of stuff with his MPC work. I'd recommend having a discussion with Aggelos and Bernardo about
+commitments in the cryptocurrency world.
+
+{\bf
+Yes, certainly, we will do this.
+}
+
+{\it
+What are the valid contracts? One possible definition is ``those contracts that do not lead to a FailedPay action''. Does this make sense independently of the inputs to a contract (i.e. observables, commitments, redeems, time, and randomness)?
+}
+
+I tend to think of compositions.
+So we have things like multisig where the players setup a special contract tailored to a set of business and trust assumptions. This game ends when funds are spent.
+Complexity could be fairly arbitrary as the conditions to spend could be quite complex and involve lots of business logic. The end of the game could initiate a new game.
+
+{\bf
+A game that starts a new game is essentially a bigger game. There seems to be a limitation about commitments. Commitments need to be voluntary by nature, so if there are no commitments inherited between the two games, then it should be no different to model both the games separately.
+
+
+There should not be a problem to model infinite games either by using co-induction.
+}
+
+For example creating a new multisig account with the same logic for the change address.
+
+
+Then we have event based games, where actions occur when something happens, a triggering event.
+
+
+For example a deadman switch.
+
+
+If bob doesn't sign a special transaction each month, then send all the money to alice.
+
+
+These are at the mercy of the oracle connected to the contract.
+
+
+Then we have games of interaction, such as poker for example.
+
+
+Bob and Alice have earned the right to interact with each other with special rules and pending how those interactions end up, we have a transfer of value between them and others.
+
+
+Abstractly, I suppose there is a notion of entry condition, allowed actions and exit conditions.
+
+{\bf
+Not sure what entry and exit conditions are, but commitments may well be entry conditions, or at least a crucial component of them. We think that all the examples described can be implemented in the DSL (assuming we add the proper observables and oracles). Maybe we need some more cryptographic primitives for poker, that is probably something we should discuss with Aggelos and Bernardo.
+}
+
+
+
+
+{\it
+Null is the null contract; it will always be quiescent.
+}
+
+Just to clarify, null means termination or just dormancy?
+
+{\bf
+Both. A contract has terminated if it has evolved to be exactly null. But there exist contracts that contain the null contract but have not terminated.
+}
+
+{\it
+Do all contracts potentially evaluate to Null? That is, for each contract do there exist sequences of values of Commit and OS such that stepping the contract with these inputs leads to Null? Might we have to rule out unsatisfiable observations?
+}
+
+If I understand null to mean the contract has finished all possible execution, then this is a reasonable assumption given a certain viewpoint completion of a multisig contract for example could be interpreted as a null case.
+
+
+But in a strict sense the answer is no, there can be cases where something is in a pending state indefinitely. For example, for a 2 of 3 contract, two keyholders could die then you'd have an active contract waiting for completion, but it will never happen.
+
+{\bf
+I understand this as: all contracts should reduce to null, but not independently of the observables. We can then think about analysing which observables stall the contract (which sounds like a boolean satisfiability problem). Maybe we just want to guarantee that there is a set of external actions that will cause the contract to reduce to null no matter its state.
+
+
+In the particular example of death of participants, we would assume that the contract would have been formulated with timeouts on inactivity of participants (when activity requested).
+}
+
+What we need to do is determine what functionality can be black-boxed in this model with some degree of reliability.
+
+
+Bernardo's MPC library is going to provide a lot of functionality for things like games for example and provides strong cryptographic guarantees for outcomes given some initial assumptions.
+
+{\bf
+We will definitely incorporate these.
+}
+
+Second, we need to have a set of canonical actions that we could test against the proposed model. And see how they would be constructed.
+
+{\bf
+Is this like a test suite? Not sure how it would work, but would like to know more.
+}
+
+Third, we need to clearly understand what is an oracle in this model and how we intend on using them.
+
+
+
+
+
+{\bf
+Good point, we need to define an interface for oracles.
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 \clearpage

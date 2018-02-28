@@ -47,7 +47,6 @@
 \usepackage{tikz}
 \usepackage{url}
 \usepackage{alltt}
-%\usepackage[dvipsnames]{xcolor}
 
 
 % Must come after hyperref
@@ -80,10 +79,10 @@
 \author{Pablo Lamela Seijas}
 \affiliation{%
   \institution{University of Kent}
-%  \streetaddress{}
+%  \streetaddress{School of Computing}
   \city{Canterbury}
   \state{Kent}
-  \postcode{CT2 7NZ}
+  \postcode{CT2 7NF}
   \country{UK}}
 \email{pl292@kent.ac.uk}
 
@@ -91,10 +90,10 @@
 \orcid{0000-0002-2350-301X}
 \affiliation{%
   \institution{University of Kent}
-%  \streetaddress{}
+%  \streetaddress{School of Computing}
   \city{Canterbury}
   \state{Kent}
-  \postcode{CT2 7NZ}
+  \postcode{CT2 7NF}
   \country{UK}}
 \email{s.j.thompson@kent.ac.uk}
 
@@ -122,66 +121,71 @@
 
 \section{Introduction}
 
-No introduction \cite{garfield1996cite}.
 
-\section{Contract DSL model discussion, Version 1.1, September 2017}
-The aim of this document is to set out the assumptions behind the Haskell model of a contract DSL blockchain. Code for this model is in the repository \url{https://github.com/input-output-hk/scdsl}
+\noindent
+\sjtnote{This is a preliminary version, return to this at the end of the writing process.}
 
+This paper explores the design of a domain specific language, Marlowe,\footnote{Marlowe is named after Christopher Marlowe, the Elizabethan poet, dramatist and spy, who was born and educated in Canterbury: \url{https://en.wikipedia.org/wiki/Christopher_Marlowe}}\footnote{The code for Marlowe is available from \url{https://github.com/input-output-hk/scdsl}
+} targetted at the execution of financial contracts in the style of Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains. This work is a part of the Cardano project, and is supported by IOHK.\footnote{\url{https://iohk.io}} 
 
-The document is structured like this:
+In doing this we are required to refine the model of contracts in a number of ways in order to fit with a radically different context. 
+\begin{itemize}
+\item In the traditional model, enforcement of the contract is the responsibility of the legal system; in the decentralised blockchain model, in which there is no central authority, the contract needs to be enforced by design. 
+\item As noted by  the authors of Findel~\cite{findel} this means in particular that payments need to be bounded; this is made concrete in our account by our notion of commitments.
+\item There is not a single blockchain model, and we give a brief overview of the different mechanisms for scripting on blockchain (although this is not the primary purpose of this article). 
+\begin{itemize}
+\item
+A particularly important technical distinction here is that between an account-style model as used by Ethereum~\cite{EthereumRationale}, and the unspent transaction output (UTxO) model of bitcoin~\cite{sok}. 
+\item There is the question of how precisely the execution of the contract interacts with the blockchain, and how information is to be recorded on the chain.
+\item Does the execution ``push'' for changes  to happen, or do external actors have to ``pull'' to effect changes enabled by execution of the contract?
+\end{itemize}
+\item \sjtnote{What else do we want to say here?}
+\end{itemize}
 
-\begin{enumerate}
-\item An overview of the model, including the assumptions made in designing it, the types of the principal functions and a description of the DSL as an algebraic type, constructor by constructor. The section aims to give a high level overview, and some of the concrete details are to be found in the repo.
-\item A discussion of the kinds of formal analysis which might be made for the DSL.
-\item A set of questions raised by the process of modelling.
-\item A response to some particular points relevant to this work and raised in the email discussion on ``Some Thoughts on Smart Contracts'' initiated by Charles, and taken up by Duncan and Phil.
-\item Background: an overview of the Rock-Paper-Scissors example from the repo and the discussion.
-\item A response to Charles’ comments as posted to slack.
-\end{enumerate}
+\noindent
+\sjtnote{Preliminary overview; need to revisit.}
+The paper is structured like this: we begin with an overview of the model, including the assumptions made in designing it, the types of the principal functions and a description of the DSL as an algebraic type, constructor by constructor. The section aims to give a high level overview, and some of the concrete details are to be found in the repo. We follow this with discussions of the kinds of formal analysis which might be made for the DSL, as well as discussing a  set of questions raised by the process of modelling. We then look at the example of BLAH, as an illustration, and then look at how Marlowe relates to other work in the area. We conclude by pointing out 
 
-\subsection{The model}
+\section{The model}
 The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
 A running contract will interact with its environment in two ways.
-  
 
 First, it will need to observe different kinds of varying quantities including, for example, the current time, the current block number and, random numbers, as well as ``real world'' quantities like ``the price of oil'' or ``the exchange rate between currencies A and B''. Each instance of such an observable will be recorded on the blockchain to allow the computation to be repeated for verification purposes. It is assumed that at each step of the execution of the contract, the values of some observables will be needed.
 
-
-Second, it will be necessary to ensure that commitments of various kinds have been made by the participants in a contract. We have included two kinds of commitments here:
-\begin{itemize}
-\item A commitment to a value: this would include a choice of a play in a game, which would be chosen and concealed from the other players until a later point in play, when it is revealed.
-
-
-\item A commitment to a certain amount of cash: while a commitment to a value is indefinite, a cash commitment needs to have a timeout so that progress can be forced in a game. After the timeout period the cash is automatically refunded; in practice this might require the user explicitly to create a transaction to reclaim the cash.
-\end{itemize}
+Second, it will be necessary to ensure that commitments of currency (or ``cash'') can be  made by the participants in a contract. While informally we might see a commitment to something as being indefinite, it is important to realise that on blockchain a commitment needs to have a timeout so that progress can be forced in a game. After the timeout period the cash can be refunded through the user creating a transaction to reclaim the cash.
 
 At each step, a number of commitments may be made. This information constitutes an input to the execution of each step. Moreover, information about the commitments currently in force forms the state, which is (potentially) modified at each execution step.
 
 
-Finally, a running contract will initiate a number of payment actions on the blockchain at each step, represented by a list of actions.
+\sjtnote{Still true? CHECK} Finally, a running contract will initiate a number of payment actions on the blockchain at each step, represented by a list of actions.
 
 
-This analysis justifies the type of the step function:
+This analysis justifies the type of the \bluett{step} function:
 
 \begin{allbluett}
 step :: Commits -> State -> Contract -> OS -> (State,Contract,AS)
 \end{allbluett}
 
 
-Where \bluett{OS} contains the current values for observables, and \bluett{AS} is a list of actions (currently payments) that are carried out as a result of executing the step.
+Where \bluett{OS} contains the values for observables available at the step in question, and \bluett{AS} is a list of actions (currently payments) that are carried out as a result of executing the step.
 
 
 The model is based on a number of assumptions.
 
 \begin{itemize}
-\item It is assumed that cryptographic ``services'' or operations are provided by a wrapper layer external to the system, and are not modelled explicitly here.
-\item Making a commitment is not something that a contract can perform; rather, it can require that a commitment is made, but that then has to be established externally: hence the input of (a set of) commitments at each step. The same applies to revealing a value commitment, and to manually redeeming a cash commitment.
-\item Observables are observed at a particular time and in a particular context. We assume that the recording and identification of each (instance of an) observation is provided by the infrastructure of the system. We provide a ``little language'' for describing observations: Observation\footnote{Why doesn't Observation appear in the type of step? I would expect a contract would need to yield a request for observations to be made, and accept the value of those observations.}\footnote{The current values of *observables* required at each step are the input OS to the step function. We assume that the infrastructure is designed to record these, but that is not part of the DSL itself. The *observations* over OS are part of the contract (e.g. the Choice constructor).}
+\item It is assumed that cryptographic ``services'' or operations are provided by a layer external to the system, and so they need not be modelled explicitly here.
+\item Making a commitment is not something that a contract can perform; rather, it can require that a commitment is made, but that then has to be established externally: hence the input of (a set of) commitments at each step. The same observation also applies to redeeming a commitment of cash.
+\item Observables are observed at a particular time and in a particular context. We assume that the recording and identification of each (instance of an) observation is provided by the infrastructure of the system. We provide a ``little language'' for describing observations: \bluett{Observation}.
 \item The fact of making commitments also needs to be recorded.
 \item It is important to be aware that there may be different instances of contracts executed, and for each instance there will typically be different instances of observables (and commitments) observed and recorded.
-\item The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the full\_step function below).
+\item The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the \bluett{full\_step} function below).
 \end{itemize}
 
+\noindent
+\sjtnote{Revised to here, 14:53 Wednesday 28 February.}
+
+\medskip
+\noindent
 The type of contracts is given by
 
 \begin{allbluett}
@@ -191,17 +195,17 @@ data Contract =
    RevealCV IdentCV Contract |
    Pay Person Person Int Contract |
    Both Contract Contract |
-   Choice Observation\footnote{Doesn't the step function need to record what observations are made, so they can be archived in the blockchain? I don't see how your design will support doing so.}\footnote{Yes, we assume that it is part of the infrastructure of this language to record the values of *observables* that are used. However, we have chosen no to make it part of the language itself.} Contract Contract |
+   Choice Observation Contract Contract |
    CommitValue IdentCV Person [Value] Contract |
    CommitCash IdentCC Person Cash Time Contract |
    When Observation Time Contract Contract
 \end{allbluett}
+%Originally on "Choice": \footnote{Doesn't the step function need to record what observations are made, so they can be archived in the blockchain? I don't see how your design will support doing so.}\footnote{Yes, we assume that it is part of the infrastructure of this language to record the values of *observables* that are used. However, we have chosen no to make it part of the language itself.}
+
+The \bluett{step} function is total, so that for every contract a result of stepping is defined. However, for some kinds of contracts -- commits, redeems or time-shifted contracts -- it is possible that the result of a step is to produce the same contract as the result; such a step is called \emph{quiescent} whereas all other steps \emph{make progress}. We use this distinction in the explanation that follows.
 
 
-The step function is total, so that for every contract a result of stepping is defined. However, for some kinds of contracts – commits, redeems or time-shifted contracts – it is possible that the result of a step is to produce the same contract as the result; such a step is called quiescent whereas all other steps make progress. We use this distinction in the explanation that follows.
-
-
-At each computational step, the step function is wrapped by a call to full\_step which in addition will cause expired cash commitments to be refunded.
+At each computational step, the \bluett{step} function is wrapped by a call to the \bluett{full\_step} function, which in addition to performing \bluett{step} will cause expired cash commitments to be refunded.
 
 
 The constructors should be interpreted thus:
@@ -221,8 +225,14 @@ When the timeout is reached, the remaining funds will be redeemed automatically 
 \item \bluett{When obs timeout k def\_k} This contract will not progress until obs is True or until the current block number is greater than or equal to the one specified by timeout. In case the timeout applies, the contract will continue as def\_k, if the timeout does not apply and obs is True, then the contract continues as k. Otherwise the contract is quiescent.
 \end{itemize}
 
+\subsection{Potential additions to the model}
 
-\subsection{Analysis}
+The model that we have discussed so far is deliberately kept as compact as possible. However there are a number of potential extensions to the model which we introduce here. 
+
+We have examined a single kind of commitment, namely a commitment of a certain amount of currency. In different applications, such as on-chain game playing of games like poker, a commitment to a value will be required. A value commitment would include a choice of a play in a game, which would be chosen and concealed from the other players until a later point in play, when it can be revealed. \sjtnote{Add citation to the poker paper?}
+
+
+\section{Analysis}
 What questions can we ask? What answers can we give?
 
 
@@ -236,7 +246,7 @@ Some relevant points (NB discussion incomplete):
 \item For Choice require a sufficient balance for the maximum of the requirements of the individual contracts. 
 \item For When, need to ``age'' the existing commitments relative to the new starting point of the continuation contract. 
 \item Are there any constraints on  Commit*, RevealCV and RedeemCC statements? Not directly, but there need to be sufficient funds available to pay if needed, or enough time for the commitments to time out, if not.
-\item Originally we had included that we should include all the ``progress'' requirements from point 2 below; but that’s probably not the right thing here.
+\item Originally we had included that we should include all the ``progress'' requirements from point 2 below; but that's probably not the right thing here.
 \end{itemize}
 
 \subsubsection{Do all contracts potentially evaluate to Null?}
@@ -244,14 +254,14 @@ Some relevant points (NB discussion incomplete):
 That is, for each contract do there exist sequences of values of Commit and OS such that stepping the contract with these inputs leads to Null? Might we have to rule out unsatisfiable observations?
 Some relevant points (NB discussion incomplete):
 \begin{itemize}
-\item For When, need to be able to make interpretObs st obs os true. Since there is a timeout to When then there’s no need to impose this condition, as we’ll progress at timeout if not before.
+\item For When, need to be able to make interpretObs st obs os true. Since there is a timeout to When then there's no need to impose this condition, as we'll progress at timeout if not before.
 \item For Commit*, need to have the right commits in the Commit argument.
 \item Similarly for RevealCV and RedeemCC statements.
 \item It would also be possible to put timeouts on to Commit, RevealCV and RedeemCC operations, and if this were to be done there would be no remaining requirements for contract execution to make progress.
 \item There are no constraints on other constructs.
 \end{itemize}
 
-\subsection{Questions}
+\section{Questions}
 
 The model outlined here raises a number of questions, enumerated here.
 
@@ -262,7 +272,7 @@ The model outlined here raises a number of questions, enumerated here.
 \item How do we ensure that contracts can be enforced? Is there a notion of validity for contracts that can be enforced? To which extent is this notion enforced by current constructors?
 \item Should there be a timeout on the process of making or revealing a commitment, or is it sufficient to have timeouts on the commitments themselves?
 \item (Related to 3) Is this also an argument to have timeouts on value commitments too?
-\item The model takes time as an observable. The type Time represents the index of evaluation, and BlockNumber is the number of the current block of the blockchain. We’ve not included a ``real'' time, but should this be included?
+\item The model takes time as an observable. The type Time represents the index of evaluation, and BlockNumber is the number of the current block of the blockchain. We've not included a ``real'' time, but should this be included?
 \item (Related to 5) What should denominate the timeouts on commitments: Time or BlockNumber or another notion of time? Currently we are using the latter.
 \item Is it possible for block number to depend on progress of computation? We conjecture not, because otherwise it would be possible to produce timelocks, under which it becomes impossible for time to progress. 
 \item Does a contract expire if a surrounding commitment does? We think not.
@@ -285,7 +295,7 @@ Added: we should probably use ``slot time'' https://eprint.iacr.org/2016/889.pdf
 \end{enumerate}
 
 
-\subsection{Response to ``Some Thoughts on Smart Contracts''}
+\section{Response to ``Some Thoughts on Smart Contracts''}
 
 The contracts implemented in the DSL language have an implicit interface defined for what would correspond to the client side of a Dapp, as shown by the interactive interface. 
 
@@ -311,10 +321,18 @@ About cost, there are two types of cost (at least):
 Even in Ethereum this distinction is important because single contract execution is limited by gas (and is thus finite), whereas the life of the whole contract may be unbounded and consist of an indefinite number of transactions. 
 
 
-So far we are assuming contracts defined in the DSL to be finite in both aspects. They could be infinite if we were to define them – co-inductively – as recursive members of the DSL type.
+So far we are assuming contracts defined in the DSL to be finite in both aspects. They could be infinite if we were to define them -- co-inductively -- as recursive members of the DSL type.
+
+\section{Related work}
+
+\begin{itemize}
+\item Original SPJ paper~\cite{PeytonJones:2000}, and multi-party successor. Original Szabo paper?
+\item Findel~\cite{findel}
+\end{itemize}
 
 
-\subsection{Rock-paper-scissors explanation (not re-formatted)}
+\section{Rock-paper-scissors explanation (not re-formatted)}
+
 In this section, we explain how the DSL can be used for designing a contract that enforces a round of rock-paper-scissors where the winner will receive from the loser 10 units of currency and not revealing your hand also has a penalty of 10 units.
 
 
@@ -459,7 +477,7 @@ We could specify the format of an answer and have them commit it to the blockcha
 We saw that commitments were an integral part of the game playing process, and so we wanted to include them as primitives in the language. Yes, they are usually implemented as hashes, but we wanted to give a more abstract presentation here. 
 
 
-Concerning bad data, a commitment will usually just store the hash, but the problem seems to come at the reveal, when all the data has to be shown, somehow. We don’t have to store the whole data (just the hash) but it does have to be revealed in some way that can be observed, and the naive interpretation of this is that it is made available somehow, thereby using storage on the blockchain.
+Concerning bad data, a commitment will usually just store the hash, but the problem seems to come at the reveal, when all the data has to be shown, somehow. We don't have to store the whole data (just the hash) but it does have to be revealed in some way that can be observed, and the naive interpretation of this is that it is made available somehow, thereby using storage on the blockchain.
 
 
 There may be other ways of doing this. Is there some sort of compact proof that can be used here?

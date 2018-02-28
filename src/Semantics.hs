@@ -26,9 +26,14 @@ import qualified Data.List as List
  -- Basic data types --
  ----------------------} 
 
-type Key = Int -- Public key
+ -- People are represented by their public keys,
+ -- which in turn are given by integers.
 
+type Key         = Int   -- Public key
 type Person      = Key
+
+-- Block numbers and random numbers are both integers.
+ 
 type Random      = Int
 type BlockNumber = Int
 
@@ -39,8 +44,16 @@ type BlockNumber = Int
 --  - We assume that some mechanism exists which will ensure that the value is looked up and recorded, or …
 --  - … we actually provide that mechanism explicitly, e.g. with inter-contract comms or transaction generation or something.
 
+-- Other observables are possible, e.g. the value of the oil price at this time.
+-- It is assumed that these would be provided in some agreed way by an oracle of some sort.
+
+-- The Observable data type represents the different sorts of observables, …
+
 data Observable = Random | BlockNumber
                     deriving (Eq,Ord,Show,Read)
+
+-- … while the type OS gives a particular random value and block number. 
+-- Can think of these as the values available at a particular step.
 
 data OS =  OS { random       :: Random,
                 blockNumber  :: BlockNumber }
@@ -48,14 +61,22 @@ data OS =  OS { random       :: Random,
 
 -- Inputs
 -- Types for cash commits, money redeems, and choices.
+--
+-- A cash commitment is an integer (should be positive integer?)
+-- Concrete values are sometimes chosen too: these are integers for the sake of this model.
 
-type Value    = Int
- 
 type Cash     = Int
-
 type ConcreteChoice = Int
 
+-- We need to put timeouts on various operations. These could be some abstract time
+-- domain, but it only really makes sense for these to be block numbers.
+
 type Timeout = BlockNumber
+
+-- Commitments, choices and payments are all identified by identifiers.
+-- Their types are given here. In a more sophisticated model these would
+-- be generated automatically (and so uniquely); here we simply assume that 
+-- they are unique.
 
 newtype IdentCC = IdentCC Int
                deriving (Eq,Ord,Show,Read)
@@ -66,10 +87,23 @@ newtype IdentChoice = IdentChoice Int
 newtype IdentPay = IdentPay Int
                deriving (Eq,Ord,Show,Read)
 
+-- A cash commitment is made by a person, for a particular amount and timeout.               
+
 data CC = CC IdentCC Person Cash Timeout
                deriving (Eq,Ord,Show,Read)
+
+-- A cash redemption is made by a person, for a particular amount.
+               
 data RC = RC IdentCC Person Cash
                deriving (Eq,Ord,Show,Read)
+
+-- The input to a step has four components
+--      - a set of cash commitments made at that step
+--      - a set of cash redemptions made at that step
+--      - a collection of payments: each payment may pay to multiple people, 
+--        so represented by a map (IdentPay, Person) |-> Cash
+--      - a collection of choices QUESTION: WHAT IS THE RATIONALE HERE???
+--        WHY ISN'T IT A MAP FROM THE IDENT TO A PERSON,CHOICE PAIR??
 
 data Input = Input {
                 cc  :: Set.Set CC,
@@ -79,9 +113,14 @@ data Input = Input {
               }
                deriving (Eq,Ord,Show,Read)
 
--- Actions are things that have an effect on the blockchain.
+-- Actions are things that have an effect on the blockchain, and a set
+-- of actions is generated at each step. We are not responsible for
+-- making these happen: this is passed to the blockchain.
+-- QUESTION: the rest of this comment should be deleted?
 -- The current implementation doesn't properly reflect this.
--- TO BE DONE
+
+-- The specific actions represented here should be self-
+-- explanatory, EXCEPT PERHAPS DuplicateRedeem QUESTION
 
 data Action =   SuccessfulPay IdentPay Person Person Cash |
                 ExpiredPay IdentPay Person Person Cash |
@@ -103,6 +142,9 @@ type AS = [Action]
 -- so that computations can be re-run. Recording these should be seen as
 -- a side-effect of their evaluation.
 
+-- In particular the state keeps track of the current state of existing 
+-- conmmitments (sc) and choices (sch) that have been made.
+
 data State = State {
                sc  :: Map.Map IdentCC CCStatus,
                sch :: Map.Map (IdentChoice, Person) ConcreteChoice
@@ -113,16 +155,20 @@ type CCStatus = (Person,CCRedeemStatus)
 data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
                deriving (Eq,Ord,Show,Read)
 
--- Representation of observations over observables and the state.
--- Rendered into predicates by interpretObs.
-
--- TO DO: add enough operations to make complete for arithmetic etc.
--- as well as enough primitive observations over the primitive values.
+-- QUESTION: how to explain this? 
+-- QUESTION: is it in the right place in the file, or should it be
+-- right at the start.
 
 data Money = AvailableMoney IdentCC |
              AddMoney Money Money |
              ConstMoney Cash
                     deriving (Eq,Ord,Show,Read)
+
+-- Representation of observations over observables and the state.
+-- Rendered into predicates by interpretObs.
+
+-- TO DO: add enough operations to make complete for arithmetic etc.
+-- as well as enough primitive observations over the primitive values.
 
 data Observation =  BelowTimeout Timeout | -- is this number below the actual block number?
                     AndObs Observation Observation |
@@ -135,6 +181,9 @@ data Observation =  BelowTimeout Timeout | -- is this number below the actual bl
                     deriving (Eq,Ord,Show,Read)
 
 -- Semantics of money
+-- QUESTION: should this be moved next to the definition of Money.
+-- What is the intention here?
+
 reduceMoney :: State -> Money -> Cash
 reduceMoney (State {sc = scv}) (AvailableMoney id) =
   case Map.lookup id scv of
@@ -260,6 +309,11 @@ step commits st c@(RedeemCC ident con) _ =
     where
         ccs = sc st
 
+-- QUESTION: what is the status of the following functions
+-- Can we give a general heading here? Would be really useful for a reader
+-- to get a sense of why these things are here. I *think* it's because
+-- they are auxiliaries to full_step but good to explain this in a high-level way.
+
 -- Given a choice, if no previous choice for its id has been recorded,
 -- it records it in the map, and adds an action ChoiceMade to the list.
 
@@ -328,12 +382,16 @@ compute_all_aux com st con os ac
   | otherwise = compute_all_aux com nst ncon os (nac ++ ac)
   where (nst, ncon, nac) = fullStep com st con os
 
-
+-- QUESTION; rationale??
 
 markRedeemed :: CCStatus -> CCStatus
 
 markRedeemed (p, NotRedeemed _ _) = (p, ManuallyRedeemed)
 markRedeemed (p, x) = (p, x)
+
+
+-- QUESTION: can these functions be rationalised in some way, grouped
+-- and described as such.
 
 
 -- Auxiliary functions on the state

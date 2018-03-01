@@ -16,7 +16,7 @@ import qualified Data.List as List
  --     - type of State (of the internal state of a DSL contract evaluation)                    --
  --     - type of Observations (of values of Observables)                                       --
  --     - type of Contracts                                                                     --
- --     - single step evaluation (the step function) which is wrapped by fullStep …            --
+ --     - single step evaluation (the step function) which is wrapped by fullStep …             --
  --     - … which expires and refunds cash commitments                                          --
  --                                                                                             --
  -- Further discussion in accompanying document.                                                --
@@ -100,10 +100,19 @@ data RC = RC IdentCC Person Cash
 -- The input to a step has four components
 --      - a set of cash commitments made at that step
 --      - a set of cash redemptions made at that step
---      - a collection of payments: each payment may pay to multiple people, 
---        so represented by a map (IdentPay, Person) |-> Cash
---      - a collection of choices QUESTION: WHAT IS THE RATIONALE HERE???
---        WHY ISN'T IT A MAP FROM THE IDENT TO A PERSON,CHOICE PAIR??
+--      - a map of payment requests made at that step
+--      - a map of choices made at that step
+--
+-- In practice, we could use sets for all of them,
+-- but using a map ensures that there is only one
+-- entry per identifier and person pair and would
+-- make access more efficient if we needed to find
+-- an entry without knowing the concrete choice
+-- or ammount of cash being claimed.
+
+-- If we want to be able to accept commitments that are
+-- more generous than established we would need to make
+-- cc a map too.
 
 data Input = Input {
                 cc  :: Set.Set CC,
@@ -116,11 +125,18 @@ data Input = Input {
 -- Actions are things that have an effect on the blockchain, and a set
 -- of actions is generated at each step. We are not responsible for
 -- making these happen: this is passed to the blockchain.
--- QUESTION: the rest of this comment should be deleted?
--- The current implementation doesn't properly reflect this.
+--
+-- There are some actions that would not have an effect on
+-- the blockchain but serve the purpouse of logging what happened
+-- and to help analysis of contracts. For example, FailedPay
+-- does not have an effect, but we may want to ensure that
+-- it cannot be produced under any circumstance by a contract,
+-- since that would imply that the contract cannot be enforced.
 
--- The specific actions represented here should be self-
--- explanatory, EXCEPT PERHAPS DuplicateRedeem QUESTION
+-- The actions represented here should be self-explanatory,
+-- with the possible exception of DuplicateRedeem, which
+-- just registers that two redeems have been made for
+-- the same IdentCC.
 
 data Action =   SuccessfulPay IdentPay Person Person Cash |
                 ExpiredPay IdentPay Person Person Cash |
@@ -155,34 +171,19 @@ type CCStatus = (Person,CCRedeemStatus)
 data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
                deriving (Eq,Ord,Show,Read)
 
--- QUESTION: how to explain this? 
--- QUESTION: is it in the right place in the file, or should it be
--- right at the start.
+-- Money is a set of contract primitives that represent constants,
+-- functions, and variables that can be evaluated as an ammount
+-- of money.
 
 data Money = AvailableMoney IdentCC |
              AddMoney Money Money |
              ConstMoney Cash
                     deriving (Eq,Ord,Show,Read)
 
--- Representation of observations over observables and the state.
--- Rendered into predicates by interpretObs.
-
--- TO DO: add enough operations to make complete for arithmetic etc.
--- as well as enough primitive observations over the primitive values.
-
-data Observation =  BelowTimeout Timeout | -- is this number below the actual block number?
-                    AndObs Observation Observation |
-                    OrObs Observation Observation |
-                    NotObs Observation |
-                    PersonChoseThis IdentChoice Person ConcreteChoice |
-                    PersonChoseSomething IdentChoice Person |
-                    ValueGE Money Money |
-                    TrueObs | FalseObs
-                    deriving (Eq,Ord,Show,Read)
-
 -- Semantics of money
--- QUESTION: should this be moved next to the definition of Money.
--- What is the intention here?
+
+-- Function that evaluates a Money construct given
+-- the current state. 
 
 reduceMoney :: State -> Money -> Cash
 reduceMoney (State {sc = scv}) (AvailableMoney id) =
@@ -191,6 +192,23 @@ reduceMoney (State {sc = scv}) (AvailableMoney id) =
     _ -> 0
 reduceMoney s (AddMoney a b) = (reduceMoney s a) + (reduceMoney s b)
 reduceMoney _ (ConstMoney c) = c
+
+
+-- Representation of observations over observables and the state.
+-- Rendered into predicates by interpretObs.
+
+-- TO DO: add enough operations to make complete for arithmetic etc.
+-- as well as enough primitive observations over the primitive values.
+
+data Observation =  BelowTimeout Timeout | -- are we still on time for something that expires on Timeout?
+                    AndObs Observation Observation |
+                    OrObs Observation Observation |
+                    NotObs Observation |
+                    PersonChoseThis IdentChoice Person ConcreteChoice |
+                    PersonChoseSomething IdentChoice Person |
+                    ValueGE Money Money | -- is first ammount is greater or equal than the second?
+                    TrueObs | FalseObs
+                    deriving (Eq,Ord,Show,Read)
 
 -- Semantics of observations
 
@@ -293,7 +311,7 @@ step commits st c@(CommitCash ident person val start_timeout end_timeout con) os
         cns = (person, if cexe || cexs then ManuallyRedeemed else NotRedeemed val end_timeout)
         ust = Map.insert ident cns ccs
 
--- Note: there is no possibility of payment failure here: is that correct?
+-- Note: there is no possibility of payment failure here
 -- Also: look at partial redemption: currently it is all or nothing.
 
 step commits st c@(RedeemCC ident con) _ =
@@ -309,10 +327,9 @@ step commits st c@(RedeemCC ident con) _ =
     where
         ccs = sc st
 
--- QUESTION: what is the status of the following functions
--- Can we give a general heading here? Would be really useful for a reader
--- to get a sense of why these things are here. I *think* it's because
--- they are auxiliaries to full_step but good to explain this in a high-level way.
+---------------------------
+-- fullStep & computeAll --
+---------------------------
 
 -- Given a choice, if no previous choice for its id has been recorded,
 -- it records it in the map, and adds an action ChoiceMade to the list.
@@ -346,6 +363,16 @@ isClaimed inp ident status
 expiredAndClaimed :: Input -> Timeout -> IdentCC -> CCStatus -> Bool
 
 expiredAndClaimed inp et k v = isExpiredNotRedeemed et v && isClaimed inp k v
+
+
+-- Marks a cash commit as redeemed,
+-- Idempotent: if it is already redeemed it does nothing 
+
+markRedeemed :: CCStatus -> CCStatus
+
+markRedeemed (p, NotRedeemed _ _) = (p, ManuallyRedeemed)
+markRedeemed (p, x) = (p, x)
+
 
 -- Looks for expired and claimed commits in the list of commits of the state (scf)
 
@@ -382,19 +409,9 @@ compute_all_aux com st con os ac
   | otherwise = compute_all_aux com nst ncon os (nac ++ ac)
   where (nst, ncon, nac) = fullStep com st con os
 
--- QUESTION; rationale??
-
-markRedeemed :: CCStatus -> CCStatus
-
-markRedeemed (p, NotRedeemed _ _) = (p, ManuallyRedeemed)
-markRedeemed (p, x) = (p, x)
-
-
--- QUESTION: can these functions be rationalised in some way, grouped
--- and described as such.
-
-
--- Auxiliary functions on the state
+-------------------------
+-- Auxiliary functions --
+-------------------------
 
 -- How much money is committed by a person, and is still unexpired?
 
@@ -458,6 +475,9 @@ discountFromPairList _ _ = error "attempt to discount when insufficient cash ava
 sortByExpirationDate :: [(IdentCC, CCStatus)] -> [(IdentCC, CCStatus)]
 sortByExpirationDate = List.sortBy lowerExpirationDateButNotExpired
 
+-- Compares two cash commitments regarding their expiration date,
+-- it considers a commitment smaller the closer it is to its
+-- expiration but without having expired.
 lowerExpirationDateButNotExpired :: (IdentCC, CCStatus) -> (IdentCC, CCStatus) -> Ordering
 
 lowerExpirationDateButNotExpired (_, (_, NotRedeemed _ e)) (_, (_, NotRedeemed _ e2)) = compare e e2

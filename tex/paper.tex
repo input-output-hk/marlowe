@@ -156,9 +156,9 @@ Second, it will be necessary to ensure that commitments of currency (or ``cash''
 
 At each step, a number of commitments may be made. This information constitutes an input to the execution of each step. Moreover, information about the commitments currently in force forms the state, which is (potentially) modified at each execution step.
 
-
-\sjtnote{Still true? CHECK} Finally, a running contract will initiate a number of payment actions on the blockchain at each step, represented by a list of actions.
-
+Finally, payments can be granted by using committed money, but they must be manually redeemed by the recipient, in the 
+same way that cash commitments are redeemed when they expire. The effects of the contract in the blockchain are 
+represented by a list of actions that is derived from the execution of each step of the semantics.
 
 This analysis justifies the type of the \bluett{step} function:
 
@@ -224,8 +224,11 @@ When the timeout is reached, the remaining funds will be redeemed automatically 
 
 The model that we have discussed so far is deliberately kept as compact as possible. However there are a number of potential extensions to the model which we introduce here. 
 
-We have examined a single kind of commitment, namely a commitment of a certain amount of currency. In different applications, such as on-chain game playing of games like poker, a commitment to a value will be required. A value commitment would include a choice of a play in a game, which would be chosen and concealed from the other players until a later point in play, when it can be revealed. \sjtnote{Add citation to the poker paper?}
-
+We have examined a single kind of commitment, namely a commitment of a certain amount of currency. In different 
+applications, such as on-chain game playing of games like poker, a commitment to a value will be required. A value 
+commitment would include a choice of a play in a game, which would be chosen and concealed from the other players until 
+a later point in play, when it can be revealed. The paper \cite{kumaresan2015use} makes use of this and other 
+cryptographic primitives to enforce the rules of poker while maintaining the cards of each player secret.
 
 \section{Analysis}
 What questions can we ask? What answers can we give?

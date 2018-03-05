@@ -47,6 +47,10 @@
 \usepackage{tikz}
 \usepackage{url}
 \usepackage{alltt}
+%\usepackage[cache=false]{minted}
+\usepackage{minted}
+\usepackage{syntax}
+
 
 
 % Must come after hyperref
@@ -60,6 +64,14 @@
 
 \FXRegisterAuthor{pls}{apls}{\color{teal}[Pablo]}
 \FXRegisterAuthor{sjt}{asjt}{\color{magenta}[Simon]}
+
+%%% MINTED COMMANDS FOR HASKELL %%%
+
+\newmint{haskell}{}
+\newminted{haskell}{}
+\newmintinline{haskell}{}
+
+
 
 
 %%% MACROS %%%
@@ -150,74 +162,93 @@ The paper is structured like this: we begin with an overview of the model, inclu
 The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
 A running contract will interact with its environment in two ways.
 
-First, it will need to observe different kinds of varying quantities including, for example, the current time, the current block number and, random numbers, as well as ``real world'' quantities like ``the price of oil'' or ``the exchange rate between currencies A and B''. Each instance of such an observable will be recorded on the blockchain to allow the computation to be repeated for verification purposes. It is assumed that at each step of the execution of the contract, the values of some observables will be needed.
+First, it will need to observe different kinds of varying quantities including, for example, the current time, the current block number and, random numbers, as well as ``real world'' quantities like ``the price of oil'' or ``the exchange rate between currencies A and B''. Each instance of such an observable will be recorded on the blockchain to allow the computation to be repeated for verification purposes. It is assumed that at each step of the execution of the contract, the values of some observables will be needed, and these values are (together) given by a value of type \haskellinline{OS}. Note that these values are not determined by the participants in the contract, but rather by the external environment.
 
-Second, it will be necessary to ensure that commitments of currency (or ``cash'') can be  made by the participants in a contract. While informally we might see a commitment to something as being indefinite, it is important to realise that on blockchain a commitment needs to have a timeout so that progress can be forced in a game. After the timeout period the cash can be refunded through the user creating a transaction to reclaim the cash.
+On the other hand, at each step there are -- potentially, at least -- a variety of inputs available from the participants. These include commitments of currency (or ``cash''), redemption of commitments, and claims of payments by a participant; moreover it is also possible for a participant to input an arbitrary value (which we term a ``choice''). The particular inputs at a given step are described by a value of type \haskellinline{Input}.
 
-At each step, a number of commitments may be made. This information constitutes an input to the execution of each step. Moreover, information about the commitments currently in force forms the state, which is (potentially) modified at each execution step.
+While informally we might see a commitment to something as being indefinite, it is important to realise that on blockchain a commitment needs to have a timeout so that progress can be forced in a game. After the timeout period the cash can be refunded through the user creating a transaction to reclaim the cash.
+
+Moreover, information about the commitments currently in force forms the \haskellinline{State}, which is (potentially) modified at each execution step. 
 
 Finally, payments can be granted by using committed money, but they must be manually redeemed by the recipient, in the 
 same way that cash commitments are redeemed when they expire. The effects of the contract in the blockchain are 
-represented by a list of actions that is derived from the execution of each step of the semantics.
+represented by a list \haskellinline{AS} of \haskellinline{Action}s that is derived from the execution of each step of the semantics.
 
-This analysis justifies the type of the \bluett{step} function:
+This analysis justifies the type of the \haskellinline{step} function:
 
-\begin{allbluett}
+\begin{haskellcode}
 step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
-\end{allbluett}
-
-
-Where \bluett{OS} contains the values for observables available at the step in question, and \bluett{AS} is a list of actions (currently payments) that are carried out as a result of executing the step.
-
+\end{haskellcode}
 
 The model is based on a number of assumptions.
 
 \begin{itemize}
 \item It is assumed that cryptographic ``services'' or operations are provided by a layer external to the system, and so they need not be modelled explicitly here.
 \item Making a commitment is not something that a contract can perform; rather, it can require that a commitment is made, but that then has to be established externally: hence the input of (a set of) commitments at each step. The same observation also applies to redeeming a commitment of cash.
-\item Observables are observed at a particular time and in a particular context. We assume that the recording and identification of each (instance of an) observation is provided by the infrastructure of the system. We provide a ``little language'' for describing observations: \bluett{Observation}.
+\item Observables are observed at a particular time and in a particular context. We assume that the recording and identification of each (instance of an) observation is provided by the infrastructure of the system. We provide a ``little language'' for describing observations: \haskellinline{Observation}.
 \item The fact of making commitments also needs to be recorded.
 \item It is important to be aware that there may be different instances of contracts executed, and for each instance there will typically be different instances of observables (and commitments) observed and recorded.
-\item The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the \bluett{full\_step} function below).
+\item The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the \haskellinline{fullStep} function below).
+\item We assume that time is ``coarse grained'' and measured simply by block number, so that timeouts etc.\ are delimited using nothing finer than block number. 
 \end{itemize}
-
-\noindent
-\sjtnote{Revised to here, 14:53 Wednesday 28 February.}
 
 \medskip
 \noindent
 The type of contracts is given by
 
-\begin{allbluett}
+\begin{haskellcode}
 data Contract =
    Null |
+   CommitCash IdentCC Person Cash Timeout Timeout Contract |  
    RedeemCC IdentCC Contract |
-   Pay IdentPay Person Person Cash Timeout Contract |   -- CHANGED
+   Pay IdentPay Person Person Cash Timeout Contract |  
    Both Contract Contract |
    Choice Observation Contract Contract |
-   CommitCash IdentCC Person Cash Timeout Timeout Contract |   -- CHANGED
-   When Observation Timeout Contract Contract    -- CHANGED
-\end{allbluett}
+   When Observation Timeout Contract Contract   
+   \end{haskellcode}
 %Originally on "Choice": \footnote{Doesn't the step function need to record what observations are made, so they can be archived in the blockchain? I don't see how your design will support doing so.}\footnote{Yes, we assume that it is part of the infrastructure of this language to record the values of *observables* that are used. However, we have chosen no to make it part of the language itself.}
 
-The \bluett{step} function is total, so that for every contract a result of stepping is defined. However, for some kinds of contracts -- commits, redeems or time-shifted contracts -- it is possible that the result of a step is to produce the same contract as the result; such a step is called \emph{quiescent} whereas all other steps \emph{make progress}. We use this distinction in the explanation that follows.
+The \haskellinline{step} function is total, so that for every contract a result of stepping is defined. However, for some kinds of contracts -- commits, redeems or time-shifted contracts -- it is possible that the result of a step is to produce the same contract as the result; such a step is called \emph{quiescent} whereas all other steps \emph{make progress}. We use this distinction in the explanation that follows.
 
 
-At each computational step, the \bluett{step} function is wrapped by a call to the \bluett{full\_step} function, which in addition to performing \bluett{step} will cause expired cash commitments to be refunded.
+At each computational step, the \haskellinline{step} function is wrapped by a call to the \haskellinline{fullStep} function, which in addition to performing \haskellinline{step} will enable expired cash commitments to be refunded and record any choices made at that step.
 
 
 The constructors should be interpreted thus:
 
 \begin{itemize} 
-\item \bluett{Null} is the null contract; it will always be quiescent.
-\item \bluett{RedeemCC idCC k} (\bluett{CC} stands for cash commitment.) For this contract to make progress, the creator of the cash commitment with identifier \bluett{idCC} is required to redeem the unspent funds in that commitment; the contract then continues as \bluett{k}. If the cash commitment with identifier \bluett{idCC} has expired, the remaining funds will be redeemed automatically by the \bluett{full\_step} function and a \bluett{ExpiredRedeem }action will be produced\footnote{How does the contract determine what actions resulted from a given step? Or is this not required?}\footnote{
-If it is required, restructuring the DSL so that the result action appears as the 'value' of executing a step (using a monadic interface as described for id generation below) would be a good idea.}\footnote{We specify the actions generated by each kind of constructor; at each step the list of such actions, of type \bluett{AS}, is a component of the result.}. Using \bluett{RedeemCC} to redeem the same identifier \bluett{idCC} twice will result in the issue of a DuplicateRedeem action. Otherwise the contract is quiescent, waiting for the commitment to be redeemed or to expire.
-\item \bluett{Pay p1 p2 int k} requires that int is paid by p1 to p2, and continues as k. It uses the currency allocated by the cash commitments made by p1 that expire the earliest. This contract will result in a FailedPay action if the funds are not available; otherwise a SuccessfulPay action is generated.
-\item \bluett{Both k1 k2} enforces the behaviour of both contracts k1 and k2. Because the model is stateful and produces output actions, to make a step it is necessary to execute a single step of each of  the contracts k1 and k2 in sequence: first k1 then k2.
-\item \bluett{Choice obs k1 k2} behaves as either k1 or k2 depending on the (Boolean) result of obs at the time that the observation is made, k1 if it is True and k2 if False.
-\item \bluett{CommitCash idCC p n timeout k}  For this contract to make progress, the user p is required to make a cash commitment of value n and timeout timeout (specified as a block number) with identifier idCC; the contract then continues as k. Otherwise the contract is quiescent, waiting for the cash to be committed. 
-When the timeout is reached, the remaining funds will be redeemed automatically and a SuccessfulPay action will be issued that indicates a self-payment from the person p with the remaining funds. This is performed by the full\_step function, which wraps the step function.
-\item \bluett{When obs timeout k def\_k} This contract will not progress until obs is True or until the current block number is greater than or equal to the one specified by timeout. In case the timeout applies, the contract will continue as def\_k, if the timeout does not apply and obs is True, then the contract continues as k. Otherwise the contract is quiescent.
+
+\item \haskellinline{Null} is the null contract; it will always be quiescent.
+
+\item \haskellinline{CommitCash idCC p n t1 t2 k}  For this contract to make progress,\begin{itemize}
+\item either before the timeout \haskellinline{t1} the user \haskellinline{p} makes a cash commitment of value \haskellinline{n} and timeout \haskellinline{t2}  with the identifier \haskellinline{idCC} , 
+\item
+or the timeout \haskellinline{t1} is exceed.
+\end{itemize} 
+In the first case, a \haskellinline{SuccessfulCommit} action is generated; in both cases, the contract then continues as \haskellinline{k}. While neither case holds the contract is quiescent, waiting for the cash to be committed. 
+
+If the cash is committed successfully and the timeout \haskellinline{t2} is reached, then it is impossible to further spend the committed cash, and any unspent funds can be reclaimed by participant \haskellinline{p}.
+ This is performed by the \haskellinline{fullStep} function, as noted above.
+
+\item \haskellinline{RedeemCC idCC k} (\haskellinline{CC} stands for cash commitment.) For this contract to make progress, the creator of the cash commitment with identifier \haskellinline{idCC} is required to redeem the unspent funds in that commitment; the contract then continues as \haskellinline{k}, and the action \haskellinline{CommitRedeemed} is produced. 
+Committed cash can only be redeemed once, and an attempt to redeem it a second time will produce a  \haskellinline{DuplicateRedeem} action, continuing as \haskellinline{k}.
+
+If the cash commitment with identifier \haskellinline{idCC} has expired, it becomes possible for the remaining funds to be redeemed by the committer; this can be done by the \haskellinline{fullStep} function processing the appropriate \haskellinline{Input}, and an \haskellinline{ExpiredCommitRedeemed} action will be produced. 
+
+Once the commitment \haskellinline{idCC} has expired and is redeemed, a \haskellinline{RedeemCC idCC k} contract will immediately evolve to \haskellinline{k}.
+%\footnote{How does the contract determine what actions resulted from a given step? Or is this not required?}
+%\footnote{If it is required, restructuring the DSL so that the result action appears as the 'value' of executing a step (using a monadic interface as described for id generation below) would be a good idea.}
+%\footnote{We specify the actions generated by each kind of constructor; at each step the list of such actions, of type \haskellinline{AS}, is a component of the result.}. 
+
+\item \haskellinline{Pay p1 p2 int t k} makes it possible, assuming that sufficient funds are available, for \haskellinline{p1} to claim  a payment of \haskellinline{int} from \haskellinline{p2} before the timeout \haskellinline{t}. The contract continues as \haskellinline{k}. By `available' we mean that sufficient commitments have been made and  not yet expired to cover the payment; in this case the payment  uses the currency allocated by the cash commitments made by \haskellinline{p1} that expire the earliest.
+
+ This contract will result in a \haskellinline{FailedPay} action if the funds are not available; otherwise a \haskellinline{SuccessfulPay} action is generated.
+
+\item \haskellinline{Both k1 k2} enforces the behaviour of both contracts \haskellinline{k1} and \haskellinline{k2}. Because the model is stateful and produces output actions, to make a step it is necessary to execute a single step of each of  the contracts \haskellinline{k1} and \haskellinline{k2} in sequence: first \haskellinline{k1} then \haskellinline{k2}.
+
+\item \haskellinline{Choice obs k1 k2} behaves as either \haskellinline{k1} or \haskellinline{k2} depending on the (Boolean) result of \haskellinline{obs} at the time that the observation is made, \haskellinline{k1} if it is \haskellinline{True} and \haskellinline{k2} if \haskellinline{False}.
+
+\item \haskellinline{When obs timeout k def_k} This contract will not progress until \haskellinline{obs} is \haskellinline{True} or until the current block number is greater than or equal to the one specified by timeout. In case the timeout applies, the contract will continue as \haskellinline{def_k}, if the timeout does not apply and \haskellinline{obs} is \haskellinline{True}, then the contract continues as \haskellinline{k}. Otherwise the contract is quiescent.
 \end{itemize}
 
 \subsection{Potential additions to the model}
@@ -230,32 +261,35 @@ commitment would include a choice of a play in a game, which would be chosen and
 a later point in play, when it can be revealed. The paper \cite{kumaresan2015use} makes use of this and other 
 cryptographic primitives to enforce the rules of poker while maintaining the cards of each player secret.
 
+We should monadify, so that identifiers are automatically generated. This gives two nice properties. First, they are guaranteed to be unique; secondly they can be generated only in cases where a commit has been made successfully (within the required time period). It might well be that these should be generated by the system; this could guarantee uniqueness, freshness etc, and could also lead to a monadic DSL, with bind used for binding names to commitments.
+
 \section{Analysis}
 What questions can we ask? What answers can we give?
 
 
 \subsubsection{What are the valid contracts?}
 
-One possible definition is ``those contracts that do not lead to a FailedPay action''. Does this make sense independently of the inputs to a contract (i.e. observables, commitments, redeems, time, and randomness)?
+One possible definition is ``those contracts that do not lead to a \haskellinline{FailedPay} action''. Does this make sense independently of the inputs to a contract (i.e. observables, commitments, redeems, timeouts, and randomness)?
 Some relevant points (NB discussion incomplete):
 \begin{itemize}
-\item For Pay require a sufficient balance not to produce a FailedPay action. 
-\item For Both require a sufficient balance for both contracts combined. Need to think here whether the two conjuncts should be independent, or whether a commitment in one half can be used in the other.
-\item For Choice require a sufficient balance for the maximum of the requirements of the individual contracts. 
-\item For When, need to ``age'' the existing commitments relative to the new starting point of the continuation contract. 
-\item Are there any constraints on  Commit*, RevealCV and RedeemCC statements? Not directly, but there need to be sufficient funds available to pay if needed, or enough time for the commitments to time out, if not.
+\item For \haskellinline{Pay} require a sufficient balance not to produce a \haskellinline{FailedPay} or a \haskellinline{DuplicateRedeem} action. 
+\item For \haskellinline{Both} require a sufficient balance for both contracts combined. Need to think here whether the two conjuncts should be independent, or whether a commitment in one half can be used in the other.
+\item For \haskellinline{Choice} require a sufficient balance for the maximum of the requirements of the individual contracts. 
+\item For \haskellinline{When}, need to ``age'' the existing commitments relative to the new starting point of the continuation contract. 
+\item Are there any constraints on  \haskellinline{CommitCash} and \haskellinline{RedeemCC} statements? Not directly, but there need to be sufficient funds available to pay if needed, or enough time for the commitments to time out, if not.
 \item Originally we had included that we should include all the ``progress'' requirements from point 2 below; but that's probably not the right thing here.
+
 \end{itemize}
 
-\subsubsection{Do all contracts potentially evaluate to Null?}
+\subsubsection{Do all contracts potentially evaluate to \haskellinline{Null}?}
 
 That is, for each contract do there exist sequences of values of Commit and OS such that stepping the contract with these inputs leads to Null? Might we have to rule out unsatisfiable observations?
 Some relevant points (NB discussion incomplete):
 \begin{itemize}
-\item For When, need to be able to make interpretObs st obs os true. Since there is a timeout to When then there's no need to impose this condition, as we'll progress at timeout if not before.
-\item For Commit*, need to have the right commits in the Commit argument.
-\item Similarly for RevealCV and RedeemCC statements.
-\item It would also be possible to put timeouts on to Commit, RevealCV and RedeemCC operations, and if this were to be done there would be no remaining requirements for contract execution to make progress.
+\item For \haskellinline{When}, need to be able to make \haskellinline{interpretObs st obs os} true. Since there is a timeout to \haskellinline{When} then there's no need to impose this condition, as we'll progress at timeout if not before.
+\item For \haskellinline{CommitCash}, need to have the right commits in the \haskellinline{Commit} argument.
+\item Similarly for \haskellinline{RedeemCC} statements.
+\item It would also be possible to put timeouts on to \haskellinline{CommitCash},  and \haskellinline{RedeemCC} operations, and if this were to be done there would be no remaining requirements for contract execution to make progress.
 \item There are no constraints on other constructs.
 \end{itemize}
 
@@ -265,30 +299,24 @@ The model outlined here raises a number of questions, enumerated here.
 
 
 \begin{enumerate}
-\item Identifiers for commitments are part of the model, and supplied as part of each contract. It might well be that these should be generated by the system; this could guarantee uniqueness, freshness etc, and could also lead to a monadic DSL, with bind used for binding names to commitments.
-\item Does the Both constructor potentially produce invalid/misleading contracts, combining a commitment in one half with its use in the other? The problem is that the ``use'' conjunct could potentially be executed, leading to a failed payment.
+\item Does the \haskellinline{Both} constructor potentially produce invalid/misleading contracts, combining a commitment in one half with its use in the other? The problem is that the ``use'' conjunct could potentially be executed, leading to a failed payment.
 \item How do we ensure that contracts can be enforced? Is there a notion of validity for contracts that can be enforced? To which extent is this notion enforced by current constructors?
-\item Should there be a timeout on the process of making or revealing a commitment, or is it sufficient to have timeouts on the commitments themselves?
-\item (Related to 3) Is this also an argument to have timeouts on value commitments too?
-\item The model takes time as an observable. The type Time represents the index of evaluation, and BlockNumber is the number of the current block of the blockchain. We've not included a ``real'' time, but should this be included?
-\item (Related to 5) What should denominate the timeouts on commitments: Time or BlockNumber or another notion of time? Currently we are using the latter.
+\item The model does not take time as an observable, but rather it is defined in terms of \haskellinline{BlockNumber} only. 
+\item We could use ``slot time'' https://eprint.iacr.org/2016/889.pdf ``We consider a setting where time is divided into discrete units called slots. A ledger, described in more detail below, associates with each time slot (at most) one ledger block.''
 \item Is it possible for block number to depend on progress of computation? We conjecture not, because otherwise it would be possible to produce timelocks, under which it becomes impossible for time to progress. 
 \item Does a contract expire if a surrounding commitment does? We think not.
 \item The model is deterministic, with all non-determinism being external, and confined to observables. This is surely necessary in order to support computation replay, but does it restrict the expressibility of the model?
 \item Is there a notion of causality for these contracts? Would we be able to characterise it semantically? Syntactically?
-\item We have modelled cash as fungible: we make payments using the cash commitments in order of expiry time, with those expiring earliest being used first. Would there be any reason for using a different approach?
-\item Timeouts are expressed in absolute time: presumably they could be relative (with recording on the blockchain of the times at which they are triggered).\footnote{This contradicts what you've said elsewhere. I think timeouts should be times, not blockchain numbers. I suspect it would be better not to use blockchain numbers. I don't want to have to react more quickly if lots of people are making transactions that day. Also, it avoids question 8.}\footnote{See addition about slot time from Ouroboros paper (as referenced in the body of the paper).}
-\end{enumerate}
+\item We have modelled cash as fungible: we make payments using the cash commitments in order of expiry time, with those expiring earliest being used first. Would there be any reason for using a different approach? Yes! UTxO.
+\item Timeouts are expressed in absolute time: presumably they could be relative (with recording on the blockchain of the times at which they are triggered).
+%\footnote{This contradicts what you've said elsewhere. I think timeouts should be times, not blockchain numbers. I suspect it would be better not to use blockchain numbers. I don't want to have to react more quickly if lots of people are making transactions that day. Also, it avoids question 8.}\footnote{See addition about slot time from Ouroboros paper (as referenced in the body of the paper).}
+\item Some observables have a ``monotonicity'' property: once a choice is made, it is fixed forever; on the other hand, something not yet chosen is only so thus far; do we need to reflect this in the observations that we allow?
+%\item The seesaw construction is key to implementing e.g. poker, and it can be described in terms of the existing constructs (modulo the answer to point 4 above). However, should seesaw be a primitive in its own right?
+%\footnote{No. You will have a successful language when you can define seesaw as an abstraction in terms of the other primitives *within the language*}\footnote{And indeed we *did* define it, at least for the RPS example.}
 
-Added: we should probably use ``slot time'' https://eprint.iacr.org/2016/889.pdf ``We consider a setting where time is divided into discrete units called slots. A ledger, described in more detail below, associates with each time slot (at most) one ledger block.''
-\begin{enumerate}
-\item Some observables have a ``monotonicity'' property: once something is revealed, it is revealed forever; on the other hand, something unrevealed is only unrevealed so far; do we need to reflect this in the observations that we allow?
-\item The seesaw construction is key to implementing e.g. poker, and it can be described in terms of the existing constructs (modulo the answer to point 4 above). However, should seesaw be a primitive in its own right?\footnote{No. You will have a successful language when you can define seesaw as an abstraction in terms of the other primitives *within the language*}\footnote{And indeed we *did* define it, at least for the RPS example.}
-
-\item Constructs that can time out could have a single continuation (do this next) or two continuations: do this if progressed normally, and do the other continuation if timed out. A candidate for this is a timed out When, where the second option is what we have implemented.
-\item RedeemCC is intended for premature repayment of a cash commitment, i.e. before the commitment has timed out.
-\footnote{Why is RedeemCC a separate construct? Can't it be implemented with Pay?}\footnote{It is for someone to claim their cash back, rather than making a payment to another person.}
- This is potentially dangerous Ð leading to a FailedPay, for example Ð but useful to make a repayment at the end of a contract. 
+\item Constructs that can time out could have a single continuation (do this next) or two continuations: do this if progressed normally, and do the other continuation if timed out. A candidate for this is a timed out \haskellinline{When}, where the second option is what we have implemented.
+\item \haskellinline{RedeemCC} is intended for premature repayment of a cash commitment, i.e. before the commitment has timed out. Why is \haskellinline{RedeemCC} a separate construct? Can't it be implemented with \haskellinline{Pay}?%\footnote{It is for someone to claim their cash back, rather than making a payment to another person.}
+ This is potentially dangerous -- leading to a \haskellinline{FailedPay}, for example -- but useful to make a repayment at the end of a contract. 
 \item Alternatively, it would be possible for the underlying model to repay all committed but unspent cash automatically at the end of a contract, but we might want to do the same thing at the end of each ``round'' of  a game, for instance.
 \end{enumerate}
 

@@ -300,8 +300,7 @@ step _ st (When obs expi con con2) os
 -- May want to relax this
 
 step commits st c@(CommitCash ident person val start_timeout end_timeout con) os
-  | cexe || cexs = (st {sc = ust}, con, [SuccessfulCommit ident person 0,
-                                         CommitRedeemed ident person 0])
+  | cexe || cexs = (st {sc = ust}, con, [])
   | Set.member (CC ident person val end_timeout) (cc commits)
         = (st {sc = ust}, con, [SuccessfulCommit ident person val])
   | otherwise = (st, c, [])

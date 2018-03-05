@@ -239,11 +239,11 @@ interpretObs _ FalseObs _
 
 data Contract =
     Null |
+    CommitCash IdentCC Person Cash Timeout Timeout Contract |
     RedeemCC IdentCC Contract |
     Pay IdentPay Person Person Cash Timeout Contract |
     Both Contract Contract |
     Choice Observation Contract Contract |
-    CommitCash IdentCC Person Cash Timeout Timeout Contract |
     When Observation Timeout Contract Contract
                deriving (Eq,Ord,Show,Read)
 

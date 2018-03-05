@@ -185,13 +185,13 @@ data Money = AvailableMoney IdentCC |
 -- Function that evaluates a Money construct given
 -- the current state. 
 
-reduceMoney :: State -> Money -> Cash
-reduceMoney (State {sc = scv}) (AvailableMoney id) =
+evalMoney :: State -> Money -> Cash
+evalMoney (State {sc = scv}) (AvailableMoney id) =
   case Map.lookup id scv of
     Just (_, NotRedeemed c _) -> c
     _ -> 0
-reduceMoney s (AddMoney a b) = (reduceMoney s a) + (reduceMoney s b)
-reduceMoney _ (ConstMoney c) = c
+evalMoney s (AddMoney a b) = (evalMoney s a) + (evalMoney s b)
+evalMoney _ (ConstMoney c) = c
 
 
 -- Representation of observations over observables and the state.
@@ -229,7 +229,7 @@ interpretObs st (PersonChoseThis choice_id person reference_choice) _
 interpretObs st (PersonChoseSomething choice_id person) _
     = Map.member (choice_id, person) (sch st)
 interpretObs st (ValueGE a b) _
-    = (reduceMoney st a) >= (reduceMoney st b)
+    = (evalMoney st a) >= (evalMoney st b)
 interpretObs _ TrueObs _
     = True
 interpretObs _ FalseObs _

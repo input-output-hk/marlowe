@@ -73,17 +73,15 @@
     <div id="ui">
 <textarea id="codeArea">
 CommitCash (IdentCC 1) 1 100 10 200
-  (Choice (BelowTimeout 10)
-          (CommitCash (IdentCC 2) 2 20 20 200
-            (Choice (BelowTimeout 20)
-                    (When (PersonChoseSomething (IdentChoice 1) 1) 100
-                          (Both (RedeemCC (IdentCC 1) Null)
-                                (RedeemCC (IdentCC 2) Null))
-                          (Pay (IdentPay 1) 2 1 20 200
-                               (Both (RedeemCC (IdentCC 1) Null)
-                                     (RedeemCC (IdentCC 2) Null))))
-                    (RedeemCC (IdentCC 1) Null)))
-          Null)
+           (CommitCash (IdentCC 2) 2 20 20 200
+                       (When (PersonChoseSomething (IdentChoice 1) 1) 100
+                             (Both (RedeemCC (IdentCC 1) Null)
+                                   (RedeemCC (IdentCC 2) Null))
+                             (Pay (IdentPay 1) 2 1 20 200
+                                  (Both (RedeemCC (IdentCC 1) Null)
+                                        (RedeemCC (IdentCC 2) Null))))
+                       (RedeemCC (IdentCC 1) Null))
+           Null
 </textarea>
 <button id="b2c" onclick="Haste.b2c()">-&gt; Blockly to Code</button><button id="c2b" onclick="Haste.c2b()">Code to Blockly &lt;-</button><button id="clear" onclick="Haste.clear_workspace()">Clear</button><button id="execute" onclick="Haste.execute()">Execute</button>
 <br /><br />
@@ -612,7 +610,7 @@ CommitCash (IdentCC 1) 1 100 10 200
                  },
                  {
                    "type": "contract_commitcash",
-                   "message0": "CommitCash %1 with id %2 %3 person with id %4 %5 may deposit %6 ADA before block %7 %8 money can be redeemed on block %9 or after, %10 if money is committed or it is too late to commit %11 continue as %12",
+                   "message0": "CommitCash %1 with id %2 %3 person with id %4 %5 may deposit %6 ADA, %7 money can be redeemed on block %8 or after, %9 if money is committed before block %10 %11 continue as %12 otherwise continue as %13",
                    "args0": [
                      {
                        "type": "input_dummy",
@@ -644,12 +642,6 @@ CommitCash (IdentCC 1) 1 100 10 200
                        "min": 0
                      },
                      {
-                       "type": "field_number",
-                       "name": "start_expiration",
-                       "value": 0,
-                       "min": 0
-                     },
-                     {
                        "type": "input_dummy",
                        "align": "RIGHT"
                      },
@@ -664,12 +656,26 @@ CommitCash (IdentCC 1) 1 100 10 200
                        "align": "RIGHT"
                      },
                      {
-                       "type": "input_dummy"
+                       "type": "field_number",
+                       "name": "start_expiration",
+                       "value": 0,
+                       "min": 0
+                     },
+                     {
+                       "type": "input_dummy",
+                       "align": "RIGHT"
                      },
                      {
                        "type": "input_statement",
-                       "name": "contract",
-                       "check": "contract"
+                       "name": "contract1",
+                       "check": "contract",
+                       "align": "RIGHT"
+                     },
+                     {
+                       "type": "input_statement",
+                       "name": "contract2",
+                       "check": "contract",
+                       "align": "RIGHT"
                      }
                    ],
                    "previousStatement": "contract",
@@ -927,16 +933,17 @@ CommitCash (IdentCC 1) 1 100 10 200
       var code = '(Choice ' + value_observation + ' ' + statements_contract1 + ' ' + statements_contract2 + ')';
       return code;
     };
-    
     Blockly.Marlowe['contract_commitcash'] = function(block) {
       var number_ccommit_id = block.getFieldValue('ccommit_id');
       var number_person_id = block.getFieldValue('person_id');
       var number_ammount = block.getFieldValue('ammount');
-      var number_start_expiration = block.getFieldValue('start_expiration');
       var number_end_expiration = block.getFieldValue('end_expiration');
-      var statements_contract = Blockly.Marlowe.statementToCode(block, 'contract');
+      var number_start_expiration = block.getFieldValue('start_expiration');
+      var statements_contract1 = Blockly.Marlowe.statementToCode(block, 'contract1');
+      var statements_contract2 = Blockly.Marlowe.statementToCode(block, 'contract2');
       var code = '(CommitCash (IdentCC ' + number_ccommit_id + ') ' + number_person_id + ' ' + number_ammount +
-                 ' ' + number_start_expiration + ' ' + number_end_expiration + ' ' + statements_contract + ')';
+                 ' ' + number_start_expiration + ' ' + number_end_expiration + ' ' + statements_contract1 +
+		 ' ' + statements_contract2 + ')';
       return code;
     };
     
@@ -983,4 +990,3 @@ CommitCash (IdentCC 1) 1 100 10 200
   <script src="marlowe.js"></script>
 </body>
 </html>
-

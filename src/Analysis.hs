@@ -258,7 +258,7 @@ findChoice (RedeemCC _ con) = findChoice con
 findChoice (Pay _ _ _ _ _ con) = findChoice con
 findChoice (Both con1 con2) = minimum (map (findChoice) [con1, con2])
 findChoice (Choice obs con1 con2) = minimum ((findChoiceObs obs):(map (findChoice) [con1, con2]))
-findChoice (CommitCash _ _ _ _ _ con) = findChoice con
+findChoice (CommitCash _ _ _ _ _ con1 con2) = minimum (map (findChoice) [con1, con2])
 findChoice (When obs _ con1 con2) = minimum ((findChoiceObs obs):(map (findChoice) [con1, con2]))
 
 
@@ -330,7 +330,7 @@ analyse_one_step_commits as = (analyse_one_step_commits_aux as)
 -- Remove top actions from contract (including those in Both trees)
 remove_actions :: Contract -> Contract
 remove_actions (Both contr1 contr2) = (Both (remove_actions contr1) (remove_actions contr2))
-remove_actions (CommitCash _ _ _ _ _ contr) = contr
+remove_actions (CommitCash _ _ _ _ _ contr1 contr2) = (Both (remove_actions contr1) (remove_actions contr2))
 remove_actions (RedeemCC _ contr) = contr
 remove_actions contr = contr
 
@@ -414,7 +414,7 @@ analyse_one_step_observables as =
 
 -- Analyses possible combinations of actions regarding the root node
 analyse_one_step_action_aux :: AnalysisState -> [AnalysisState]
-analyse_one_step_action_aux (as@ AS {rem_contract = (CommitCash ident per cash tout _ _),
+analyse_one_step_action_aux (as@ AS {rem_contract = (CommitCash ident per cash tout _ _ _),
                                      commits = comm@Input {cc = cc_old}, -- CommitCash
                                      curr_event = ce,
                                      possible_block = blo

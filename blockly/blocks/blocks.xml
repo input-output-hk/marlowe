@@ -1115,16 +1115,7 @@
                             <field name="PRECISION">0</field>
                             <next>
                               <block type="field_static" id="zuHS@9I1i[qV)79]k7^4">
-                                <field name="TEXT">ADA before block</field>
-                                <next>
-                                  <block type="field_number" id="Kcww~Li]R8:+t.0r9a,E">
-                                    <field name="VALUE">0</field>
-                                    <field name="FIELDNAME">start_expiration</field>
-                                    <field name="MIN">0</field>
-                                    <field name="MAX">Infinity</field>
-                                    <field name="PRECISION">0</field>
-                                  </block>
-                                </next>
+                                <field name="TEXT">ADA,</field>
                               </block>
                             </next>
                           </block>
@@ -1155,16 +1146,25 @@
                         </statement>
                         <next>
                           <block type="input_dummy" id="*1(8S)c::j6k=5zi6MzI">
-                            <field name="ALIGN">LEFT</field>
+                            <field name="ALIGN">RIGHT</field>
                             <statement name="FIELDS">
                               <block type="field_static" id="4y]bs4w02sw=GN8cAU^O">
-                                <field name="TEXT">if money is committed or it is too late to commit</field>
+                                <field name="TEXT">if money is committed before block</field>
+                                <next>
+                                  <block type="field_number" id="Kcww~Li]R8:+t.0r9a,E">
+                                    <field name="VALUE">0</field>
+                                    <field name="FIELDNAME">start_expiration</field>
+                                    <field name="MIN">0</field>
+                                    <field name="MAX">Infinity</field>
+                                    <field name="PRECISION">0</field>
+                                  </block>
+                                </next>
                               </block>
                             </statement>
                             <next>
                               <block type="input_statement" id="7D478oZfHtW#}wt5lP-C">
-                                <field name="INPUTNAME">contract</field>
-                                <field name="ALIGN">LEFT</field>
+                                <field name="INPUTNAME">contract1</field>
+                                <field name="ALIGN">RIGHT</field>
                                 <statement name="FIELDS">
                                   <block type="field_static" id=";1Kw*KL47DI7nn=_Dz]9">
                                     <field name="TEXT">continue as</field>
@@ -1176,6 +1176,23 @@
                                     <field name="TYPE">contract</field>
                                   </block>
                                 </value>
+                                <next>
+                                  <block type="input_statement" id="q7X:58z!jtJb21TO2y+)">
+                                    <field name="INPUTNAME">contract2</field>
+                                    <field name="ALIGN">RIGHT</field>
+                                    <statement name="FIELDS">
+                                      <block type="field_static" id="*urZ1Eb~9#9415-f+I]~">
+                                        <field name="TEXT">otherwise continue as</field>
+                                      </block>
+                                    </statement>
+                                    <value name="TYPE">
+                                      <shadow type="type_null" id="rO{..t^E.lgJ#*@!!{c}"></shadow>
+                                      <block type="type_other" id="=CTx[,e1(cZ=xR1K8kyE">
+                                        <field name="TYPE">contract</field>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </next>
                               </block>
                             </next>
                           </block>

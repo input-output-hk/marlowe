@@ -242,15 +242,17 @@ block_to_blockly (Choice obs c1 c2) =
      connect_as_input "contract1" tb cb1
      connect_as_input "contract2" tb cb2
      return tb
-block_to_blockly (CommitCash (IdentCC id) p cash b1 b2 c) =
-  do cb <- block_to_blockly c
+block_to_blockly (CommitCash (IdentCC id) p cash b1 b2 c1 c2) =
+  do cb1 <- block_to_blockly c1
+     cb2 <- block_to_blockly c2
      tb <- create_block "contract_commitcash"
      set_field_value tb "ccommit_id" id
      set_field_value tb "person_id" p
      set_field_value tb "ammount" cash
      set_field_value tb "start_expiration" b1
      set_field_value tb "end_expiration" b2
-     connect_as_input "contract" tb cb
+     connect_as_input "contract1" tb cb1
+     connect_as_input "contract2" tb cb2
      return tb
 block_to_blockly (When obs b c1 c2) =
   do obb <- obs_to_blockly obs

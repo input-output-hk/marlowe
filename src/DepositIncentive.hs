@@ -16,14 +16,12 @@ import Semantics
 
 depositIncentive :: Contract
 depositIncentive = CommitCash (IdentCC 1) 1 100 10 200
-                     (Choice (BelowTimeout 10)
-                             (CommitCash (IdentCC 2) 2 20 20 200
-                               (Choice (BelowTimeout 20)
-                                       (When (PersonChoseSomething (IdentChoice 1) 1) 100
-                                             (Both (RedeemCC (IdentCC 1) Null)
-                                                   (RedeemCC (IdentCC 2) Null))
-                                             (Pay (IdentPay 1) 2 1 20 200
-                                                  (Both (RedeemCC (IdentCC 1) Null)
-                                                        (RedeemCC (IdentCC 2) Null))))
-                                       (RedeemCC (IdentCC 1) Null)))
-                             Null)
+                              (CommitCash (IdentCC 2) 2 20 20 200
+                                          (When (PersonChoseSomething (IdentChoice 1) 1) 100
+                                                (Both (RedeemCC (IdentCC 1) Null)
+                                                      (RedeemCC (IdentCC 2) Null))
+                                                (Pay (IdentPay 1) 2 1 20 200
+                                                     (Both (RedeemCC (IdentCC 1) Null)
+                                                           (RedeemCC (IdentCC 2) Null))))
+                                          (RedeemCC (IdentCC 1) Null))
+                              Null

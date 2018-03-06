@@ -239,7 +239,7 @@ interpretObs _ FalseObs _
 
 data Contract =
     Null |
-    CommitCash IdentCC Person Cash Timeout Timeout Contract |
+    CommitCash IdentCC Person Cash Timeout Timeout Contract Contract |
     RedeemCC IdentCC Contract |
     Pay IdentPay Person Person Cash Timeout Contract |
     Both Contract Contract |
@@ -299,10 +299,10 @@ step _ st (When obs expi con con2) os
 -- Note that conformance of the commitment here is exact
 -- May want to relax this
 
-step commits st c@(CommitCash ident person val start_timeout end_timeout con) os
-  | cexe || cexs = (st {sc = ust}, con, [])
+step commits st c@(CommitCash ident person val start_timeout end_timeout con1 con2) os
+  | cexe || cexs = (st {sc = ust}, con2, [])
   | Set.member (CC ident person val end_timeout) (cc commits)
-        = (st {sc = ust}, con, [SuccessfulCommit ident person val])
+        = (st {sc = ust}, con1, [SuccessfulCommit ident person val])
   | otherwise = (st, c, [])
   where ccs = sc st
         cexs = expired (blockNumber os) start_timeout

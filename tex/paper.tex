@@ -199,7 +199,7 @@ The type of contracts is given by
 \begin{haskellcode}
 data Contract =
    Null |
-   CommitCash IdentCC Person Cash Timeout Timeout Contract |  
+   CommitCash IdentCC Person Cash Timeout Timeout Contract Contract |  
    RedeemCC IdentCC Contract |
    Pay IdentPay Person Person Cash Timeout Contract |  
    Both Contract Contract |
@@ -220,12 +220,14 @@ The constructors should be interpreted thus:
 
 \item \haskellinline{Null} is the null contract; it will always be quiescent.
 
-\item \haskellinline{CommitCash idCC p n t1 t2 k}  For this contract to make progress,\begin{itemize}
+\item \haskellinline{CommitCash idCC p n t1 t2 k1 k2}  For this contract to make progress,\begin{itemize}
 \item either before the timeout \haskellinline{t1} the user \haskellinline{p} makes a cash commitment of value \haskellinline{n} and timeout \haskellinline{t2}  with the identifier \haskellinline{idCC} , 
 \item
 or the timeout \haskellinline{t1} is exceed.
 \end{itemize} 
-In the first case, a \haskellinline{SuccessfulCommit} action is generated; in both cases, the contract then continues as \haskellinline{k}. While neither case holds the contract is quiescent, waiting for the cash to be committed. 
+In the first case, a \haskellinline{SuccessfulCommit} action is generated and the contract continues as 
+\haskellinline{k1}; in the second case no action is generated and the contract continues as 
+\haskellinline{k2}. While neither case holds the contract is quiescent, waiting for the cash to be committed. 
 
 If the cash is committed successfully and the timeout \haskellinline{t2} is reached, then it is impossible to further spend the committed cash, and any unspent funds can be reclaimed by participant \haskellinline{p}.
  This is performed by the \haskellinline{fullStep} function, as noted above.

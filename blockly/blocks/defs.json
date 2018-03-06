@@ -419,7 +419,7 @@
 },
 {
   "type": "contract_commitcash",
-  "message0": "CommitCash %1 with id %2 %3 person with id %4 %5 may deposit %6 ADA before block %7 %8 money can be redeemed on block %9 or after, %10 if money is committed or it is too late to commit %11 continue as %12",
+  "message0": "CommitCash %1 with id %2 %3 person with id %4 %5 may deposit %6 ADA, %7 money can be redeemed on block %8 or after, %9 if money is committed before block %10 %11 continue as %12 otherwise continue as %13",
   "args0": [
     {
       "type": "input_dummy",
@@ -451,12 +451,6 @@
       "min": 0
     },
     {
-      "type": "field_number",
-      "name": "start_expiration",
-      "value": 0,
-      "min": 0
-    },
-    {
       "type": "input_dummy",
       "align": "RIGHT"
     },
@@ -471,12 +465,26 @@
       "align": "RIGHT"
     },
     {
-      "type": "input_dummy"
+      "type": "field_number",
+      "name": "start_expiration",
+      "value": 0,
+      "min": 0
+    },
+    {
+      "type": "input_dummy",
+      "align": "RIGHT"
     },
     {
       "type": "input_statement",
-      "name": "contract",
-      "check": "contract"
+      "name": "contract1",
+      "check": "contract",
+      "align": "RIGHT"
+    },
+    {
+      "type": "input_statement",
+      "name": "contract2",
+      "check": "contract",
+      "align": "RIGHT"
     }
   ],
   "previousStatement": "contract",

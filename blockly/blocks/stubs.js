@@ -58,6 +58,14 @@ Blockly.JavaScript['observation_personchosethis'] = function(block) {
   return [code, Blockly.JavaScript.ORDER_NONE];
 };
 
+Blockly.JavaScript['observation_timeabove'] = function(block) {
+  var text_block_number = block.getFieldValue('block_number');
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...';
+  // TODO: Change ORDER_NONE to the correct strength.
+  return [code, Blockly.JavaScript.ORDER_NONE];
+};
+
 Blockly.JavaScript['observation_trueobs'] = function(block) {
   // TODO: Assemble JavaScript into code variable.
   var code = '...';
@@ -66,7 +74,7 @@ Blockly.JavaScript['observation_trueobs'] = function(block) {
 };
 
 Blockly.JavaScript['base_contract'] = function(block) {
-  var statements_name = Blockly.JavaScript.statementToCode(block, 'NAME');
+  var statements_base_contract = Blockly.JavaScript.statementToCode(block, 'base_contract');
   // TODO: Assemble JavaScript into code variable.
   var code = '...;\n';
   return code;
@@ -74,9 +82,8 @@ Blockly.JavaScript['base_contract'] = function(block) {
 
 Blockly.JavaScript['contract_null'] = function(block) {
   // TODO: Assemble JavaScript into code variable.
-  var code = '...';
-  // TODO: Change ORDER_NONE to the correct strength.
-  return [code, Blockly.JavaScript.ORDER_NONE];
+  var code = '...;\n';
+  return code;
 };
 
 Blockly.JavaScript['contract_redeemcc'] = function(block) {
@@ -120,9 +127,10 @@ Blockly.JavaScript['contract_commitcash'] = function(block) {
   var number_ccommit_id = block.getFieldValue('ccommit_id');
   var number_person_id = block.getFieldValue('person_id');
   var number_ammount = block.getFieldValue('ammount');
-  var number_start_expiration = block.getFieldValue('start_expiration');
   var number_end_expiration = block.getFieldValue('end_expiration');
-  var statements_contract = Blockly.JavaScript.statementToCode(block, 'contract');
+  var number_start_expiration = block.getFieldValue('start_expiration');
+  var statements_contract1 = Blockly.JavaScript.statementToCode(block, 'contract1');
+  var statements_contract2 = Blockly.JavaScript.statementToCode(block, 'contract2');
   // TODO: Assemble JavaScript into code variable.
   var code = '...;\n';
   return code;
@@ -136,4 +144,38 @@ Blockly.JavaScript['contract_when'] = function(block) {
   // TODO: Assemble JavaScript into code variable.
   var code = '...;\n';
   return code;
+};
+
+Blockly.JavaScript['observation_value_ge'] = function(block) {
+  var value_value1 = Blockly.JavaScript.valueToCode(block, 'value1', Blockly.JavaScript.ORDER_ATOMIC);
+  var value_value2 = Blockly.JavaScript.valueToCode(block, 'value2', Blockly.JavaScript.ORDER_ATOMIC);
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...';
+  // TODO: Change ORDER_NONE to the correct strength.
+  return [code, Blockly.JavaScript.ORDER_NONE];
+};
+
+Blockly.JavaScript['value_available_money'] = function(block) {
+  var number_commit_id = block.getFieldValue('commit_id');
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...';
+  // TODO: Change ORDER_NONE to the correct strength.
+  return [code, Blockly.JavaScript.ORDER_NONE];
+};
+
+Blockly.JavaScript['value_add_money'] = function(block) {
+  var value_value1 = Blockly.JavaScript.valueToCode(block, 'value1', Blockly.JavaScript.ORDER_ATOMIC);
+  var value_value2 = Blockly.JavaScript.valueToCode(block, 'value2', Blockly.JavaScript.ORDER_ATOMIC);
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...';
+  // TODO: Change ORDER_NONE to the correct strength.
+  return [code, Blockly.JavaScript.ORDER_NONE];
+};
+
+Blockly.JavaScript['value_const_money'] = function(block) {
+  var number_money = block.getFieldValue('money');
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...';
+  // TODO: Change ORDER_NONE to the correct strength.
+  return [code, Blockly.JavaScript.ORDER_NONE];
 };

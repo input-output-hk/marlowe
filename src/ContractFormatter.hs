@@ -86,10 +86,10 @@ isTrivial :: NodeType -> Bool
 isTrivial (Trivial _) = True
 isTrivial _ = False
 
-bothComplexOrNot :: NodeType -> NodeType -> Bool
-bothComplexOrNot (Complex _) _ = False
-bothComplexOrNot _ (Complex _)= False
-bothComplexOrNot _ _ = True
+noneComplex :: NodeType -> NodeType -> Bool
+noneComplex (Complex _) _ = False
+noneComplex _ (Complex _)= False
+noneComplex _ _ = True
 
 -- We assume that Simple nodes have Simple or Trivial children
 smartPrettyPrint :: Int -> NodeType -> String
@@ -106,7 +106,7 @@ prettyPrint spaces (name, args) =
   concat $ intersperse "\n" (trivialNames:(map ((tabulateLine newSpaces) ++) others))
   where classified = map (classify) args
         newSpaces = (spaces + (length name) + 1)
-        groupedClassified = groupBy (bothComplexOrNot) classified
+        groupedClassified = groupBy (noneComplex) classified
         trivialNames = joinWithSpaces (name:(map (smartPrettyPrint newSpaces) (head groupedClassified)))
         others = map (joinWithSpaces . (map (smartPrettyPrint newSpaces))) (tail groupedClassified)
 

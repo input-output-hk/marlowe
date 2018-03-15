@@ -6,6 +6,7 @@ import qualified Haste.Prim as P
 import qualified Haste.DOM as D
 import qualified DepositIncentive as DI
 import Semantics
+import ContractFormatter
 import qualified Data.Maybe as M
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -362,7 +363,7 @@ workspace_to_code_aux = F.ffi (J.pack "(function () {return Blockly.Marlowe.work
 
 workspace_to_code :: IO (String)
 workspace_to_code = do rough_code <- workspace_to_code_aux
-                       return (show ((read rough_code) :: Contract))
+                       return (prettyPrintContract ((read rough_code) :: Contract))
 
 workspace_to_contract :: IO Contract
 workspace_to_contract = do rough_code <- workspace_to_code_aux

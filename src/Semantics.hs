@@ -186,8 +186,8 @@ data Money = AvailableMoney IdentCC |
 -- the current state. 
 
 evalMoney :: State -> Money -> Cash
-evalMoney (State {sc = scv}) (AvailableMoney id) =
-  case Map.lookup id scv of
+evalMoney (State {sc = scv}) (AvailableMoney ident) =
+  case Map.lookup ident scv of
     Just (_, NotRedeemed c _) -> c
     _ -> 0
 evalMoney s (AddMoney a b) = (evalMoney s a) + (evalMoney s b)

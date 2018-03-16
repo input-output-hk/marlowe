@@ -8,11 +8,17 @@
   <script src="blockly/en.js"></script>
   <script src="jquery/jquery.min.js"></script>
   <script src="jquery_resize/jquery.elementresize.js"></script>
+  <script src="jquery-ui/jquery-ui.js"></script>
+  <link rel="stylesheet" href="jquery-ui/jquery-ui.css">
+  <script>$( function() { $( "#tabs" ).tabs({ active: 0 }); } );</script>
     <style type="text/css">
       * {
     -webkit-box-sizing: border-box;
        -moz-box-sizing: border-box;
             box-sizing: border-box;
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;	   
       }
       html, body {
         height: 100%;
@@ -20,6 +26,9 @@
         margin: 0px;
         padding: 0px;
         display: table;
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;	   
       }
       #main {
         position: absolute;
@@ -27,6 +36,9 @@
         top: 0px;
         height: 100%;
         width: 100%;
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;	   
       }
       #blocklyArea {
         position: relative;
@@ -34,15 +46,21 @@
         left: 0px;
         top: 0px;
         height: 100%;
-        width: 50%;
+        width: 56%;
         resize: horizontal;
         overflow: hidden;
         border-right: 2px solid;
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;	   
       }
       #ui {
         position: relative;
         height: 100%;
         overflow: auto;
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;	   
       }
       #codeArea {
         overflow: auto;
@@ -64,7 +82,31 @@
       textarea {
         font-family: Consolas,monaco,monospace; 
         resize: vertical;
-	overflow: auto;
+        overflow: auto;
+      }
+      #tabs {
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;	   
+      }
+      #tabs-1 {
+	padding: 0px;
+	margin: 0px;
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;	   
+      }
+      #tabs-2 {
+	padding: 0px;
+	margin: 0px;
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;	   
+      }
+      .notselectable {
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;	
       }
     </style>
 <body>
@@ -88,19 +130,28 @@ CommitCash (IdentCC 1) 1 100 10 200
 <br /><br />
     <div><p style="display:inline;">Current block: </p><input style="display:inline;" type="text" id="currBlock" value="0"></input></div>
     <div><h3>Contract state:</h3></div>
-	 <textarea id="contractState" style="width: 100%; height: 10%; ">([], [])</textarea>
+         <textarea id="contractState" style="width: 100%; height: 5%; ">([], [])</textarea>
     <div><h3>Input:</h3></div>
-	 <textarea id="contractInput" style="width: 100%; height: 10%; ">([], [], [], [])</textarea>
-    <div>
+         <textarea id="contractInput" style="width: 100%; height: 5%; ">([], [], [], [])</textarea>
+    <div id="tabs">
       <ul>
-	<li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="commitsPerson" value="1"></input><p style="display:inline;"> <b>commits</b> </p><input style="display:inline; width: 50px" type="text" id="commitsAmmount" value="0"></input><p style="display:inline;"> ADA with ID </p><input style="display:inline; width: 50px" type="text" id="commitsID" value="1"><p style="display:inline;"> to expire by </p><input style="display:inline; width: 50px" type="text" id="commitsExpiry" value="1"></input><button id="commit" onclick="Haste.commit(document.getElementById('commitsPerson').value,document.getElementById('commitsAmmount').value,document.getElementById('commitsID').value,document.getElementById('commitsExpiry').value)">Add to input</button></li>
-	<li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="redeemsPerson" value="1"></input><p style="display:inline;"> <b>redeems</b> </p><input style="display:inline; width: 50px" type="text" id="redeemsAmmount" value="0"></input><p style="display:inline;"> ADA from ID </p><input style="display:inline; width: 50px" type="text" id="redeemsID" value="1"></input><button id="redeem" onclick="Haste.redeem(document.getElementById('redeemsPerson').value,document.getElementById('redeemsAmmount').value,document.getElementById('redeemsID').value)">Add to input</button></li>
-	<li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="claimsPerson" value="1"></input><p style="display:inline;"> <b>claims</b> </p><input style="display:inline; width: 50px" type="text" id="claimsAmmount" value="0"></input><p style="display:inline;"> ADA from ID </p><input style="display:inline; width: 50px" type="text" id="claimsID" value="1"></input><button id="claim" onclick="Haste.claim(document.getElementById('claimsPerson').value,document.getElementById('claimsAmmount').value,document.getElementById('claimsID').value)">Add to input</button></li>
-	<li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="choosesPerson" value="1"></input><p style="display:inline;"> <b>chooses value</b> </p><input style="display:inline; width: 50px" type="text" id="choosesAmmount" value="0"></input><p style="display:inline;"> for ID </p><input style="display:inline; width: 50px" type="text" id="choosesID" value="1"></input><button id="choice" onclick="Haste.choose(document.getElementById('choosesPerson').value,document.getElementById('choosesAmmount').value,document.getElementById('choosesID').value)">Add to input</button></li>
+        <li><a draggable="false" href="#tabs-1">Smart interface</a></li>
+	<li><a draggable="false" href="#tabs-2">Manual interface</a></li>
       </ul>
-     </div>
+      <div id="tabs-1">
+        <p>Space for the new interface</p>
+      </div>
+      <div id="tabs-2">
+        <ul>
+          <li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="commitsPerson" value="1"></input><p style="display:inline;"> <b>commits</b> </p><input style="display:inline; width: 50px" type="text" id="commitsAmmount" value="0"></input><p style="display:inline;"> ADA with ID </p><input style="display:inline; width: 50px" type="text" id="commitsID" value="1"><p style="display:inline;"> to expire by </p><input style="display:inline; width: 50px" type="text" id="commitsExpiry" value="1"></input><button id="commit" onclick="Haste.commit(document.getElementById('commitsPerson').value,document.getElementById('commitsAmmount').value,document.getElementById('commitsID').value,document.getElementById('commitsExpiry').value)">Add to input</button></li>
+          <li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="redeemsPerson" value="1"></input><p style="display:inline;"> <b>redeems</b> </p><input style="display:inline; width: 50px" type="text" id="redeemsAmmount" value="0"></input><p style="display:inline;"> ADA from ID </p><input style="display:inline; width: 50px" type="text" id="redeemsID" value="1"></input><button id="redeem" onclick="Haste.redeem(document.getElementById('redeemsPerson').value,document.getElementById('redeemsAmmount').value,document.getElementById('redeemsID').value)">Add to input</button></li>
+          <li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="claimsPerson" value="1"></input><p style="display:inline;"> <b>claims</b> </p><input style="display:inline; width: 50px" type="text" id="claimsAmmount" value="0"></input><p style="display:inline;"> ADA from ID </p><input style="display:inline; width: 50px" type="text" id="claimsID" value="1"></input><button id="claim" onclick="Haste.claim(document.getElementById('claimsPerson').value,document.getElementById('claimsAmmount').value,document.getElementById('claimsID').value)">Add to input</button></li>
+          <li><p style="display:inline;">Person </p><input style="display:inline; width: 50px" type="text" id="choosesPerson" value="1"></input><p style="display:inline;"> <b>chooses value</b> </p><input style="display:inline; width: 50px" type="text" id="choosesAmmount" value="0"></input><p style="display:inline;"> for ID </p><input style="display:inline; width: 50px" type="text" id="choosesID" value="1"></input><button id="choice" onclick="Haste.choose(document.getElementById('choosesPerson').value,document.getElementById('choosesAmmount').value,document.getElementById('choosesID').value)">Add to input</button></li>
+        </ul>
+      </div>
+    </div>
     <div><h3>Output:</h3></div>
-	 <textarea id="contractOutput" style="width: 100%; height: 10%; "></textarea>
+         <textarea id="contractOutput" style="width: 100%; height: 5%; "></textarea>
     </div>
   </div>
   <div id="blocklyDiv" style="position: absolute"></div>
@@ -944,7 +995,7 @@ CommitCash (IdentCC 1) 1 100 10 200
       var statements_contract2 = Blockly.Marlowe.statementToCode(block, 'contract2');
       var code = '(CommitCash (IdentCC ' + number_ccommit_id + ') ' + number_person_id + ' ' + number_ammount +
                  ' ' + number_start_expiration + ' ' + number_end_expiration + ' ' + statements_contract1 +
-		 ' ' + statements_contract2 + ')';
+                 ' ' + statements_contract2 + ')';
       return code;
     };
     

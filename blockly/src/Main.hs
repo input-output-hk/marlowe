@@ -370,7 +370,7 @@ workspace_to_contract = do rough_code <- workspace_to_code_aux
                            return (read rough_code)
 
 code_to_contract :: Contract -> IO ()
-code_to_contract contr = do set_code (show contr)
+code_to_contract contr = do set_code (prettyPrintContract contr)
 
 -- blockly to code
 

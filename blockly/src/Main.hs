@@ -7,6 +7,7 @@ import qualified Haste.DOM as D
 import qualified DepositIncentive as DI
 import Semantics
 import ContractFormatter
+import SmartInputs
 import qualified Data.Maybe as M
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -377,6 +378,7 @@ code_to_contract contr = do set_code (prettyPrintContract contr)
 b2c :: IO ()
 b2c = do code <- workspace_to_code
          set_code code
+         refreshActions
 
 -- code to blockly
 
@@ -387,7 +389,7 @@ c2b = do code <- get_code
          blk <- let contract = read code :: Contract in block_to_blockly contract
          connect_as_input "base_contract" root blk
          render
-         return ()
+         refreshActions
 
 -- input addition
 
@@ -395,21 +397,25 @@ commit :: Int -> Int -> Int -> Int -> IO ()
 commit per cash id exp =
   do inp <- get_input
      set_input (inp {cc = Set.insert (CC (IdentCC id) per cash exp) (cc inp)})
+     refreshActions
 
 redeem :: Int -> Int -> Int -> IO ()
 redeem per cash id =
   do inp <- get_input
      set_input (inp {rc = Set.insert (RC (IdentCC id) per cash) (rc inp)})
+     refreshActions
 
 claim :: Int -> Int -> Int -> IO ()
 claim per cash id =
   do inp <- get_input
      set_input (inp {rp = Map.insert (IdentPay id, per) cash (rp inp)})
+     refreshActions
 
 choose :: Int -> Int -> Int -> IO ()
 choose per choice id =
   do inp <- get_input
      set_input (inp {ic = Map.insert (IdentChoice id, per) choice (ic inp)})
+     refreshActions
 
 -- execute
 execute :: IO ()
@@ -423,7 +429,72 @@ execute =
                          set_state nst;
                          set_input_text "([], [], [], [])";
                          set_blocknum (blk + 1);
-                         c2b}
+                         c2b;
+                         refreshActions}
+
+deleteChildNodes :: String -> IO ()
+deleteChildNodes = F.ffi (J.pack "(function (x) { var node = document.getElementById(x); while (node.hasChildNodes()) { node.removeChild(node.lastChild); } })")
+
+insertNormalAction :: String -> String -> IO ()
+insertNormalAction = F.ffi (J.pack "(function (x, y) {var r = document.getElementById('actions').insertRow(); var c1 = r.insertCell(); c1.appendChild(document.createTextNode(x)); var c2 = r.insertCell(); var btn = document.createElement('button'); c2.appendChild(btn); btn.appendChild(document.createTextNode('Add action')); btn.style.setProperty('width', '100%'); btn.onclick = function () {Haste.addAction(y);};})")
+
+insertActionWithNum :: String -> String -> String -> IO ()
+insertActionWithNum = F.ffi (J.pack "(function (x, y, z) {var r = document.getElementById('actions').insertRow(); var c1 = r.insertCell(); c1.appendChild(document.createTextNode(x + ' ')); var input = document.createElement('input'); input.type = 'number'; var ch = 'ibox' + r.childNodes.length; input.id = ch; input.value = 0; input.style.setProperty('width', '3em'); c1.appendChild(input); c1.appendChild(document.createTextNode(' ' + y)); var c2 = r.insertCell(); var btn = document.createElement('button'); c2.appendChild(btn); btn.appendChild(document.createTextNode('Add action')); btn.style.setProperty('width', '100%'); btn.onclick = function () {Haste.addActionWithNum(z, document.getElementById(ch).value);};})")
+
+data SmartInput = SICC IdentCC Person Cash Timeout
+                | SIRC IdentCC Person Cash
+                | SIP IdentPay Person Cash
+               deriving (Eq,Ord,Show,Read)
+
+addCommitInputs :: CC -> IO ()
+addCommitInputs (CC ide@(IdentCC identcc) per cash tim)
+ = insertNormalAction ("P" ++ (show per) ++ ": Make commit (with id: "
+                       ++ (show identcc) ++ ") of " ++ (show cash) ++
+                       " ADA expiring on: " ++ (show tim)) (show $ SICC ide per cash tim)
+
+addRedeemInputs :: RC -> IO ()
+addRedeemInputs (RC ide@(IdentCC identcc) per cash)
+ = insertNormalAction ("P" ++ (show per) ++ ": Redeem " ++ (show cash) ++
+                       " ADA from commit (with id: " ++ (show identcc) ++
+                       ")") (show $ SIRC ide per cash)
+
+addPayInputs :: ((IdentPay, Person), Cash) -> IO ()
+addPayInputs ((ide@(IdentPay identpay), per), cash)
+ = insertNormalAction ("P" ++ (show per) ++ ": Claim payment (with id: "
+                       ++ (show identpay) ++ ") of " ++ (show cash) ++
+                       " ADA") (show $ SIP ide per cash)
+
+addChoiceInputs :: ((IdentChoice, Person), ConcreteChoice) -> IO ()
+addChoiceInputs (pair@(IdentChoice identchoice, per), _)
+ = insertActionWithNum ("P" ++ (show per) ++ ": Choose")
+                       ("for choice with id " ++ (show identchoice)) (show pair)
+
+addInputs :: Input -> IO ()
+addInputs Input {cc = cci, rc = rci,
+                 rp = rpi, ic = ici}
+ = do mapM_ addCommitInputs (Set.toList cci)
+      mapM_ addRedeemInputs (Set.toList rci)
+      mapM_ addPayInputs (Map.toList rpi)
+      mapM_ addChoiceInputs (Map.toList ici)
+
+refreshActions :: IO ()
+refreshActions = do inputs <- get_input
+                    contr <- workspace_to_contract
+                    blk <- get_blocknum
+                    stat <- get_state
+                    let os = OS {random = 42, blockNumber = blk}
+                    deleteChildNodes "actions"
+                    addInputs (getPossibleInputs os inputs contr stat)
+
+addAction :: String -> IO ()
+addAction x = case (read x) :: SmartInput of
+                   SICC (IdentCC ide) per cash tim -> commit per cash ide tim
+                   SIRC (IdentCC ide) per cash -> redeem per cash ide
+                   SIP (IdentPay ide) per cash -> claim per cash ide
+
+addActionWithNum :: String -> Int -> IO ()
+addActionWithNum x ch = choose per ch ide
+  where (IdentChoice ide, per) = (read x) :: (IdentChoice, Person)
 
 -- alert
 
@@ -442,6 +513,10 @@ main = do c2b
           F.export (J.pack "claim") claim
           F.export (J.pack "choose") choose
           F.export (J.pack "execute") execute
+          F.export (J.pack "refreshActions") refreshActions
+          F.export (J.pack "addAction") addAction
+          F.export (J.pack "addActionWithNum") addActionWithNum
+          refreshActions
           return ()
 
 

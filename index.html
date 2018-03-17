@@ -108,6 +108,11 @@
    -khtml-user-select: none;
    -webkit-user-select: none;	
       }
+      th, td {
+	    padding: 3px;
+	    padding-left: 5px;
+	    border: solid black 1px;
+      }
     </style>
 <body>
   <div id="main">
@@ -139,7 +144,18 @@ CommitCash (IdentCC 1) 1 100 10 200
 	<li><a draggable="false" href="#tabs-2">Manual interface</a></li>
       </ul>
       <div id="tabs-1">
-        <p>Space for the new interface</p>
+        <table style="border:1px solid black; width:100%">
+	  <thead>
+	  <tr>
+	    <th width="100%"><b>Potential actions</b></th><th align="center" valign="middle"><button onclick="Haste.refreshActions()">&nbsp;&nbsp;&nbsp;Refresh&nbsp;&nbsp;&nbsp;</button></th>
+	  </tr>
+	  </thead>
+	  <tbody id="actions">
+	  <tr>
+	    <td align="center" valign="middle">Loading...</td><td></td>
+	  </tr>
+	  </tbody>
+        </table>
       </div>
       <div id="tabs-2">
         <ul>

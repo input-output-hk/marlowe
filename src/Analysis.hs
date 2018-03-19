@@ -249,6 +249,7 @@ findChoiceObs (OrObs obs1 obs2) = minimum (map (findChoiceObs) [obs1, obs2])
 findChoiceObs (NotObs obs) = findChoiceObs obs
 findChoiceObs (PersonChoseThis _ _ x) = (x - 1)
 findChoiceObs (PersonChoseSomething _ _) = 0
+findChoiceObs (ValueGE _ _) = 0
 findChoiceObs TrueObs = 0
 findChoiceObs FalseObs = 0
 
@@ -350,6 +351,7 @@ interval_from_obs m (PersonChoseSomething ident p) =
   where x = Map.lookup (ident, p) m
 interval_from_obs _ (TrueObs) = [inf_domain]
 interval_from_obs _ (FalseObs) = []
+interval_from_obs _ (ValueGE _ _) = [inf_domain]
 interval_from_obs m (NotObs o) = interval_from_obs_inv m o
 
 interval_from_obs_inv :: Map.Map (IdentChoice, Person) ConcreteChoice -> Observation -> [Domain]
@@ -368,6 +370,7 @@ interval_from_obs_inv m (PersonChoseSomething ident p) =
   where x = Map.lookup (ident, p) m
 interval_from_obs_inv _ (FalseObs) = [inf_domain]
 interval_from_obs_inv _ (TrueObs) = []
+interval_from_obs_inv _ (ValueGE _ _) = []
 interval_from_obs_inv m (NotObs o) = interval_from_obs m o
 
 

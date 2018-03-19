@@ -93,7 +93,7 @@ data CC = CC IdentCC Person Cash Timeout
                deriving (Eq,Ord,Show,Read)
 
 -- A cash redemption is made by a person, for a particular amount.
-               
+
 data RC = RC IdentCC Person Cash
                deriving (Eq,Ord,Show,Read)
 
@@ -121,6 +121,9 @@ data Input = Input {
                 ic  :: Map.Map (IdentChoice, Person) ConcreteChoice
               }
                deriving (Eq,Ord,Show,Read)
+
+emptyInput :: Input
+emptyInput = Input Set.empty Set.empty Map.empty Map.empty
 
 -- Actions are things that have an effect on the blockchain, and a set
 -- of actions is generated at each step. We are not responsible for
@@ -186,8 +189,8 @@ data Money = AvailableMoney IdentCC |
 -- the current state. 
 
 evalMoney :: State -> Money -> Cash
-evalMoney (State {sc = scv}) (AvailableMoney id) =
-  case Map.lookup id scv of
+evalMoney (State {sc = scv}) (AvailableMoney ident) =
+  case Map.lookup ident scv of
     Just (_, NotRedeemed c _) -> c
     _ -> 0
 evalMoney s (AddMoney a b) = (evalMoney s a) + (evalMoney s b)
@@ -382,7 +385,6 @@ expireCommits inp scf os = (Map.union uexp nsc, pas)
         pas = [ExpiredCommitRedeemed ident p val | (ident, (p, NotRedeemed val _)) <- Map.toList expi]
         et = blockNumber os
         uexp = Map.map markRedeemed expi
-
 -- Wraps step function to refund expired cash commitments
 
 fullStep :: Input -> State -> Contract -> OS -> (State, Contract, AS)

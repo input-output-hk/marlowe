@@ -24,7 +24,6 @@
     <block type="contract_pay">
       <field name="pay_id">1</field>
       <field name="payer_id">1</field>
-      <field name="ammount">0</field>
       <field name="payee_id">1</field>
       <field name="expiration">1</field>
     </block>
@@ -36,9 +35,8 @@
     <block type="contract_commitcash">
       <field name="ccommit_id">1</field>
       <field name="person_id">1</field>
-      <field name="ammount">0</field>
-      <field name="start_expiration">0</field>
       <field name="end_expiration">0</field>
+      <field name="start_expiration">0</field>
     </block>
     <block type="contract_redeemcc">
       <field name="ccommit_id">1</field>
@@ -51,6 +49,10 @@
     <block type="value_add_money"></block>
     <block type="value_const_money">
       <field name="money">0</field>
+    </block>
+    <block type="money_from_choice">
+      <field name="choice_id">1</field>
+      <field name="person_id">1</field>
     </block>
   </category>
 </xml>

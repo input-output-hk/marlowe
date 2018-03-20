@@ -3,6 +3,7 @@ module Semantics where
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Data.List as List
+import qualified Data.Maybe as Maybe
 
  -------------------------------------------------------------------------------------------------
  --                                                                                             --
@@ -180,7 +181,8 @@ data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
 
 data Money = AvailableMoney IdentCC |
              AddMoney Money Money |
-             ConstMoney Cash
+             ConstMoney Cash |
+             MoneyFromChoice IdentChoice Person Money
                     deriving (Eq,Ord,Show,Read)
 
 -- Semantics of money
@@ -189,13 +191,14 @@ data Money = AvailableMoney IdentCC |
 -- the current state. 
 
 evalMoney :: State -> Money -> Cash
-evalMoney (State {sc = scv}) (AvailableMoney ident) =
+evalMoney State {sc = scv} (AvailableMoney ident) =
   case Map.lookup ident scv of
     Just (_, NotRedeemed c _) -> c
     _ -> 0
-evalMoney s (AddMoney a b) = (evalMoney s a) + (evalMoney s b)
+evalMoney s (AddMoney a b) = evalMoney s a + evalMoney s b
 evalMoney _ (ConstMoney c) = c
-
+evalMoney s (MoneyFromChoice ident per def)
+  = Maybe.fromMaybe (evalMoney s def) (Map.lookup (ident, per) (sch s))
 
 -- Representation of observations over observables and the state.
 -- Rendered into predicates by interpretObs.
@@ -231,8 +234,7 @@ interpretObs st (PersonChoseThis choice_id person reference_choice) _
         Nothing -> False
 interpretObs st (PersonChoseSomething choice_id person) _
     = Map.member (choice_id, person) (sch st)
-interpretObs st (ValueGE a b) _
-    = (evalMoney st a) >= (evalMoney st b)
+interpretObs st (ValueGE a b) _ = evalMoney st a >= evalMoney st b
 interpretObs _ TrueObs _
     = True
 interpretObs _ FalseObs _
@@ -242,9 +244,9 @@ interpretObs _ FalseObs _
 
 data Contract =
     Null |
-    CommitCash IdentCC Person Cash Timeout Timeout Contract Contract |
+    CommitCash IdentCC Person Money Timeout Timeout Contract Contract |
     RedeemCC IdentCC Contract |
-    Pay IdentPay Person Person Cash Timeout Contract |
+    Pay IdentPay Person Person Money Timeout Contract |
     Both Contract Contract |
     Choice Observation Contract Contract |
     When Observation Timeout Contract Contract
@@ -262,19 +264,20 @@ step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
 step _ st Null _ = (st, Null, [])
 
 step inp st c@(Pay idpay from to val expi con) os
-    | expired (blockNumber os) expi =
-         (st,con,[ExpiredPay idpay from to val])
-    | right_claim =
-        (if committed st from bn >= val
-         then (newstate,con,[SuccessfulPay idpay from to val])
-         else (st,con,[FailedPay idpay from to val]))
-    | otherwise = (st,c,[])
-    where
-        newstate = stateUpdate st from to bn val
-        bn = blockNumber os
-        right_claim = case Map.lookup (idpay, to) (rp inp) of
-                         Just claimed_val -> claimed_val == val
-                         Nothing -> False
+  | expired (blockNumber os) expi = (st, con, [ExpiredPay idpay from to cval])
+  | right_claim =
+    if committed st from bn >= cval
+      then (newstate, con, [SuccessfulPay idpay from to cval])
+      else (st, con, [FailedPay idpay from to cval])
+  | otherwise = (st, c, [])
+  where
+    cval = evalMoney st val
+    newstate = stateUpdate st from to bn cval
+    bn = blockNumber os
+    right_claim =
+      case Map.lookup (idpay, to) (rp inp) of
+        Just claimed_val -> claimed_val == cval
+        Nothing -> False
 
 
 -- CHECK: the clause for Both could use a commitment twice,
@@ -304,14 +307,15 @@ step _ st (When obs expi con con2) os
 
 step commits st c@(CommitCash ident person val start_timeout end_timeout con1 con2) os
   | cexe || cexs = (st {sc = ust}, con2, [])
-  | Set.member (CC ident person val end_timeout) (cc commits)
-        = (st {sc = ust}, con1, [SuccessfulCommit ident person val])
+  | Set.member (CC ident person cval end_timeout) (cc commits)
+        = (st {sc = ust}, con1, [SuccessfulCommit ident person cval])
   | otherwise = (st, c, [])
   where ccs = sc st
         cexs = expired (blockNumber os) start_timeout
         cexe = expired (blockNumber os) end_timeout
-        cns = (person, if cexe || cexs then ManuallyRedeemed else NotRedeemed val end_timeout)
+        cns = (person, if cexe || cexs then ManuallyRedeemed else NotRedeemed cval end_timeout)
         ust = Map.insert ident cns ccs
+        cval = evalMoney st val
 
 -- Note: there is no possibility of payment failure here
 -- Also: look at partial redemption: currently it is all or nothing.
@@ -399,16 +403,17 @@ fullStep inp st con os = (rs, rcon, nas)
 -- Repeatedly calls the step function (fullStep function actually) until
 -- it does not change anything or produces any actions
 
-compute_all :: Input -> State -> Contract -> OS -> (State, Contract, AS)
+computeAll :: Input -> State -> Contract -> OS -> (State, Contract, AS)
 
-compute_all com st con os = compute_all_aux com st con os []
+computeAll com st con os = computeAllAux com st con os []
 
-compute_all_aux :: Input -> State -> Contract -> OS -> AS -> (State, Contract, AS)
+computeAllAux :: Input -> State -> Contract -> OS -> AS -> (State, Contract, AS)
 
-compute_all_aux com st con os ac
-  | (nst == st) && (ncon == con) && (nac == []) = (st, con, ac)
-  | otherwise = compute_all_aux com nst ncon os (nac ++ ac)
-  where (nst, ncon, nac) = fullStep com st con os
+computeAllAux com st con os ac
+  | (nst == st) && (ncon == con) && null nac = (st, con, ac)
+  | otherwise = computeAllAux com nst ncon os (nac ++ ac)
+  where
+    (nst, ncon, nac) = fullStep com st con os
 
 -------------------------
 -- Auxiliary functions --

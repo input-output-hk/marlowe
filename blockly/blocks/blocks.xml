@@ -87,9 +87,12 @@
               <block type="field_static" id="HZ$SDlyqBC%!7}j66H^E">
                 <field name="TEXT">block</field>
                 <next>
-                  <block type="field_input" id="jsEr3c-/ItxbG?kQMZG1">
-                    <field name="TEXT">0</field>
+                  <block type="field_number" id="Q!S?{(2xP)0s.?asSd[+">
+                    <field name="VALUE">1</field>
                     <field name="FIELDNAME">block_number</field>
+                    <field name="MIN">0</field>
+                    <field name="MAX">Infinity</field>
+                    <field name="PRECISION">0</field>
                   </block>
                 </next>
               </block>
@@ -285,14 +288,17 @@
         </statement>
         <next>
           <block type="input_dummy" id="kfHUVV#S@A%DWT-9Sy|6">
-            <field name="ALIGN">LEFT</field>
+            <field name="ALIGN">RIGHT</field>
             <statement name="FIELDS">
               <block type="field_static" id="h-ov?Z..n1YT.d#?{mKt">
                 <field name="TEXT">for choice with id</field>
                 <next>
-                  <block type="field_input" id="_E}Mm3`dJ0@pKslx@3[P">
-                    <field name="TEXT">1</field>
+                  <block type="field_number" id="Q!S?{(2xP)0s.?asSd[+">
+                    <field name="VALUE">1</field>
                     <field name="FIELDNAME">choice_id</field>
+                    <field name="MIN">0</field>
+                    <field name="MAX">Infinity</field>
+                    <field name="PRECISION">0</field>
                     <next>
                       <block type="field_static" id="#wFq=aj6o;{4!XgIym.!">
                         <field name="TEXT">...</field>
@@ -309,23 +315,21 @@
                   <block type="field_static" id="|P~lyW-B)PXsK7A8Hk*-">
                     <field name="TEXT">person</field>
                     <next>
-                      <block type="field_input" id="LgO0FoY2PfHHo`L5]J$?">
-                        <field name="TEXT">1</field>
+                      <block type="field_number" id="oid,apPHUGXln2DBnQ~+">
+                        <field name="VALUE">1</field>
                         <field name="FIELDNAME">person</field>
+                        <field name="MIN">1</field>
+                        <field name="MAX">Infinity</field>
+                        <field name="PRECISION">0</field>
+                        <next>
+                          <block type="field_static" id="p[?:nl{tS^^%9au{U{QT">
+                            <field name="TEXT">chose something</field>
+                          </block>
+                        </next>
                       </block>
                     </next>
                   </block>
                 </statement>
-                <next>
-                  <block type="input_dummy" id="3xb9N/9k5v_SjB}yWK{A">
-                    <field name="ALIGN">CENTRE</field>
-                    <statement name="FIELDS">
-                      <block type="field_static" id="p[?:nl{tS^^%9au{U{QT">
-                        <field name="TEXT">chose something</field>
-                      </block>
-                    </statement>
-                  </block>
-                </next>
               </block>
             </next>
           </block>
@@ -373,9 +377,12 @@
               <block type="field_static" id="-S*jKY{5-.I|nB@M(+4J">
                 <field name="TEXT">for choice with id</field>
                 <next>
-                  <block type="field_input" id="f/b8Z;J}N,,a6,2K{e+N">
-                    <field name="TEXT">1</field>
+                  <block type="field_number" id="Q!S?{(2xP)0s.?asSd[+">
+                    <field name="VALUE">1</field>
                     <field name="FIELDNAME">choice_id</field>
+                    <field name="MIN">0</field>
+                    <field name="MAX">Infinity</field>
+                    <field name="PRECISION">0</field>
                     <next>
                       <block type="field_static" id="4lBYKO_18A[MZgCltUC:">
                         <field name="TEXT">...</field>
@@ -392,9 +399,12 @@
                   <block type="field_static" id="Pk)Jw;G4q;2aw,3S?q9]">
                     <field name="TEXT">person</field>
                     <next>
-                      <block type="field_input" id="T4Dw;)%17P#gG=CW?BGX">
-                        <field name="TEXT">1</field>
+                      <block type="field_number" id="X^8uK#bb~$K_,1(sTRxN">
+                        <field name="VALUE">1</field>
                         <field name="FIELDNAME">person</field>
+                        <field name="MIN">1</field>
+                        <field name="MAX">Infinity</field>
+                        <field name="PRECISION">0</field>
                       </block>
                     </next>
                   </block>
@@ -414,9 +424,12 @@
                           <block type="field_static" id=";yBli2$AHbciGeH/_Egk">
                             <field name="TEXT">num</field>
                             <next>
-                              <block type="field_input" id="QouF@_9}7v+|Zd:t3q#f">
-                                <field name="TEXT">0</field>
+                              <block type="field_number" id="vqcb3d*b~-5O*Aybpwwq">
+                                <field name="VALUE">0</field>
                                 <field name="FIELDNAME">choice_value</field>
+                                <field name="MIN">-Infinity</field>
+                                <field name="MAX">Infinity</field>
+                                <field name="PRECISION">0</field>
                               </block>
                             </next>
                           </block>
@@ -472,9 +485,12 @@
               <block type="field_static" id="oN4@A#[aXn)5*L{#]^8f">
                 <field name="TEXT">block</field>
                 <next>
-                  <block type="field_input" id="}eZZmZx7`dcaq0QcV@G-">
-                    <field name="TEXT">0</field>
+                  <block type="field_number" id="X^8uK#bb~$K_,1(sTRxN">
+                    <field name="VALUE">1</field>
                     <field name="FIELDNAME">block_number</field>
+                    <field name="MIN">0</field>
+                    <field name="MAX">Infinity</field>
+                    <field name="PRECISION">0</field>
                   </block>
                 </next>
               </block>
@@ -774,33 +790,26 @@
                       </block>
                     </statement>
                     <next>
-                      <block type="input_dummy" id="kRz(cfG~o,Dy3fB7L7sR">
+                      <block type="input_value" id="i,8#(2w|W$|{UHD[16O`">
+                        <field name="INPUTNAME">ammount</field>
                         <field name="ALIGN">RIGHT</field>
                         <statement name="FIELDS">
                           <block type="field_static" id="4LiupLG^ZAOV/k#;Ey_B">
-                            <field name="TEXT">to pay</field>
-                            <next>
-                              <block type="field_number" id="TGW5o~vwhX%gcqMKRm5?">
-                                <field name="VALUE">0</field>
-                                <field name="FIELDNAME">ammount</field>
-                                <field name="MIN">0</field>
-                                <field name="MAX">Infinity</field>
-                                <field name="PRECISION">0</field>
-                                <next>
-                                  <block type="field_static" id="uOs%Jf!)19.9aI~NS#)3">
-                                    <field name="TEXT">ADA</field>
-                                  </block>
-                                </next>
-                              </block>
-                            </next>
+                            <field name="TEXT">to pay:</field>
                           </block>
                         </statement>
+                        <value name="TYPE">
+                          <shadow type="type_null" id="dFdeXoa$_X${Bu|mcN?y"></shadow>
+                          <block type="type_other" id="@]m33+1amgCPo0o[8o+w">
+                            <field name="TYPE">value</field>
+                          </block>
+                        </value>
                         <next>
                           <block type="input_dummy" id="c?@z,QsP=Ycp0s~QDHM[">
                             <field name="ALIGN">RIGHT</field>
                             <statement name="FIELDS">
                               <block type="field_static" id="%5ePghLu+,P{Kv*KJ.#r">
-                                <field name="TEXT">to person with id</field>
+                                <field name="TEXT">ADA to person with id</field>
                                 <next>
                                   <block type="field_number" id="C6Yz,DR6kV:]jX%%~nu7">
                                     <field name="VALUE">1</field>
@@ -1101,33 +1110,26 @@
                   </block>
                 </statement>
                 <next>
-                  <block type="input_dummy" id="RpuUK;BXR26l}=xX:SB!">
+                  <block type="input_value" id="i,8#(2w|W$|{UHD[16O`">
+                    <field name="INPUTNAME">ammount</field>
                     <field name="ALIGN">RIGHT</field>
                     <statement name="FIELDS">
                       <block type="field_static" id="GrjXi?/Y-iUM?:o%-~vz">
                         <field name="TEXT">may deposit</field>
-                        <next>
-                          <block type="field_number" id="@(maWkt-@`R}L5N8_cH/">
-                            <field name="VALUE">0</field>
-                            <field name="FIELDNAME">ammount</field>
-                            <field name="MIN">0</field>
-                            <field name="MAX">Infinity</field>
-                            <field name="PRECISION">0</field>
-                            <next>
-                              <block type="field_static" id="zuHS@9I1i[qV)79]k7^4">
-                                <field name="TEXT">ADA,</field>
-                              </block>
-                            </next>
-                          </block>
-                        </next>
                       </block>
                     </statement>
+                    <value name="TYPE">
+                      <shadow type="type_null" id="dFdeXoa$_X${Bu|mcN?y"></shadow>
+                      <block type="type_other" id="@]m33+1amgCPo0o[8o+w">
+                        <field name="TYPE">value</field>
+                      </block>
+                    </value>
                     <next>
                       <block type="input_dummy" id="oA1:mI@-|/?gEF1/xzwG">
                         <field name="ALIGN">RIGHT</field>
                         <statement name="FIELDS">
                           <block type="field_static" id="o9:R5/6;xl?#6LURoBc|">
-                            <field name="TEXT">money can be redeemed on block</field>
+                            <field name="TEXT">ADA redeemable on block</field>
                             <next>
                               <block type="field_number" id="vUX^3zN@Gnsa`7Eaa-xc">
                                 <field name="VALUE">0</field>
@@ -1436,7 +1438,7 @@
                   <block type="field_number" id=".b*Y*vcHRcs@54}vD]yl">
                     <field name="VALUE">1</field>
                     <field name="FIELDNAME">commit_id</field>
-                    <field name="MIN">-Infinity</field>
+                    <field name="MIN">0</field>
                     <field name="MAX">Infinity</field>
                     <field name="PRECISION">0</field>
                   </block>
@@ -1560,7 +1562,7 @@
               <block type="field_number" id=".b*Y*vcHRcs@54}vD]yl">
                 <field name="VALUE">0</field>
                 <field name="FIELDNAME">money</field>
-                <field name="MIN">-Infinity</field>
+                <field name="MIN">0</field>
                 <field name="MAX">Infinity</field>
                 <field name="PRECISION">0</field>
               </block>
@@ -1573,6 +1575,98 @@
                     <field name="TEXT">ADA</field>
                   </block>
                 </statement>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+    <value name="TOOLTIP">
+      <block type="text" id="4ow-(}!O$cjCM3lrRe0r">
+        <field name="TEXT"></field>
+      </block>
+    </value>
+    <value name="HELPURL">
+      <block type="text" id="6Q,A(Yxx;eVKkzA`irr5">
+        <field name="TEXT"></field>
+      </block>
+    </value>
+    <value name="OUTPUTTYPE">
+      <shadow type="type_null" id="GpBx;J0BR~((szXGtqxn"></shadow>
+      <block type="type_other" id="hairH]_*G.E0A=v3$l)7">
+        <field name="TYPE">value</field>
+      </block>
+    </value>
+    <value name="COLOUR">
+      <block type="colour_hue" id="_~wwo:SE0G5{;=2EGlSW">
+        <mutation colour="#5ba56d"></mutation>
+        <field name="HUE">135</field>
+      </block>
+    </value>
+  </block><block type="factory_base" id="ORWw2ZjtnXO+!*ZV-D_Y" x="26" y="-69">
+    <mutation connections="LEFT"></mutation>
+    <field name="NAME">money_from_choice</field>
+    <field name="INLINE">EXT</field>
+    <field name="CONNECTIONS">LEFT</field>
+    <statement name="INPUTS">
+      <block type="input_dummy" id="E/RBW_,]UC~(VpP4USZ:">
+        <field name="ALIGN">CENTRE</field>
+        <statement name="FIELDS">
+          <block type="field_static" id="nsLG7xxjXdak]_RIRqu+">
+            <field name="TEXT">MoneyFromChoice</field>
+          </block>
+        </statement>
+        <next>
+          <block type="input_dummy" id="[v(Hgw2#.OC/FUYSzs];">
+            <field name="ALIGN">RIGHT</field>
+            <statement name="FIELDS">
+              <block type="field_static" id="]A~lZRh)l-#$2$g}MP=@">
+                <field name="TEXT">use value of choice with id:</field>
+                <next>
+                  <block type="field_number" id="M=34wj?05UYLK0=OR,jU">
+                    <field name="VALUE">1</field>
+                    <field name="FIELDNAME">choice_id</field>
+                    <field name="MIN">0</field>
+                    <field name="MAX">Infinity</field>
+                    <field name="PRECISION">0</field>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="input_dummy" id="2)-(r4O!T[*t%MnmYB0m">
+                <field name="ALIGN">RIGHT</field>
+                <statement name="FIELDS">
+                  <block type="field_static" id="Y6_=JaSY5*L/5cZZf9BW">
+                    <field name="TEXT">chosen by participant with id:</field>
+                    <next>
+                      <block type="field_number" id="ge`znbHzt/7+a/EUm5`U">
+                        <field name="VALUE">1</field>
+                        <field name="FIELDNAME">person_id</field>
+                        <field name="MIN">1</field>
+                        <field name="MAX">Infinity</field>
+                        <field name="PRECISION">0</field>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+                <next>
+                  <block type="input_value" id="i,8#(2w|W$|{UHD[16O`">
+                    <field name="INPUTNAME">default</field>
+                    <field name="ALIGN">RIGHT</field>
+                    <statement name="FIELDS">
+                      <block type="field_static" id="L61L.p5!p1TrGvrt8Bc:">
+                        <field name="TEXT">if no choice was made use:</field>
+                      </block>
+                    </statement>
+                    <value name="TYPE">
+                      <shadow type="type_null" id="dFdeXoa$_X${Bu|mcN?y"></shadow>
+                      <block type="type_other" id="@]m33+1amgCPo0o[8o+w">
+                        <field name="TYPE">value</field>
+                      </block>
+                    </value>
+                  </block>
+                </next>
               </block>
             </next>
           </block>

@@ -23,27 +23,27 @@ data DNode = DNode String
   deriving (Eq, Show, Ord)
 
 instance Labellable DNode where
-  toLabelValue (DNode s) = StrLabel (pack $ s)
+  toLabelValue (DNode s) = StrLabel (pack s)
 
 data DTran = DTran String
   deriving (Eq, Show, Ord)
 
 instance Labellable DTran where
-  toLabelValue (DTran s) = StrLabel (pack $ s)
+  toLabelValue (DTran s) = StrLabel (pack s)
 
 
 ncp :: GraphvizParams Int DNode DTran () DNode
 ncp = nonClusteredParams { fmtNode = \(_, n) -> decorateNode n
                          , fmtEdge = \(_, _, e) -> decorateEdge e }
 
-to_dot :: PT.Gr DNode DTran -> DotGraph Int 
-to_dot gr = graphToDot ncp gr 
+toDot :: PT.Gr DNode DTran -> DotGraph Int 
+toDot = graphToDot ncp
 
 visualise :: GraphData -> IO ()
-visualise gd = runGraphvizCanvas' (to_dot (toGr gd)) Xlib
+visualise gd = runGraphvizCanvas' (toDot (toGr gd)) Xlib
 
 renderToFile :: FilePath -> GraphData -> IO FilePath
-renderToFile path gd = runGraphvizCommand Dot (to_dot (toGr gd)) DotOutput path
+renderToFile path gd = runGraphvizCommand Dot (toDot (toGr gd)) DotOutput path
 
 decorateEdge :: DTran -> Attributes
 decorateEdge (DTran x) = [ Label $ StrLabel $ pack x ]

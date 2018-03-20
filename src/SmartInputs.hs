@@ -17,13 +17,13 @@ combineInputs Input {cc = cci1, rc = rci1, rp = rpi1, ic = ici1}
 getPotentialInputsFromContract :: OS -> Contract -> State -> Input
 getPotentialInputsFromContract _ (CommitCash idencc per cash _ tim2 _ _) st
   | Map.member idencc (sc st) = emptyInput
-  | otherwise = emptyInput {cc = Set.singleton (CC idencc per cash tim2)}
+  | otherwise = emptyInput {cc = Set.singleton (CC idencc per (evalMoney st cash) tim2)}
 getPotentialInputsFromContract _ (RedeemCC idencc _) st =
   case Map.lookup idencc (sc st) of
     Just (person, NotRedeemed val _) -> emptyInput {rc = Set.singleton (RC idencc person val)}
     _ -> emptyInput
-getPotentialInputsFromContract _ (Pay idenpay _ pt cash _ _) _ =
-  emptyInput {rp = Map.singleton (idenpay, pt) cash}
+getPotentialInputsFromContract _ (Pay idenpay _ pt cash _ _) st =
+  emptyInput {rp = Map.singleton (idenpay, pt) (evalMoney st cash)}
 getPotentialInputsFromContract os (Both c1 c2) st
   = combineInputs (getPotentialInputsFromContract os c1 st)
                   (getPotentialInputsFromContract os c2 st)
@@ -69,7 +69,7 @@ getPotentialInputsFromState os State {sc = commits} =
 -- It takes all choices as "0", independently of what would be useful
 getPossibleInputs :: OS -> Input -> Contract -> State -> Input
 getPossibleInputs os inp contr stat = foldl1 combineInputs [inputsFromContract, inputsFromState, choices]
-  where (statGivenInputs, contractGivenInputs, _) = compute_all inp stat contr os
+  where (statGivenInputs, contractGivenInputs, _) = computeAll inp stat contr os
         inputsFromContract = getPotentialInputsFromContract os contractGivenInputs statGivenInputs
         inputsFromState = getPotentialInputsFromState os statGivenInputs
         choices = getUsedChoiceNumbers statGivenInputs contractGivenInputs

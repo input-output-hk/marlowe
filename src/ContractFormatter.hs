@@ -1,7 +1,7 @@
 module ContractFormatter where
 
 import Semantics
-import Data.List (intersperse, groupBy)
+import Data.List (groupBy, intercalate)
 
 ------------------------
 -- AST dependent code --
@@ -22,6 +22,8 @@ listCurryType (ASTNodeM (AddMoney money1 money2))
  = ("AddMoney", [ASTNodeM money1, ASTNodeM money2])
 listCurryType (ASTNodeM (ConstMoney cash))
  = ("ConstMoney", [ASTNodeI cash])
+listCurryType (ASTNodeM (MoneyFromChoice identChoice person def))
+ = ("MoneyFromChoice", [ASTNodeIC identChoice, ASTNodeI person, ASTNodeM def])
 listCurryType (ASTNodeO (BelowTimeout timeout))
  = ("BelowTimeout", [ASTNodeI timeout])
 listCurryType (ASTNodeO (AndObs observation1 observation2))
@@ -40,13 +42,13 @@ listCurryType (ASTNodeO TrueObs) = ("TrueObs", [])
 listCurryType (ASTNodeO FalseObs) = ("FalseObs", [])
 listCurryType (ASTNodeC Null) = ("Null", [])
 listCurryType (ASTNodeC (CommitCash identCC person cash timeout1 timeout2 contract1 contract2))
- = ("CommitCash", [ASTNodeCC identCC, ASTNodeI person, ASTNodeI cash, ASTNodeI timeout1,
+ = ("CommitCash", [ASTNodeCC identCC, ASTNodeI person, ASTNodeM cash, ASTNodeI timeout1,
                    ASTNodeI timeout2, ASTNodeC contract1, ASTNodeC contract2])
 listCurryType (ASTNodeC (RedeemCC identCC contract))
  = ("RedeemCC", [ASTNodeCC identCC, ASTNodeC contract])
 listCurryType (ASTNodeC (Pay identPay person1 person2 cash timeout contract))
  = ("Pay", [ASTNodeIP identPay, ASTNodeI person1, ASTNodeI person2,
-            ASTNodeI cash, ASTNodeI timeout, ASTNodeC contract])
+            ASTNodeM cash, ASTNodeI timeout, ASTNodeC contract])
 listCurryType (ASTNodeC (Both contract1 contract2))
  = ("Both", [ASTNodeC contract1, ASTNodeC contract2])
 listCurryType (ASTNodeC (Choice observation contract1 contract2))
@@ -94,25 +96,22 @@ noneComplex _ _ = True
 -- We assume that Simple nodes have Simple or Trivial children
 smartPrettyPrint :: Int -> NodeType -> String
 smartPrettyPrint _ (Trivial a) = prettyPrint 0 a
-smartPrettyPrint _ (Simple a) = "(" ++ (prettyPrint 0 a) ++ ")"
-smartPrettyPrint spaces (Complex a) = "(" ++ (prettyPrint (spaces + 1) a) ++ ")"
-
-joinWithSpaces :: [String] -> String
-joinWithSpaces x = concat $ intersperse " " x
+smartPrettyPrint _ (Simple a) = "(" ++ prettyPrint 0 a ++ ")"
+smartPrettyPrint spaces (Complex a) = "(" ++ prettyPrint (spaces + 1) a ++ ")"
 
 prettyPrint :: Int -> (String, [ASTNode]) -> String
 prettyPrint _ (name, []) = name
-prettyPrint spaces (name, args) =
-  concat $ intersperse "\n" (trivialNames:(map ((tabulateLine newSpaces) ++) others))
-  where classified = map (classify) args
-        newSpaces = (spaces + (length name) + 1)
-        groupedClassified = groupBy (noneComplex) classified
-        trivialNames = joinWithSpaces (name:(map (smartPrettyPrint newSpaces) (head groupedClassified)))
-        others = map (joinWithSpaces . (map (smartPrettyPrint newSpaces))) (tail groupedClassified)
+prettyPrint spaces (name, args) = intercalate "\n" (trivialNames : map (tabulateLine newSpaces ++) others)
+  where
+    classified = map classify args
+    newSpaces = spaces + length name + 1
+    groupedClassified = groupBy noneComplex classified
+    trivialNames = unwords (name : map (smartPrettyPrint newSpaces) (head groupedClassified))
+    others = map (unwords . map (smartPrettyPrint newSpaces)) (tail groupedClassified)
 
 -------------
 -- Wrapper --
 -------------
 
 prettyPrintContract :: Contract -> String
-prettyPrintContract = (prettyPrint 0) . listCurryType . ASTNodeC
+prettyPrintContract = prettyPrint 0 . listCurryType . ASTNodeC

@@ -8,7 +8,7 @@ Blockly.JavaScript['observation_andobs'] = function(block) {
 };
 
 Blockly.JavaScript['observation_belowtimeout'] = function(block) {
-  var text_block_number = block.getFieldValue('block_number');
+  var number_block_number = block.getFieldValue('block_number');
   // TODO: Assemble JavaScript into code variable.
   var code = '...';
   // TODO: Change ORDER_NONE to the correct strength.
@@ -40,8 +40,8 @@ Blockly.JavaScript['observation_orobs'] = function(block) {
 };
 
 Blockly.JavaScript['observation_personchosesomething'] = function(block) {
-  var text_choice_id = block.getFieldValue('choice_id');
-  var text_person = block.getFieldValue('person');
+  var number_choice_id = block.getFieldValue('choice_id');
+  var number_person = block.getFieldValue('person');
   // TODO: Assemble JavaScript into code variable.
   var code = '...';
   // TODO: Change ORDER_NONE to the correct strength.
@@ -49,9 +49,9 @@ Blockly.JavaScript['observation_personchosesomething'] = function(block) {
 };
 
 Blockly.JavaScript['observation_personchosethis'] = function(block) {
-  var text_choice_id = block.getFieldValue('choice_id');
-  var text_person = block.getFieldValue('person');
-  var text_choice_value = block.getFieldValue('choice_value');
+  var number_choice_id = block.getFieldValue('choice_id');
+  var number_person = block.getFieldValue('person');
+  var number_choice_value = block.getFieldValue('choice_value');
   // TODO: Assemble JavaScript into code variable.
   var code = '...';
   // TODO: Change ORDER_NONE to the correct strength.
@@ -59,7 +59,7 @@ Blockly.JavaScript['observation_personchosethis'] = function(block) {
 };
 
 Blockly.JavaScript['observation_timeabove'] = function(block) {
-  var text_block_number = block.getFieldValue('block_number');
+  var number_block_number = block.getFieldValue('block_number');
   // TODO: Assemble JavaScript into code variable.
   var code = '...';
   // TODO: Change ORDER_NONE to the correct strength.
@@ -97,7 +97,7 @@ Blockly.JavaScript['contract_redeemcc'] = function(block) {
 Blockly.JavaScript['contract_pay'] = function(block) {
   var number_pay_id = block.getFieldValue('pay_id');
   var number_payer_id = block.getFieldValue('payer_id');
-  var number_ammount = block.getFieldValue('ammount');
+  var value_ammount = Blockly.JavaScript.valueToCode(block, 'ammount', Blockly.JavaScript.ORDER_ATOMIC);
   var number_payee_id = block.getFieldValue('payee_id');
   var number_expiration = block.getFieldValue('expiration');
   var statements_contract = Blockly.JavaScript.statementToCode(block, 'contract');
@@ -126,7 +126,7 @@ Blockly.JavaScript['contract_choice'] = function(block) {
 Blockly.JavaScript['contract_commitcash'] = function(block) {
   var number_ccommit_id = block.getFieldValue('ccommit_id');
   var number_person_id = block.getFieldValue('person_id');
-  var number_ammount = block.getFieldValue('ammount');
+  var value_ammount = Blockly.JavaScript.valueToCode(block, 'ammount', Blockly.JavaScript.ORDER_ATOMIC);
   var number_end_expiration = block.getFieldValue('end_expiration');
   var number_start_expiration = block.getFieldValue('start_expiration');
   var statements_contract1 = Blockly.JavaScript.statementToCode(block, 'contract1');
@@ -174,6 +174,16 @@ Blockly.JavaScript['value_add_money'] = function(block) {
 
 Blockly.JavaScript['value_const_money'] = function(block) {
   var number_money = block.getFieldValue('money');
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...';
+  // TODO: Change ORDER_NONE to the correct strength.
+  return [code, Blockly.JavaScript.ORDER_NONE];
+};
+
+Blockly.JavaScript['money_from_choice'] = function(block) {
+  var number_choice_id = block.getFieldValue('choice_id');
+  var number_person_id = block.getFieldValue('person_id');
+  var value_default = Blockly.JavaScript.valueToCode(block, 'default', Blockly.JavaScript.ORDER_ATOMIC);
   // TODO: Assemble JavaScript into code variable.
   var code = '...';
   // TODO: Change ORDER_NONE to the correct strength.

@@ -15,13 +15,19 @@ import Semantics
 -- person 1 gets to keep the 20 ADA from person 2.
 
 depositIncentive :: Contract
-depositIncentive = CommitCash (IdentCC 1) 1 100 10 200
-                              (CommitCash (IdentCC 2) 2 20 20 200
+depositIncentive = CommitCash (IdentCC 1) 1
+                              (ConstMoney 100)
+                              10 200
+                              (CommitCash (IdentCC 2) 2
+                                          (ConstMoney 20)
+                                          20 200
                                           (When (PersonChoseSomething (IdentChoice 1) 1)
                                                 100
                                                 (Both (RedeemCC (IdentCC 1) Null)
                                                       (RedeemCC (IdentCC 2) Null))
-                                                (Pay (IdentPay 1) 2 1 20 200
+                                                (Pay (IdentPay 1) 2 1
+                                                     (ConstMoney 20)
+                                                     200
                                                      (Both (RedeemCC (IdentCC 1) Null)
                                                            (RedeemCC (IdentCC 2) Null))))
                                           (RedeemCC (IdentCC 1) Null))

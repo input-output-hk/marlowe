@@ -420,6 +420,7 @@ analyse_one_step_action_aux :: AnalysisState -> [AnalysisState]
 analyse_one_step_action_aux (as@ AS {rem_contract = (CommitCash ident per cash tout _ _ _),
                                      commits = comm@Input {cc = cc_old}, -- CommitCash
                                      curr_event = ce,
+                                     state = sta,
                                      possible_block = blo
                                     }) =
        [ -- the commit is done on time
@@ -429,18 +430,21 @@ analyse_one_step_action_aux (as@ AS {rem_contract = (CommitCash ident per cash t
          -- the commit is not done on time
         as {possible_block = not_below tout $ extend_dom blo}
        ]
-    where cc_new = (CC ident per cash tout)
+    where cc_new = (CC ident per ccash tout)
+          ccash = evalMoney sta cash
 
 analyse_one_step_action_aux (as@ AS {rem_contract = (Pay ide pf pt cash tim _),
                                      commits = comm@Input {rp = rp_old}, -- Pay
                                      curr_event = ce,
+                                     state = sta,
                                      possible_block = blo
                                     }) =
-    [as { commits = comm {rp = Map.insert (ide, pt) cash rp_old},
-          curr_event = ce ++ [RequestPay ide pf pt cash],
+    [as { commits = comm {rp = Map.insert (ide, pt) ccash rp_old},
+          curr_event = ce ++ [RequestPay ide pf pt ccash],
           possible_block = extend_dom blo},
      as {possible_block = not_below tim $ extend_dom blo}
     ]
+    where ccash = evalMoney sta cash
 analyse_one_step_action_aux (as@ AS {rem_contract = (RedeemCC ident _),
                                      commits = comm@Input {rc = rc_old}, -- RedeemCC
                                      curr_event = ce,

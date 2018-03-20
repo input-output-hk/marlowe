@@ -158,6 +158,13 @@ money_to_blockly (ConstMoney cv) =
   do tb <- create_block "value_const_money"
      set_field_value tb "money" cv
      return tb
+money_to_blockly (MoneyFromChoice (IdentChoice ic) per mon) =
+  do monb <- money_to_blockly mon
+     tb <- create_block "money_from_choice"
+     set_field_value tb "choice_id" ic
+     set_field_value tb "person_id" per
+     connect_value_as_input "default" tb monb
+     return tb
 
 -- block to blockly
 
@@ -221,10 +228,11 @@ block_to_blockly (RedeemCC (IdentCC id) c) =
 block_to_blockly (Pay (IdentPay ip) p1 p2 cash expi c) =
   do cb <- block_to_blockly c
      tb <- create_block "contract_pay"
+     cashb <- money_to_blockly cash
      set_field_value tb "pay_id" ip
      set_field_value tb "payer_id" p1
      set_field_value tb "payee_id" p2
-     set_field_value tb "ammount" cash
+     connect_value_as_input "ammount" tb cashb
      set_field_value tb "expiration" expi
      connect_as_input "contract" tb cb
      return tb
@@ -247,10 +255,11 @@ block_to_blockly (Choice obs c1 c2) =
 block_to_blockly (CommitCash (IdentCC id) p cash b1 b2 c1 c2) =
   do cb1 <- block_to_blockly c1
      cb2 <- block_to_blockly c2
+     cashb <- money_to_blockly cash
      tb <- create_block "contract_commitcash"
      set_field_value tb "ccommit_id" id
      set_field_value tb "person_id" p
-     set_field_value tb "ammount" cash
+     connect_value_as_input "ammount" tb cashb
      set_field_value tb "start_expiration" b1
      set_field_value tb "end_expiration" b2
      connect_as_input "contract1" tb cb1
@@ -424,7 +433,7 @@ execute =
      st <- get_state
      contr <- workspace_to_contract
      blk <- get_blocknum
-     let (nst, ncontr, outp) = compute_all inp st contr (OS {random = 42, blockNumber = blk}) in do {set_output outp;
+     let (nst, ncontr, outp) = computeAll inp st contr (OS {random = 42, blockNumber = blk}) in do {set_output outp;
                          code_to_contract ncontr;
                          set_state nst;
                          set_input_text "([], [], [], [])";

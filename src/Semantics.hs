@@ -473,8 +473,10 @@ discountFromPairList :: Cash -> [(IdentCC, CCStatus)] -> [(IdentCC, CCStatus)]
 discountFromPairList v ((ident, (p, NotRedeemed ve e)):t)
   | v <= ve = [(ident, (p, NotRedeemed (ve - v) e))]
   | ve < v = (ident, (p, NotRedeemed 0 e)) : discountFromPairList (v - ve) t
-discountFromPairList _ (_:t) = t 
-discountFromPairList _ _ = error "attempt to discount when insufficient cash available"
+discountFromPairList _ (_:t) = t
+discountFromPairList v []
+  | v == 0 = []
+  | otherwise = error "attempt to discount when insufficient cash available"
 
 -- Sorts a list of pairs by expiration date.
 

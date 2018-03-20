@@ -1101,7 +1101,7 @@ CommitCash (IdentCC 1) 1
       var number_choice_id = block.getFieldValue('choice_id');
       var number_person_id = block.getFieldValue('person_id');
       var value_default = Blockly.Marlowe.valueToCode(block, 'default', Blockly.Marlowe.ORDER_ATOMIC);
-      var code = '(MoneyFromChoice ' + number_choice_id + ' ' + number_person_id + ' ' + value_default + ')';
+      var code = '(MoneyFromChoice (IdentChoice ' + number_choice_id + ') ' + number_person_id + ' ' + value_default + ')';
       return [code, 0];
     };
 

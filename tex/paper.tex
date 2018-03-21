@@ -156,7 +156,12 @@ A particularly important technical distinction here is that between an account-s
 
 \noindent
 \sjtnote{Preliminary overview; need to revisit.}
-The paper is structured like this: we begin with an overview of the model, including the assumptions made in designing it, the types of the principal functions and a description of the DSL as an algebraic type, constructor by constructor. The section aims to give a high level overview, and some of the concrete details are to be found in the repo. We follow this with discussions of the kinds of formal analysis which might be made for the DSL, as well as discussing a  set of questions raised by the process of modelling. We then look at the example of BLAH, as an illustration, and then look at how Marlowe relates to other work in the area. We conclude by pointing out 
+The paper is structured like this: we begin with an overview of the model, including the assumptions made in designing 
+it, the types of the principal functions and a description of the DSL as an algebraic type, constructor by constructor. 
+The section aims to give a high level overview, and some of the concrete details are to be found in the repo. We follow 
+this with discussions of the kinds of formal analysis which might be made for the DSL, as well as discussing a  set of 
+questions raised by the process of modelling. We then look at the example of ``incentivised saving'', as an 
+illustration, and then look at how Marlowe relates to other work in the area. We conclude by pointing out 
 
 \section{The model}
 The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
@@ -185,7 +190,12 @@ The model is based on a number of assumptions.
 \begin{itemize}
 \item It is assumed that cryptographic ``services'' or operations are provided by a layer external to the system, and so they need not be modelled explicitly here.
 \item Making a commitment is not something that a contract can perform; rather, it can require that a commitment is made, but that then has to be established externally: hence the input of (a set of) commitments at each step. The same observation also applies to redeeming a commitment of cash.
-\item Observables are observed at a particular time and in a particular context. We assume that the recording and identification of each (instance of an) observation is provided by the infrastructure of the system. We provide a ``little language'' for describing observations: \haskellinline{Observation}.
+\item Observables are observed at a particular time and in a particular context. We assume that the recording and 
+identification of each (instance of an) observation is provided by the infrastructure of the system. We provide a 
+``little language'' for describing observations: \haskellinline{Observation}. Similar properties are true for
+\haskellinline{Money} amounts: their values are calculated depending on the inputs and state of execution of the 
+contract, they can be deterministically established given the context, and they are described through a small 
+``expression language''.
 \item The fact of making commitments also needs to be recorded.
 \item It is important to be aware that there may be different instances of contracts executed, and for each instance there will typically be different instances of observables (and commitments) observed and recorded.
 \item The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the \haskellinline{fullStep} function below).
@@ -199,9 +209,9 @@ The type of contracts is given by
 \begin{haskellcode}
 data Contract =
    Null |
-   CommitCash IdentCC Person Cash Timeout Timeout Contract Contract |  
+   CommitCash IdentCC Person Money Timeout Timeout Contract Contract |  
    RedeemCC IdentCC Contract |
-   Pay IdentPay Person Person Cash Timeout Contract |  
+   Pay IdentPay Person Person Money Timeout Contract |  
    Both Contract Contract |
    Choice Observation Contract Contract |
    When Observation Timeout Contract Contract   
@@ -220,8 +230,9 @@ The constructors should be interpreted thus:
 
 \item \haskellinline{Null} is the null contract; it will always be quiescent.
 
-\item \haskellinline{CommitCash idCC p n t1 t2 k1 k2}  For this contract to make progress,\begin{itemize}
-\item either before the timeout \haskellinline{t1} the user \haskellinline{p} makes a cash commitment of value \haskellinline{n} and timeout \haskellinline{t2}  with the identifier \haskellinline{idCC} , 
+\item \haskellinline{CommitCash idCC p v t1 t2 k1 k2}  For this contract to make progress,\begin{itemize}
+\item either before the timeout \haskellinline{t1} the user \haskellinline{p} makes a cash commitment of value 
+\haskellinline{v} and timeout \haskellinline{t2}  with the identifier \haskellinline{idCC}, 
 \item
 or the timeout \haskellinline{t1} is exceed.
 \end{itemize} 
@@ -242,7 +253,11 @@ Once the commitment \haskellinline{idCC} has expired and is redeemed, a \haskell
 %\footnote{If it is required, restructuring the DSL so that the result action appears as the 'value' of executing a step (using a monadic interface as described for id generation below) would be a good idea.}
 %\footnote{We specify the actions generated by each kind of constructor; at each step the list of such actions, of type \haskellinline{AS}, is a component of the result.}. 
 
-\item \haskellinline{Pay p1 p2 int t k} makes it possible, assuming that sufficient funds are available, for \haskellinline{p1} to claim  a payment of \haskellinline{int} from \haskellinline{p2} before the timeout \haskellinline{t}. The contract continues as \haskellinline{k}. By `available' we mean that sufficient commitments have been made and  not yet expired to cover the payment; in this case the payment  uses the currency allocated by the cash commitments made by \haskellinline{p1} that expire the earliest.
+\item \haskellinline{Pay p1 p2 v t k} makes it possible, assuming that sufficient funds are available, for 
+\haskellinline{p1} to claim  a payment of \haskellinline{v} from \haskellinline{p2} before the timeout 
+\haskellinline{t}. The contract continues as \haskellinline{k}. By `available' we mean that sufficient commitments have 
+been made and  not yet expired to cover the payment; in this case the payment  uses the currency allocated by the cash 
+commitments made by \haskellinline{p1} that expire the earliest.
 
  This contract will result in a \haskellinline{FailedPay} action if the funds are not available; otherwise a \haskellinline{SuccessfulPay} action is generated.
 
@@ -359,113 +374,85 @@ So far we are assuming contracts defined in the DSL to be finite in both aspects
 \end{itemize}
 
 
-\section{Rock-paper-scissors explanation (not re-formatted)}
+\section{Incentivised saving}
 
-In this section, we explain how the DSL can be used for designing a contract that enforces a round of rock-paper-scissors where the winner will receive from the loser 10 units of currency and not revealing your hand also has a penalty of 10 units.
+In this section, we explain how the DSL can be used for designing a contract that incentivises saving. We use the 
+following example: ``participant 2'' offers 20 ADA to ``participant 1'' in exchange for saving 100 ADA for 100 blocks. 
+``Participant 1'' will be able to withdraw the savings after block 20, but if that option is chosen, then ``participant 
+2'' will not pay the extra 20 ADA to ``participant 1''.
 
+We will start from outer to inner primitives. The first thing is to allow ``participant 1'' to commit the 100 ADA. The 
+primitive says that with identity \haskellinline{IdentCC 1} (this is the identity of the commitment), ``participant 
+\haskellinline{1}'' can commit \haskellinline{100} ADA before block \haskellinline{10}, and the commitment must 
+expire on block \haskellinline{200}. But if the money is not committed before block \haskellinline{10}, then the 
+contract will continue as \haskellinline{Null}.
 
-We will start top to bottom. First we define identities for the players and the commitments.
-The player 1 will be identified by integer 1:
-player1 = 1
-the cash commitment of player 1 will be identified by:
-p1 = IdentCC 1
-and his value commitment will be identified by:
-v1 = IdentCV 1
-In the same way, player 2 will be identified by integer 2:
-player2 = 2
-the cash commitment player 2 will be identified by:
-p2 = IdentCC 2
-And his value commitment will be identified by:
-v2 = IdentCV 2
+\begin{haskellcode}
+CommitCash (IdentCC 1) 1 (ConstMoney 100) 10 200
+           step2
+           Null
+\end{haskellcode}
 
+If the commitment is done correctly and on time, we continue as in \haskellinline{step2}. \haskellinline{step2} is 
+another commitment, this time by ``participant 2''. The primitive says that with identity \haskellinline{IdentCC 2},
+``participant \haskellinline{2}'' can commit \haskellinline{20} ADA before block \haskellinline{20}, and the commitment
+must expire on block \haskellinline{200}. But if the money is not committed before block \haskellinline{20}, then the
+contract will continue as \haskellinline{RedeemCC (IdentCC 1) Null}, which in turn gives ``participant 1'' the 
+opportunity to withdraw all the money committed immediately.
 
-And because choices must be represented as Int we encode them as follows:
+\begin{haskellcode}
+CommitCash (IdentCC 2) 2 (ConstMoney 20) 20 200
+           step3
+           (RedeemCC (IdentCC 1) Null)
+\end{haskellcode}
 
+If the commitment is done correctly and on time, we continue as in \haskellinline{step3}. \haskellinline{step3}
+waits until choice with identity \haskellinline{IdentChoice 1} is made by ``participant \haskellinline{1}'' or
+until block \haskellinline{100} (whatever happens first). If the choice is made before block \haskellinline{100}, 
+it continues as \haskellinline{stepRedeem}, if block \haskellinline{100} comes first, then it continues as 
+\haskellinline{step4}.
 
-data RPS = Rock | Paper | Scissors
+\begin{haskellcode}
+When (PersonChoseSomething (IdentChoice 1) 1) 100
+     stepRedeem
+     step4
+\end{haskellcode}
 
+\haskellinline{step4} pays the \haskellinline{20} ADA committed by ``participant \haskellinline{2}'' in the commit with 
+identity \haskellinline{IdentPay 1} to ``participant \haskellinline{1}'', if the payment is claimed before block 
+\haskellinline{200}. Once the payment is claimed or after block 200, it continues as \haskellinline{stepRedeem}.
 
-all\_rps = [Rock, Paper, Scissors]
+\begin{haskellcode}
+Pay (IdentPay 1) 2 1 (ConstMoney 20) 200 stepRedeem
+\end{haskellcode}
 
+Finally, \haskellinline{stepRedeem} allows both participants to redeem all the remaining committed funds.
 
-encoding\_rps Rock = 1      -- rock is encoded as 1
-encoding\_rps Paper = 2     -- paper is encoded as 2
-encoding\_rps Scissors = 3  -- scissors is encoded as 3
+\begin{haskellcode}
+Both (RedeemCC (IdentCC 1) Null)
+     (RedeemCC (IdentCC 2) Null)
+\end{haskellcode}
 
-
-all\_rps\_encoded = map (encoding\_rps) all\_rps
-
-
-We first ask the players to commit money. We will need 20 units from each player since we want 10 units to enforce that the hand is revealed, and 10 units for the prize. Theoretically we could reuse just 10 units, but in practice recommitting payments may limit the applicability of the DSL to certain systems like Bitcoin, so it does not support it at the moment.
-
-
-The commitments are chained as follows:
-* Cash commitment p1 is done by player 1, consists of 20 units and expires on block 42 same for p2 by player 2.
-
-
-CommitCash p1 player1 20 42
-  (CommitCash p2 player2 20 42 
-
-
-* Value commitments are done for two choices of one of the three values that encode rock, paper, or scissors.
-
-
-     (CommitValue v1 (all\_rps\_encoded) player1
-        (CommitValue v2 (all\_rps\_encoded) player2
-
-
-* The see-saw mechanism ensures that both players reveal or none does. This is fundamentally achieved by forcing a player to reveal the other when he reveals. But we need to do this steadily to give players enough time to do the actions required by the rest of the contract, otherwise one player may push the other one to timeout.
-
-    (RevealCV v1
-            (Choice (BelowTimeout 10)
-                    (Pay player2 player1 10
-                       (RevealCV v2
-                              (Choice (BelowTimeout 20)
-                                  (Pay 1 2 10
-                                       reward\_winner)
-                                  Null)))
-                    Null)))))
-
-First RevealCV waits for the owner of value commitment v1 (player 1) to reveal his choice. If the reveal happens before block number 10 (after the start of the contract instance), player 2 pays 10 currency units to player 1. Otherwise we consider the contract timed out and make the contract Null, the existing cash commitments will be automatically refunded on block 42.
-The same is done for player 2. This time he is incentivised to reveal his hand before block number 20, since that is the only way he will recover the 10 currency unit. He might already know that he has lost and decide not to reveal, that will have the same effect than revealing. If desired we could increase the see-saw penalty to make not revealing worse than losing.
-
-
-If the contract remaining becomes reward\_winner, we already have enough information to know who won and we will have exactly 10 currency units committed by each player.
-
-
-So we define reward\_winner as follows. We just use Choice twice, one to check if Player 1 won, one to check if Player 2 won, and the default option is just refunding everything:
-
-
--- If player 1 won
-Choice (OrObs (AndObs (CVRevealedAs v1 (encoding\_rps Paper))
-                      (CVRevealedAs v2 (encoding\_rps Rock)))
-              (OrObs (AndObs (CVRevealedAs v1 (encoding\_rps Scissors))
-                             (CVRevealedAs v2 (encoding\_rps Paper)))
-                     (AndObs (CVRevealedAs v1 (encoding\_rps Rock))
-                             (CVRevealedAs v2 (encoding\_rps Scissors)))))
--- player2 pays 10 currency units to player 1
-       (Pay player2 player1 10
--- and everything else is redeemed
-          (Both (RedeemCC p1 Null)
-                (RedeemCC p2 Null)))
--- if player 2 won
-       (Choice (OrObs (AndObs (CVRevealedAs v2 (encoding\_rps Paper))
-                              (CVRevealedAs v1 (encoding\_rps Rock)))
-                      (OrObs (AndObs (CVRevealedAs v2 (encoding\_rps Scissors))
-                                     (CVRevealedAs v1 (encoding\_rps Paper)))
-                             (AndObs (CVRevealedAs v2 (encoding\_rps Rock))
-                                     (CVRevealedAs v1 (encoding\_rps Scissors)))))
--- player1 pays 10 currency units to player 2
-               (Pay player1 player2 10
--- and everything else is redeemd
-                  (Both (RedeemCC p1 Null)
-                        (RedeemCC p2 Null)))
--- otherwise everything else is redeemed
-               (Both (RedeemCC p1 Null)
-                     (RedeemCC p2 Null)))
-
-
-It is also worth noting that, because the possible choices are specified, RedeemCV requires that the choice revealed is valid, otherwise it behaves as nothing was revealed. Thus, we know that if no player won it must be a draw.
+The whole contract remains as follows:
+\begin{haskellcode}
+CommitCash (IdentCC 1) 1
+           (ConstMoney 100)
+           10 200
+           (CommitCash (IdentCC 2) 2
+                       (ConstMoney 20)
+                       20 200
+                       (When (PersonChoseSomething (IdentChoice 1) 1)
+                             100
+                             (Both (RedeemCC (IdentCC 1) Null)
+                                   (RedeemCC (IdentCC 2) Null))
+                             (Pay (IdentPay 1) 2 1
+                                  (ConstMoney 20)
+                                  200
+                                  (Both (RedeemCC (IdentCC 1) Null)
+                                        (RedeemCC (IdentCC 2) Null))))
+                       (RedeemCC (IdentCC 1) Null))
+           Null
+\end{haskellcode}
 
 
 \subsection{Response to comments on the original document made by Charles on Slack}

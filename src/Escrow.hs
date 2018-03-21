@@ -1,6 +1,6 @@
-module CrowdFunding where
+module Escrow where
 
-import Semantics    
+import Semantics
 
 ------------------------------------------
 -- Implementation of an escrow contract --

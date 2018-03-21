@@ -79,6 +79,15 @@
       #execute {
         width: 25%;
       }
+      #example1 {
+        width: 33%;
+      }
+      #example2 {
+        width: 33%;
+      }
+      #example3 {
+        width: 34%;
+      }
       textarea {
         font-family: Consolas,monaco,monospace; 
         resize: vertical;
@@ -174,8 +183,10 @@ CommitCash (IdentCC 1) 1
     </div>
     <div><h3>Output:</h3></div>
          <textarea id="contractOutput" style="width: 100%; height: 5%; "></textarea>
-    </div>
+    <div><h3>Examples:</h3></div>
+<button id="example1" onclick="Haste.depositIncentive()">Deposit incentive</button><button id="example2" onclick="Haste.crowdFunding()">Crowd-funding</button><button id="example3" onclick="Haste.escrow()">Escrow</button>
   </div>
+    </div>
   <div id="blocklyDiv" style="position: absolute"></div>
   <xml xmlns="http://www.w3.org/1999/xhtml" id="toolbox" style="display: none;">
     <category name="Observation">

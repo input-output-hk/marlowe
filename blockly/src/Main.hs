@@ -5,6 +5,8 @@ import qualified Haste.JSString as J
 import qualified Haste.Prim as P
 import qualified Haste.DOM as D
 import qualified DepositIncentive as DI
+import qualified CrowFunding as CF
+import qualified Escrow as E
 import Semantics
 import ContractFormatter
 import SmartInputs
@@ -367,6 +369,19 @@ clear_everything = do clear_workspace
                       set_input_text "([], [], [], [])"
                       set_output_text ""
 
+-- examples
+depositIncentive = do clear_everything
+                      code_to_contract DI.depositIncentive
+                      c2b 
+
+crowdFunding = do clear_everything
+                  code_to_contract CF.crowdFunding
+                  c2b
+
+escrow = do clear_everything
+            code_to_contract E.escrow
+            c2b
+
 -- workspace to code
 workspace_to_code_aux :: IO (String)
 workspace_to_code_aux = F.ffi (J.pack "(function () {return Blockly.Marlowe.workspaceToCode(demoWorkspace);})")
@@ -525,6 +540,9 @@ main = do c2b
           F.export (J.pack "refreshActions") refreshActions
           F.export (J.pack "addAction") addAction
           F.export (J.pack "addActionWithNum") addActionWithNum
+          F.export (J.pack "depositIncentive") depositIncentive
+          F.export (J.pack "crowdFunding") crowdFunding
+          F.export (J.pack "escrow") escrow
           refreshActions
           return ()
 

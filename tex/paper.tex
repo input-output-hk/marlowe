@@ -163,6 +163,66 @@ this with discussions of the kinds of formal analysis which might be made for th
 questions raised by the process of modelling. We then look at the example of ``incentivised saving'', as an 
 illustration, and then look at how Marlowe relates to other work in the area. We conclude by pointing out 
 
+\sjtnote{To talk about, in no particular order \ldots}
+\begin{itemize}
+\item
+Marlowe as the ``canary in the coalmine'': test out how it will work, how it will interface with
+other aspects of the Cardano platform
+\item
+Be clear that this paper describes version 1.2 of Marlowe.
+\end{itemize}
+
+
+\section{Design rationale}
+
+\sjtnote{References to background papers still to be added.}
+
+\medskip
+\noindent
+In this section we explore the rationale for building the Marlowe language, and put it into the context of other work in the field.
+
+\subsection{Smart contracts on blockchain}
+
+As more than one wag has observed, many of the programs that run on blockchains are neither smart nor indeed form contracts in any real sense. Nonetheless, this terminology has stuck, and has become shorthand for ``programmed interactions on the blockchain''. In an earlier paper we presented a survey of the approaches available~\cite{cryptoeprint:2016:1156}; we give an overview here.
+
+Blockchains are executed in a replicated form by parties who cannot be guaranteed not to be hostile, either by directly trying to change the contents of the chain, or through trying to affect other properties of the chain by indirect means (such as swamping honest parties with work). Programming on the blockchain therefore needs to be constrained in some ways, since it has to be amenable to replication or verification within a reasonable time if the security and integrity of the chain are to be preserved. We look at representatives of the main approaches now.
+
+\paragraph{Bitcoin script}
+
+One approach to this is to choose mechanisms such as bitcoin script which are manifestly non-Turing complete. A bitcoin script, written in a Forth-like language, is essentially linear: it can branch, but the language contains neither looping constructs nor recursion. It is therefore straightforward not only to see that scripts will terminate, but also to give an accurate estimate of the time taken to execute a script. 
+
+\paragraph{Ethereum}
+
+On the other hand, the Ethereum system provides a Turing-complete language for the EVM virtual machine, and a higher-level programming language, Solidity, that compiles into EVM code. However, EVM and Solidity programs are constrained \emph{post hoc} by two mechanisms: program execution must be paid for using `gas' proportional to the effort expended, and a set of \emph{ad hoc} limits on program execution, e.g.\ on stack size.
+
+\paragraph{Nxt}
+
+Programmability of the system is provided through a ``fat'' high-level API, which is accessible from Nxt clients through a REST interface. The API provides functionality supporting various kinds of transactions. The core software itself doesn't support any form of scripting language; rather, users are expected to work with the built in transaction types and transactions that support some 250 primitive operations; these can be ``scripted'' in a client (only) using a binding to the API, which is available, for instance, in JavaScript.
+
+\paragraph{Other approaches}
+
+Other approaches to scripting include using business process notations, such as the OMG's BPMN, process calculi such as Rholang, logic rules (in Formal Contract Logic) and finite state machines. More details of these are provided in the survey~\cite{cryptoeprint:2016:1156}.
+
+\subsection{Blockchain platforms: Cardano and others}
+
+There is not a single model of how a blockchain operates, and in this section we look at some of the tradeoffs possible in this space. This allows us to give a context to some of the design decisions taken in designing Marlowe.  
+
+The simplest blockchain is Bitcoin. Transactions on Bitcoin are made by spending the (as yet) unspent outputs of previous transactions (`unspent transaction outputs' or UTxOs).The chain need not maintain any state, such as the current value owned by any particular participant: such \emph{account} information is implicit and external to the Bitcoin blockchain. On the other hand, the Ethereum model explicitly keeps track of account values, and so this information needs to be kept as state information on chain. While it is possible to translate between UTxO-based and account-based chains \sjtnote{cite Bruno paper} the UTxO model is more fundamental, and requires less support from the implementation of the chain itself.
+
+Some chains have a layered design, and Cardano~\cite{cardano} does this. The settlement layer (SL) is to support settlement of transactions, whereas the computation layer (or CL) supports more powerful general computations over the chain. Moreover, the Cardano roadmap \cite{cardano-rationale} envisages the possibility of computation taking place, in part at least, on a sidechain \sjtnote{citation} rather than on the main chain itself, which may support only the SL.
+
+\medskip
+\noindent
+\sjtnote{To talk about, in no particular order \ldots}
+\begin{itemize}
+\item
+push vs pull
+\item
+DSLs and Embedded DSLs
+\item
+Multiple languages: can reference aeternity here (see presentation), and tezos (Michelson: stack-based and Liquidity, strongly typed functional)
+\end{itemize}
+
 \section{The model}
 The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
 A running contract will interact with its environment in two ways.

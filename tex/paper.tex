@@ -175,13 +175,13 @@ Be clear that this paper describes version 1.2 of Marlowe.
 
 \section{Design rationale}
 
-\sjtnote{References to background papers still to be added.}
+\sjtnote{References to some of the background work still to be added.}
 
 \medskip
 \noindent
-In this section we explore the rationale for building the Marlowe language, and put it into the context of other work in the field.
+In this section we look at existing work on smart contracts and blockchains in general, before exploring the rationale for building the Marlowe language.
 
-\subsection{Smart contracts on blockchain}
+\subsection{Smart contracts on blockchains}
 
 As more than one wag has observed, many of the programs that run on blockchains are neither smart nor indeed form contracts in any real sense. Nonetheless, this terminology has stuck, and has become shorthand for ``programmed interactions on the blockchain''. In an earlier paper we presented a survey of the approaches available~\cite{cryptoeprint:2016:1156}; we give an overview here.
 
@@ -199,29 +199,41 @@ On the other hand, the Ethereum system provides a Turing-complete language for t
 
 Programmability of the system is provided through a ``fat'' high-level API, which is accessible from Nxt clients through a REST interface. The API provides functionality supporting various kinds of transactions. The core software itself doesn't support any form of scripting language; rather, users are expected to work with the built in transaction types and transactions that support some 250 primitive operations; these can be ``scripted'' in a client (only) using a binding to the API, which is available, for instance, in JavaScript.
 
+\paragraph{Multiple languages}
+
+A common feature of many blockchain platforms is that they provide multiple scripting languages. As we noted earlier, Ethereum can be programmed at the EVM level as well as by using the high-level Solidity language. Tezos~\cite{tezos-white-paper} supports the stack-based, strongly-typed, functional language Michelson, but also provides a high-level language, Liquidity, that compiles into Michelson. Liquidity is also functional and strongly typed, but provides more constructs in a more familiar syntax, namely that of a subset of OCaml. The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs:\footnote{As presented by Erik Stenman at CODE BEAM SF, March 2018, \url{https://www.youtube.com/watch?v=VXsqvfPIdWg}} the functional language  Sophia (akin to Reason) and the Functional Typed Warded Virtual Machine (FTWVM) for safe ``system level programming'', the language Varna and the HLM for simple contracts, and a (port of) Solidity and the EVM for compatibility with Ethereum. In a similar way, Cardano provides support for IELE~\sjtnote{citation}, a rational reconstruction of the EVM, and thus for Solidity contracts too. 
+
+\paragraph{Domain-specific languages} 
+
+A domain-specific language or DSL is a high-level language designed to work in a specific field or domain. The intention is that because the users will know about the field, the constructs of the language can be designed to be meaningful to them, and also that because of its nature the DSL need not include all the features of a general purpose language. Removing this clutter and having the remaining operations directly reflect the application area is intended to make the language more accessible to domain experts who do not necessarily see themselves as programmers.
+
+Stand-alone DSLs have the advantage of providing appropriate, domain-level error messages when things go wrong, but suffer the disadvantage of having to be implemented from scratch. An alternative to this are \emph{embedded} DSLs (EDSLs), which provide a ``little language'' for the particular domain embedded within a general-purpose host language. This means that parts of the host -- such as arithmetical expressions, or list idioms --  can be used to extend the expressibility of the DSL. A notable example of this is the financial contracts language described by Peyton Jones and his collaborators~\cite{PeytonJones:2000}, which is embedded in Haskell.
+
 \paragraph{Other approaches}
 
-Other approaches to scripting include using business process notations, such as the OMG's BPMN, process calculi such as Rholang, logic rules (in Formal Contract Logic) and finite state machines. More details of these are provided in the survey~\cite{cryptoeprint:2016:1156}.
+There are a variety of other approaches to scripting, including business process notations, such as the OMG's BPMN; process calculi such as Rholang; logic rules (in Formal Contract Logic), and finite state machines. More details of these are provided in the survey~\cite{cryptoeprint:2016:1156}.
 
 \subsection{Blockchain platforms: Cardano and others}
 
 There is not a single model of how a blockchain operates, and in this section we look at some of the tradeoffs possible in this space. This allows us to give a context to some of the design decisions taken in designing Marlowe.  
 
+\paragraph{UTxO and accounts}
+
 The simplest blockchain is Bitcoin. Transactions on Bitcoin are made by spending the (as yet) unspent outputs of previous transactions (`unspent transaction outputs' or UTxOs).The chain need not maintain any state, such as the current value owned by any particular participant: such \emph{account} information is implicit and external to the Bitcoin blockchain. On the other hand, the Ethereum model explicitly keeps track of account values, and so this information needs to be kept as state information on chain. While it is possible to translate between UTxO-based and account-based chains \sjtnote{cite Bruno paper} the UTxO model is more fundamental, and requires less support from the implementation of the chain itself.
 
-Some chains have a layered design, and Cardano~\cite{cardano} does this. The settlement layer (SL) is to support settlement of transactions, whereas the computation layer (or CL) supports more powerful general computations over the chain. Moreover, the Cardano roadmap \cite{cardano-rationale} envisages the possibility of computation taking place, in part at least, on a sidechain \sjtnote{citation} rather than on the main chain itself, which may support only the SL.
+\paragraph{Interaction modality}
 
-\medskip
-\noindent
-\sjtnote{To talk about, in no particular order \ldots}
-\begin{itemize}
-\item
-push vs pull
-\item
-DSLs and Embedded DSLs
-\item
-Multiple languages: can reference aeternity here (see presentation), and tezos (Michelson: stack-based and Liquidity, strongly typed functional)
-\end{itemize}
+Contracts can be conceived of as acting in two ways. In a \emph{push} model, contracts are seen to be pro-active, and to make things happen. In the case of blockchain, this would include making payments or transactions happen. Alternatively, in the \emph{pull} model contracts enable certain things to happen, such as transactions, but the transactions need to be effected by an external player. The pull model makes fewer demands on the blockchain implementation than the push model, which requires the contract to have direct access to modify the chain.
+
+\paragraph{Layered design and sidechains}
+
+Some chains have a layered design, and in particular Cardano~\cite{cardano} has. The settlement layer (SL) is to support settlement of transactions but nothing more complicated, whereas the computation layer (or CL) supports more powerful general computations over the chain. Moreover, the Cardano roadmap \cite{cardano-rationale} envisages the possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually Bitcoin) and the channels of \ae{}ternity, introduced below.
+
+\subsection{Designing Marlowe}
+
+\sjtnote{To be completed.}
+
+
 
 \section{The model}
 The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 

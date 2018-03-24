@@ -80,6 +80,8 @@
 \newcommand{\bluett}[1]{\textcolor{myblue}{\texttt{#1}}}
 \newenvironment{allbluett}{\begin{alltt}\color{myblue}}{\end{alltt}}
 
+\setlength{\itemsep}{2pt}
+
 % Document starts
 \begin{document}
 
@@ -143,7 +145,6 @@ This paper explores the design of a domain specific language, Marlowe,\footnote{
 In doing this we are required to refine the model of contracts in a number of ways in order to fit with a radically different context. 
 \begin{itemize}
 \item In the traditional model, enforcement of the contract is the responsibility of the legal system; in the decentralised blockchain model, in which there is no central authority, the contract needs to be enforced by design. 
-\item As noted by  the authors of Findel~\cite{findel} this means in particular that payments need to be bounded; this is made concrete in our account by our notion of commitments.
 \item There is not a single blockchain model, and we give a brief overview of the different mechanisms for scripting on blockchain (although this is not the primary purpose of this article). 
 \begin{itemize}
 \item
@@ -170,6 +171,8 @@ Marlowe as the ``canary in the coalmine'': test out how it will work, how it wil
 other aspects of the Cardano platform
 \item
 Be clear that this paper describes version 1.2 of Marlowe.
+\item 
+Enforcement and promptness.
 \end{itemize}
 
 
@@ -201,7 +204,9 @@ Programmability of the system is provided through a ``fat'' high-level API, whic
 
 \paragraph{Multiple languages}
 
-A common feature of many blockchain platforms is that they provide multiple scripting languages. As we noted earlier, Ethereum can be programmed at the EVM level as well as by using the high-level Solidity language. Tezos~\cite{tezos-white-paper} supports the stack-based, strongly-typed, functional language Michelson, but also provides a high-level language, Liquidity, that compiles into Michelson. Liquidity is also functional and strongly typed, but provides more constructs in a more familiar syntax, namely that of a subset of OCaml. The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs:\footnote{As presented by Erik Stenman at CODE BEAM SF, March 2018, \url{https://www.youtube.com/watch?v=VXsqvfPIdWg}} the functional language  Sophia (akin to Reason) and the Functional Typed Warded Virtual Machine (FTWVM) for safe ``system level programming'', the language Varna and the HLM for simple contracts, and a (port of) Solidity and the EVM for compatibility with Ethereum. In a similar way, Cardano provides support for IELE~\sjtnote{citation}, a rational reconstruction of the EVM, and thus for Solidity contracts too. 
+A common feature of many blockchain platforms is that they provide multiple scripting languages. As we noted earlier, Ethereum can be programmed at the EVM level as well as by using the high-level Solidity language. Tezos~\cite{tezos-white-paper} supports the stack-based, strongly-typed, functional language Michelson, but also provides a high-level language, Liquidity, that compiles into Michelson. Liquidity is also functional and strongly typed, but provides more constructs in a more familiar syntax, namely that of a subset of OCaml. 
+
+The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs:\footnote{As presented by Erik Stenman at CODE BEAM SF, March 2018, \url{https://www.youtube.com/watch?v=VXsqvfPIdWg}} the functional language  Sophia (akin to Reason) and the Functional Typed Warded Virtual Machine (FTWVM) for safe ``system level programming'', the language Varna and the HLM for simple contracts, and a (port of) Solidity and the EVM for compatibility with Ethereum. In a similar way, Cardano provides support for IELE~\sjtnote{citation}, a rational reconstruction of the EVM, and thus for Solidity contracts too. 
 
 \paragraph{Domain-specific languages} 
 
@@ -211,7 +216,12 @@ Stand-alone DSLs have the advantage of providing appropriate, domain-level error
 
 \paragraph{Other approaches}
 
-There are a variety of other approaches to scripting, including business process notations, such as the OMG's BPMN; process calculi such as Rholang; logic rules (in Formal Contract Logic), and finite state machines. More details of these are provided in the survey~\cite{cryptoeprint:2016:1156}.
+There are a variety of other approaches to scripting, including business process notations, such as the OMG's BPMN; process calculi such as Rholang; logic rules (in Formal Contract Logic), and finite state machines. More details of these are provided in~\cite{cryptoeprint:2016:1156}.
+
+\paragraph{Related work}
+
+The Findel~\cite{findel} project examines financial contracts on the Ethereum platform, and the authors note that  payments need to be bounded; this is made concrete in our account by our notion of commitments. They take no account of commitments or timeouts as we do below, but it should be noted that the Ethereum platform is more powerful than the one that we target in this paper.
+
 
 \subsection{Blockchain platforms: Cardano and others}
 
@@ -227,21 +237,54 @@ Contracts can be conceived of as acting in two ways. In a \emph{push} model, con
 
 \paragraph{Layered design and sidechains}
 
-Some chains have a layered design, and in particular Cardano~\cite{cardano} has. The settlement layer (SL) is to support settlement of transactions but nothing more complicated, whereas the computation layer (or CL) supports more powerful general computations over the chain. Moreover, the Cardano roadmap \cite{cardano-rationale} envisages the possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually Bitcoin) and the channels of \ae{}ternity, introduced below.
+Some chains have a layered design, in particular Cardano~\cite{cardano}. The Cardano Settlement Layer (SL) is to support settlement of transactions but nothing more complicated, whereas the Computation Layer (or CL) supports more powerful general computations over the chain. Moreover, the Cardano roadmap \cite{cardano-rationale} envisages the possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually Bitcoin) and the channels of \ae{}ternity, introduced below.
 
 \subsection{Designing Marlowe}
 
-\sjtnote{To be completed.}
+In designing Marlowe we have chosen a number of options; this description applies to Marlowe version 1.2 \sjtnote{Is there an obvious way of making that clear in the repo? I really don't understand how git deals with ``releases'' or versions.}
 
+\paragraph{Pull} 
+
+While earlier versions used a ``push'' model of operations, we have revised the language to give a ``pull'' semantics. This means, for example, that the language can \emph{enable} a payment to be made, but cannot make the payment happen. It is up to the interested party (or parties) to make the change happen. It is therefore possible for the payment not to happen, despite the fact that this is against the interest of the receiving party. The same 
+
+\paragraph{UTxO vs.\ accounts} \sjtnote{Pablo: please check this section carefully}
+
+The language semantics is described in terms of \emph{commitments} of sums of cryptocurrency -- which we choose to abbreviate to ``cash'' -- and so is agnostic of the underlying implementation.  However, the current redemption mechanism in Plutus Core is not strong enough to support Marlowe, and we are actively investigating the best way to extend this mechanism to implement Marlowe in full on Plutus Core.
+
+\paragraph{DSL or EDSL?}
+
+Marlowe is described as an algebraic \haskellinline{data} type in Haskell, and as such can be seen as a simple EDSL. Note, however, that the implementation presented here is for the purposes of presenting the semantics and behaviour of the language in the abstract. The implementation on the Cardano platform could be stand-alone, but more likely it will be a DSL embedded in Plutus or Plutus Core. The details of this remain to be decided, as noted in the introduction.
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width=0.6\textwidth]{pix/context.png}
+\caption{The context for the contract}
+\label{fig:context}
+\end{center}
+\end{figure}
 
 
 \section{The model}
+
 The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
-A running contract will interact with its environment in two ways.
+We start by looking at the different types used by the model, and then look at the \haskellinline{Contract} DSL itself. \sjtnote{To complete this introduction}
+
+\subsection{The model types}
+
+A running contract will interact with its environment in two ways, as shown in Figure \ref{fig:context}.
+
+\paragraph{Observables}
+
 
 First, it will need to observe different kinds of varying quantities including, for example, the current time, the current block number and, random numbers, as well as ``real world'' quantities like ``the price of oil'' or ``the exchange rate between currencies A and B''. Each instance of such an observable will be recorded on the blockchain to allow the computation to be repeated for verification purposes. It is assumed that at each step of the execution of the contract, the values of some observables will be needed, and these values are (together) given by a value of type \haskellinline{OS}. Note that these values are not determined by the participants in the contract, but rather by the external environment.
 
+\paragraph{Inputs}
+
+
 On the other hand, at each step there are -- potentially, at least -- a variety of inputs available from the participants. These include commitments of currency (or ``cash''), redemption of commitments, and claims of payments by a participant; moreover it is also possible for a participant to input an arbitrary value (which we term a ``choice''). The particular inputs at a given step are described by a value of type \haskellinline{Input}.
+
+\paragraph{Commitments}
+
 
 While informally we might see a commitment to something as being indefinite, it is important to realise that on blockchain a commitment needs to have a timeout so that progress can be forced in a game. After the timeout period the cash can be refunded through the user creating a transaction to reclaim the cash.
 
@@ -251,31 +294,48 @@ Finally, payments can be granted by using committed money, but they must be manu
 same way that cash commitments are redeemed when they expire. The effects of the contract in the blockchain are 
 represented by a list \haskellinline{AS} of \haskellinline{Action}s that is derived from the execution of each step of the semantics.
 
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width=0.8\textwidth]{pix/step-type.png}
+\caption{The \haskellinline{step} function}
+\label{fig:step-function}
+\end{center}
+\end{figure}
+
+\paragraph{The \haskellinline{step} function}
+
+
 This analysis justifies the type of the \haskellinline{step} function:
 
 \begin{haskellcode}
 step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
 \end{haskellcode}
 
-The model is based on a number of assumptions.
+which is also shown in Figure \ref{fig:step-function}.
+
+\paragraph{Infrastructure}
+
+The model makes a number of assumptions about the blockchain infrastructure in which it is run.
 
 \begin{itemize}
-\item It is assumed that cryptographic ``services'' or operations are provided by a layer external to the system, and so they need not be modelled explicitly here.
-\item Making a commitment is not something that a contract can perform; rather, it can require that a commitment is made, but that then has to be established externally: hence the input of (a set of) commitments at each step. The same observation also applies to redeeming a commitment of cash.
+\item It is assumed that cryptographic functions and operations are provided by a layer external to the system, and so they need not be modelled explicitly here.
+\item We assume that time is ``coarse grained'' and measured simply by block number, so that timeouts etc.\ are delimited using nothing finer than block number. 
+\item Because we assume a ``pull'' model, making a commitment is not something that a contract can perform; rather, it can enable that a commitment is made, but that then has to be established externally: hence the input of (a set of) commitments at each step. The same observation also applies to redeeming a commitment of cash. Commitments that have been made or redeemed need to be recorded somehow.
+
 \item Observables are observed at a particular time and in a particular context. We assume that the recording and 
 identification of each (instance of an) observation is provided by the infrastructure of the system. We provide a 
-``little language'' for describing observations: \haskellinline{Observation}. Similar properties are true for
+``little language'' for describing observations: \haskellinline{Observation}. 
+\item
+Similar properties are true for
 \haskellinline{Money} amounts: their values are calculated depending on the inputs and state of execution of the 
 contract, they can be deterministically established given the context, and they are described through a small 
 ``expression language''.
-\item The fact of making commitments also needs to be recorded.
 \item It is important to be aware that there may be different instances of contracts executed, and for each instance there will typically be different instances of observables (and commitments) observed and recorded.
 \item The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the \haskellinline{fullStep} function below).
-\item We assume that time is ``coarse grained'' and measured simply by block number, so that timeouts etc.\ are delimited using nothing finer than block number. 
 \end{itemize}
 
-\medskip
-\noindent
+\subsection{The \haskellinline{Contract} type}
+
 The type of contracts is given by
 
 \begin{haskellcode}
@@ -290,13 +350,16 @@ data Contract =
    \end{haskellcode}
 %Originally on "Choice": \footnote{Doesn't the step function need to record what observations are made, so they can be archived in the blockchain? I don't see how your design will support doing so.}\footnote{Yes, we assume that it is part of the infrastructure of this language to record the values of *observables* that are used. However, we have chosen no to make it part of the language itself.}
 
+\subsection{The \haskellinline{step} function}
+
+
 The \haskellinline{step} function is total, so that for every contract a result of stepping is defined. However, for some kinds of contracts -- commits, redeems or time-shifted contracts -- it is possible that the result of a step is to produce the same contract as the result; such a step is called \emph{quiescent} whereas all other steps \emph{make progress}. We use this distinction in the explanation that follows.
 
 
 At each computational step, the \haskellinline{step} function is wrapped by a call to the \haskellinline{fullStep} function, which in addition to performing \haskellinline{step} will enable expired cash commitments to be refunded and record any choices made at that step.
 
 
-The constructors should be interpreted thus:
+The constructors are interpreted like this:
 
 \begin{itemize} 
 
@@ -339,116 +402,12 @@ commitments made by \haskellinline{p1} that expire the earliest.
 
 \item \haskellinline{When obs timeout k def_k} This contract will not progress until \haskellinline{obs} is \haskellinline{True} or until the current block number is greater than or equal to the one specified by timeout. In case the timeout applies, the contract will continue as \haskellinline{def_k}, if the timeout does not apply and \haskellinline{obs} is \haskellinline{True}, then the contract continues as \haskellinline{k}. Otherwise the contract is quiescent.
 \end{itemize}
-
-\subsection{Potential additions to the model}
-
-The model that we have discussed so far is deliberately kept as compact as possible. However there are a number of potential extensions to the model which we introduce here. 
-
-We have examined a single kind of commitment, namely a commitment of a certain amount of currency. In different 
-applications, such as on-chain game playing of games like poker, a commitment to a value will be required. A value 
-commitment would include a choice of a play in a game, which would be chosen and concealed from the other players until 
-a later point in play, when it can be revealed. The paper \cite{kumaresan2015use} makes use of this and other 
-cryptographic primitives to enforce the rules of poker while maintaining the cards of each player secret.
-
-We should monadify, so that identifiers are automatically generated. This gives two nice properties. First, they are guaranteed to be unique; secondly they can be generated only in cases where a commit has been made successfully (within the required time period). It might well be that these should be generated by the system; this could guarantee uniqueness, freshness etc, and could also lead to a monadic DSL, with bind used for binding names to commitments.
-
-\section{Analysis}
-What questions can we ask? What answers can we give?
-
-
-\subsubsection{What are the valid contracts?}
-
-One possible definition is ``those contracts that do not lead to a \haskellinline{FailedPay} action''. Does this make sense independently of the inputs to a contract (i.e. observables, commitments, redeems, timeouts, and randomness)?
-Some relevant points (NB discussion incomplete):
-\begin{itemize}
-\item For \haskellinline{Pay} require a sufficient balance not to produce a \haskellinline{FailedPay} or a \haskellinline{DuplicateRedeem} action. 
-\item For \haskellinline{Both} require a sufficient balance for both contracts combined. Need to think here whether the two conjuncts should be independent, or whether a commitment in one half can be used in the other.
-\item For \haskellinline{Choice} require a sufficient balance for the maximum of the requirements of the individual contracts. 
-\item For \haskellinline{When}, need to ``age'' the existing commitments relative to the new starting point of the continuation contract. 
-\item Are there any constraints on  \haskellinline{CommitCash} and \haskellinline{RedeemCC} statements? Not directly, but there need to be sufficient funds available to pay if needed, or enough time for the commitments to time out, if not.
-\item Originally we had included that we should include all the ``progress'' requirements from point 2 below; but that's probably not the right thing here.
-
-\end{itemize}
-
-\subsubsection{Do all contracts potentially evaluate to \haskellinline{Null}?}
-
-That is, for each contract do there exist sequences of values of Commit and OS such that stepping the contract with these inputs leads to Null? Might we have to rule out unsatisfiable observations?
-Some relevant points (NB discussion incomplete):
-\begin{itemize}
-\item For \haskellinline{When}, need to be able to make \haskellinline{interpretObs st obs os} true. Since there is a timeout to \haskellinline{When} then there's no need to impose this condition, as we'll progress at timeout if not before.
-\item For \haskellinline{CommitCash}, need to have the right commits in the \haskellinline{Commit} argument.
-\item Similarly for \haskellinline{RedeemCC} statements.
-\item It would also be possible to put timeouts on to \haskellinline{CommitCash},  and \haskellinline{RedeemCC} operations, and if this were to be done there would be no remaining requirements for contract execution to make progress.
-\item There are no constraints on other constructs.
-\end{itemize}
-
-\section{Questions}
-
-The model outlined here raises a number of questions, enumerated here.
-
-
-\begin{enumerate}
-\item Does the \haskellinline{Both} constructor potentially produce invalid/misleading contracts, combining a commitment in one half with its use in the other? The problem is that the ``use'' conjunct could potentially be executed, leading to a failed payment.
-\item How do we ensure that contracts can be enforced? Is there a notion of validity for contracts that can be enforced? To which extent is this notion enforced by current constructors?
-\item The model does not take time as an observable, but rather it is defined in terms of \haskellinline{BlockNumber} only. 
-\item We could use ``slot time'' https://eprint.iacr.org/2016/889.pdf ``We consider a setting where time is divided into discrete units called slots. A ledger, described in more detail below, associates with each time slot (at most) one ledger block.''
-\item Is it possible for block number to depend on progress of computation? We conjecture not, because otherwise it would be possible to produce timelocks, under which it becomes impossible for time to progress. 
-\item Does a contract expire if a surrounding commitment does? We think not.
-\item The model is deterministic, with all non-determinism being external, and confined to observables. This is surely necessary in order to support computation replay, but does it restrict the expressibility of the model?
-\item Is there a notion of causality for these contracts? Would we be able to characterise it semantically? Syntactically?
-\item We have modelled cash as fungible: we make payments using the cash commitments in order of expiry time, with those expiring earliest being used first. Would there be any reason for using a different approach? Yes! UTxO.
-\item Timeouts are expressed in absolute time: presumably they could be relative (with recording on the blockchain of the times at which they are triggered).
-%\footnote{This contradicts what you've said elsewhere. I think timeouts should be times, not blockchain numbers. I suspect it would be better not to use blockchain numbers. I don't want to have to react more quickly if lots of people are making transactions that day. Also, it avoids question 8.}\footnote{See addition about slot time from Ouroboros paper (as referenced in the body of the paper).}
-\item Some observables have a ``monotonicity'' property: once a choice is made, it is fixed forever; on the other hand, something not yet chosen is only so thus far; do we need to reflect this in the observations that we allow?
-%\item The seesaw construction is key to implementing e.g. poker, and it can be described in terms of the existing constructs (modulo the answer to point 4 above). However, should seesaw be a primitive in its own right?
-%\footnote{No. You will have a successful language when you can define seesaw as an abstraction in terms of the other primitives *within the language*}\footnote{And indeed we *did* define it, at least for the RPS example.}
-
-\item Constructs that can time out could have a single continuation (do this next) or two continuations: do this if progressed normally, and do the other continuation if timed out. A candidate for this is a timed out \haskellinline{When}, where the second option is what we have implemented.
-\item \haskellinline{RedeemCC} is intended for premature repayment of a cash commitment, i.e. before the commitment has timed out. Why is \haskellinline{RedeemCC} a separate construct? Can't it be implemented with \haskellinline{Pay}?%\footnote{It is for someone to claim their cash back, rather than making a payment to another person.}
- This is potentially dangerous -- leading to a \haskellinline{FailedPay}, for example -- but useful to make a repayment at the end of a contract. 
-\item Alternatively, it would be possible for the underlying model to repay all committed but unspent cash automatically at the end of a contract, but we might want to do the same thing at the end of each ``round'' of  a game, for instance.
-\end{enumerate}
-
-
-\section{Response to ``Some Thoughts on Smart Contracts''}
-
-The contracts implemented in the DSL language have an implicit interface defined for what would correspond to the client side of a Dapp, as shown by the interactive interface. 
-
-
-We have designed the contract DSL assuming that each contract would be compiled into
-\begin{itemize} 
-\item one or more smart contracts (potentially written in Plutus) and 
-\item a client side program or interface that has a limited number of choices to be made at each point in time (including an interface for the observables). 
-\end{itemize} 
-
-
-Of course, we probably do not want to give a user a programmatic interface but an actual application with user interface. So there is still some work to be done to create interfaces on top of the client side of the contracts.
-
-
-About cost, there are two types of cost (at least):
-
-\begin{itemize} 
-\item The cost of a single transaction execution (a single Plutus validator).
-\item The cost of the whole contract, which may consists of many transactions.
-\end{itemize} 
-
-
-Even in Ethereum this distinction is important because single contract execution is limited by gas (and is thus finite), whereas the life of the whole contract may be unbounded and consist of an indefinite number of transactions. 
-
-
-So far we are assuming contracts defined in the DSL to be finite in both aspects. They could be infinite if we were to define them -- co-inductively -- as recursive members of the DSL type.
-
-\section{Related work}
-
-\begin{itemize}
-\item Original SPJ paper~\cite{PeytonJones:2000}, and multi-party successor. Original Szabo paper?
-\item Findel~\cite{findel}
-\end{itemize}
+We look next at an example of Marlowe in action.
 
 
 \section{Incentivised saving}
 
-In this section, we explain how the DSL can be used for designing a contract that incentivises saving. We use the 
+In this section, we explain how Marlowe can be used for designing a contract that incentivises saving. We use the 
 following example: ``participant 2'' offers 20 ADA to ``participant 1'' in exchange for saving 100 ADA for 100 blocks. 
 ``Participant 1'' will be able to withdraw the savings after block 20, but if that option is chosen, then ``participant 
 2'' will not pay the extra 20 ADA to ``participant 1''.
@@ -525,9 +484,119 @@ CommitCash (IdentCC 1) 1
                        (RedeemCC (IdentCC 1) Null))
            Null
 \end{haskellcode}
+In the next section we look again at the model and the Marlowe language.
+
+\section{Reflection}
+We have given a concrete model and DSL, namely Marlowe version 1.2. In this section we examine how the model can be taken further, and reflect on different possible choices that might be made.
+
+\subsection{Potential additions to the model}
+
+The model that we have discussed so far is deliberately kept as compact as possible. However there are a number of potential extensions to the model which we introduce here. 
+
+\paragraph{Value commitments}
+
+We have examined a single kind of commitment, namely a commitment of a certain amount of currency. In different 
+applications, such as on-chain game playing of games like poker, a commitment to a value will be required. A value 
+commitment would include a choice of a play in a game, which would be chosen and concealed from the other players until 
+a later point in play, when it can be revealed. The paper \cite{kumaresan2015use} makes use of this and other 
+cryptographic primitives to enforce the rules of poker while maintaining the cards of each player secret.
+
+\paragraph{A monadic DSL}
+
+Haskell is a pure functional programming language, and uses the \haskellinline{Monad} type class to encapsulate operations that can potentially have a side effect. Many introductions to monads exist \sjtnote{cite some} but for the sake of this discussion it is enough to think of a value of type \haskellinline{m a} where \haskellinline{m} is a monad as a ``computation that results in something of type \haskellinline{a}''. The \haskellinline{Monad} API allows such computations to be assembled, and then once assembled they may be run, in general causing some side-effects as a part of the computation.
+
+We can make the \haskellinline{Contract} type monadic, so that new, unique identifiers are automatically generated. This gives two nice properties. First, they are guaranteed to be unique; secondly they can be generated only in cases where a commit has been made successfully (within the required time period). The 
+\haskellinline{do} notation supported by monads allows the generated names to be captured by the \haskellinline{bind} operation and referred to later in the computation.
 
 
-\subsection{Response to comments on the original document made by Charles on Slack}
+\subsection{Potential model analyses}
+
+Given that we have a language and a semantics for it, we can examine its properties. These might be properties of individual runs of a particular contract, of all runs of a given contract, or indeed properties of all the contracts of the language. In this section we look at two particularly obvious questions, but these are not the only ones that we might ask.
+
+
+
+\paragraph{What are the valid contracts?}
+
+One possible definition is ``those contracts that do not lead to a \haskellinline{FailedPay} action''.
+Given the mechanisms for making and using commitments are limited by timeouts, it should be possible to write contracts that have this property, perhaps with some assumptions about the value of observables.
+Looking at this in a little more detail, we would expect the following points to hold.
+\begin{itemize}
+\item For a \haskellinline{Pay} contract a sufficient balance not to produce a \haskellinline{FailedPay} or a \haskellinline{DuplicateRedeem} action is required.. 
+\item For \haskellinline{Both} we require a sufficient balance for both contracts combined. Need to think here whether the two conjuncts should be independent, or whether a commitment in one half can be used in the other.
+\item For \haskellinline{Choice} we require a sufficient balance for the maximum of the requirements of the individual contracts. 
+\item For \haskellinline{When}, need to ``age'' the existing commitments relative to the new starting point of the continuation contract. 
+\item Are there any constraints on  \haskellinline{CommitCash} and \haskellinline{RedeemCC} statements? Not directly, but there need to be sufficient funds available to pay if needed, or enough time for the commitments to time out, if not.
+\end{itemize}
+
+\paragraph{Do all contracts potentially evaluate to \haskellinline{Null}?}
+
+That is, for each contract do there exist sequences of values of \haskellinline{Commit} and \haskellinline{OS} such that stepping the contract with these inputs leads to \haskellinline{Null}? Some relevant points include:
+\begin{itemize}
+\item For \haskellinline{When}, need to be able to make \haskellinline{interpretObs st obs os} true. Since there is a timeout to \haskellinline{When} then there's no need to impose this condition, as we'll progress at timeout if not before.
+\item As we have put timeouts on to \haskellinline{CommitCash} and \haskellinline{RedeemCC} operations, there are no remaining requirements on these constructs for contract execution to make progress, albeit eventually.
+\item We need to check the status of \haskellinline{Observations}: what if an observation is unsatisfiable?
+\item There are no constraints on other constructs.
+\end{itemize}
+
+\subsection{Alternatives}
+
+The model outlined here raises a number of questions, enumerated here.
+
+
+\begin{enumerate}
+\item Does the \haskellinline{Both} constructor potentially produce invalid/misleading contracts, combining a commitment in one half with its use in the other? The problem is that the ``use'' conjunct could potentially be executed, leading to a failed payment.
+\item How do we ensure that contracts can be enforced? Is there a notion of validity for contracts that can be enforced? To which extent is this notion enforced by current constructors?
+\item The model does not take time as an observable, but rather it is defined in terms of \haskellinline{BlockNumber} only. 
+\item We could use ``slot time'' https://eprint.iacr.org/2016/889.pdf ``We consider a setting where time is divided into discrete units called slots. A ledger, described in more detail below, associates with each time slot (at most) one ledger block.''
+\item Is it possible for block number to depend on progress of computation? We conjecture not, because otherwise it would be possible to produce timelocks, under which it becomes impossible for time to progress. 
+\item Does a contract expire if a surrounding commitment does? We think not.
+\item The model is deterministic, with all non-determinism being external, and confined to observables. This is surely necessary in order to support computation replay, but does it restrict the expressibility of the model?
+\item Is there a notion of causality for these contracts? Would we be able to characterise it semantically? Syntactically?
+\item We have modelled cash as fungible: we make payments using the cash commitments in order of expiry time, with those expiring earliest being used first. Would there be any reason for using a different approach? Yes! UTxO.
+\item Timeouts are expressed in absolute time: presumably they could be relative (with recording on the blockchain of the times at which they are triggered).
+%\footnote{This contradicts what you've said elsewhere. I think timeouts should be times, not blockchain numbers. I suspect it would be better not to use blockchain numbers. I don't want to have to react more quickly if lots of people are making transactions that day. Also, it avoids question 8.}\footnote{See addition about slot time from Ouroboros paper (as referenced in the body of the paper).}
+\item Some observables have a ``monotonicity'' property: once a choice is made, it is fixed forever; on the other hand, something not yet chosen is only so thus far; do we need to reflect this in the observations that we allow?
+%\item The seesaw construction is key to implementing e.g. poker, and it can be described in terms of the existing constructs (modulo the answer to point 4 above). However, should seesaw be a primitive in its own right?
+%\footnote{No. You will have a successful language when you can define seesaw as an abstraction in terms of the other primitives *within the language*}\footnote{And indeed we *did* define it, at least for the RPS example.}
+
+\item Constructs that can time out could have a single continuation (do this next) or two continuations: do this if progressed normally, and do the other continuation if timed out. A candidate for this is a timed out \haskellinline{When}, where the second option is what we have implemented.
+\item \haskellinline{RedeemCC} is intended for premature repayment of a cash commitment, i.e. before the commitment has timed out. Why is \haskellinline{RedeemCC} a separate construct? Can't it be implemented with \haskellinline{Pay}?%\footnote{It is for someone to claim their cash back, rather than making a payment to another person.}
+ This is potentially dangerous -- leading to a \haskellinline{FailedPay}, for example -- but useful to make a repayment at the end of a contract. 
+\item Alternatively, it would be possible for the underlying model to repay all committed but unspent cash automatically at the end of a contract, but we might want to do the same thing at the end of each ``round'' of  a game, for instance.
+\end{enumerate}
+
+
+\section{Response to ``Some Thoughts on Smart Contracts''}
+
+The contracts implemented in the DSL language have an implicit interface defined for what would correspond to the client side of a Dapp, as shown by the interactive interface. 
+
+
+We have designed the contract DSL assuming that each contract would be compiled into
+\begin{itemize} 
+\item one or more smart contracts (potentially written in Plutus) and 
+\item a client side program or interface that has a limited number of choices to be made at each point in time (including an interface for the observables). 
+\end{itemize} 
+
+
+Of course, we probably do not want to give a user a programmatic interface but an actual application with user interface. So there is still some work to be done to create interfaces on top of the client side of the contracts.
+
+
+About cost, there are two types of cost (at least):
+
+\begin{itemize} 
+\item The cost of a single transaction execution (a single Plutus validator).
+\item The cost of the whole contract, which may consists of many transactions.
+\end{itemize} 
+
+
+Even in Ethereum this distinction is important because single contract execution is limited by gas (and is thus finite), whereas the life of the whole contract may be unbounded and consist of an indefinite number of transactions. 
+
+
+So far we are assuming contracts defined in the DSL to be finite in both aspects. They could be infinite if we were to define them -- co-inductively -- as recursive members of the DSL type.
+
+
+
+\section{Response to comments on the original document made by Charles on Slack}
 
 Legend: {\it a quote from this document}, Charles' response, {\bf our reply}:
 

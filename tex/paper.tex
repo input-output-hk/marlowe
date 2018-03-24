@@ -484,10 +484,18 @@ CommitCash (IdentCC 1) 1
                        (RedeemCC (IdentCC 1) Null))
            Null
 \end{haskellcode}
+In the next section we cover the online contract visualisation and interaction tool for Marlowe.
+
+\section{Visualising the contract}
+
+\sjtnote{Pablo: can you add something here about the online visualisation, including one or more suitable screenshots? It might be worth giving a condensed screenshot of the whole screen, and then more detailed ones of parts of the display.}
+
+\sjtnote{Should it have a name?}
+
 In the next section we look again at the model and the Marlowe language.
 
 \section{Reflection}
-We have given a concrete model and DSL, namely Marlowe version 1.2. In this section we examine how the model can be taken further, and reflect on different possible choices that might be made.
+We have given a concrete model and DSL, namely Marlowe version 1.2. In this section we examine how the model can be extended, how contacts can be analysed, reflect on different design decisions that might be made and discuss some aspects of the implementation on Marlowe within a blockchain environment.
 
 \subsection{Potential additions to the model}
 
@@ -538,61 +546,69 @@ That is, for each contract do there exist sequences of values of \haskellinline{
 \item There are no constraints on other constructs.
 \end{itemize}
 
-\subsection{Alternatives}
+\subsection{Questions and alternatives}
 
-The model outlined here raises a number of questions, enumerated here.
+The model outlined here raises a number of questions, or suggests a number of alternative choices.
+
+\paragraph{Time}
+
+The model does not take time as an observable, but rather it is defined in terms of \haskellinline{BlockNumber} only. We could  use ``slot time'' instead: \emph{``We consider a setting where time is divided into discrete units called slots. A ledger, described in more detail below, associates with each time slot (at most) one ledger block.''}\footnote{\url{https://eprint.iacr.org/2016/889.pdf}}
+
+\paragraph{Timelocks}
+
+In systems where time is significant, it is possible to build ``timelocks'' under which 
+it becomes impossible for time to progress. Is it possible for block number to depend on progress of computation? We conjecture not, because otherwise it would be possible to produce timelocks, under which it would become impossible for time to progress. 
+
+\paragraph{Relative time}
+
+Timeouts are expressed in absolute time: presumably they could be relative (with recording on the blockchain of the times at which they are triggered).
+
+\paragraph{Determinism}
+
+The model is deterministic, with all non-determinism being external, and confined to observables. This is surely necessary in order to support computation replay, but does it restrict the expressibility of the model?
+
+\paragraph{Causality}
+
+Is there a notion of causality for these contracts? Would we be able to characterise it semantically? Syntactically?
+
+\paragraph{Expiry}
+
+Does a contract expire if a surrounding commitment does? We have not made this a feature of the model.
+
+\paragraph{Premature repayment}
+
+The \haskellinline{RedeemCC} construct is intended for premature repayment of a cash commitment, i.e. before the commitment has timed out. Alternatively, it would be possible for the underlying model to repay all committed but unspent cash automatically at the end of a contract (but before all commitments have expired), but we might want to do the same thing at the end of each ``round'' of  a game, for instance.
+
+\paragraph{Fungibility}
+
+We have modelled cash as fungible: we make payments using the cash commitments in order of expiry time, with those expiring earliest being used first. Building a model on UTxO might be a reason for using a different approach.
 
 
-\begin{enumerate}
-\item Does the \haskellinline{Both} constructor potentially produce invalid/misleading contracts, combining a commitment in one half with its use in the other? The problem is that the ``use'' conjunct could potentially be executed, leading to a failed payment.
-\item How do we ensure that contracts can be enforced? Is there a notion of validity for contracts that can be enforced? To which extent is this notion enforced by current constructors?
-\item The model does not take time as an observable, but rather it is defined in terms of \haskellinline{BlockNumber} only. 
-\item We could use ``slot time'' https://eprint.iacr.org/2016/889.pdf ``We consider a setting where time is divided into discrete units called slots. A ledger, described in more detail below, associates with each time slot (at most) one ledger block.''
-\item Is it possible for block number to depend on progress of computation? We conjecture not, because otherwise it would be possible to produce timelocks, under which it becomes impossible for time to progress. 
-\item Does a contract expire if a surrounding commitment does? We think not.
-\item The model is deterministic, with all non-determinism being external, and confined to observables. This is surely necessary in order to support computation replay, but does it restrict the expressibility of the model?
-\item Is there a notion of causality for these contracts? Would we be able to characterise it semantically? Syntactically?
-\item We have modelled cash as fungible: we make payments using the cash commitments in order of expiry time, with those expiring earliest being used first. Would there be any reason for using a different approach? Yes! UTxO.
-\item Timeouts are expressed in absolute time: presumably they could be relative (with recording on the blockchain of the times at which they are triggered).
-%\footnote{This contradicts what you've said elsewhere. I think timeouts should be times, not blockchain numbers. I suspect it would be better not to use blockchain numbers. I don't want to have to react more quickly if lots of people are making transactions that day. Also, it avoids question 8.}\footnote{See addition about slot time from Ouroboros paper (as referenced in the body of the paper).}
-\item Some observables have a ``monotonicity'' property: once a choice is made, it is fixed forever; on the other hand, something not yet chosen is only so thus far; do we need to reflect this in the observations that we allow?
-%\item The seesaw construction is key to implementing e.g. poker, and it can be described in terms of the existing constructs (modulo the answer to point 4 above). However, should seesaw be a primitive in its own right?
-%\footnote{No. You will have a successful language when you can define seesaw as an abstraction in terms of the other primitives *within the language*}\footnote{And indeed we *did* define it, at least for the RPS example.}
+\paragraph{The \haskellinline{Both} construct}
 
-\item Constructs that can time out could have a single continuation (do this next) or two continuations: do this if progressed normally, and do the other continuation if timed out. A candidate for this is a timed out \haskellinline{When}, where the second option is what we have implemented.
-\item \haskellinline{RedeemCC} is intended for premature repayment of a cash commitment, i.e. before the commitment has timed out. Why is \haskellinline{RedeemCC} a separate construct? Can't it be implemented with \haskellinline{Pay}?%\footnote{It is for someone to claim their cash back, rather than making a payment to another person.}
- This is potentially dangerous -- leading to a \haskellinline{FailedPay}, for example -- but useful to make a repayment at the end of a contract. 
-\item Alternatively, it would be possible for the underlying model to repay all committed but unspent cash automatically at the end of a contract, but we might want to do the same thing at the end of each ``round'' of  a game, for instance.
-\end{enumerate}
+Does the \haskellinline{Both} constructor potentially produce invalid/misleading contracts, combining a commitment in one half with its use in the other? The problem is that the ``use'' conjunct could potentially be executed, leading to a failed payment.
+
+\paragraph{Monotonicity}
+
+Some observables have a ``monotonicity'' property: once a choice is made, it is fixed forever; on the other hand, something not yet chosen is only so thus far; do we need to reflect this in the observations that we allow?
 
 
-\section{Response to ``Some Thoughts on Smart Contracts''}
+\subsection{Towards an implementation}
 
-The contracts implemented in the DSL language have an implicit interface defined for what would correspond to the client side of a Dapp, as shown by the interactive interface. 
-
-
-We have designed the contract DSL assuming that each contract would be compiled into
+The contracts implemented in the Marlowe language have an implicit interface defined for what would correspond to the client side of a distributed application, as shown by the interactive interface. 
+We have designed Marlowe assuming that each contract would be compiled into
 \begin{itemize} 
 \item one or more smart contracts (potentially written in Plutus) and 
 \item a client side program or interface that has a limited number of choices to be made at each point in time (including an interface for the observables). 
-\end{itemize} 
-
-
+\end{itemize}
 Of course, we probably do not want to give a user a programmatic interface but an actual application with user interface. So there is still some work to be done to create interfaces on top of the client side of the contracts.
 
-
-About cost, there are two types of cost (at least):
-
+The Cardano platform has a notion of cost, and Marlowe contracts will potentially incur costs of two kinds:
 \begin{itemize} 
 \item The cost of a single transaction execution (a single Plutus validator).
-\item The cost of the whole contract, which may consists of many transactions.
+\item The cost of the whole contract, which may consist of many transactions.
 \end{itemize} 
-
-
-Even in Ethereum this distinction is important because single contract execution is limited by gas (and is thus finite), whereas the life of the whole contract may be unbounded and consist of an indefinite number of transactions. 
-
-
-So far we are assuming contracts defined in the DSL to be finite in both aspects. They could be infinite if we were to define them -- co-inductively -- as recursive members of the DSL type.
+Even in Ethereum this distinction is important because single contract execution is limited by gas (and is thus finite), whereas the life of the whole contract may be unbounded and consist of an indefinite number of transactions.  So far we are assuming contracts defined in Marlowe to be finite in both aspects. They could be infinite if we were to define them co-inductively as recursive members of the DSL type.
 
 
 

@@ -139,44 +139,27 @@
 \noindent
 \sjtnote{This is a preliminary version, return to this at the end of the writing process.}
 
-This paper explores the design of a domain specific language, Marlowe,\footnote{Marlowe is named after Christopher Marlowe, the Elizabethan poet, dramatist and spy, who was born and educated in Canterbury: \url{https://en.wikipedia.org/wiki/Christopher_Marlowe}}\footnote{The code for Marlowe is available from \url{https://github.com/input-output-hk/scdsl}
-} targetted at the execution of financial contracts in the style of Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains. This work is a part of the Cardano project, and is supported by IOHK.\footnote{\url{https://iohk.io}} 
-
+This paper explores the design of a domain specific language, Marlowe,\footnote{Marlowe is named after Christopher Marlowe, the Elizabethan poet, dramatist and spy, who was born and educated in Canterbury, which is also where our university is based. \url{https://en.wikipedia.org/wiki/Christopher_Marlowe}}\footnote{The code for Marlowe is available from \url{https://github.com/input-output-hk/scdsl}
+} targetted at the execution of financial contracts in the style of Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains. This work is a part of the Cardano project, and is supported by IOHK.\footnote{\url{https://iohk.io}}
 In doing this we are required to refine the model of contracts in a number of ways in order to fit with a radically different context. 
-\begin{itemize}
-\item In the traditional model, enforcement of the contract is the responsibility of the legal system; in the decentralised blockchain model, in which there is no central authority, the contract needs to be enforced by design. 
-\item There is not a single blockchain model, and we give a brief overview of the different mechanisms for scripting on blockchain (although this is not the primary purpose of this article). 
-\begin{itemize}
-\item
+
+In the traditional model, enforcement of the contract is the responsibility of the legal system; in the decentralised blockchain model, in which there is no central authority, the contract needs to be enforced by design. This means that we require participants to commit currency (or ``cash'' as we term it) to cover all possible expenditure in advance of the contract executing; we also have to use timeouts to ensure that the contract does not become stuck even if one or more of the participants stop interacting with it.
+
+Moreover, there is not a single blockchain model, and we give a brief overview of the different mechanisms for scripting on blockchain (although this is not the primary purpose of this article). 
 A particularly important technical distinction here is that between an account-style model as used by Ethereum~\cite{EthereumRationale}, and the unspent transaction output (UTxO) model of bitcoin~\cite{sok}. 
-\item There is the question of how precisely the execution of the contract interacts with the blockchain, and how information is to be recorded on the chain.
-\item Does the execution ``push'' for changes  to happen, or do external actors have to ``pull'' to effect changes enabled by execution of the contract?
-\end{itemize}
-\item \sjtnote{What else do we want to say here?}
-\end{itemize}
+There is also the question of how precisely the execution of the contract interacts with the blockchain, and how information is to be recorded on the chain. Finally, should the execution ``push'' for changes  to happen, or do external actors have to ``pull'' to effect changes enabled by execution of the contract?
 
-\noindent
-\sjtnote{Preliminary overview; need to revisit.}
-The paper is structured like this: we begin with an overview of the model, including the assumptions made in designing 
-it, the types of the principal functions and a description of the DSL as an algebraic type, constructor by constructor. 
-The section aims to give a high level overview, and some of the concrete details are to be found in the repo. We follow 
-this with discussions of the kinds of formal analysis which might be made for the DSL, as well as discussing a  set of 
-questions raised by the process of modelling. We then look at the example of ``incentivised saving'', as an 
-illustration, and then look at how Marlowe relates to other work in the area. We conclude by pointing out 
+The paper describes version 1.2 of Marlowe, and it should be seen as a work in progress. We have designed it to provide financial contracts in Cardano, but also in order to start to answer the twin
+ questions of what smart contracts will look like in Cardano, and how those contracts will be implemented in the overall system.
 
-\sjtnote{To talk about, in no particular order \ldots}
-\begin{itemize}
-\item
-Marlowe as the ``canary in the coalmine'': test out how it will work, how it will interface with
-other aspects of the Cardano platform
-\item
-Be clear that this paper describes version 1.2 of Marlowe.
-\item 
-Enforcement and promptness.
-\end{itemize}
+The paper is structured like this: we begin in Section \ref{section:design} with a discussion of the design rationale for Marlowe, including an overview of the various approaches to scripting in blockchain as well as the different designs of the blockchains themselves. We conclude Section \ref{section:design} with a set of decisions about the blockchain environment for Marlowe. The central part of the paper is Section \ref{section:model} where we introduce the Marlowe model, including the assumptions made in designing 
+it, the types of the principal functions and a description of the DSL as an algebraic type, constructor by constructor. Section \ref{section:example} presents an example of a larger Marlowe contract, for incentivised saving, and Section \ref{section:tool} introduces our tool for visualising and interacting with Marlowe contracts.
+Section \ref{section:reflection} reflects on the system design, and observes some alternative designs and Section \ref{section:next-steps} enumerates the next steps for the project.
+
 
 
 \section{Design rationale}
+\label{section:design}
 
 \sjtnote{References to some of the background work still to be added.}
 
@@ -220,7 +203,7 @@ There are a variety of other approaches to scripting, including business process
 
 \paragraph{Related work}
 
-The Findel~\cite{findel} project examines financial contracts on the Ethereum platform, and the authors note that  payments need to be bounded; this is made concrete in our account by our notion of commitments. They take no account of commitments or timeouts as we do below, but it should be noted that the Ethereum platform is more powerful than the one that we target in this paper.
+The Findel project~\cite{findel} examines financial contracts on the Ethereum platform, based on the seminal~\cite{PeytonJones:2000}, and the authors note that payments need to be bounded; this is made concrete in our account by our notion of commitments. They take no account of commitments or timeouts as we do below, but it should be noted that the Ethereum platform is more powerful than the one that we target in this paper.
 
 
 \subsection{Blockchain platforms: Cardano and others}
@@ -265,9 +248,10 @@ Marlowe is described as an algebraic \haskellinline{data} type in Haskell, and a
 
 
 \section{The model}
+\label{section:model}
 
 The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
-We start by looking at the different types used by the model, and then look at the \haskellinline{Contract} DSL itself. \sjtnote{To complete this introduction}
+We start by looking at the different types used by the model, then we look at the \haskellinline{Contract} DSL itself, and finally we give its semantics in Haskell. Section \ref{section:example} gives an example of Marlowe in action.
 
 \subsection{The model types}
 
@@ -278,6 +262,8 @@ A running contract will interact with its environment in two ways, as shown in F
 
 First, it will need to observe different kinds of varying quantities including, for example, the current time, the current block number and, random numbers, as well as ``real world'' quantities like ``the price of oil'' or ``the exchange rate between currencies A and B''. Each instance of such an observable will be recorded on the blockchain to allow the computation to be repeated for verification purposes. It is assumed that at each step of the execution of the contract, the values of some observables will be needed, and these values are (together) given by a value of type \haskellinline{OS}. Note that these values are not determined by the participants in the contract, but rather by the external environment.
 
+As the examples illustrate, observables come both from aspects of the blockchain (e.g.\ current block number) and externally. In the latter case it will be necessary to agree a trusted oracle or beacon giving the value, which can then be stored (or a hash stored) on chain.
+
 \paragraph{Inputs}
 
 
@@ -287,12 +273,11 @@ On the other hand, at each step there are -- potentially, at least -- a variety 
 
 
 While informally we might see a commitment to something as being indefinite, it is important to realise that on blockchain a commitment needs to have a timeout so that progress can be forced in a game. After the timeout period the cash can be refunded through the user creating a transaction to reclaim the cash.
+Information about the commitments currently in force forms the \haskellinline{State}, which is (potentially) modified at each execution step. 
 
-Moreover, information about the commitments currently in force forms the \haskellinline{State}, which is (potentially) modified at each execution step. 
-
-Finally, payments can be granted by using committed money, but they must be manually redeemed by the recipient, in the 
+Payments can be granted by using committed money, but they must be manually redeemed by the recipient, in the 
 same way that cash commitments are redeemed when they expire. The effects of the contract in the blockchain are 
-represented by a list \haskellinline{AS} of \haskellinline{Action}s that is derived from the execution of each step of the semantics.
+represented by a list \haskellinline{AS} of \haskellinline{Actions} that is derived from the execution of each step of the semantics.
 
 \begin{figure}[t]
 \begin{center}
@@ -406,8 +391,9 @@ We look next at an example of Marlowe in action.
 
 
 \section{Incentivised saving}
+\label{section:example}
 
-In this section, we explain how Marlowe can be used for designing a contract that incentivises saving. We use the 
+In this section, we show how Marlowe can be used for designing a contract that incentivises saving. We use the 
 following example: ``participant 2'' offers 20 ADA to ``participant 1'' in exchange for saving 100 ADA for 100 blocks. 
 ``Participant 1'' will be able to withdraw the savings after block 20, but if that option is chosen, then ``participant 
 2'' will not pay the extra 20 ADA to ``participant 1''.
@@ -486,15 +472,18 @@ CommitCash (IdentCC 1) 1
 \end{haskellcode}
 In the next section we cover the online contract visualisation and interaction tool for Marlowe.
 
-\section{Visualising the contract}
+\section{Visualising and interacting with contracts}
+\label{section:tool}
 
 \sjtnote{Pablo: can you add something here about the online visualisation, including one or more suitable screenshots? It might be worth giving a condensed screenshot of the whole screen, and then more detailed ones of parts of the display.}
 
 \sjtnote{Should it have a name?}
 
-In the next section we look again at the model and the Marlowe language.
+In the next section we re-examine the model and the Marlowe language, looking at possible extensions, alternative design decisions and ways in which we can formally analyse Marlowe contracts.
 
 \section{Reflection}
+\label{section:reflection}
+
 We have given a concrete model and DSL, namely Marlowe version 1.2. In this section we examine how the model can be extended, how contacts can be analysed, reflect on different design decisions that might be made and discuss some aspects of the implementation on Marlowe within a blockchain environment.
 
 \subsection{Potential additions to the model}
@@ -518,6 +507,7 @@ We can make the \haskellinline{Contract} type monadic, so that new, unique ident
 
 
 \subsection{Potential model analyses}
+\label{section:analysis}
 
 Given that we have a language and a semantics for it, we can examine its properties. These might be properties of individual runs of a particular contract, of all runs of a given contract, or indeed properties of all the contracts of the language. In this section we look at two particularly obvious questions, but these are not the only ones that we might ask.
 
@@ -593,15 +583,23 @@ Does the \haskellinline{Both} constructor potentially produce invalid/misleading
 Some observables have a ``monotonicity'' property: once a choice is made, it is fixed forever; on the other hand, something not yet chosen is only so thus far; do we need to reflect this in the observations that we allow?
 
 
-\subsection{Towards an implementation}
+\subsection{Towards an implementation in Cardano}
+\label{section:towards-implementation}
+
+\sjtnote{I have expanded this to include a number of responses to Charles' comments on an earlier document. Other responses appear in the previous sub-section.}
 
 The contracts implemented in the Marlowe language have an implicit interface defined for what would correspond to the client side of a distributed application, as shown by the interactive interface. 
+
+\paragraph{Compilation}
+
 We have designed Marlowe assuming that each contract would be compiled into
 \begin{itemize} 
 \item one or more smart contracts (potentially written in Plutus) and 
 \item a client side program or interface that has a limited number of choices to be made at each point in time (including an interface for the observables). 
 \end{itemize}
 Of course, we probably do not want to give a user a programmatic interface but an actual application with user interface. So there is still some work to be done to create interfaces on top of the client side of the contracts.
+
+\paragraph{Cost}
 
 The Cardano platform has a notion of cost, and Marlowe contracts will potentially incur costs of two kinds:
 \begin{itemize} 
@@ -610,202 +608,75 @@ The Cardano platform has a notion of cost, and Marlowe contracts will potentiall
 \end{itemize} 
 Even in Ethereum this distinction is important because single contract execution is limited by gas (and is thus finite), whereas the life of the whole contract may be unbounded and consist of an indefinite number of transactions.  So far we are assuming contracts defined in Marlowe to be finite in both aspects. They could be infinite if we were to define them co-inductively as recursive members of the DSL type.
 
+\paragraph{Recording information on chain}
 
+Commitments and values of observables need to be recorded somehow, and this raises the potential issue about bloating the chain with data. In general it will only be necessary to store a signed hash value of the observable, and this will keep data usage bounded.
 
-\section{Response to comments on the original document made by Charles on Slack}
 
-Legend: {\it a quote from this document}, Charles' response, {\bf our reply}:
+\paragraph{General computations}
 
+If we have contracts that involve, for example, the oil price then we may need to convert a published price in USD into ADA, using a value for the prevailing USD/ADA exchange rate. This will require a computation: in this case, a multiplication. If Marlowe is to be stand-alone then we need to be extend it with arithmetic and other operations, but we expect Marlowe to be embedded in Plutus (Core) and so to be able to use the facilities of the host language here.
 
-{\it
-First, it will need to observe different kinds of varying quantities including, for example, the current time, the current block number and, random numbers, as well as ``real world'' quantities like ``the price of oil'' or ``the exchange rate between currencies A and B''. Each instance of such an observable will be recorded on the blockchain to allow the computation to be repeated for verification purposes. It is assumed that at each step of the execution of the contract, the values of some observables will be needed.
-}
+\paragraph{Sidechains and wallets}
 
-We need to get a better notion of observation. 
+The implementation may split contract execution between the main chain and a sidechain (or chains). This will allow links from Marlowe to work on securing multiparty sidechain games/contracts (MPCs).
 
 
-There seem to be two broad categories of events worth observing. One that is derived from the network itself and one that is from an external source. 
+\section{Next steps}
+\label{section:next-steps}
 
+We plan to continue the work with Marlowe in a number of directions. First, we need to sign off a definition of the language, as the current status of Marlowe 1.2 is that of a proposal.
 
-For example, we could consider a game where the contract executes based upon the value of a block header, this is something known after it occurs and cannot be changed.
-Whereas the price of oil is not.
+\paragraph{Context}
 
+We should decide on the final form of the language -- for example, should it be monadic or not -- and the relation of Marlowe to Plutus (Core). In particular, answering the latter question will require work on the current redeemer/validator model of transactions in Plutus Core.
 
+\paragraph{Implement in Cardano}
 
-{\bf
-Indeed, we agree. The former kind of observations are already artefacts on the blockchain, whereas the latter need to be stored on the blockchain. We have assumed that the infrastructure for the language supports this recording: we would not expect language users to have to do this for themselves.
-}
+An immediate goal is to implement Marlowe in Cardano, noting the observations of Section \ref{section:towards-implementation} and to deploy it in a test network to observe and measure its behaviour in practice.
 
-{\bf
-Apart from this difference in the infrastructure, we see no difference between the two different sorts of observations: is this correct?
-}
+\paragraph{Compilation}
 
-The question of commitment to blockchain is interesting as who should have write access and also how do we prevent an enormous amount of bad data from being posted? And is it necessary at all?
+Marlowe contracts could be generated by a compilation process from `vanilla' financial contracts. This also suggests that models with off-chain enforcement could be investigated too, with an MPC foundation.
 
+\paragraph{Validation and Verification}
 
-We could specify the format of an answer and have them commit it to the blockchain as a signed hash and then it could be externally shared for example and everyone would be able to determine it is correct.
+Some degree of validation is provided by the visualisation tool presented in Section \ref{section:tool}, albeit for smaller-scale contracts, but there is a general question of how properties of contracts can be inferred. One relatively low-cost is to use QuickCheck-style property-based testing~\cite{quickCheck}, and properties developed here become candidates for fully fledged verification in a formalisation of the (semantics of) Marlowe.
 
-{\bf
-We saw that commitments were an integral part of the game playing process, and so we wanted to include them as primitives in the language. Yes, they are usually implemented as hashes, but we wanted to give a more abstract presentation here. 
+\paragraph{Analysis}
 
+As we noted in Section \ref{section:analysis} we can develop analyses of various aspects of Marlowe contracts. While these might initially be ``pencil and paper'' analyses, we could expect these to be based on a formalisation of the language and its semantics.
 
-Concerning bad data, a commitment will usually just store the hash, but the problem seems to come at the reveal, when all the data has to be shown, somehow. We don't have to store the whole data (just the hash) but it does have to be revealed in some way that can be observed, and the naive interpretation of this is that it is made available somehow, thereby using storage on the blockchain.
+\paragraph{Formalisation} 
 
+Marlowe and its semantics could be formalised in a theorem prover such as Isabelle~\cite{IsabelleHOL}, which has been used in the formalisation of language semantics. A formalisation could provide a sanity check on the language definition, as well as formalise proofs of important properties, based on analysis of the contract language.
 
-There may be other ways of doing this. Is there some sort of compact proof that can be used here?
 
+\section{Acknowledgements}
 
-Or can we devolve to a trusted third party, off chain?
-}
+\sjtnote{Have I forgotten anyone?}
 
-I'm also curious about expectations. For example, say we have an oil contract.
+Thanks to IOHK staff Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiyakis, Darry McAdams, Bruno Woltzenlogel Paleo, and Phil Wadler for their collaboration, and to colleagues from the Universities of Kent and Leicester for their comments on previous presentations of this work.
 
 
-We have an expectation of exchange rates or something like that so we'd expect some int to float and then a float to float. Examples:
 
 
-   * 1 barrel for 120.55 dollars.
-   * 22 dollars for 1 ada.
 
 
-Gives us everything we need to act on the contract accordingly in a deterministic way.
 
 
-First, we guess these may be fixed or rational rather than float :-) We would assume that exchange rates are observables, with values recorded at the point of use, so that re-computation is possible (and deterministic). 
 
-{\bf
-In general, we need a more powerful expression language (e.g. through embedding the DSL). Maybe we could use a subset of Plutus.
-}
 
 
-{\it
-Second, it will be necessary to ensure that commitments of various kinds have been made by the participants in a contract.
-}
 
-Ok, Bernardo knows a lot more about this than I do. He's been doing this type of stuff with his MPC work. I'd recommend having a discussion with Aggelos and Bernardo about
-commitments in the cryptocurrency world.
 
-{\bf
-Yes, certainly, we will do this.
-}
 
-{\it
-What are the valid contracts? One possible definition is ``those contracts that do not lead to a FailedPay action''. Does this make sense independently of the inputs to a contract (i.e. observables, commitments, redeems, time, and randomness)?
-}
 
-I tend to think of compositions.
-So we have things like multisig where the players setup a special contract tailored to a set of business and trust assumptions. This game ends when funds are spent.
-Complexity could be fairly arbitrary as the conditions to spend could be quite complex and involve lots of business logic. The end of the game could initiate a new game.
 
-{\bf
-A game that starts a new game is essentially a bigger game. There seems to be a limitation about commitments. Commitments need to be voluntary by nature, so if there are no commitments inherited between the two games, then it should be no different to model both the games separately.
 
 
-There should not be a problem to model infinite games either by using co-induction.
-}
 
-For example creating a new multisig account with the same logic for the change address.
 
-
-Then we have event based games, where actions occur when something happens, a triggering event.
-
-
-For example a deadman switch.
-
-
-If bob doesn't sign a special transaction each month, then send all the money to alice.
-
-
-These are at the mercy of the oracle connected to the contract.
-
-
-Then we have games of interaction, such as poker for example.
-
-
-Bob and Alice have earned the right to interact with each other with special rules and pending how those interactions end up, we have a transfer of value between them and others.
-
-
-Abstractly, I suppose there is a notion of entry condition, allowed actions and exit conditions.
-
-{\bf
-Not sure what entry and exit conditions are, but commitments may well be entry conditions, or at least a crucial component of them. We think that all the examples described can be implemented in the DSL (assuming we add the proper observables and oracles). Maybe we need some more cryptographic primitives for poker, that is probably something we should discuss with Aggelos and Bernardo.
-}
-
-
-
-
-{\it
-Null is the null contract; it will always be quiescent.
-}
-
-Just to clarify, null means termination or just dormancy?
-
-{\bf
-Both. A contract has terminated if it has evolved to be exactly null. But there exist contracts that contain the null contract but have not terminated.
-}
-
-{\it
-Do all contracts potentially evaluate to Null? That is, for each contract do there exist sequences of values of Commit and OS such that stepping the contract with these inputs leads to Null? Might we have to rule out unsatisfiable observations?
-}
-
-If I understand null to mean the contract has finished all possible execution, then this is a reasonable assumption given a certain viewpoint completion of a multisig contract for example could be interpreted as a null case.
-
-
-But in a strict sense the answer is no, there can be cases where something is in a pending state indefinitely. For example, for a 2 of 3 contract, two keyholders could die then you'd have an active contract waiting for completion, but it will never happen.
-
-{\bf
-I understand this as: all contracts should reduce to null, but not independently of the observables. We can then think about analysing which observables stall the contract (which sounds like a boolean satisfiability problem). Maybe we just want to guarantee that there is a set of external actions that will cause the contract to reduce to null no matter its state.
-
-
-In the particular example of death of participants, we would assume that the contract would have been formulated with timeouts on inactivity of participants (when activity requested).
-}
-
-What we need to do is determine what functionality can be black-boxed in this model with some degree of reliability.
-
-
-Bernardo's MPC library is going to provide a lot of functionality for things like games for example and provides strong cryptographic guarantees for outcomes given some initial assumptions.
-
-{\bf
-We will definitely incorporate these.
-}
-
-Second, we need to have a set of canonical actions that we could test against the proposed model. And see how they would be constructed.
-
-{\bf
-Is this like a test suite? Not sure how it would work, but would like to know more.
-}
-
-Third, we need to clearly understand what is an oracle in this model and how we intend on using them.
-
-
-
-
-
-{\bf
-Good point, we need to define an interface for oracles.
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-\clearpage
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{paper}
 

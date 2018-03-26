@@ -631,7 +631,7 @@ Looking at this in a little more detail, we would expect the following points to
 \item For \haskellinline{Choice} we require a sufficient balance for the maximum of the requirements of the individual contracts. 
 \item For \haskellinline{When}, need to ``age'' the existing commitments relative to the new starting point of the 
 continuation contract.
-\item \haskellinline{RedeemCC} should not happen twice in any execution, so as to avoid producing a
+\item \haskellinline{RedeemCC} should not happen twice in any execution, so as to avoid a
 \haskellinline{DuplicateRedeem} action.
 \item Are there any constraints on \haskellinline{CommitCash} statements? Not directly, but there need to be sufficient 
 funds available to pay if needed, and enough time for the commitments to time out.

@@ -169,7 +169,10 @@ In this section we look at existing work on smart contracts and blockchains in g
 
 \subsection{Smart contracts on blockchains}
 
-As more than one wag has observed, many of the programs that run on blockchains are neither smart nor indeed form contracts in any real sense. Nonetheless, this terminology has stuck, and has become shorthand for ``programmed interactions on the blockchain''. In an earlier paper we presented a survey of the approaches available~\cite{cryptoeprint:2016:1156}; we give an overview here.
+As more than one wag has observed, many of the programs that run on blockchains are neither smart nor indeed form 
+contracts in any real sense. Nonetheless, this terminology has stuck, and has become shorthand for ``programmed 
+interactions on the blockchain''. In an earlier paper, we presented a survey of the approaches 
+available~\cite{cryptoeprint:2016:1156}; we give an overview here.
 
 Blockchains are executed in a replicated form by parties who cannot be guaranteed not to be hostile, either by directly trying to change the contents of the chain, or through trying to affect other properties of the chain by indirect means (such as swamping honest parties with work). Programming on the blockchain therefore needs to be constrained in some ways, since it has to be amenable to replication or verification within a reasonable time if the security and integrity of the chain are to be preserved. We look at representatives of the main approaches now.
 
@@ -193,7 +196,11 @@ The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs:\fo
 
 \paragraph{Domain-specific languages} 
 
-A domain-specific language or DSL is a high-level language designed to work in a specific field or domain. The intention is that because the users will know about the field, the constructs of the language can be designed to be meaningful to them, and also that because of its nature the DSL need not include all the features of a general purpose language. Removing this clutter and having the remaining operations directly reflect the application area is intended to make the language more accessible to domain experts who do not necessarily see themselves as programmers.
+A domain-specific language or DSL is a high-level language designed to work in a specific field or domain. The intention 
+is that because the users will know about the field, the constructs of the language can be designed to be meaningful to 
+them, and also that, because of its nature, the DSL need not include all the features of a general purpose language. 
+Removing this clutter and having the remaining operations directly reflect the application area is intended to make the 
+language more accessible to domain experts who do not necessarily see themselves as programmers.
 
 Stand-alone DSLs have the advantage of providing appropriate, domain-level error messages when things go wrong, but suffer the disadvantage of having to be implemented from scratch. An alternative to this are \emph{embedded} DSLs (EDSLs), which provide a ``little language'' for the particular domain embedded within a general-purpose host language. This means that parts of the host -- such as arithmetical expressions, or list idioms --  can be used to extend the expressibility of the DSL. A notable example of this is the financial contracts language described by Peyton Jones and his collaborators~\cite{PeytonJones:2000}, which is embedded in Haskell.
 
@@ -212,11 +219,21 @@ There is not a single model of how a blockchain operates, and in this section we
 
 \paragraph{UTxO and accounts}
 
-The simplest blockchain is Bitcoin. Transactions on Bitcoin are made by spending the (as yet) unspent outputs of previous transactions (`unspent transaction outputs' or UTxOs).The chain need not maintain any state, such as the current value owned by any particular participant: such \emph{account} information is implicit and external to the Bitcoin blockchain. On the other hand, the Ethereum model explicitly keeps track of account values, and so this information needs to be kept as state information on chain. While it is possible to translate between UTxO-based and account-based chains \sjtnote{cite Bruno paper} the UTxO model is more fundamental, and requires less support from the implementation of the chain itself.
+The simplest blockchain is Bitcoin. Transactions on Bitcoin are made by spending the (as yet) unspent outputs of 
+previous transactions (`unspent transaction outputs' or UTxOs). The chain need not maintain any state, such as the 
+current value owned by any particular participant: such \emph{account} information is implicit and external to the 
+Bitcoin blockchain. On the other hand, the Ethereum model explicitly keeps track of account values, and so this 
+information needs to be kept as state information on chain. While it is possible to translate between UTxO-based and 
+account-based chains \sjtnote{cite Bruno paper} the UTxO model is more fundamental, and requires less support from the 
+implementation of the chain itself.
 
 \paragraph{Interaction modality}
 
-Contracts can be conceived of as acting in two ways. In a \emph{push} model, contracts are seen to be pro-active, and to make things happen. In the case of blockchain, this would include making payments or transactions happen. Alternatively, in the \emph{pull} model contracts enable certain things to happen, such as transactions, but the transactions need to be effected by an external player. The pull model makes fewer demands on the blockchain implementation than the push model, which requires the contract to have direct access to modify the chain.
+Contracts can be conceived of as acting in two ways. In a \emph{push} model, contracts are seen to be pro-active, and to 
+make things happen. In the case of blockchain, this would include making payments or transactions happen. 
+Alternatively, in the \emph{pull} model, contracts enable certain things to happen, such as transactions, but the 
+transactions need to be effected by an external player. The pull model makes fewer demands on the blockchain 
+implementation than the push model, which requires the contract to be triggered automatically.
 
 \paragraph{Layered design and sidechains}
 
@@ -224,15 +241,24 @@ Some chains have a layered design, in particular Cardano~\cite{cardano}. The Car
 
 \subsection{Designing Marlowe}
 
-In designing Marlowe we have chosen a number of options; this description applies to Marlowe version 1.2 \sjtnote{Is there an obvious way of making that clear in the repo? I really don't understand how git deals with ``releases'' or versions.}
+In designing, Marlowe we have chosen a number of options; this description applies to Marlowe version 1.2 \sjtnote{Is 
+there an obvious way of making that clear in the repo? I really don't understand how git deals with ``releases'' or 
+versions.}\plsnote{We can create a branch and point to that.}
 
 \paragraph{Pull} 
 
-While earlier versions used a ``push'' model of operations, we have revised the language to give a ``pull'' semantics. This means, for example, that the language can \emph{enable} a payment to be made, but cannot make the payment happen. It is up to the interested party (or parties) to make the change happen. It is therefore possible for the payment not to happen, despite the fact that this is against the interest of the receiving party. The same 
+While earlier versions used a ``push'' model of operations, we have revised the language to give a ``pull'' semantics. 
+This means, for example, that the language can \emph{enable} a payment to be made, but cannot make the payment happen. 
+It is up to the interested party (or parties) to make the change happen. It is therefore possible for the payment not to 
+happen, despite the fact that this is against the interest of the receiving party.\plsnote{There was a trailing ``the 
+same'' here. Did you think of another example?}
 
 \paragraph{UTxO vs.\ accounts} \sjtnote{Pablo: please check this section carefully}
 
-The language semantics is described in terms of \emph{commitments} of sums of cryptocurrency -- which we choose to abbreviate to ``cash'' -- and so is agnostic of the underlying implementation.  However, the current redemption mechanism in Plutus Core is not strong enough to support Marlowe, and we are actively investigating the best way to extend this mechanism to implement Marlowe in full on Plutus Core.
+The language semantics is described in terms of \emph{commitments} of sums of cryptocurrency -- which we choose to 
+abbreviate to ``cash'' or ``money'' -- and so is agnostic of the underlying implementation.  However, the current 
+redemption mechanism in Plutus Core is not strong enough to support Marlowe, and we are actively investigating the best 
+way to extend this mechanism to implement Marlowe in full on Plutus Core.
 
 \paragraph{DSL or EDSL?}
 
@@ -470,7 +496,7 @@ CommitCash (IdentCC 1) 1
                        (RedeemCC (IdentCC 1) Null))
            Null
 \end{haskellcode}
-In the next section we cover the online contract visualisation and interaction tool for Marlowe.
+In the next section, we cover the online contract visualisation and interaction tool for Marlowe.
 
 \section{Visualising and interacting with contracts}
 \label{section:tool}
@@ -484,7 +510,9 @@ In the next section we re-examine the model and the Marlowe language, looking at
 \section{Reflection}
 \label{section:reflection}
 
-We have given a concrete model and DSL, namely Marlowe version 1.2. In this section we examine how the model can be extended, how contacts can be analysed, reflect on different design decisions that might be made and discuss some aspects of the implementation on Marlowe within a blockchain environment.
+We have given a concrete model and DSL, namely Marlowe version 1.2. In this section we examine how the model can be 
+extended, how contacts can be analysed, reflect on different design decisions that might be made and discuss some 
+aspects of the implementation of Marlowe within a blockchain environment.
 
 \subsection{Potential additions to the model}
 
@@ -500,7 +528,12 @@ cryptographic primitives to enforce the rules of poker while maintaining the car
 
 \paragraph{A monadic DSL}
 
-Haskell is a pure functional programming language, and uses the \haskellinline{Monad} type class to encapsulate operations that can potentially have a side effect. Many introductions to monads exist \sjtnote{cite some} but for the sake of this discussion it is enough to think of a value of type \haskellinline{m a} where \haskellinline{m} is a monad as a ``computation that results in something of type \haskellinline{a}''. The \haskellinline{Monad} API allows such computations to be assembled, and then once assembled they may be run, in general causing some side-effects as a part of the computation.
+Haskell is a pure functional programming language, and uses the \haskellinline{Monad} type class to encapsulate
+operations that can potentially have a side effect. Many introductions to monads exist \sjtnote{cite some} but for the 
+sake of this discussion it is enough to think of a value of type \haskellinline{m a} where \haskellinline{m} is a monad 
+as a ``computation that results in something of type \haskellinline{a}''. The \haskellinline{Monad} API allows 
+suchcomputations to be assembled, and then, once assembled, they may be run, in general causing some side-effects as a 
+part of the computation.
 
 We can make the \haskellinline{Contract} type monadic, so that new, unique identifiers are automatically generated. This gives two nice properties. First, they are guaranteed to be unique; secondly they can be generated only in cases where a commit has been made successfully (within the required time period). The 
 \haskellinline{do} notation supported by monads allows the generated names to be captured by the \haskellinline{bind} operation and referred to later in the computation.
@@ -509,7 +542,10 @@ We can make the \haskellinline{Contract} type monadic, so that new, unique ident
 \subsection{Potential model analyses}
 \label{section:analysis}
 
-Given that we have a language and a semantics for it, we can examine its properties. These might be properties of individual runs of a particular contract, of all runs of a given contract, or indeed properties of all the contracts of the language. In this section we look at two particularly obvious questions, but these are not the only ones that we might ask.
+Given that we have a language and a semantics for it, we can examine its properties. These might be properties of 
+individual runs of a particular contract, of all runs of a given contract, or indeed properties of all the contracts of 
+the language. In this section, we look at two particularly obvious questions, but these are not the only ones that we 
+might ask.
 
 
 
@@ -519,18 +555,24 @@ One possible definition is ``those contracts that do not lead to a \haskellinlin
 Given the mechanisms for making and using commitments are limited by timeouts, it should be possible to write contracts that have this property, perhaps with some assumptions about the value of observables.
 Looking at this in a little more detail, we would expect the following points to hold.
 \begin{itemize}
-\item For a \haskellinline{Pay} contract a sufficient balance not to produce a \haskellinline{FailedPay} or a \haskellinline{DuplicateRedeem} action is required.. 
+\item For a \haskellinline{Pay} contract a sufficient balance not to produce a \haskellinline{FailedPay}.
 \item For \haskellinline{Both} we require a sufficient balance for both contracts combined. Need to think here whether the two conjuncts should be independent, or whether a commitment in one half can be used in the other.
 \item For \haskellinline{Choice} we require a sufficient balance for the maximum of the requirements of the individual contracts. 
-\item For \haskellinline{When}, need to ``age'' the existing commitments relative to the new starting point of the continuation contract. 
-\item Are there any constraints on  \haskellinline{CommitCash} and \haskellinline{RedeemCC} statements? Not directly, but there need to be sufficient funds available to pay if needed, or enough time for the commitments to time out, if not.
+\item For \haskellinline{When}, need to ``age'' the existing commitments relative to the new starting point of the 
+continuation contract.
+\item \haskellinline{RedeemCC} should not happen twice in any execution, so as to avoid producing a
+\haskellinline{DuplicateRedeem} action.
+\item Are there any constraints on \haskellinline{CommitCash} statements? Not directly, but there need to be sufficient 
+funds available to pay if needed, and enough time for the commitments to time out.
 \end{itemize}
 
 \paragraph{Do all contracts potentially evaluate to \haskellinline{Null}?}
 
 That is, for each contract do there exist sequences of values of \haskellinline{Commit} and \haskellinline{OS} such that stepping the contract with these inputs leads to \haskellinline{Null}? Some relevant points include:
 \begin{itemize}
-\item For \haskellinline{When}, need to be able to make \haskellinline{interpretObs st obs os} true. Since there is a timeout to \haskellinline{When} then there's no need to impose this condition, as we'll progress at timeout if not before.
+\item For \haskellinline{When}, we need to be able to make \haskellinline{interpretObs st obs os} true. Since there is 
+a timeout to \haskellinline{When} then there is no need to impose this condition, as we will progress at timeout if not 
+before.
 \item As we have put timeouts on to \haskellinline{CommitCash} and \haskellinline{RedeemCC} operations, there are no remaining requirements on these constructs for contract execution to make progress, albeit eventually.
 \item We need to check the status of \haskellinline{Observations}: what if an observation is unsatisfiable?
 \item There are no constraints on other constructs.
@@ -576,7 +618,9 @@ We have modelled cash as fungible: we make payments using the cash commitments i
 
 \paragraph{The \haskellinline{Both} construct}
 
-Does the \haskellinline{Both} constructor potentially produce invalid/misleading contracts, combining a commitment in one half with its use in the other? The problem is that the ``use'' conjunct could potentially be executed, leading to a failed payment.
+Does the \haskellinline{Both} constructor potentially produce invalid/misleading contracts, combining a commitment in 
+one half with its use in the other? The problem is that the ``use'' conjunct could potentially be executed, leading to 
+a failed payment. \plsnote{What do you mean with the ``use'' conjunct?}
 
 \paragraph{Monotonicity}
 
@@ -610,7 +654,9 @@ Even in Ethereum this distinction is important because single contract execution
 
 \paragraph{Recording information on chain}
 
-Commitments and values of observables need to be recorded somehow, and this raises the potential issue about bloating the chain with data. In general it will only be necessary to store a signed hash value of the observable, and this will keep data usage bounded.
+Commitments and values of observables need to be recorded somehow, and this raises the potential issue about bloating 
+the chain with data. In general, it will only be necessary to store a signed hash value of the observable, and this will 
+keep data usage bounded.
 
 
 \paragraph{General computations}
@@ -656,7 +702,9 @@ Marlowe and its semantics could be formalised in a theorem prover such as Isabel
 
 \sjtnote{Have I forgotten anyone?}
 
-Thanks to IOHK staff Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiyakis, Darry McAdams, Bruno Woltzenlogel Paleo, and Phil Wadler for their collaboration, and to colleagues from the Universities of Kent and Leicester for their comments on previous presentations of this work.
+Thanks to IOHK staff Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiyakis, Darryl 
+McAdams, Bruno Woltzenlogel Paleo, and Phil Wadler for their collaboration, and to colleagues from the Universities of 
+Kent and Leicester for their comments on previous presentations of this work.
 
 
 

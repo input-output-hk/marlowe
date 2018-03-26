@@ -612,7 +612,7 @@ Haskell is a pure functional programming language, and uses the \haskellinline{M
 operations that can potentially have a side effect. Many introductions to monads exist \sjtnote{cite some} but for the 
 sake of this discussion it is enough to think of a value of type \haskellinline{m a} where \haskellinline{m} is a monad 
 as a ``computation that results in something of type \haskellinline{a}''. The \haskellinline{Monad} API allows 
-suchcomputations to be assembled, and then, once assembled, they may be run, in general causing some side-effects as a 
+such computations to be assembled, and then, once assembled, they may be run, in general causing some side-effects as a 
 part of the computation.
 
 We can make the \haskellinline{Contract} type monadic, so that new, unique identifiers are automatically generated. This gives two nice properties. First, they are guaranteed to be unique; secondly they can be generated only in cases where a commit has been made successfully (within the required time period). The 

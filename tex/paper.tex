@@ -166,8 +166,6 @@ Section \ref{section:reflection} reflects on the system design, and observes som
 \section{Design rationale}
 \label{section:design}
 
-\sjtnote{References to some of the background work still to be added.}
-
 \medskip
 \noindent
 In this section we look at existing work on smart contracts and blockchains in general, before exploring the rationale for building the Marlowe language.
@@ -183,21 +181,31 @@ Blockchains are executed in a replicated form by parties who cannot be guarantee
 
 \paragraph{Bitcoin script}
 
-One approach to this is to choose mechanisms such as bitcoin script which are manifestly non-Turing complete. A bitcoin script, written in a Forth-like language, is essentially linear: it can branch, but the language contains neither looping constructs nor recursion. It is therefore straightforward not only to see that scripts will terminate, but also to give an accurate estimate of the time taken to execute a script. 
+One approach to this is to choose mechanisms such as bitcoin script~\cite{BitcoinWikiScript} which are manifestly 
+non-Turing complete. A bitcoin script, written in a Forth-like language, is essentially linear: it can branch, but the 
+language contains neither looping constructs nor recursion. It is therefore straightforward not only to see that scripts 
+will terminate, but also to give an accurate estimate of the time taken to execute a script. 
 
 \paragraph{Ethereum}
 
-On the other hand, the Ethereum system provides a Turing-complete language for the EVM virtual machine, and a higher-level programming language, Solidity, that compiles into EVM code. However, EVM and Solidity programs are constrained \emph{post hoc} by two mechanisms: program execution must be paid for using `gas' proportional to the effort expended, and a set of \emph{ad hoc} limits on program execution, e.g.\ on stack size.
+On the other hand, the Ethereum system~\cite{wood2014ethereum} provides a Turing-complete language for the EVM virtual 
+machine, and a higher-level programming language, Solidity, that compiles into EVM code. However, EVM and Solidity 
+programs are constrained \emph{post hoc} by two mechanisms: program execution must be paid for using `gas' proportional 
+to the effort expended, and a set of \emph{ad hoc} limits on program execution, e.g.\ on stack size.
 
 \paragraph{Nxt}
 
-Programmability of the system is provided through a ``fat'' high-level API, which is accessible from Nxt clients through a REST interface. The API provides functionality supporting various kinds of transactions. The core software itself doesn't support any form of scripting language; rather, users are expected to work with the built in transaction types and transactions that support some 250 primitive operations; these can be ``scripted'' in a client (only) using a binding to the API, which is available, for instance, in JavaScript.
+In Nxt~\cite{Nxt}, programmability of the system is provided through a ``fat'' high-level 
+API, which is accessible from Nxt clients through a REST interface. The API provides functionality supporting various 
+kinds of transactions. The core software itself doesn't support any form of scripting language; rather, users are 
+expected to work with the built in transaction types and transactions that support some 250 primitive operations; these 
+can be ``scripted'' in a client (only) using a binding to the API, which is available, for instance, in JavaScript.
 
 \paragraph{Multiple languages}
 
 A common feature of many blockchain platforms is that they provide multiple scripting languages. As we noted earlier, Ethereum can be programmed at the EVM level as well as by using the high-level Solidity language. Tezos~\cite{tezos-white-paper} supports the stack-based, strongly-typed, functional language Michelson, but also provides a high-level language, Liquidity, that compiles into Michelson. Liquidity is also functional and strongly typed, but provides more constructs in a more familiar syntax, namely that of a subset of OCaml. 
 
-The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs:\footnote{As presented by Erik Stenman at CODE BEAM SF, March 2018, \url{https://www.youtube.com/watch?v=VXsqvfPIdWg}} the functional language  Sophia (akin to Reason) and the Functional Typed Warded Virtual Machine (FTWVM) for safe ``system level programming'', the language Varna and the HLM for simple contracts, and a (port of) Solidity and the EVM for compatibility with Ethereum. In a similar way, Cardano provides support for IELE~\sjtnote{citation}, a rational reconstruction of the EVM, and thus for Solidity contracts too. 
+The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs:\footnote{As presented by Erik Stenman at CODE BEAM SF, March 2018, \url{https://www.youtube.com/watch?v=VXsqvfPIdWg}} the functional language  Sophia (akin to Reason) and the Functional Typed Warded Virtual Machine (FTWVM) for safe ``system level programming'', the language Varna and the HLM for simple contracts, and a (port of) Solidity and the EVM for compatibility with Ethereum. In a similar way, Cardano provides support for IELE~\cite{IELE}, a rational reconstruction of the EVM, and thus for Solidity contracts too. 
 
 \paragraph{Domain-specific languages} 
 
@@ -211,7 +219,9 @@ Stand-alone DSLs have the advantage of providing appropriate, domain-level error
 
 \paragraph{Other approaches}
 
-There are a variety of other approaches to scripting, including business process notations, such as the OMG's BPMN; process calculi such as Rholang; logic rules (in Formal Contract Logic), and finite state machines. More details of these are provided in~\cite{cryptoeprint:2016:1156}.
+There are a variety of other approaches to scripting, including business process notations, such as the OMG's BPMN; 
+process calculi such as Rholang; logic rules (in Formal Contract Logic), and finite state machines. More details of 
+these are provided in~\cite{cryptoeprint:2016:1156}.
 
 \paragraph{Related work}
 
@@ -242,7 +252,7 @@ implementation than the push model, which requires the contract to be triggered 
 
 \paragraph{Layered design and sidechains}
 
-Some chains have a layered design, in particular Cardano~\cite{cardano}. The Cardano Settlement Layer (SL) is to support settlement of transactions but nothing more complicated, whereas the Computation Layer (or CL) supports more powerful general computations over the chain. Moreover, the Cardano roadmap \cite{cardano-rationale} envisages the possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually Bitcoin) and the channels of \ae{}ternity, introduced below.
+Some chains have a layered design, in particular Cardano~\cite{cardano}. The Cardano Settlement Layer (SL) is to support settlement of transactions but nothing more complicated, whereas the Computation Layer (or CL) supports more powerful general computations over the chain. Moreover, the Cardano roadmap~\cite{cardano-rationale} envisages the possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually Bitcoin) and the channels of \ae{}ternity, introduced below.
 
 \subsection{Designing Marlowe}
 
@@ -517,8 +527,8 @@ of the tool in the middle of simulating the execution of the ``incentivised
 saving'' contract described in Section~\ref{section:example}.
 
 The tool has been mainly written in Haskell and compiled to JavaScript
-by the Haste compiler \cite{Haste}, it also relies on
-the Blockly library \cite{Blockly} for providing a visual
+by the Haste compiler~\cite{Haste}, it also relies on
+the Blockly library~\cite{Blockly} for providing a visual
 editor for smart contracts written in Marlowe. Blockly's editor allows
 the user to visualise and edit smart-contracts as interlocking blocks
 that can be dragged and dropped like pieces of a jigsaw puzzle (see
@@ -601,17 +611,17 @@ The model that we have discussed so far is deliberately kept as compact as possi
 We have examined a single kind of commitment, namely a commitment of a certain amount of currency. In different 
 applications, such as on-chain game playing of games like poker, a commitment to a value will be required. A value 
 commitment would include a choice of a play in a game, which would be chosen and concealed from the other players until 
-a later point in play, when it can be revealed. The paper \cite{kumaresan2015use} makes use of this and other 
+a later point in play, when it can be revealed. The paper~\cite{kumaresan2015use} makes use of this and other 
 cryptographic primitives to enforce the rules of poker while maintaining the cards of each player secret.
 
 \paragraph{A monadic DSL}
 
 Haskell is a pure functional programming language, and uses the \haskellinline{Monad} type class to encapsulate
-operations that can potentially have a side effect. Many introductions to monads exist \sjtnote{cite some} but for the 
-sake of this discussion it is enough to think of a value of type \haskellinline{m a} where \haskellinline{m} is a monad 
-as a ``computation that results in something of type \haskellinline{a}''. The \haskellinline{Monad} API allows 
-such computations to be assembled, and then, once assembled, they may be run, in general causing some side-effects as a 
-part of the computation.
+operations that can potentially have a side effect. Many introductions to monads exist \cite{wadler1990comprehending} 
+but for the sake of this discussion it is enough to think of a value of type \haskellinline{m a} where \haskellinline{m} 
+is a monad as a ``computation that results in something of type \haskellinline{a}''. The \haskellinline{Monad} API 
+allows such computations to be assembled, and then, once assembled, they may be run, in general causing some 
+side-effects as a part of the computation.
 
 We can make the \haskellinline{Contract} type monadic, so that new, unique identifiers are automatically generated. This gives two nice properties. First, they are guaranteed to be unique; secondly they can be generated only in cases where a commit has been made successfully (within the required time period). The 
 \haskellinline{do} notation supported by monads allows the generated names to be captured by the \haskellinline{bind} operation and referred to later in the computation.

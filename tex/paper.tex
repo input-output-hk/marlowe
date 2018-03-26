@@ -525,11 +525,11 @@ code back to its block representation.
 \includegraphics[width=1\textwidth]{pix/screenshot1}
 \par\end{centering}
 \caption{\label{fig:full-screenshot-demo}Screenshot of the visualisation tool
-running the incentivised deposit contract.}
+simulating the incentivised deposit contract.}
 \end{figure}
 
 \begin{figure}
-\centering{}\includegraphics[scale=0.7]{pix/detail1}\caption{\label{fig:detail-of-block}Detail of five interlocked 
+\centering{}\includegraphics[scale=0.5]{pix/detail1}\caption{\label{fig:detail-of-block}Detail of five interlocked 
 blocks.}
 \end{figure}
 
@@ -540,7 +540,7 @@ the state of the contract, the current inputs, and the outputs from
 last block.
 
 \begin{figure}
-\centering{}\includegraphics[scale=0.7]{pix/detail2}\caption{\label{fig:detail-of-interface}Detail of the interface for 
+\centering{}\includegraphics[scale=0.5]{pix/detail2}\caption{\label{fig:detail-of-interface}Detail of the interface for 
 contract
 execution simulation.}
 \end{figure}
@@ -559,13 +559,13 @@ already filled in.
 \end{itemize}
 \begin{figure}
 \begin{centering}
-\includegraphics[scale=0.7]{pix/detail3}
+\includegraphics[scale=0.5]{pix/detail3}
 \par\end{centering}
 \caption{\label{fig:detail-of-manual-interface}Detail of the manual interface.}
 \end{figure}
 
 \begin{figure}
-\centering{}\includegraphics[scale=0.7]{pix/detail4}\caption{\label{fig:detail-of-smart-interface}Detail of the smart 
+\centering{}\includegraphics[scale=0.5]{pix/detail4}\caption{\label{fig:detail-of-smart-interface}Detail of the smart 
 interface.}
 \end{figure}
 
@@ -638,14 +638,20 @@ funds available to pay if needed, and enough time for the commitments to time ou
 
 \paragraph{Do all contracts potentially evaluate to \haskellinline{Null}?}
 
-That is, for each contract do there exist sequences of values of \haskellinline{Commit} and \haskellinline{OS} such that stepping the contract with these inputs leads to \haskellinline{Null}? Some relevant points include:
+That is, for each contract do there exist sequences of inputs and observables such that stepping the contract with them 
+leads to \haskellinline{Null}? Furthermore, do all sequences of inputs and observables eventually evolve to 
+\haskellinline{Null}? Some relevant points include:
 \begin{itemize}
-\item For \haskellinline{When}, we need to be able to make \haskellinline{interpretObs st obs os} true. Since there is 
-a timeout to \haskellinline{When} then there is no need to impose this condition, as we will progress at timeout if not 
-before.
-\item As we have put timeouts on to \haskellinline{CommitCash} and \haskellinline{RedeemCC} operations, there are no remaining requirements on these constructs for contract execution to make progress, albeit eventually.
-\item We need to check the status of \haskellinline{Observations}: what if an observation is unsatisfiable?
-\item There are no constraints on other constructs.
+\item For \haskellinline{When}, in principle, we would need to be able to make \haskellinline{interpretObs st obs os} 
+true. However, since there is  a timeout to \haskellinline{When} then there is no need to impose this condition, as we 
+will progress at timeout if not before.
+\item As we have put timeouts on to \haskellinline{CommitCash} and \haskellinline{Pay}, the only construct that may not 
+reduce to \haskellinline{Null} eventually is \haskellinline{RedeemCC}. \haskellinline{RedeemCC} will still reduce to 
+\haskellinline{Null} if the commitment that it refers to has expired (and it will produce a 
+\haskellinline{DuplicateRedeem} action), but it will be quiescent forever if the money is never comitted in the first 
+place.
+\item Other constructs will reduce to \haskellinline{Null} eventually as long as their continuations also reduce to 
+\haskellinline{Null} (as is the case of \haskellinline{Both}).
 \end{itemize}
 
 \subsection{Questions and alternatives}

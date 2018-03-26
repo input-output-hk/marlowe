@@ -136,8 +136,6 @@
 \section{Introduction}
 
 
-\noindent
-\sjtnote{This is a preliminary version, return to this at the end of the writing process.}
 
 This paper explores the design of a domain specific language, Marlowe,\footnote{Marlowe is named after Christopher Marlowe, the Elizabethan poet, dramatist and spy, who was born and educated in Canterbury, which is also where our university is based. \url{https://en.wikipedia.org/wiki/Christopher_Marlowe}}\footnote{The code for Marlowe is available from \url{https://github.com/input-output-hk/scdsl}
 } targetted at the execution of financial contracts in the style of Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains. This work is a part of the Cardano project, and is supported by IOHK.\footnote{\url{https://iohk.io}}
@@ -241,19 +239,17 @@ Some chains have a layered design, in particular Cardano~\cite{cardano}. The Car
 
 \subsection{Designing Marlowe}
 
-In designing, Marlowe we have chosen a number of options; this description applies to Marlowe version 1.2 \sjtnote{Is 
-there an obvious way of making that clear in the repo? I really don't understand how git deals with ``releases'' or 
-versions.}\plsnote{We can create a branch and point to that.}
+In designing, Marlowe we have chosen a number of options; this description applies to Marlowe version 1.2 
 
 \paragraph{Pull} 
 
 While earlier versions used a ``push'' model of operations, we have revised the language to give a ``pull'' semantics. 
 This means, for example, that the language can \emph{enable} a payment to be made, but cannot make the payment happen. 
 It is up to the interested party (or parties) to make the change happen. It is therefore possible for the payment not to 
-happen, despite the fact that this is against the interest of the receiving party.\plsnote{There was a trailing ``the 
-same'' here. Did you think of another example?}
+happen, despite the fact that this is against the interest of the receiving party.
 
-\paragraph{UTxO vs.\ accounts} \sjtnote{Pablo: please check this section carefully}
+
+\paragraph{UTxO vs.\ accounts}
 
 The language semantics is described in terms of \emph{commitments} of sums of cryptocurrency -- which we choose to 
 abbreviate to ``cash'' or ``money'' -- and so is agnostic of the underlying implementation.  However, the current 
@@ -619,8 +615,8 @@ We have modelled cash as fungible: we make payments using the cash commitments i
 \paragraph{The \haskellinline{Both} construct}
 
 Does the \haskellinline{Both} constructor potentially produce invalid/misleading contracts, combining a commitment in 
-one half with its use in the other? The problem is that the ``use'' conjunct could potentially be executed, leading to 
-a failed payment. \plsnote{What do you mean with the ``use'' conjunct?}
+one half with its use in the other? The problem is that this might potentially lead to 
+a failed payment. 
 
 \paragraph{Monotonicity}
 
@@ -629,8 +625,6 @@ Some observables have a ``monotonicity'' property: once a choice is made, it is 
 
 \subsection{Towards an implementation in Cardano}
 \label{section:towards-implementation}
-
-\sjtnote{I have expanded this to include a number of responses to Charles' comments on an earlier document. Other responses appear in the previous sub-section.}
 
 The contracts implemented in the Marlowe language have an implicit interface defined for what would correspond to the client side of a distributed application, as shown by the interactive interface. 
 
@@ -700,9 +694,7 @@ Marlowe and its semantics could be formalised in a theorem prover such as Isabel
 
 \section{Acknowledgements}
 
-\sjtnote{Have I forgotten anyone?}
-
-Thanks to IOHK staff Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiyakis, Darryl 
+Thanks to IOHK staff Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiayias, Darryl 
 McAdams, Bruno Woltzenlogel Paleo, and Phil Wadler for their collaboration, and to colleagues from the Universities of 
 Kent and Leicester for their comments on previous presentations of this work.
 

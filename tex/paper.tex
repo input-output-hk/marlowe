@@ -494,14 +494,86 @@ CommitCash (IdentCC 1) 1
 \end{haskellcode}
 In the next section, we cover the online contract visualisation and interaction tool for Marlowe.
 
+
 \section{Visualising and interacting with contracts}
+
 \label{section:tool}
 
-\sjtnote{Pablo: can you add something here about the online visualisation, including one or more suitable screenshots? It might be worth giving a condensed screenshot of the whole screen, and then more detailed ones of parts of the display.}
+One of the objectives of Marlowe is to be accessible to a wider audience
+than a general purpose language would. With this aim, and to aid Marlowe's
+usage by people that does not know is not familiar with its syntax,
+we have developed a web tool that supports the interactive construction,
+edition, and simulation of smart-contracts written in Marlowe. The
+tool is publicly available in the url: \url{https://input-output-hk.github.io/scdsl/}.
+In Figure~\ref{fig:full-screenshot-demo}, we provide a screenshot
+of the tool in the middle of simulating the execution of the ``incentivised
+saving'' contract described in Section~\ref{section:example}.
 
-\sjtnote{Should it have a name?}
+The tool has been mainly written in Haskell and compiled to JavaScript
+by the Haste compiler \plsnote{Citation needed}, it also relies on
+the Blockly library \plsnote{Citation needed} for providing a visual
+editor for smart contracts written in Marlowe. Blockly's editor allows
+the user to visualise and edit smart-contracts as interlocking blocks
+that can be dragged and dropped like pieces of a jigsaw puzzle (see
+Figure~\ref{fig:detail-of-block}). The tool also provides functionality
+to generate syntactically correct and formatted code (that is displayed
+in the upper right corner of the application), and to convert the
+code back to its block representation.
 
-In the next section we re-examine the model and the Marlowe language, looking at possible extensions, alternative design decisions and ways in which we can formally analyse Marlowe contracts.
+\begin{figure}
+\begin{centering}
+\includegraphics[width=1\textwidth]{pix/screenshot1}
+\par\end{centering}
+\caption{\label{fig:full-screenshot-demo}Screenshot of the visualisation tool
+running the incentivised deposit contract.}
+\end{figure}
+
+\begin{figure}
+\centering{}\includegraphics[scale=0.7]{pix/detail1}\caption{\label{fig:detail-of-block}Detail of five interlocked 
+blocks.}
+\end{figure}
+
+The execution of complete contracts can be simulated block by block
+by using the panel on the right (see Figure~\ref{fig:detail-of-interface}),
+which includes text fields to view and edit the current block number,
+the state of the contract, the current inputs, and the outputs from
+last block.
+
+\begin{figure}
+\centering{}\includegraphics[scale=0.7]{pix/detail2}\caption{\label{fig:detail-of-interface}Detail of the interface for 
+contract
+execution simulation.}
+\end{figure}
+
+Additionally, to facilitate the introduction of inputs, the tool provides
+two different interfaces:
+\begin{itemize}
+\item The manual interface (see Figure~\ref{fig:detail-of-manual-interface}),
+provides a template for each of the four possible types of input:
+commits, redeems, payment claims, and choices.
+\item The smart interface (see Figure~\ref{fig:detail-of-smart-interface}),
+calculates the possible operations that would make sense given the
+current inputs, state of the contract, block number, and remaining
+contract; and it provides them in a table with most of the parameters
+already filled in.
+\end{itemize}
+\begin{figure}
+\begin{centering}
+\includegraphics[scale=0.7]{pix/detail3}
+\par\end{centering}
+\caption{\label{fig:detail-of-manual-interface}Detail of the manual interface.}
+\end{figure}
+
+\begin{figure}
+\centering{}\includegraphics[scale=0.7]{pix/detail4}\caption{\label{fig:detail-of-smart-interface}Detail of the smart 
+interface.}
+\end{figure}
+
+The smart interface is usually more convenient to use than the manual
+interface since the later provides between 3 and 4 fields for each
+operation whereas the former ``guesses'' the possible intentions
+of the user and usually can input new operations with a single click
+(except for choices, which still may require the user to input a number).
 
 \section{Reflection}
 \label{section:reflection}

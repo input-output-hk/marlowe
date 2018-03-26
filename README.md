@@ -10,10 +10,10 @@ This repository contains a preliminary design of a DSL for describing smart-cont
 - `src/CrowdFunding.hs` —  contains an example contract for crowd-funding limited to 4 participants.
 - `src/Escrow.hs` —  contains an example contract for an escrow payment.
 
-## Interactive demo
+## Meadow
 
-A browser-based demo prototype is available that supports graphical editing of smart-contracts (thanks to the Blockly library) and block by block simulation of their execution (translated from the semantics thanks to the Haste compiler).
+Meadow is a browser-based demo prototype that supports graphical editing of smart-contracts (thanks to the Blockly library) and block by block simulation of their execution (translated from the semantics thanks to the Haste compiler).
 
-The demo is available at: https://input-output-hk.github.io/scdsl/
+Meadow is available at: https://input-output-hk.github.io/scdsl/
 
-The sources for the demo are available in the blockly folder.
+The sources for Meadow are available in the `meadow` folder.

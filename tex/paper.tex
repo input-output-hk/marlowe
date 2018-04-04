@@ -726,16 +726,49 @@ Some observables have a ``monotonicity'' property: once a choice is made, it is 
 \subsection{Towards an implementation in Cardano}
 \label{section:towards-implementation}
 
-The contracts implemented in the Marlowe language have an implicit interface defined for what would correspond to the client side of a distributed application, as shown by the interactive interface. 
+The contracts implemented in the Marlowe language have an implicit interface defined for what would correspond to the 
+client side of a distributed application, as shown by the interactive interface. 
 
 \paragraph{Compilation}
 
 We have designed Marlowe assuming that each contract would be compiled into
 \begin{itemize} 
 \item one or more smart contracts (potentially written in Plutus) and 
-\item a client side program or interface that has a limited number of choices to be made at each point in time (including an interface for the observables). 
+\item a client side program or interface that has a limited number of choices to be made at each point in time 
+(including an interface for the observables). 
 \end{itemize}
-Of course, we probably do not want to give a user a programmatic interface but an actual application with user interface. So there is still some work to be done to create interfaces on top of the client side of the contracts.
+Of course, we probably do not want to give a user a programmatic interface but an actual application with user 
+interface. So there is still some work to be done to create interfaces on top of the client side of the contracts.
+
+Since the current version of Marlowe follows the `pull' model, a contract written in Marlowe could also be potentially
+compiled to a contract written in Ethereum. This could be done in two ways, it could be compiled so that an Ethereum
+contract represents a single instance of the contract (with a fixed set of participants), or alternatively it would be
+possible to create a generic contract with an extra ``instantiate'' operation that sets-up' a new contract instance
+with a given set of participants (represented by a set of public keys).
+
+\paragraph{Transactions}
+
+In principle, we can directly translate each operation in the model (i.e: cash commitment, payment claim, choice, or
+redemption) into a separate transaction in the blockchain. In Ethereum model this would work in the same 
+way that is simulated by Meadow: several operations can be issued in parallel and the blockchain subsystem will 
+automatically apply them in some order and integrate them into the next block.
+
+Another approach would be to use a UTXO model with continuations in which a UTXO represents a contract. In this model,
+an operation would correspond to a transaction that spends a UTXO and creates (at least) a new UTXO that represents the 
+contract after the operation.
+
+Usually, in the UTXO model, it is necessary that a UTXO is in the blockchain in order for another transaction to be able 
+to spend it. This could potentially limit the number of operations that can be applied in a single block to one, which 
+would make infeasible the approach of using the same UTXO to represent several instances of the same contract (since it 
+would not scale).
+
+On the other hand, it would prevent non-determinism and, with it, it would remove the possibility of race-conditions. A 
+change to the state of a contract before a transaction (and its corresponding operation) is accepted in the blockchain 
+would invalidate the transaction and require the user to issue it again.
+
+Even if we only allow one transaction per block, it would still be possible to combine several transactions off-chain 
+and to issue a transaction that contains several operations. However, that would require an offline protocol 
+independent from the blockchain and it would require participants to collaborate.
 
 \paragraph{Cost}
 

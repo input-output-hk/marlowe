@@ -5,7 +5,7 @@ import qualified Haste.JSString as J
 import qualified Haste.Prim as P
 import qualified Haste.DOM as D
 import qualified DepositIncentive as DI
-import qualified CrowFunding as CF
+import qualified CrowdFunding as CF
 import qualified Escrow as E
 import Semantics
 import ContractFormatter

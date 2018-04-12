@@ -29,7 +29,7 @@ escrow = CommitCash iCC1 1
                                        (AvailableMoney iCC1)
                                        100
                                        redeem_original)
-                                   redeem_original)
+                                  redeem_original)
                           redeem_original)
                     Null
 

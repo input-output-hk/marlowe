@@ -17,6 +17,20 @@ import Semantics
 -- or if payment did not go through after block 100,
 -- the money will be refunded to person 1.
 
+
+-- escrow :: Contract
+-- escrow = CommitCash 1
+--                     (ConstMoney 450)
+--                     (When (OrObs (two_chose 1 2 3 refund)
+--                                  (two_chose 1 2 3 pay))
+--                           (Choice (two_chose 1 2 3 pay)
+--                                   (Pay 1 2 AvailableMoney)
+--                                   redeem_original))   
+
+-- refund = 0
+-- pay    = 1
+
+
 escrow :: Contract
 escrow = CommitCash iCC1 1
                     (ConstMoney 450)

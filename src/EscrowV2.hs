@@ -1,4 +1,4 @@
-module Escrow where
+module EscrowV2 where
 
 import Semantics
 

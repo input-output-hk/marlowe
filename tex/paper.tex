@@ -511,8 +511,118 @@ CommitCash (IdentCC 1) 1
                        (RedeemCC (IdentCC 1) Null))
            Null
 \end{haskellcode}
-In the next section, we cover the online contract visualisation and interaction tool for Marlowe.
 
+In the next section, we look at how to take advantage of Haskell embedding when implementing Marlowe contracts.
+
+\section{Haskell embedding example}
+\label{section:example}
+
+In this section, we give an example of how we can have Marlowe contracts that are easier to write, read, and 
+understand, by embedding them into Haskel code (taking advantage that Marlowe contracts are implemented as Haskell 
+terms).
+
+The example contract we use through this section implements an escrow contract. Let us imagine that ``participant 1'' 
+is buying some item from ``participant 2''. On one hand, if ``participant 1'' pays before receiving the item, there 
+is a risk that ``participant 2'' will never give ``participant 1'' the item. On the other hand, if ``participant 2'' 
+gives ``participant 1'' the item before ``participant 1'' pays, then there is a risk that ``participant 1'' will never 
+pay.
+
+The escrow mechanism allows ``participant 1'' to deposit the money into a contract, in a way that the money will only 
+be released when two out of three participants agree on whether ``participant 2'' has indeed given ``participant 1'' 
+the item. The third participant (``participant 3'') is supposed to be a neutral third party that will decide in case of 
+dispute.
+
+This way, if ``participant 1'' and ``participant 2'' are honest, they will just agree on the result of the transaction 
+and ``participant 3'' will not need to do anything. If ``participant 1'' and ``participant 2'' disagree, ``participant 
+3'' will be able to choose whether the money must go to ``participant 1'' or to ``participant 2''.
+
+In addition to this, in our implementation, the money paid for the item is 450 ADA, it must be committed by 
+``participant 1'' before block 10, and it will be refunded to ``participant 1'' if there is no consensus before block 
+90.
+
+We start by defining some Haskell functions. We can encapsulate identifiers in functions to make the contract more 
+readable. That way we can generate an identifier for the cash commitment:
+
+\begin{haskellcode}
+iCC1 :: IdentCC
+iCC1 = IdentCC 1
+\end{haskellcode}
+
+And an identifier for the payment:
+
+\begin{haskellcode}
+iP1 :: IdentPay
+iP1 = IdentPay 1
+\end{haskellcode}
+
+We can also create a sub-contract that allows the money to be redeemed by ``participant 1'':
+
+\begin{haskellcode}
+redeem_original :: Contract
+redeem_original = RedeemCC iCC1 Null
+\end{haskellcode}
+
+Each participant has a say on who deserves the money: either ``participant 1'' deserves a refund, which we represent 
+with the number $0$; or ``participant 2'' deserves a payment, which we represent with the number $1$. Because there is 
+only one choice to make per participant, we use the same \haskellinline{IdentChoice} as their participant id. We can 
+define a function that returns an observation that is true if and only if the participant \haskellinline{per} has 
+chosen the number \haskellinline{c} as follows:
+
+\begin{haskellcode}
+chose :: Int -> ConcreteChoice -> Observation
+chose per c = PersonChoseThis (IdentChoice per) per c
+\end{haskellcode}
+
+Then we can easily write a function that returns an observation that is true if and only if at least one of the 
+participants \haskellinline{per} and \haskellinline{per'} has chosen the number \haskellinline{c} as follows:
+
+\begin{haskellcode}
+one_chose :: Person -> Person -> ConcreteChoice -> Observation
+one_chose per per' val = (OrObs (chose per val) (chose per' val)) 
+\end{haskellcode}
+
+After that, we can write a function that returns an observation that is true if and only if at least 
+two of the three participants \haskellinline{p1}, \haskellinline{p2}, and \haskellinline{p3} have chosen the number 
+\haskellinline{c} as follows:
+
+\begin{haskellcode}
+two_chose :: Person -> Person -> Person -> ConcreteChoice -> Observation
+two_chose p1 p2 p3 c = OrObs (AndObs (chose p1 c) (one_chose p2 p3 c))
+                             (AndObs (chose p2 c) (chose p3 c))
+\end{haskellcode}
+
+Finally, we can write the escrow contract, which would remain as follows:
+
+\begin{haskellcode}
+escrow :: Contract
+escrow = CommitCash iCC1 1 (ConstMoney 450) 10 100
+                    (When (OrObs (two_chose 1 2 3 0)
+                                 (two_chose 1 2 3 1))
+                          90
+                          (Choice (two_chose 1 2 3 1)
+                                  (Pay iP1 1 2 (AvailableMoney iCC1) 100
+                                       redeem_original)
+                                  redeem_original)
+                          redeem_original)
+                    Null
+\end{haskellcode}
+
+The outermost primitive \haskellinline{CommitCash} allows the ``participant 1'' to commit 450 ADA before block 10, 
+with the promise that money will be released on block 100 if they are not claimed before that.
+
+The next primitive, \haskellinline{When}, waits for one of three things to happen:
+\begin{enumerate}
+ \item Two out of three choose $0$.
+ \item Two out of three choose $1$.
+ \item The block 90 is added to the blockchain.
+\end{enumerate}
+
+If the third option happens first, the money is refunded. Otherwise, there is a \haskellinline{Choice} that will 
+immediately refund the money to ``participant 1'' unless two out of three chose $1$; in the later case, 
+\haskellinline{Pay} will give ``participant 2'' the opportunity to claim the funds available in \haskellinline{iCC1} 
+before block 100. If the funds are not claimed before block 100 they will also be refunded to ``participant 1''.
+
+In the next section, we cover the online contract visualisation and interaction tool for Marlowe.
 
 \section{Visualising and interacting with contracts}
 

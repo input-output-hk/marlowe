@@ -714,8 +714,8 @@ with the promise that money will be released on block 100 if they are not claime
 
 The next primitive, \haskellinline{When}, waits for one of three things to happen:
 \begin{enumerate}
- \item Two out of three choose $0$, for \haskellinline{pay}. 
- \item Two out of three choose $1$, for \haskellinline{refund}.
+ \item Two out of three choose $0$, for `\haskellinline{pay}'. 
+ \item Two out of three choose $1$, for `\haskellinline{refund}'.
  \item The block 90 is added to the blockchain.
 \end{enumerate}
 
@@ -723,6 +723,20 @@ If the third option happens first, the money is refunded. Otherwise, there is a 
 immediately refund the money to participant \haskellinline{1} unless two out of three chose option $1$; in the later case, 
 \haskellinline{Pay} will give participant \haskellinline{2} the opportunity to claim the funds available in \haskellinline{iCC1} 
 before block 100. If the funds are not claimed before block 100 they will also be refunded to participant \haskellinline{1}.
+
+Reflecting on the example we can see that using Haskell definitions has made the contract substantially more comprehensible; it will also support more efficient operation, if we were to replace the repeated  expression \haskellinline{two_chose 1 2 3 1} above by a \haskellinline{where} clause, 
+\begin{haskellcode}
+escrow = ...
+                    (When (OrObs (two_chose 1 2 3 0)
+                                 chose_refund)
+                          90
+                          (Choice chose_refund
+                           ...
+         ...
+         where 
+         chose_refund = two_chose 1 2 3 1                 
+\end{haskellcode}
+then the repeated computation of the expression will be avoided.
 
 In the next section, we cover the online contract visualisation and interaction tool for Marlowe.
 

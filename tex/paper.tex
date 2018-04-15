@@ -159,7 +159,7 @@ In doing this we are required to refine the model of contracts in a number of wa
 
 In the traditional model, enforcement of the contract is the responsibility of the legal system. If participant \haskellinline{1} doesn't pay the money into escrow, or participant \haskellinline{3} chooses to keep it for herself, then we can assume that they can be sued for the money and probably damages on top, thus providing both legal and financial incentives for compliance. On the other hand, in the decentralised blockchain model, where there is no central authority, the contract needs to be enforced by design. 
 
-This means that we require participants to commit money to cover all possible expenditure \emph{in advance of the contract executing}. In order to make sure that player continue to engage with a contract we ensure urgency by imposing timeouts: money is committed for a finite period, for example, and when waiting for a player to make a commitment we also impose a timeout to ensure that the contract does not become stuck even if one or more of the participants stops interacting with it.
+This means that we require participants to commit money to cover all possible expenditure \emph{in advance of the contract executing}. In order to make sure that player continue to engage with a contract we ensure urgency by imposing timeouts: money is committed for a finite period, for example, and when waiting for a player to make a commitment we also impose a timeout to ensure that the contract does not become stuck even if one or more of the participants stops interacting with it. We revisit this example in Section~\ref{section:example-escrow} where we show how commitments, timeouts and other features of Marlowe are used to describe this as a self-enforcing contract ``on the blockchain''.
 
 Moreover, there is not a single blockchain model, and we give a brief overview of the different mechanisms for scripting on blockchain (although this is not the primary purpose of this article). 
 A particularly important technical distinction here is that between an account-style model as used by Ethereum~\cite{EthereumRationale}, and the unspent transaction output (UTxO) model of bitcoin~\cite{sok}. 
@@ -550,13 +550,13 @@ We look next at an example of Marlowe in action.
 \label{section:example-saving}
 
 In this section, we show how Marlowe can be used for designing a contract that incentivises saving. We use the 
-following example: ``participant 2'' offers 20 ADA to ``participant 1'' in exchange for saving 100 ADA for 100 blocks. 
-``Participant 1'' will be able to withdraw the savings after block 20, but if that option is chosen, then ``participant 
-2'' will not pay the extra 20 ADA to ``participant 1''.
+following example: participant \haskellinline{2} offers 20 ADA to participant \haskellinline{1} in exchange for saving 100 ADA for 100 blocks. 
+participant \haskellinline{1} will be able to withdraw the savings after block 20, but if that option is chosen, then participant 
+ \haskellinline{2} will not pay the extra 20 ADA to participant \haskellinline{1}.
 
-We will start from outer to inner primitives. The first thing is to allow ``participant 1'' to commit the 100 ADA. The 
-primitive says that with identity \haskellinline{IdentCC 1} (this is the identity of the commitment), ``participant 
-\haskellinline{1}'' can commit \haskellinline{100} ADA before block \haskellinline{10}, and the commitment must 
+We will start from outer to inner primitives. The first thing is to allow participant \haskellinline{1} to commit the 100 ADA. The 
+primitive says that with identity \haskellinline{IdentCC 1} (this is the identity of the commitment), participant 
+\haskellinline{1} can commit \haskellinline{100} ADA before block \haskellinline{10}, and the commitment must 
 expire on block \haskellinline{200}. But if the money is not committed before block \haskellinline{10}, then the 
 contract will continue as \haskellinline{Null}.
 
@@ -567,10 +567,10 @@ CommitCash (IdentCC 1) 1 (ConstMoney 100) 10 200
 \end{haskellcode}
 
 If the commitment is done correctly and on time, we continue as in \haskellinline{step2}. \haskellinline{step2} is 
-another commitment, this time by ``participant 2''. The primitive says that with identity \haskellinline{IdentCC 2},
-``participant \haskellinline{2}'' can commit \haskellinline{20} ADA before block \haskellinline{20}, and the commitment
+another commitment, this time by participant \haskellinline{2}. The primitive says that with identity \haskellinline{IdentCC 2},
+participant \haskellinline{2} can commit \haskellinline{20} ADA before block \haskellinline{20}, and the commitment
 must expire on block \haskellinline{200}. But if the money is not committed before block \haskellinline{20}, then the
-contract will continue as \haskellinline{RedeemCC (IdentCC 1) Null}, which in turn gives ``participant 1'' the 
+contract will continue as \haskellinline{RedeemCC (IdentCC 1) Null}, which in turn gives participant \haskellinline{1} the 
 opportunity to withdraw all the money committed immediately.
 
 \begin{haskellcode}
@@ -580,7 +580,7 @@ CommitCash (IdentCC 2) 2 (ConstMoney 20) 20 200
 \end{haskellcode}
 
 If the commitment is done correctly and on time, we continue as in \haskellinline{step3}. \haskellinline{step3}
-waits until choice with identity \haskellinline{IdentChoice 1} is made by ``participant \haskellinline{1}'' or
+waits until choice with identity \haskellinline{IdentChoice 1} is made by participant \haskellinline{1} or
 until block \haskellinline{100} (whatever happens first). If the choice is made before block \haskellinline{100}, 
 it continues as \haskellinline{stepRedeem}, if block \haskellinline{100} comes first, then it continues as 
 \haskellinline{step4}.
@@ -591,8 +591,8 @@ When (PersonChoseSomething (IdentChoice 1) 1) 100
      step4
 \end{haskellcode}
 
-\haskellinline{step4} pays the \haskellinline{20} ADA committed by ``participant \haskellinline{2}'' in the commit with 
-identity \haskellinline{IdentPay 1} to ``participant \haskellinline{1}'', if the payment is claimed before block 
+\haskellinline{step4} pays the \haskellinline{20} ADA committed by participant \haskellinline{2} in the commit with 
+identity \haskellinline{IdentPay 1} to participant \haskellinline{1}, if the payment is claimed before block 
 \haskellinline{200}. Once the payment is claimed or after block 200, it continues as \haskellinline{stepRedeem}.
 
 \begin{haskellcode}
@@ -632,28 +632,27 @@ In the next section, we look at how to take advantage of Haskell embedding when 
 \section{Marlowe as a DSL embedded in Haskell}
 \label{section:example-escrow}
 
-In this section, we give an example of how we can have Marlowe contracts that are easier to write, read, and 
-understand, by embedding them into Haskel code (taking advantage that Marlowe contracts are implemented as Haskell 
-terms).
+In this section, we revisit the escrow example that we discussed briefly in the introduction, and show  how we can make Marlowe contracts that are easier to write, read, and 
+understand, by embedding them into Haskell code, taking advantage of the fact that Marlowe contracts are implemented as Haskell 
+terms.
 
-The example contract we use through this section implements an escrow contract. Let us imagine that ``participant 1'' 
-is buying some item from ``participant 2''. On one hand, if ``participant 1'' pays before receiving the item, there 
-is a risk that ``participant 2'' will never give ``participant 1'' the item. On the other hand, if ``participant 2'' 
-gives ``participant 1'' the item before ``participant 1'' pays, then there is a risk that ``participant 1'' will never 
+The example contract we use through this section implements an escrow contract. Let us imagine that participant \haskellinline{1} 
+is buying some item from participant \haskellinline{2}. On one hand, if participant \haskellinline{1} pays before receiving the item, there 
+is a risk that participant \haskellinline{2} will never give \haskellinline{1} the item. On the other hand, if participant \haskellinline{2} 
+gives participant \haskellinline{1} the item before \haskellinline{1} pays, then there is a risk that \haskellinline{1} will never 
 pay.
 
-The escrow mechanism allows ``participant 1'' to deposit the money into a contract, in a way that the money will only 
-be released when two out of three participants agree on whether ``participant 2'' has indeed given ``participant 1'' 
-the item. The third participant (``participant 3'') is supposed to be a neutral third party that will decide in case of 
+The escrow mechanism allows participant \haskellinline{1} to deposit the money into a contract, in a way that the money will only 
+be released when two out of three participants agree on whether participant \haskellinline{2} has indeed given participant \haskellinline{1} 
+the item. The third participant (participant \haskellinline{3}) is supposed to be a neutral third party that will decide in case of 
 dispute.
 
-This way, if ``participant 1'' and ``participant 2'' are honest, they will just agree on the result of the transaction 
-and ``participant 3'' will not need to do anything. If ``participant 1'' and ``participant 2'' disagree, ``participant 
-3'' will be able to choose whether the money must go to ``participant 1'' or to ``participant 2''.
+This way, if participants \haskellinline{1} and \haskellinline{2} are honest, they will just agree on the result of the transaction 
+and \haskellinline{3} will not need to do anything. If \haskellinline{1} and \haskellinline{2} disagree, participant \haskellinline{3} will be able to choose whether the money must go to \haskellinline{1} or to \haskellinline{2}.
 
 In addition to this, in our implementation, the money paid for the item is 450 ADA, it must be committed by 
-``participant 1'' before block 10, and it will be refunded to ``participant 1'' if there is no consensus before block 
-90.
+participant \haskellinline{1} before block \haskellinline{10}, and it will be refunded to participant \haskellinline{1} if there is no consensus before block 
+\haskellinline{90}.
 
 We start by defining some Haskell functions. We can encapsulate identifiers in functions to make the contract more 
 readable. That way we can generate an identifier for the cash commitment:
@@ -662,52 +661,40 @@ readable. That way we can generate an identifier for the cash commitment:
 iCC1 :: IdentCC
 iCC1 = IdentCC 1
 \end{haskellcode}
-
 And an identifier for the payment:
-
 \begin{haskellcode}
 iP1 :: IdentPay
 iP1 = IdentPay 1
 \end{haskellcode}
-
-We can also create a sub-contract that allows the money to be redeemed by ``participant 1'':
-
+We can also create a sub-contract that allows the money to be redeemed by participant \haskellinline{1}:
 \begin{haskellcode}
 redeem_original :: Contract
 redeem_original = RedeemCC iCC1 Null
 \end{haskellcode}
-
-Each participant has a say on who deserves the money: either ``participant 1'' deserves a refund, which we represent 
-with the number $0$; or ``participant 2'' deserves a payment, which we represent with the number $1$. Because there is 
+Each participant has a say on who deserves the money: either participant \haskellinline{1} deserves a refund, which we represent 
+with the number $0$; or participant \haskellinline{2} deserves a payment, which we represent with the number $1$. Because there is 
 only one choice to make per participant, we use the same \haskellinline{IdentChoice} as their participant id. We can 
 define a function that returns an observation that is true if and only if the participant \haskellinline{per} has 
 chosen the number \haskellinline{c} as follows:
-
 \begin{haskellcode}
 chose :: Int -> ConcreteChoice -> Observation
 chose per c = PersonChoseThis (IdentChoice per) per c
 \end{haskellcode}
-
 Then we can easily write a function that returns an observation that is true if and only if at least one of the 
 participants \haskellinline{per} and \haskellinline{per'} has chosen the number \haskellinline{c} as follows:
-
 \begin{haskellcode}
 one_chose :: Person -> Person -> ConcreteChoice -> Observation
 one_chose per per' val = (OrObs (chose per val) (chose per' val)) 
 \end{haskellcode}
-
 After that, we can write a function that returns an observation that is true if and only if at least 
 two of the three participants \haskellinline{p1}, \haskellinline{p2}, and \haskellinline{p3} have chosen the number 
 \haskellinline{c} as follows:
-
 \begin{haskellcode}
 two_chose :: Person -> Person -> Person -> ConcreteChoice -> Observation
 two_chose p1 p2 p3 c = OrObs (AndObs (chose p1 c) (one_chose p2 p3 c))
                              (AndObs (chose p2 c) (chose p3 c))
 \end{haskellcode}
-
-Finally, we can write the escrow contract, which would remain as follows:
-
+Finally, we can write the escrow contract, thus:
 \begin{haskellcode}
 escrow :: Contract
 escrow = CommitCash iCC1 1 (ConstMoney 450) 10 100
@@ -722,20 +709,20 @@ escrow = CommitCash iCC1 1 (ConstMoney 450) 10 100
                     Null
 \end{haskellcode}
 
-The outermost primitive \haskellinline{CommitCash} allows the ``participant 1'' to commit 450 ADA before block 10, 
+The outermost primitive \haskellinline{CommitCash} allows the participant \haskellinline{1} to commit 450 ADA before block 10, 
 with the promise that money will be released on block 100 if they are not claimed before that.
 
 The next primitive, \haskellinline{When}, waits for one of three things to happen:
 \begin{enumerate}
- \item Two out of three choose $0$.
- \item Two out of three choose $1$.
+ \item Two out of three choose $0$, for \haskellinline{pay}. 
+ \item Two out of three choose $1$, for \haskellinline{refund}.
  \item The block 90 is added to the blockchain.
 \end{enumerate}
 
 If the third option happens first, the money is refunded. Otherwise, there is a \haskellinline{Choice} that will 
-immediately refund the money to ``participant 1'' unless two out of three chose $1$; in the later case, 
-\haskellinline{Pay} will give ``participant 2'' the opportunity to claim the funds available in \haskellinline{iCC1} 
-before block 100. If the funds are not claimed before block 100 they will also be refunded to ``participant 1''.
+immediately refund the money to participant \haskellinline{1} unless two out of three chose option $1$; in the later case, 
+\haskellinline{Pay} will give participant \haskellinline{2} the opportunity to claim the funds available in \haskellinline{iCC1} 
+before block 100. If the funds are not claimed before block 100 they will also be refunded to participant \haskellinline{1}.
 
 In the next section, we cover the online contract visualisation and interaction tool for Marlowe.
 

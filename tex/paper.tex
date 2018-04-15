@@ -146,9 +146,20 @@ and ease of analysis and use.
 
 This paper explores the design of a domain specific language, Marlowe,\footnote{Marlowe is named after Christopher Marlowe, the Elizabethan poet, dramatist and spy, who was born and educated in Canterbury, which is also where our university is based. \url{https://en.wikipedia.org/wiki/Christopher_Marlowe}}\footnote{The code for Marlowe is available from \url{https://github.com/input-output-hk/scdsl}
 } targetted at the execution of financial contracts in the style of Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains. This work is a part of the Cardano project, and is supported by IOHK.\footnote{\url{https://iohk.io}}
-In doing this we are required to refine the model of contracts in a number of ways in order to fit with a radically different context. 
 
-In the traditional model, enforcement of the contract is the responsibility of the legal system; in the decentralised blockchain model, in which there is no central authority, the contract needs to be enforced by design. This means that we require participants to commit currency (or ``cash'' as we term it) to cover all possible expenditure in advance of the contract executing; we also have to use timeouts to ensure that the contract does not become stuck even if one or more of the participants stop interacting with it.
+In doing this we are required to refine the model of contracts in a number of ways in order to fit with a radically different context. Taking the following example of an ``escrow'' contract we can explain the differences more concretely. The aim of this contract, written in functional pseudocode in the style of~\cite{PeytonJones:2000} involves players 1, 2 and 3. Player 1 is to pay an amount of money to player 2 on receipt of goods. She pays the sum into escrow controlled by player 3. There are two options for the money: if two players agree to \haskellinline{pay} it goes ahead; if, on the other hand, two of the players opt to \haskellinline{refund} the money, that is done. The \haskellinline{When} construct ensures fires when its first argument -- a condition -- becomes true; the second argument, a \haskellinline{Contract} itself, is then performed, and this makes the payment according to the players' \haskellinline{Choice}.
+
+\begin{haskellcode}
+(When (Or (two_chose 1 2 3 refund)
+          (two_chose 1 2 3 pay))
+      (Choice (two_chose 1 2 3 pay)
+              (Pay 1 2 AvailableMoney)
+              redeem_original))
+\end{haskellcode}
+
+In the traditional model, enforcement of the contract is the responsibility of the legal system. If player 1 doesn't pay the money into escrow, or play 3 chooses to keep it for herself, then we can assume that they can be sued for the money and probably damages on top, thus providing both legal and financial incentives for compliance. On the other hand, in the decentralised blockchain model, where there is no central authority, the contract needs to be enforced by design. 
+
+This means that we require participants to commit money to cover all possible expenditure \emph{in advance of the contract executing}. In order to make sure that player continue to engage with a contract we ensure urgency by imposing timeouts: money is committed for a finite period, for example, and when waiting for a player to make a commitment we also impose a timeout to ensure that the contract does not become stuck even if one or more of the participants stops interacting with it.
 
 Moreover, there is not a single blockchain model, and we give a brief overview of the different mechanisms for scripting on blockchain (although this is not the primary purpose of this article). 
 A particularly important technical distinction here is that between an account-style model as used by Ethereum~\cite{EthereumRationale}, and the unspent transaction output (UTxO) model of bitcoin~\cite{sok}. 
@@ -159,7 +170,7 @@ The paper describes version 1.2 of Marlowe, and it should be seen as a work in p
 
 The paper is structured like this: we begin in Section \ref{section:design} with a discussion of the design rationale for Marlowe, including an overview of the various approaches to scripting in blockchain as well as the different designs of the blockchains themselves. We conclude Section \ref{section:design} with a set of decisions about the blockchain environment for Marlowe. The central part of the paper is Section \ref{section:model} where we introduce the Marlowe model, including the assumptions made in designing 
 it, the types of the principal functions and a description of the DSL as an algebraic type, constructor by constructor. 
-Section \ref{section:example} presents an example of a larger Marlowe contract, for incentivised saving, and Section 
+Section \ref{section:example-saving} presents an example of a larger Marlowe contract, for incentivised saving. Section \ref{section:example-escrow} revisits the escrow example, and shows how it is described using a combination of Marlowe and Haskell constructs: that is, we use Marlowe as an embedded DSL. Section 
 \ref{section:tool} introduces Meadow, our tool for visualising and interacting with Marlowe contracts.
 Section \ref{section:reflection} reflects on the system design, and observes some alternative designs and Section \ref{section:next-steps} enumerates the next steps for the project.
 
@@ -292,7 +303,8 @@ Marlowe is described as an algebraic \haskellinline{data} type in Haskell, and a
 \label{section:model}
 
 The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
-We start by looking at the different types used by the model, then we look at the \haskellinline{Contract} DSL itself, and finally we give its semantics in Haskell. Section \ref{section:example} gives an example of Marlowe in action.
+We start by looking at the different types used by the model, then we look at the \haskellinline{Contract} DSL itself, and finally we give its semantics in Haskell. Section \ref{section:example-saving} gives an example of Marlowe in action, and Section
+\ref{section:example-escrow} shows the advantage of seeing Marlowe as a DSL embedded in Haskell.
 
 \subsection{The model types}
 
@@ -535,7 +547,7 @@ We look next at an example of Marlowe in action.
 
 
 \section{Incentivised saving}
-\label{section:example}
+\label{section:example-saving}
 
 In this section, we show how Marlowe can be used for designing a contract that incentivises saving. We use the 
 following example: ``participant 2'' offers 20 ADA to ``participant 1'' in exchange for saving 100 ADA for 100 blocks. 
@@ -617,8 +629,8 @@ CommitCash (IdentCC 1) 1
 
 In the next section, we look at how to take advantage of Haskell embedding when implementing Marlowe contracts.
 
-\section{Haskell embedding example}
-\label{section:example}
+\section{Marlowe as a DSL embedded in Haskell}
+\label{section:example-escrow}
 
 In this section, we give an example of how we can have Marlowe contracts that are easier to write, read, and 
 understand, by embedding them into Haskel code (taking advantage that Marlowe contracts are implemented as Haskell 
@@ -739,7 +751,7 @@ edition, and simulation of smart-contracts written in Marlowe. The
 tool is publicly available in the url: \url{https://input-output-hk.github.io/scdsl/}.
 In Figure~\ref{fig:full-screenshot-demo}, we provide a screenshot
 of Meadow in the middle of simulating the execution of the ``incentivised
-saving'' contract described in Section~\ref{section:example}.
+saving'' contract described in Section~\ref{section:example-saving}.
 
 Meadow has been mainly written in Haskell and compiled to JavaScript
 by the Haste compiler~\cite{Haste}, it also relies on

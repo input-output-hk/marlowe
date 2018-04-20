@@ -826,7 +826,7 @@
                                 <field name="ALIGN">RIGHT</field>
                                 <statement name="FIELDS">
                                   <block type="field_static" id=")pM}%KI)J+w8iWrRij~s">
-                                    <field name="TEXT">if claimed before block</field>
+                                    <field name="TEXT">if not claimed before block</field>
                                     <next>
                                       <block type="field_number" id="Q!S?{(2xP)0s.?asSd[+">
                                         <field name="VALUE">1</field>

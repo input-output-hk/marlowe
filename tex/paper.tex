@@ -369,7 +369,7 @@ Similar properties are true for
 contract, they can be deterministically established given the context, and they are described through a small 
 ``expression language''.
 \item It is important to be aware that there may be different instances of contracts executed, and for each instance there will typically be different instances of observables (and commitments) observed and recorded.
-\item The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the \haskellinline{fullStep} function below).
+\item The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the \haskellinline{computeAll} function below).
 \end{itemize}
 
 \subsection{The \haskellinline{Contract} type}
@@ -394,8 +394,7 @@ data Contract =
 The \haskellinline{step} function is total, so that for every contract a result of stepping is defined. However, for some kinds of contracts -- commits, redeems or time-shifted contracts -- it is possible that the result of a step is to produce the same contract as the result; such a step is called \emph{quiescent} whereas all other steps \emph{make progress}. We use this distinction in the explanation that follows.
 
 
-At each computational step, the \haskellinline{step} function is wrapped by a call to the \haskellinline{fullStep} function, which in addition to performing \haskellinline{step} will enable expired cash commitments to be refunded and record any choices made at that step.
-
+The function \haskellinline{step} is wrapped by the \haskellinline{stepAll} function, which calls \haskellinline{step} until it stops having any effects. For every block, the \haskellinline{computeAll} function is called. In addition to calling \haskellinline{stepAll}, \haskellinline{computeAll} will first enable expired cash commitments to be refunded and record any choices made at that step.
 
 The constructors are interpreted like this:
 
@@ -442,7 +441,7 @@ In the first case, a \haskellinline{SuccessfulCommit} action is generated and th
 \haskellinline{k2}. While neither case holds the contract is quiescent, waiting for the cash to be committed. 
 
 If the cash is committed successfully and the timeout \haskellinline{t2} is reached, then it is impossible to further spend the committed cash, and any unspent funds can be reclaimed by participant \haskellinline{p}.
- This is performed by the \haskellinline{fullStep} function, as noted above.
+ This is performed by the \haskellinline{computeAll} function, as noted above.
 
 \item \haskellinline{RedeemCC idCC k} (\haskellinline{CC} stands for cash commitment.) For this contract to make progress, the creator of the cash commitment with identifier \haskellinline{idCC} is required to redeem the unspent funds in that commitment; the contract then continues as \haskellinline{k}, and the action \haskellinline{CommitRedeemed} is produced. 
 
@@ -466,7 +465,7 @@ step commits st c@(RedeemCC ident con) _ =
 
 Committed cash can only be redeemed once, and an attempt to redeem it a second time will produce a  \haskellinline{DuplicateRedeem} action, continuing as \haskellinline{k}.
 
-If the cash commitment with identifier \haskellinline{idCC} has expired, it becomes possible for the remaining funds to be redeemed by the committer; this can be done by the \haskellinline{fullStep} function processing the appropriate \haskellinline{Input}, and an \haskellinline{ExpiredCommitRedeemed} action will be produced. 
+If the cash commitment with identifier \haskellinline{idCC} has expired, it becomes possible for the remaining funds to be redeemed by the committer; this can be done by the \haskellinline{computeAll} function processing the appropriate \haskellinline{Input}, and an \haskellinline{ExpiredCommitRedeemed} action will be produced. 
 
 Once the commitment \haskellinline{idCC} has expired and is redeemed, a \haskellinline{RedeemCC idCC k} contract will immediately evolve to \haskellinline{k}.
 %\footnote{How does the contract determine what actions resulted from a given step? Or is this not required?}

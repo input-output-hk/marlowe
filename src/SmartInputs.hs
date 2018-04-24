@@ -78,7 +78,7 @@ getPotentialInputsFromState os State {sc = commits} =
 -- It takes all choices as "0", independently of what would be useful
 getPossibleInputs :: OS -> Input -> Contract -> State -> Input
 getPossibleInputs os inp contr stat = foldl1 combineInputs [inputsFromContract, inputsFromState, choices]
-  where (statGivenInputs, contractGivenInputs, _) = computeAll inp stat contr os
+  where (statGivenInputs, contractGivenInputs, _) = stepBlock inp stat contr os
         inputsFromContract = getPotentialInputsFromContract os contractGivenInputs statGivenInputs
         inputsFromState = getPotentialInputsFromState os statGivenInputs
         choices = getUsedChoiceNumbers statGivenInputs contractGivenInputs

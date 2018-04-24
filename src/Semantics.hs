@@ -17,7 +17,7 @@ import qualified Data.Maybe as Maybe
  --     - type of State (of the internal state of a DSL contract evaluation)                    --
  --     - type of Observations (of values of Observables)                                       --
  --     - type of Contracts                                                                     --
- --     - single step evaluation (the step function) which is wrapped by fullStep …             --
+ --     - single step evaluation (the step function) which is wrapped by stepBlock …            --
  --     - … which expires and refunds cash commitments                                          --
  --                                                                                             --
  -- Further discussion in accompanying document.                                                --
@@ -333,9 +333,9 @@ step commits st c@(RedeemCC ident con) _ =
     where
         ccs = sc st
 
---------------------------
--- stepAll & computeAll --
---------------------------
+-------------------------
+-- stepAll & stepBlock --
+-------------------------
 
 -- Given a choice, if no previous choice for its id has been recorded,
 -- it records it in the map, and adds an action ChoiceMade to the list.
@@ -408,9 +408,9 @@ stepAllAux com st con os ac
 -- Wraps stepAll function to carry out actions that need to be
 -- done once per block (refund expired cash commitments, and record choices)
 
-computeAll :: Input -> State -> Contract -> OS -> (State, Contract, AS)
+stepBlock :: Input -> State -> Contract -> OS -> (State, Contract, AS)
 
-computeAll inp st con os = (rs, rcon, nas)
+stepBlock inp st con os = (rs, rcon, nas)
   where (nsch, chas) = recordChoices inp (sch st)
         (nsc, pas) = expireCommits inp (sc st) os
         nst = st { sc = nsc, sch = nsch }
@@ -499,7 +499,7 @@ lowerExpirationDateButNotExpired _ _ = EQ
  - Driver -
  ----------}
 
--- Driver for a single step of execution, using the fullStep function
+-- Driver for a single step of execution, using the stepBlock function
 -- This first performs any repayments due because of an expired commit,
 -- then calls the step function.
 
@@ -512,7 +512,7 @@ driver start_state contract input =
  case input of
   [] -> error "Input should be infinite in driver"
   (com1,os1):rest_input ->
-    let (next_st,next_con,aset) = computeAll com1 start_state contract os1 in
+    let (next_st,next_con,aset) = stepBlock com1 start_state contract os1 in
     let rest                    = driver next_st next_con rest_input in aset:rest
 
 

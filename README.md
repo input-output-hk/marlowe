@@ -2,7 +2,7 @@
 
 This repository contains a preliminary design of a DSL for describing smart-contracts that can be enforced by scripts deployed on a cryptocurrency's blockchain, and some tools for analysing and simulating the execution of contracts written in the DSL.
 
-- `src/Semantics.hs` —  contains the small-step semantics of DSL (`fullStep` function), together with a simple driver (`driver` function).
+- `src/Semantics.hs` —  contains the small-step semantics of DSL (`stepBlock` function), together with a simple driver (`driver` function).
 - `src/ContractFormatter.hs` — contains the implementation of a formatter for scdsl code.
 - `src/SmartInputs.hs` — contains code that calculates possible inputs for a
  given input, state, contract, and observables value.

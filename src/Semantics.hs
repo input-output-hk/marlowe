@@ -333,9 +333,9 @@ step commits st c@(RedeemCC ident con) _ =
     where
         ccs = sc st
 
----------------------------
--- fullStep & computeAll --
----------------------------
+--------------------------
+-- stepAll & computeAll --
+--------------------------
 
 -- Given a choice, if no previous choice for its id has been recorded,
 -- it records it in the map, and adds an action ChoiceMade to the list.
@@ -390,7 +390,7 @@ expireCommits inp scf os = (Map.union uexp nsc, pas)
         et = blockNumber os
         uexp = Map.map markRedeemed expi
 
--- Repeatedly calls the step function (fullStep function actually) until
+-- Repeatedly calls the step function until
 -- it does not change anything or produces any actions
 
 stepAll :: Input -> State -> Contract -> OS -> (State, Contract, AS)
@@ -405,7 +405,8 @@ stepAllAux com st con os ac
   where
     (nst, ncon, nac) = step com st con os
 
--- Wraps step function to refund expired cash commitments
+-- Wraps stepAll function to carry out actions that need to be
+-- done once per block (refund expired cash commitments, and record choices)
 
 computeAll :: Input -> State -> Contract -> OS -> (State, Contract, AS)
 

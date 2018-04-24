@@ -389,31 +389,32 @@ expireCommits inp scf os = (Map.union uexp nsc, pas)
         pas = [ExpiredCommitRedeemed ident p val | (ident, (p, NotRedeemed val _)) <- Map.toList expi]
         et = blockNumber os
         uexp = Map.map markRedeemed expi
--- Wraps step function to refund expired cash commitments
-
-fullStep :: Input -> State -> Contract -> OS -> (State, Contract, AS)
-
-fullStep inp st con os = (rs, rcon, nas)
-  where (nsch, chas) = recordChoices inp (sch st)
-        (nsc, pas) = expireCommits inp (sc st) os
-        nst = st { sc = nsc, sch = nsch }
-        nas = chas ++ pas ++ ras
-        (rs, rcon, ras) = step inp nst con os
 
 -- Repeatedly calls the step function (fullStep function actually) until
 -- it does not change anything or produces any actions
 
+stepAll :: Input -> State -> Contract -> OS -> (State, Contract, AS)
+
+stepAll com st con os = stepAllAux com st con os []
+
+stepAllAux :: Input -> State -> Contract -> OS -> AS -> (State, Contract, AS)
+
+stepAllAux com st con os ac
+  | (nst == st) && (ncon == con) && null nac = (st, con, ac)
+  | otherwise = stepAllAux com nst ncon os (nac ++ ac)
+  where
+    (nst, ncon, nac) = step com st con os
+
+-- Wraps step function to refund expired cash commitments
+
 computeAll :: Input -> State -> Contract -> OS -> (State, Contract, AS)
 
-computeAll com st con os = computeAllAux com st con os []
-
-computeAllAux :: Input -> State -> Contract -> OS -> AS -> (State, Contract, AS)
-
-computeAllAux com st con os ac
-  | (nst == st) && (ncon == con) && null nac = (st, con, ac)
-  | otherwise = computeAllAux com nst ncon os (nac ++ ac)
-  where
-    (nst, ncon, nac) = fullStep com st con os
+computeAll inp st con os = (rs, rcon, nas)
+  where (nsch, chas) = recordChoices inp (sch st)
+        (nsc, pas) = expireCommits inp (sc st) os
+        nst = st { sc = nsc, sch = nsch }
+        nas = chas ++ pas ++ ras
+        (rs, rcon, ras) = stepAll inp nst con os
 
 -------------------------
 -- Auxiliary functions --
@@ -510,7 +511,7 @@ driver start_state contract input =
  case input of
   [] -> error "Input should be infinite in driver"
   (com1,os1):rest_input ->
-    let (next_st,next_con,aset) = fullStep com1 start_state contract os1 in
+    let (next_st,next_con,aset) = computeAll com1 start_state contract os1 in
     let rest                    = driver next_st next_con rest_input in aset:rest
 
 

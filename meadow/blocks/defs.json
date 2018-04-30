@@ -678,4 +678,214 @@
   "colour": 135,
   "tooltip": "",
   "helpUrl": ""
+},
+{
+  "type": "contract_bindcontract",
+  "message0": "CBind %1 with id %2 %3 bind the contract %4 %5 continue as %6 %7",
+  "args0": [
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "field_number",
+      "name": "cbind_id",
+      "value": 0,
+      "min": 0
+    },
+    {
+      "type": "input_dummy",
+      "align": "RIGHT"
+    },
+    {
+      "type": "input_dummy",
+      "align": "RIGHT"
+    },
+    {
+      "type": "input_statement",
+      "name": "contract1",
+      "check": "contract",
+      "align": "RIGHT"
+    },
+    {
+      "type": "input_dummy",
+      "align": "RIGHT"
+    },
+    {
+      "type": "input_statement",
+      "name": "contract2",
+      "check": "contract",
+      "align": "RIGHT"
+    }
+  ],
+  "previousStatement": "contract",
+  "colour": 0,
+  "tooltip": "",
+  "helpUrl": ""
+},
+{
+  "type": "contract_bindobservation",
+  "message0": "OBind %1 with id %2 %3 bind the observation %4 continue as %5 %6",
+  "args0": [
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "field_number",
+      "name": "obind_id",
+      "value": 0,
+      "min": 0
+    },
+    {
+      "type": "input_dummy",
+      "align": "RIGHT"
+    },
+    {
+      "type": "input_value",
+      "name": "observation",
+      "check": "observation",
+      "align": "RIGHT"
+    },
+    {
+      "type": "input_dummy",
+      "align": "RIGHT"
+    },
+    {
+      "type": "input_statement",
+      "name": "contract",
+      "check": "contract",
+      "align": "RIGHT"
+    }
+  ],
+  "previousStatement": "contract",
+  "colour": 0,
+  "tooltip": "",
+  "helpUrl": ""
+},
+{
+  "type": "contract_unbindcontract",
+  "message0": "CUnbind %1 unbind last contract %2 bound with id %3 %4 continue as %5",
+  "args0": [
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "input_dummy",
+      "align": "RIGHT"
+    },
+    {
+      "type": "field_number",
+      "name": "cbind_id",
+      "value": 0,
+      "min": 0
+    },
+    {
+      "type": "input_dummy",
+      "align": "RIGHT"
+    },
+    {
+      "type": "input_statement",
+      "name": "contract",
+      "check": "contract",
+      "align": "RIGHT"
+    }
+  ],
+  "previousStatement": "contract",
+  "colour": 0,
+  "tooltip": "",
+  "helpUrl": ""
+},
+{
+  "type": "contract_unbindobservation",
+  "message0": "OUnbind %1 unbind last observation %2 bound with id %3 %4 continue as %5",
+  "args0": [
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "field_number",
+      "name": "obind_id",
+      "value": 0,
+      "min": 0
+    },
+    {
+      "type": "input_dummy",
+      "align": "RIGHT"
+    },
+    {
+      "type": "input_statement",
+      "name": "contract",
+      "check": "contract",
+      "align": "RIGHT"
+    }
+  ],
+  "previousStatement": "contract",
+  "colour": 0,
+  "tooltip": "",
+  "helpUrl": ""
+},
+{
+  "type": "contract_replacecontractbind",
+  "lastDummyAlign0": "RIGHT",
+  "message0": "CReplace %1 continue using the last %2 contract bound with id %3 %4 unbind it before continuing",
+  "args0": [
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "field_number",
+      "name": "obind_id",
+      "value": 0,
+      "min": 0
+    },
+    {
+      "type": "input_dummy",
+      "align": "RIGHT"
+    }
+  ],
+  "previousStatement": "contract",
+  "colour": 0,
+  "tooltip": "",
+  "helpUrl": ""
+},
+{
+  "type": "observation_replaceobservationbind",
+  "lastDummyAlign0": "RIGHT",
+  "message0": "OReplace %1 evaluate as the last %2 observation bound with id %3 %4 unbind it before continuing",
+  "args0": [
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "input_dummy",
+      "align": "CENTRE"
+    },
+    {
+      "type": "field_number",
+      "name": "obind_id",
+      "value": 0,
+      "min": 0
+    },
+    {
+      "type": "input_dummy",
+      "align": "RIGHT"
+    }
+  ],
+  "output": null,
+  "colour": 230,
+  "tooltip": "",
+  "helpUrl": ""
 }]

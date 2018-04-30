@@ -18,6 +18,9 @@
       <field name="choice_value">0</field>
     </block>
     <block type="observation_value_ge"></block>
+    <block type="observation_replaceobservationbind">
+      <field name="obind_id">0</field>
+    </block>
   </category>
   <category name="Contract">
     <block type="contract_null"></block>
@@ -40,6 +43,21 @@
     </block>
     <block type="contract_redeemcc">
       <field name="ccommit_id">1</field>
+    </block>
+    <block type="contract_bindcontract">
+      <field name="cbind_id">0</field>
+    </block>
+    <block type="contract_bindobservation">
+      <field name="obind_id">0</field>
+    </block>
+    <block type="contract_unbindcontract">
+      <field name="cbind_id">0</field>
+    </block>
+    <block type="contract_unbindobservation">
+      <field name="obind_id">0</field>
+    </block>
+    <block type="contract_replacecontractbind">
+      <field name="obind_id">0</field>
     </block>
   </category>
   <category name="Money">

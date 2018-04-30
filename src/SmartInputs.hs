@@ -27,6 +27,14 @@ getPotentialInputsFromContract _ (Pay idenpay _ pt cash _ _) st =
 getPotentialInputsFromContract os (Both c1 c2) st
   = combineInputs (getPotentialInputsFromContract os c1 st)
                   (getPotentialInputsFromContract os c2 st)
+getPotentialInputsFromContract os (CBind _ _ c) st
+  = getPotentialInputsFromContract os c st
+getPotentialInputsFromContract os (OBind _ _ c) st
+  = getPotentialInputsFromContract os c st
+getPotentialInputsFromContract os (OUnbind _ c) st
+  = getPotentialInputsFromContract os c st
+getPotentialInputsFromContract os (CUnbind _ c) st
+  = getPotentialInputsFromContract os c st
 getPotentialInputsFromContract _ _ _ = emptyInput
 
 -- Obtains all the choices that are checked by an observation (taken as "0")
@@ -41,6 +49,7 @@ getUsedChoiceNumbersObs st (AndObs obs1 obs2) =
   foldl1 combineInputs $ map (getUsedChoiceNumbersObs st) [obs1, obs2]
 getUsedChoiceNumbersObs st (OrObs obs1 obs2) =
   foldl1 combineInputs $ map (getUsedChoiceNumbersObs st) [obs1, obs2]
+getUsedChoiceNumbersObs _ (OReplace _) = emptyInput
 getUsedChoiceNumbersObs st (NotObs obs) = getUsedChoiceNumbersObs st obs
 getUsedChoiceNumbersObs st (ValueGE m1 m2) = foldl1 combineInputs $ map (getUsedChoiceNumbersMoney st) [m1, m2]
 getUsedChoiceNumbersObs _ _ = emptyInput
@@ -48,17 +57,17 @@ getUsedChoiceNumbersObs _ _ = emptyInput
 -- Obtains all the choices that are potentially checked by a money expression (taken as "0")
 getUsedChoiceNumbersMoney :: State -> Money -> Input
 getUsedChoiceNumbersMoney st (AddMoney m1 m2) = foldl1 combineInputs $ map (getUsedChoiceNumbersMoney st) [m1, m2]
-getUsedChoiceNumbersMoney st (MoneyFromChoice identch per m)
- = foldl1 combineInputs $ [emptyInput {ic = Map.singleton (identch, per) 0}, getUsedChoiceNumbersMoney st m]
-getUsedChoiceNumbersMoney st _ = emptyInput
+getUsedChoiceNumbersMoney st (MoneyFromChoice identch per m) =
+  foldl1 combineInputs [emptyInput {ic = Map.singleton (identch, per) 0}, getUsedChoiceNumbersMoney st m]
+getUsedChoiceNumbersMoney _ _ = emptyInput
 
 -- Obtains all the choices that are potentially checked by a contract (taken as "0")
 getUsedChoiceNumbers :: State -> Contract -> Input
-getUsedChoiceNumbers st (CommitCash _ _ m _ _ c1 c2)
- = foldl1 combineInputs $ ((getUsedChoiceNumbersMoney st m):(map (getUsedChoiceNumbers st) [c1, c2]))
+getUsedChoiceNumbers st (CommitCash _ _ m _ _ c1 c2) =
+  foldl1 combineInputs (getUsedChoiceNumbersMoney st m : map (getUsedChoiceNumbers st) [c1, c2])
 getUsedChoiceNumbers st (RedeemCC _ c) = getUsedChoiceNumbers st c
-getUsedChoiceNumbers st (Pay _ _ _ m _ c)
- = foldl1 combineInputs $ [getUsedChoiceNumbersMoney st m, getUsedChoiceNumbers st c]
+getUsedChoiceNumbers st (Pay _ _ _ m _ c) =
+  foldl1 combineInputs [getUsedChoiceNumbersMoney st m, getUsedChoiceNumbers st c]
 getUsedChoiceNumbers st (Both c1 c2) =
   foldl1 combineInputs $ map (getUsedChoiceNumbers st) [c1, c2]
 getUsedChoiceNumbers _ Null = emptyInput
@@ -66,6 +75,13 @@ getUsedChoiceNumbers st (Choice obs c1 c2) =
   foldl1 combineInputs (getUsedChoiceNumbersObs st obs : map (getUsedChoiceNumbers st) [c1, c2])
 getUsedChoiceNumbers st (When obs _ c1 c2) =
   foldl1 combineInputs (getUsedChoiceNumbersObs st obs : map (getUsedChoiceNumbers st) [c1, c2])
+getUsedChoiceNumbers _ (CReplace _) = emptyInput
+getUsedChoiceNumbers st (CBind _ c1 c2) =
+  foldl1 combineInputs (map (getUsedChoiceNumbers st) [c1, c2])
+getUsedChoiceNumbers st (OBind _ o c) =
+  foldl1 combineInputs [getUsedChoiceNumbersObs st o, getUsedChoiceNumbers st c]
+getUsedChoiceNumbers st (OUnbind _ c) = getUsedChoiceNumbers st c
+getUsedChoiceNumbers st (CUnbind _ c) = getUsedChoiceNumbers st c
 
 -- Obtains all the valid redeems that can be done because they expired
 getPotentialInputsFromState :: OS -> State -> Input

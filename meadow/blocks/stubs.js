@@ -189,3 +189,52 @@ Blockly.JavaScript['money_from_choice'] = function(block) {
   // TODO: Change ORDER_NONE to the correct strength.
   return [code, Blockly.JavaScript.ORDER_NONE];
 };
+
+Blockly.JavaScript['contract_bindcontract'] = function(block) {
+  var number_cbind_id = block.getFieldValue('cbind_id');
+  var statements_contract1 = Blockly.JavaScript.statementToCode(block, 'contract1');
+  var statements_contract2 = Blockly.JavaScript.statementToCode(block, 'contract2');
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...;\n';
+  return code;
+};
+
+Blockly.JavaScript['contract_bindobservation'] = function(block) {
+  var number_obind_id = block.getFieldValue('obind_id');
+  var value_observation = Blockly.JavaScript.valueToCode(block, 'observation', Blockly.JavaScript.ORDER_ATOMIC);
+  var statements_contract = Blockly.JavaScript.statementToCode(block, 'contract');
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...;\n';
+  return code;
+};
+
+Blockly.JavaScript['contract_unbindcontract'] = function(block) {
+  var number_cbind_id = block.getFieldValue('cbind_id');
+  var statements_contract = Blockly.JavaScript.statementToCode(block, 'contract');
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...;\n';
+  return code;
+};
+
+Blockly.JavaScript['contract_unbindobservation'] = function(block) {
+  var number_obind_id = block.getFieldValue('obind_id');
+  var statements_contract = Blockly.JavaScript.statementToCode(block, 'contract');
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...;\n';
+  return code;
+};
+
+Blockly.JavaScript['contract_replacecontractbind'] = function(block) {
+  var number_obind_id = block.getFieldValue('obind_id');
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...;\n';
+  return code;
+};
+
+Blockly.JavaScript['observation_replaceobservationbind'] = function(block) {
+  var number_obind_id = block.getFieldValue('obind_id');
+  // TODO: Assemble JavaScript into code variable.
+  var code = '...';
+  // TODO: Change ORDER_NONE to the correct strength.
+  return [code, Blockly.JavaScript.ORDER_NONE];
+};

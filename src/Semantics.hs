@@ -182,13 +182,14 @@ data State = State {
 
 data Environment = Environment {
                      cbin  :: IStack.IStack IdentCBind Contract,
-                     obin  :: IStack.IStack IdentOBind Observation
+                     obin  :: IStack.IStack IdentOBind Observation,
+                     bindOrder :: [Either IdentCBind IdentOBind]
                    }
                deriving (Eq,Ord,Show,Read)
 
 -- Empty environment definition
 emptyEnvironment :: Environment
-emptyEnvironment = Environment { cbin = IStack.empty, obin = IStack.empty }
+emptyEnvironment = Environment { cbin = IStack.empty, obin = IStack.empty, bindOrder = [] }
 
 type CCStatus = (Person,CCRedeemStatus)
 data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
@@ -264,8 +265,13 @@ interpretObs st env (OReplace ident) os
      Just o -> interpretObs st nenv o os
      Nothing -> Right [FailedOReplace ident]
   where
+    bo = bindOrder env
     ob = obin env
-    nenv = env {obin = IStack.pop ident ob}
+    cb = cbin env
+    nenv = env {obin = nob, cbin = ncb, bindOrder = rest}
+    (us, (_:rest)) = span (/= Right ident) bo
+    nob = IStack.popAll [ x | Right x <- (Right ident:us)] ob
+    ncb = IStack.popAll [ x | Left x <- us] cb
 
 -- The type of contracts
 
@@ -369,21 +375,25 @@ step commits st _ c@(RedeemCC ident con) _ =
 step commits st env (CBind ident c1 c2) os = (ns, CBind ident c1 nc2, na)
   where
     cb = cbin env
-    nenv = env {cbin = IStack.insert ident c1 cb}
+    bo = bindOrder env
+    nenv = env {cbin = IStack.insert ident c1 cb, bindOrder = Left ident : bo}
     (ns, nc2, na) = step commits st nenv c2 os
 
 step commits st env (OBind ident o c) os = (ns, OBind ident o nc, na)
   where
     ob = obin env
-    nenv = env {obin = IStack.insert ident o ob}
+    bo = bindOrder env
+    nenv = env {obin = IStack.insert ident o ob, bindOrder = Right ident : bo}
     (ns, nc, na) = step commits st nenv c os
 
 step _ st env (CReplace ident) _
   = case IStack.lookup ident cb of
-     Just c -> (st, CUnbind ident c, [])
+     Just c -> (st, unbinds (Left ident : us) c, [])
      Nothing -> (st, Null, [FailedCReplace ident])
   where
     cb = cbin env
+    bo = bindOrder env
+    us = takeWhile (/= Left ident) bo
 
 step commits st env (CUnbind ident c) os
   = case IStack.lookup ident cb of
@@ -491,6 +501,13 @@ stepBlock inp st con os = (rs, rcon, nas)
 -------------------------
 -- Auxiliary functions --
 -------------------------
+
+-- Creates a chain to unbind the identifiers provided
+
+unbinds :: [Either IdentCBind IdentOBind] -> Contract -> Contract
+unbinds [] c = c
+unbinds (Left c1 : r) c2 = CUnbind c1 (unbinds r c2)
+unbinds (Right o : r) c = OUnbind o (unbinds r c)
 
 -- If both are Left apply the function, otherwise concatenate the Rights
 

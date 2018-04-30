@@ -1,5 +1,6 @@
-module IStack(IStack, empty, insert, IStack.lookup, pop) where
+module IStack(IStack, empty, insert, IStack.lookup, pop, popAll) where
 
+import Data.List (foldl')
 import qualified Data.Map as Map
 
 data IStack k v = IStack (Map.Map k [v])
@@ -28,3 +29,6 @@ pop k i@(IStack m)
      Just [_] -> (IStack $ Map.delete k m)
      Just (_:t) -> (IStack $ Map.insert k t m)
      Nothing -> i
+
+popAll :: Ord k => [k] -> IStack k v -> IStack k v
+popAll l i = foldl' (flip pop) i l

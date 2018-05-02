@@ -261,17 +261,9 @@ interpretObs st _ (ValueGE a b) _ = Left $ evalMoney st a >= evalMoney st b
 interpretObs _ _ TrueObs _ = Left True
 interpretObs _ _ FalseObs _ = Left False
 interpretObs st env (OReplace ident) os
-  = case IStack.lookup ident ob of
-     Just o -> interpretObs st nenv o os
+  = case oreplaceUpdate ident env of
+     Just (o, nenv) -> interpretObs st nenv o os
      Nothing -> Right [FailedOReplace ident]
-  where
-    bo = bindOrder env
-    ob = obin env
-    cb = cbin env
-    nenv = env {obin = nob, cbin = ncb, bindOrder = rest}
-    (us, (_:rest)) = span (/= Right ident) bo
-    nob = IStack.popAll [ x | Right x <- (Right ident:us)] ob
-    ncb = IStack.popAll [ x | Left x <- us] cb
 
 -- The type of contracts
 
@@ -395,24 +387,25 @@ step _ st env (CReplace ident) _
     bo = bindOrder env
     us = takeWhile (/= Left ident) bo
 
-step commits st env (CUnbind ident c) os
-  = case IStack.lookup ident cb of
-     Just _ -> (nst, CUnbind ident nc, na)
-     Nothing -> (st, Null, [FailedCUnbind ident])
+step commits st env (CUnbind ident c) os =
+  case IStack.lookup ident cb of
+    Just _ -> (nst, CUnbind ident nc, na)
+    Nothing -> (st, Null, [FailedCUnbind ident])
   where
     cb = cbin env
-    nenv = env {cbin = IStack.pop ident cb}
+    bo = bindOrder env
+    nenv = env {cbin = IStack.pop ident cb, bindOrder = removeFirst (Left ident) bo}
     (nst, nc, na) = step commits st nenv c os
 
-step commits st env (OUnbind ident c) os
-  = case IStack.lookup ident ob of
-     Just _ -> (nst, OUnbind ident nc, na)
-     Nothing -> (st, Null, [FailedOUnbind ident])
+step commits st env (OUnbind ident c) os =
+  case IStack.lookup ident ob of
+    Just _ -> (nst, OUnbind ident nc, na)
+    Nothing -> (st, Null, [FailedOUnbind ident])
   where
     ob = obin env
-    nenv = env {obin = IStack.pop ident ob}
+    bo = bindOrder env
+    nenv = env {obin = IStack.pop ident ob, bindOrder = removeFirst (Right ident) bo}
     (nst, nc, na) = step commits st nenv c os
-
 
 -------------------------
 -- stepAll & stepBlock --
@@ -437,6 +430,7 @@ recordChoices :: Input -> Map.Map (IdentChoice, Person) Int -> (Map.Map (IdentCh
 recordChoices input recorded_choices = Map.foldlWithKey addNewChoices (recorded_choices, []) (ic input)
 
 -- Checks whether the provided cash commit is claimed in the input
+
 isClaimed :: Input -> IdentCC -> CCStatus -> Bool
 
 isClaimed inp ident status
@@ -491,7 +485,7 @@ stepAllAux com st con os ac
 
 stepBlock :: Input -> State -> Contract -> OS -> (State, Contract, AS)
 
-stepBlock inp st con os = (rs, rcon, nas)
+stepBlock inp st con os = (rs, removeUnusedBinds rcon, nas)
   where (nsch, chas) = recordChoices inp (sch st)
         (nsc, pas) = expireCommits inp (sc st) os
         nst = st { sc = nsc, sch = nsch }
@@ -501,6 +495,169 @@ stepBlock inp st con os = (rs, rcon, nas)
 -------------------------
 -- Auxiliary functions --
 -------------------------
+
+-- Extracts the specified bound observation from the environment
+
+oreplaceUpdate :: IdentOBind -> Environment -> Maybe (Observation, Environment)
+oreplaceUpdate ident env =
+  case IStack.lookup ident ob of
+    Just o -> Just (o, nenv)
+    Nothing -> Nothing
+  where
+    (us, _:rest) = span (/= Right ident) bo
+    bo = bindOrder env
+    ob = obin env
+    cb = cbin env
+    nob = IStack.popAll [x | Right x <- Right ident : us] ob
+    ncb = IStack.popAll [x | Left x <- us] cb
+    nenv = env {obin = nob, cbin = ncb, bindOrder = rest}
+
+-- Extracts the specified bound contract from the environment
+
+creplaceUpdate :: IdentCBind -> Environment -> Maybe (Contract, Environment)
+creplaceUpdate ident env =
+  case IStack.lookup ident cb of
+    Just c -> Just (c, nenv)
+    Nothing -> Nothing
+  where
+    (us, _:rest) = span (/= Left ident) bo
+    bo = bindOrder env
+    ob = obin env
+    cb = cbin env
+    nob = IStack.popAll [x | Right x <- us] ob
+    ncb = IStack.popAll [x | Left x <- Left ident : us] cb
+    nenv = env {obin = nob, cbin = ncb, bindOrder = rest}
+
+-- Remove first occurrence of an element from the list
+
+removeFirst :: Eq a => a -> [a] -> [a]
+removeFirst _ [] = []
+removeFirst a (h:t)
+  | a == h = t
+  | otherwise = h : removeFirst a t
+
+-- Finds out whether the given observation uses replace on the given identifier
+
+isBindUsedObs :: Observation -> Either IdentCBind IdentOBind -> Environment -> Bool
+isBindUsedObs _ (Left _) _ = False
+isBindUsedObs (BelowTimeout _) _ _ = False
+isBindUsedObs (AndObs obs1 obs2) ident env = any (\x -> isBindUsedObs x ident env) [obs1, obs2]
+isBindUsedObs (OrObs obs1 obs2) ident env = any (\x -> isBindUsedObs x ident env) [obs1, obs2]
+isBindUsedObs (NotObs obs) ident env = isBindUsedObs obs ident env
+isBindUsedObs (PersonChoseThis _ _ _) _ _  = False
+isBindUsedObs (PersonChoseSomething _ _) _ _ = False
+isBindUsedObs (ValueGE _ _) _ _  = False
+isBindUsedObs TrueObs _ _ = False
+isBindUsedObs FalseObs _ _ = False
+isBindUsedObs (OReplace identOBind) ide@(Right identOBind2) env
+  | identOBind == identOBind2 = True
+  | otherwise = case oreplaceUpdate identOBind env of
+                  Just (o, nenv) -> isBindUsedObs o ide nenv
+                  Nothing -> False
+
+-- Finds out whether the given contract uses replace on the given identifier
+
+isBindUsed :: Contract -> Either IdentCBind IdentOBind -> Environment -> Bool
+isBindUsed Null _ _ = False
+isBindUsed (CommitCash _ _ _ _ _ c1 c2) ident env = any (\x -> isBindUsed x ident env) [c1, c2]
+isBindUsed (RedeemCC _ c) ident env = isBindUsed c ident env
+isBindUsed (Pay _ _ _ _ _ c) ident env = isBindUsed c ident env
+isBindUsed (Both c1 c2) ident env = any (\x -> isBindUsed x ident env) [c1, c2]
+isBindUsed (Choice o c1 c2) ident env = isBindUsedObs o ident env || any (\x -> isBindUsed x ident env) [c1, c2]
+isBindUsed (When o _ c1 c2) ident env = isBindUsedObs o ident env || any (\x -> isBindUsed x ident env) [c1, c2]
+isBindUsed (CReplace identCBind) ident env
+  | Left identCBind == ident = True
+  | otherwise = case creplaceUpdate identCBind env of
+                  Just (o, nenv) -> isBindUsed o ident nenv
+                  Nothing -> False
+isBindUsed (CBind identCBind c1 c2) ident env
+  | Left identCBind == ident = isBindUsed c1 ident env
+  | otherwise = isBindUsed c2 ident nenv
+  where
+    cb = cbin env
+    bo = bindOrder env
+    nenv = env {cbin = IStack.insert identCBind c1 cb, bindOrder = Left identCBind : bo}
+isBindUsed (OBind identOBind o c) ident env
+  | Right identOBind == ident = isBindUsedObs o ident env
+  | otherwise = isBindUsed c ident nenv
+  where
+    ob = obin env
+    bo = bindOrder env
+    nenv = env {obin = IStack.insert identOBind o ob, bindOrder = Right identOBind : bo}
+isBindUsed (CUnbind identCBind c) ident env
+  | Left identCBind == ident = False
+  | otherwise =
+    case IStack.lookup identCBind cb of
+      Just _ -> isBindUsed c ident nenv
+      Nothing -> False
+  where
+    cb = cbin env
+    bo = bindOrder env
+    nenv = env {cbin = IStack.pop identCBind cb, bindOrder = removeFirst (Left identCBind) bo}
+isBindUsed (OUnbind identOBind c) ident env
+  | Right identOBind == ident = False
+  | otherwise =
+    case IStack.lookup identOBind ob of
+      Just _ -> isBindUsed c ident nenv
+      Nothing -> False
+  where
+    ob = obin env
+    bo = bindOrder env
+    nenv = env {obin = IStack.pop identOBind ob, bindOrder = removeFirst (Right identOBind) bo}
+
+-- Removes unbinds with the given identifier from the contract
+
+removeUnbind :: Contract -> Either IdentCBind IdentOBind -> Contract
+removeUnbind Null _ = Null
+removeUnbind (CommitCash identCC p m t1 t2 c1 c2) ident = CommitCash identCC p m t1 t2 nc1 nc2
+  where [nc1, nc2] = map (`removeUnbind` ident) [c1, c2]
+removeUnbind (RedeemCC identCC c) ident = RedeemCC identCC (removeUnbind c ident)
+removeUnbind (Pay identPay p1 p2 m t c) ident = Pay identPay p1 p2 m t (removeUnbind c ident)
+removeUnbind (Both c1 c2) ident = Both nc1 nc2
+  where [nc1, nc2] = map (`removeUnbind` ident) [c1, c2]
+removeUnbind (Choice o c1 c2) ident = Choice o nc1 nc2
+  where [nc1, nc2] = map (`removeUnbind` ident) [c1, c2]
+removeUnbind (When o t c1 c2) ident = When o t nc1 nc2
+  where [nc1, nc2] = map (`removeUnbind` ident) [c1, c2]
+removeUnbind (CReplace identCBind) _ = CReplace identCBind
+removeUnbind (CBind identCBind c1 c2) ident
+  | Left identCBind == ident = CBind identCBind (removeUnbind c1 ident) c2
+  | otherwise = CBind identCBind (removeUnbind c1 ident) (removeUnbind c2 ident)
+removeUnbind (OBind identOBind o c) ident
+  | Right identOBind == ident = OBind identOBind o c
+  | otherwise = OBind identOBind o (removeUnbind c ident)
+removeUnbind (CUnbind identCBind c) ident
+  | Left identCBind == ident = c
+  | otherwise = CUnbind identCBind (removeUnbind c ident)
+removeUnbind (OUnbind identOBind c) ident
+  | Right identOBind == ident = c
+  | otherwise = OUnbind identOBind (removeUnbind c ident)
+
+-- Removes unused binds
+
+removeUnusedBinds :: Contract -> Contract
+removeUnusedBinds Null = Null
+removeUnusedBinds (CommitCash identCC p m t1 t2 c1 c2) = CommitCash identCC p m t1 t2 nc1 nc2
+  where [nc1, nc2] = map removeUnusedBinds [c1, c2]
+removeUnusedBinds (RedeemCC identCC c) = RedeemCC identCC (removeUnusedBinds c)
+removeUnusedBinds (Pay identPay p1 p2 m t c) = Pay identPay p1 p2 m t (removeUnusedBinds c)
+removeUnusedBinds (Both c1 c2) = Both nc1 nc2
+  where [nc1, nc2] = map removeUnusedBinds [c1, c2]
+removeUnusedBinds (Choice o c1 c2) = Choice o nc1 nc2
+  where [nc1, nc2] = map removeUnusedBinds [c1, c2]
+removeUnusedBinds (When o t c1 c2) = When o t nc1 nc2
+  where [nc1, nc2] = map removeUnusedBinds [c1, c2]
+removeUnusedBinds (CReplace identCBind) = CReplace identCBind
+removeUnusedBinds (CBind identCBind c1 c2)
+  | isBindUsed c2 (Left identCBind) emptyEnvironment = CBind identCBind nc1 nc2
+  | otherwise = removeUnusedBinds (removeUnbind c2 (Left identCBind))
+  where [nc1, nc2] = map removeUnusedBinds [c1, c2]
+removeUnusedBinds n@(OBind identOBind o c)
+  | isBindUsed c (Right identOBind) emptyEnvironment = OBind identOBind o nc
+  | otherwise = removeUnusedBinds (removeUnbind c (Right identOBind))
+  where nc = removeUnusedBinds c
+removeUnusedBinds (CUnbind identCBind c) = CUnbind identCBind (removeUnusedBinds c)
+removeUnusedBinds (OUnbind identOBind c) = OUnbind identOBind (removeUnusedBinds c)
 
 -- Creates a chain to unbind the identifiers provided
 

@@ -97,7 +97,7 @@ foreign import javascript safe
   codeToBlockly :: IO ()
 
 compile :: IO ()
-compile = do setValue "textarea" "Compiling...\n\nThis could take up to one minute."
+compile = do setValue "textarea" "Compiling...\n\nThis could take more than one minute."
              disableButton "compile"
              disableButton "reset"
              disableButton "submit"

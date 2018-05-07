@@ -1,825 +1,118 @@
-
-/*******************************************************************************
- * Misc.
- */
-
-
-// Workaround for missing functionality in IE 8 and earlier.
-if( Object.create === undefined ) {
-  Object.create = function( o ) {
-    function F(){}
-    F.prototype = o;
-    return new F();
-  };
-}
-
-// Insert properties of b in place into a.
-function Fay$$objConcat(a,b){
-  for (var p in b) if (b.hasOwnProperty(p)){
-    a[p] = b[p];
-  }
-  return a;
-}
-
-/*******************************************************************************
- * Thunks.
- */
-
-// Force a thunk (if it is a thunk) until WHNF.
-function Fay$$_(thunkish,nocache){
-  while (thunkish instanceof Fay$$$) {
-    thunkish = thunkish.force(nocache);
-  }
-  return thunkish;
-}
-
-// Apply a function to arguments (see method2 in Fay.hs).
-function Fay$$__(){
-  var f = arguments[0];
-  for (var i = 1, len = arguments.length; i < len; i++) {
-    f = (f instanceof Fay$$$? Fay$$_(f) : f)(arguments[i]);
-  }
-  return f;
-}
-
-// Thunk object.
-function Fay$$$(value){
-  this.forced = false;
-  this.value = value;
-}
-
-// Force the thunk.
-Fay$$$.prototype.force = function(nocache) {
-  return nocache ?
-    this.value() :
-    (this.forced ?
-     this.value :
-     (this.value = this.value(), this.forced = true, this.value));
-};
-
-
-function Fay$$seq(x) {
-  return function(y) {
-    Fay$$_(x,false);
-    return y;
-  }
-}
-
-function Fay$$seq$36$uncurried(x,y) {
-  Fay$$_(x,false);
-  return y;
-}
-
-/*******************************************************************************
- * Monad.
- */
-
-function Fay$$Monad(value){
-  this.value = value;
-}
-
-// This is used directly from Fay, but can be rebound or shadowed. See primOps in Types.hs.
-// >>
-function Fay$$then(a){
-  return function(b){
-    return Fay$$bind(a)(function(_){
-      return b;
-    });
-  };
-}
-
-// This is used directly from Fay, but can be rebound or shadowed. See primOps in Types.hs.
-// >>
-function Fay$$then$36$uncurried(a,b){
-  return Fay$$bind$36$uncurried(a,function(_){ return b; });
-}
-
-// >>=
-// This is used directly from Fay, but can be rebound or shadowed. See primOps in Types.hs.
-function Fay$$bind(m){
-  return function(f){
-    return new Fay$$$(function(){
-      var monad = Fay$$_(m,true);
-      return Fay$$_(f)(monad.value);
-    });
-  };
-}
-
-// >>=
-// This is used directly from Fay, but can be rebound or shadowed. See primOps in Types.hs.
-function Fay$$bind$36$uncurried(m,f){
-  return new Fay$$$(function(){
-    var monad = Fay$$_(m,true);
-    return Fay$$_(f)(monad.value);
-  });
-}
-
-// This is used directly from Fay, but can be rebound or shadowed.
-function Fay$$$_return(a){
-  return new Fay$$Monad(a);
-}
-
-// Allow the programmer to access thunk forcing directly.
-function Fay$$force(thunk){
-  return function(type){
-    return new Fay$$$(function(){
-      Fay$$_(thunk,type);
-      return new Fay$$Monad(Fay$$unit);
-    })
-  }
-}
-
-// This is used directly from Fay, but can be rebound or shadowed.
-function Fay$$return$36$uncurried(a){
-  return new Fay$$Monad(a);
-}
-
-// Unit: ().
-var Fay$$unit = null;
-
-/*******************************************************************************
- * Serialization.
- * Fay <-> JS. Should be bijective.
- */
-
-// Serialize a Fay object to JS.
-function Fay$$fayToJs(type,fayObj){
-  var base = type[0];
-  var args = type[1];
-  var jsObj;
-  if(base == "action") {
-    // A nullary monadic action. Should become a nullary JS function.
-    // Fay () -> function(){ return ... }
-    return function(){
-      return Fay$$fayToJs(args[0],Fay$$_(fayObj,true).value);
-    };
-
-  }
-  else if(base == "function") {
-    // A proper function.
-    return function(){
-      var fayFunc = fayObj;
-      var return_type = args[args.length-1];
-      var len = args.length;
-      // If some arguments.
-      if (len > 1) {
-        // Apply to all the arguments.
-        fayFunc = Fay$$_(fayFunc,true);
-        // TODO: Perhaps we should throw an error when JS
-        // passes more arguments than Haskell accepts.
-
-        // Unserialize the JS values to Fay for the Fay callback.
-        if (args == "automatic_function")
-        {
-          for (var i = 0; i < arguments.length; i++) {
-            fayFunc = Fay$$_(fayFunc(Fay$$jsToFay(["automatic"],arguments[i])),true);
-          }
-          return Fay$$fayToJs(["automatic"], fayFunc);
-        }
-
-        for (var i = 0, len = len; i < len - 1 && fayFunc instanceof Function; i++) {
-          fayFunc = Fay$$_(fayFunc(Fay$$jsToFay(args[i],arguments[i])),true);
-        }
-        // Finally, serialize the Fay return value back to JS.
-        var return_base = return_type[0];
-        var return_args = return_type[1];
-        // If it's a monadic return value, get the value instead.
-        if(return_base == "action") {
-          return Fay$$fayToJs(return_args[0],fayFunc.value);
-        }
-        // Otherwise just serialize the value direct.
-        else {
-          return Fay$$fayToJs(return_type,fayFunc);
-        }
-      } else {
-        throw new Error("Nullary function?");
-      }
-    };
-
-  }
-  else if(base == "string") {
-    return Fay$$fayToJs_string(fayObj);
-  }
-  else if(base == "list") {
-    // Serialize Fay list to JavaScript array.
-    var arr = [];
-    fayObj = Fay$$_(fayObj);
-    while(fayObj instanceof Fay$$Cons) {
-      arr.push(Fay$$fayToJs(args[0],fayObj.car));
-      fayObj = Fay$$_(fayObj.cdr);
-    }
-    return arr;
-  }
-  else if(base == "tuple") {
-    // Serialize Fay tuple to JavaScript array.
-    var arr = [];
-    fayObj = Fay$$_(fayObj);
-    var i = 0;
-    while(fayObj instanceof Fay$$Cons) {
-      arr.push(Fay$$fayToJs(args[i++],fayObj.car));
-      fayObj = Fay$$_(fayObj.cdr);
-    }
-    return arr;
-  }
-  else if(base == "defined") {
-    fayObj = Fay$$_(fayObj);
-    return fayObj instanceof Fay.FFI._Undefined
-      ? undefined
-      : Fay$$fayToJs(args[0],fayObj.slot1);
-  }
-  else if(base == "nullable") {
-    fayObj = Fay$$_(fayObj);
-    return fayObj instanceof Fay.FFI._Null
-      ? null
-      : Fay$$fayToJs(args[0],fayObj.slot1);
-  }
-  else if(base == "double" || base == "int" || base == "bool") {
-    // Bools are unboxed.
-    return Fay$$_(fayObj);
-  }
-  else if(base == "ptr")
-    return fayObj;
-  else if(base == "unknown")
-    return Fay$$fayToJs(["automatic"], fayObj);
-  else if(base == "automatic" && fayObj instanceof Function) {
-    return Fay$$fayToJs(["function", "automatic_function"], fayObj);
-  }
-  else if(base == "automatic" || base == "user") {
-    fayObj = Fay$$_(fayObj);
-
-    if(fayObj instanceof Fay$$Cons || fayObj === null){
-      // Serialize Fay list to JavaScript array.
-      var arr = [];
-      while(fayObj instanceof Fay$$Cons) {
-        arr.push(Fay$$fayToJs(["automatic"],fayObj.car));
-        fayObj = Fay$$_(fayObj.cdr);
-      }
-      return arr;
-    } else {
-      var fayToJsFun = fayObj && fayObj.instance && Fay$$fayToJsHash[fayObj.instance];
-      return fayToJsFun ? fayToJsFun(type,type[2],fayObj) : fayObj;
-    }
-  }
-
-  throw new Error("Unhandled Fay->JS translation type: " + base);
-}
-
-// Stores the mappings from fay types to js objects.
-// This will be populated by compiled modules.
-var Fay$$fayToJsHash = {};
-
-// Specialized serializer for string.
-function Fay$$fayToJs_string(fayObj){
-  // Serialize Fay string to JavaScript string.
-  var str = "";
-  fayObj = Fay$$_(fayObj);
-  while(fayObj instanceof Fay$$Cons) {
-    str += Fay$$_(fayObj.car);
-    fayObj = Fay$$_(fayObj.cdr);
-  }
-  return str;
-};
-function Fay$$jsToFay_string(x){
-  return Fay$$list(x)
-};
-
-// Special num/bool serializers.
-function Fay$$jsToFay_int(x){return x;}
-function Fay$$jsToFay_double(x){return x;}
-function Fay$$jsToFay_bool(x){return x;}
-
-function Fay$$fayToJs_int(x){return Fay$$_(x);}
-function Fay$$fayToJs_double(x){return Fay$$_(x);}
-function Fay$$fayToJs_bool(x){return Fay$$_(x);}
-
-// Unserialize an object from JS to Fay.
-function Fay$$jsToFay(type,jsObj){
-  var base = type[0];
-  var args = type[1];
-  var fayObj;
-  if(base == "action") {
-    // Unserialize a "monadic" JavaScript return value into a monadic value.
-    return new Fay$$Monad(Fay$$jsToFay(args[0],jsObj));
-  }
-  else if(base == "function") {
-    // Unserialize a function from JavaScript to a function that Fay can call.
-    // So
-    //
-    //    var f = function(x,y,z){ … }
-    //
-    // becomes something like:
-    //
-    //    function(x){
-    //      return function(y){
-    //        return function(z){
-    //          return new Fay$$$(function(){
-    //            return Fay$$jsToFay(f(Fay$$fayTojs(x),
-    //                                  Fay$$fayTojs(y),
-    //                                  Fay$$fayTojs(z))
-    //    }}}}};
-    var returnType = args[args.length-1];
-    var funArgs = args.slice(0,-1);
-
-    if (jsObj.length > 0) {
-      var makePartial = function(args){
-        return function(arg){
-          var i = args.length;
-          var fayArg = Fay$$fayToJs(funArgs[i],arg);
-          var newArgs = args.concat([fayArg]);
-          if(newArgs.length == funArgs.length) {
-            return new Fay$$$(function(){
-              return Fay$$jsToFay(returnType,jsObj.apply(this,newArgs));
-            });
-          } else {
-            return makePartial(newArgs);
-          }
-        };
-      };
-      return makePartial([]);
-    }
-    else
-      return function (arg) {
-        return Fay$$jsToFay(["automatic"], jsObj(Fay$$fayToJs(["automatic"], arg)));
-      };
-  }
-  else if(base == "string") {
-    // Unserialize a JS string into Fay list (String).
-    // This is a special case, when String is explicit in the type signature,
-    // with `Automatic' a string would not be decoded.
-    return Fay$$list(jsObj);
-  }
-  else if(base == "list") {
-    // Unserialize a JS array into a Fay list ([a]).
-    var serializedList = [];
-    for (var i = 0, len = jsObj.length; i < len; i++) {
-      // Unserialize each JS value into a Fay value, too.
-      serializedList.push(Fay$$jsToFay(args[0],jsObj[i]));
-    }
-    // Pop it all in a Fay list.
-    return Fay$$list(serializedList);
-  }
-  else if(base == "tuple") {
-    // Unserialize a JS array into a Fay tuple ((a,b,c,...)).
-    var serializedTuple = [];
-    for (var i = 0, len = jsObj.length; i < len; i++) {
-      // Unserialize each JS value into a Fay value, too.
-      serializedTuple.push(Fay$$jsToFay(args[i],jsObj[i]));
-    }
-    // Pop it all in a Fay list.
-    return Fay$$list(serializedTuple);
-  }
-  else if(base == "defined") {
-    return jsObj === undefined
-      ? new Fay.FFI._Undefined()
-      : new Fay.FFI._Defined(Fay$$jsToFay(args[0],jsObj));
-  }
-  else if(base == "nullable") {
-    return jsObj === null
-      ? new Fay.FFI._Null()
-      : new Fay.FFI.Nullable(Fay$$jsToFay(args[0],jsObj));
-  }
-  else if(base == "int") {
-    // Int are unboxed, so there's no forcing to do.
-    // But we can do validation that the int has no decimal places.
-    // E.g. Math.round(x)!=x? throw "NOT AN INTEGER, GET OUT!"
-    fayObj = Math.round(jsObj);
-    if(fayObj!==jsObj) throw "Argument " + jsObj + " is not an integer!";
-    return fayObj;
-  }
-  else if (base == "double" ||
-           base == "bool" ||
-           base ==  "ptr") {
-    return jsObj;
-  }
-  else if(base == "unknown")
-    return Fay$$jsToFay(["automatic"], jsObj);
-  else if(base == "automatic" && jsObj instanceof Function) {
-    var type = [["automatic"]];
-    for (var i = 0; i < jsObj.length; i++)
-      type.push(["automatic"]);
-    return Fay$$jsToFay(["function", type], jsObj);
-  }
-  else if(base == "automatic" && jsObj instanceof Array) {
-    var list = null;
-    for (var i = jsObj.length - 1; i >= 0; i--) {
-      list = new Fay$$Cons(Fay$$jsToFay([base], jsObj[i]), list);
-    }
-    return list;
-  }
-  else if(base == "automatic" || base == "user") {
-    if (jsObj && jsObj['instance']) {
-      var jsToFayFun = Fay$$jsToFayHash[jsObj["instance"]];
-      return jsToFayFun ? jsToFayFun(type,type[2],jsObj) : jsObj;
-    }
-    else
-      return jsObj;
-  }
-
-  throw new Error("Unhandled JS->Fay translation type: " + base);
-}
-
-// Stores the mappings from js objects to fay types.
-// This will be populated by compiled modules.
-var Fay$$jsToFayHash = {};
-
-/*******************************************************************************
- * Lists.
- */
-
-// Cons object.
-function Fay$$Cons(car,cdr){
-  this.car = car;
-  this.cdr = cdr;
-}
-
-// Make a list.
-function Fay$$list(xs){
-  var out = null;
-  for(var i=xs.length-1; i>=0;i--)
-    out = new Fay$$Cons(xs[i],out);
-  return out;
-}
-
-// Built-in list cons.
-function Fay$$cons(x){
-  return function(y){
-    return new Fay$$Cons(x,y);
-  };
-}
-
-// List index.
-// `list' is already forced by the time it's passed to this function.
-// `list' cannot be null and `index' cannot be out of bounds.
-function Fay$$index(index,list){
-  for(var i = 0; i < index; i++) {
-    list = Fay$$_(list.cdr);
-  }
-  return list.car;
-}
-
-// List length.
-// `list' is already forced by the time it's passed to this function.
-function Fay$$listLen(list,max){
-  for(var i = 0; list !== null && i < max + 1; i++) {
-    list = Fay$$_(list.cdr);
-  }
-  return i == max;
-}
-
-/*******************************************************************************
- * Numbers.
- */
-
-// Built-in *.
-function Fay$$mult(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return Fay$$_(x) * Fay$$_(y);
-    });
-  };
-}
-
-function Fay$$mult$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return Fay$$_(x) * Fay$$_(y);
-  });
-
-}
-
-// Built-in +.
-function Fay$$add(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return Fay$$_(x) + Fay$$_(y);
-    });
-  };
-}
-
-// Built-in +.
-function Fay$$add$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return Fay$$_(x) + Fay$$_(y);
-  });
-
-}
-
-// Built-in -.
-function Fay$$sub(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return Fay$$_(x) - Fay$$_(y);
-    });
-  };
-}
-// Built-in -.
-function Fay$$sub$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return Fay$$_(x) - Fay$$_(y);
-  });
-
-}
-
-// Built-in /.
-function Fay$$divi(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return Fay$$_(x) / Fay$$_(y);
-    });
-  };
-}
-
-// Built-in /.
-function Fay$$divi$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return Fay$$_(x) / Fay$$_(y);
-  });
-
-}
-
-/*******************************************************************************
- * Booleans.
- */
-
-// Are two values equal?
-function Fay$$equal(lit1, lit2) {
-  // Simple case
-  lit1 = Fay$$_(lit1);
-  lit2 = Fay$$_(lit2);
-  if (lit1 === lit2) {
-    return true;
-  }
-  // General case
-  if (lit1 instanceof Array) {
-    if (lit1.length != lit2.length) return false;
-    for (var len = lit1.length, i = 0; i < len; i++) {
-      if (!Fay$$equal(lit1[i], lit2[i])) return false;
-    }
-    return true;
-  } else if (lit1 instanceof Fay$$Cons && lit2 instanceof Fay$$Cons) {
-    do {
-      if (!Fay$$equal(lit1.car,lit2.car))
-        return false;
-      lit1 = Fay$$_(lit1.cdr), lit2 = Fay$$_(lit2.cdr);
-      if (lit1 === null || lit2 === null)
-        return lit1 === lit2;
-    } while (true);
-  } else if (typeof lit1 == 'object' && typeof lit2 == 'object' && lit1 && lit2 &&
-             lit1.instance === lit2.instance) {
-    for(var x in lit1) {
-      if(!Fay$$equal(lit1[x],lit2[x]))
-        return false;
-    }
-    return true;
-  } else {
-    return false;
-  }
-}
-
-// Built-in ==.
-function Fay$$eq(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return Fay$$equal(x,y);
-    });
-  };
-}
-
-function Fay$$eq$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return Fay$$equal(x,y);
-  });
-
-}
-
-// Built-in /=.
-function Fay$$neq(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return !(Fay$$equal(x,y));
-    });
-  };
-}
-
-// Built-in /=.
-function Fay$$neq$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return !(Fay$$equal(x,y));
-  });
-
-}
-
-// Built-in >.
-function Fay$$gt(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return Fay$$_(x) > Fay$$_(y);
-    });
-  };
-}
-
-// Built-in >.
-function Fay$$gt$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return Fay$$_(x) > Fay$$_(y);
-  });
-
-}
-
-// Built-in <.
-function Fay$$lt(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return Fay$$_(x) < Fay$$_(y);
-    });
-  };
-}
-
-
-// Built-in <.
-function Fay$$lt$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return Fay$$_(x) < Fay$$_(y);
-  });
-
-}
-
-
-// Built-in >=.
-function Fay$$gte(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return Fay$$_(x) >= Fay$$_(y);
-    });
-  };
-}
-
-// Built-in >=.
-function Fay$$gte$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return Fay$$_(x) >= Fay$$_(y);
-  });
-
-}
-
-// Built-in <=.
-function Fay$$lte(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return Fay$$_(x) <= Fay$$_(y);
-    });
-  };
-}
-
-// Built-in <=.
-function Fay$$lte$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return Fay$$_(x) <= Fay$$_(y);
-  });
-
-}
-
-// Built-in &&.
-function Fay$$and(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return Fay$$_(x) && Fay$$_(y);
-    });
-  };
-}
-
-// Built-in &&.
-function Fay$$and$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return Fay$$_(x) && Fay$$_(y);
-  });
-  ;
-}
-
-// Built-in ||.
-function Fay$$or(x){
-  return function(y){
-    return new Fay$$$(function(){
-      return Fay$$_(x) || Fay$$_(y);
-    });
-  };
-}
-
-// Built-in ||.
-function Fay$$or$36$uncurried(x,y){
-
-  return new Fay$$$(function(){
-    return Fay$$_(x) || Fay$$_(y);
-  });
-
-}
-
-/*******************************************************************************
- * Mutable references.
- */
-
-// Make a new mutable reference.
-function Fay$$Ref(x){
-  this.value = x;
-}
-
-// Write to the ref.
-function Fay$$writeRef(ref,x){
-  ref.value = x;
-}
-
-// Get the value from the ref.
-function Fay$$readRef(ref){
-  return ref.value;
-}
-
-/*******************************************************************************
- * Dates.
- */
-function Fay$$date(str){
-  return Date.parse(str);
-}
-
-/*******************************************************************************
- * Data.Var
- */
-
-function Fay$$Ref2(val){
-  this.val = val;
-}
-
-function Fay$$Sig(){
-  this.handlers = [];
-}
-
-function Fay$$Var(val){
-  this.val = val;
-  this.handlers = [];
-}
-
-// Helper used by Fay$$setValue and for merging
-function Fay$$broadcastInternal(self, val, force){
-  var handlers = self.handlers;
-  var exceptions = [];
-  for(var len = handlers.length, i = 0; i < len; i++) {
-    try {
-      force(handlers[i][1](val), true);
-    } catch (e) {
-      exceptions.push(e);
-    }
-  }
-  // Rethrow the encountered exceptions.
-  if (exceptions.length > 0) {
-    console.error("Encountered " + exceptions.length + " exception(s) while broadcasing a change to ", self);
-    for(var len = exceptions.length, i = 0; i < len; i++) {
-      (function(exception) {
-        setTimeout(function() { throw exception; }, 0);
-      })(exceptions[i]);
-    }
-  }
-}
-
-function Fay$$setValue(self, val, force){
-  if (self instanceof Fay$$Ref2) {
-    self.val = val;
-  } else if (self instanceof Fay$$Var) {
-    self.val = val;
-    Fay$$broadcastInternal(self, val, force);
-  } else if (self instanceof Fay$$Sig) {
-    Fay$$broadcastInternal(self, val, force);
-  } else {
-    throw "Fay$$setValue given something that's not a Ref2, Var, or Sig"
-  }
-}
-
-function Fay$$subscribe(self, f){
-  var key = {};
-  self.handlers.push([key,f]);
-  var searchStart = self.handlers.length - 1;
-  return function(_){
-    for(var i = Math.min(searchStart, self.handlers.length - 1); i >= 0; i--) {
-      if(self.handlers[i][0] == key) {
-        self.handlers = self.handlers.slice(0,i).concat(self.handlers.slice(i+1));
-        return;
-      }
-    }
-    return _; // This variable has to be used, otherwise Closure
-              // strips it out and Fay serialization breaks.
-  };
-}
-
-/*******************************************************************************
- * Application code.
- */
-
-var Data = {};Data.Data = {};var Fay = {};Fay.FFI = {};Fay.FFI._Nullable = function Nullable(slot1){this.slot1 = slot1;};Fay.FFI._Nullable.prototype.instance = "Nullable";Fay.FFI.Nullable = function(slot1){return new Fay$$$(function(){return new Fay.FFI._Nullable(slot1);});};Fay.FFI._Null = function Null(){};Fay.FFI._Null.prototype.instance = "Null";Fay.FFI.Null = new Fay$$$(function(){return new Fay.FFI._Null();});Fay.FFI._Defined = function Defined(slot1){this.slot1 = slot1;};Fay.FFI._Defined.prototype.instance = "Defined";Fay.FFI.Defined = function(slot1){return new Fay$$$(function(){return new Fay.FFI._Defined(slot1);});};Fay.FFI._Undefined = function Undefined(){};Fay.FFI._Undefined.prototype.instance = "Undefined";Fay.FFI.Undefined = new Fay$$$(function(){return new Fay.FFI._Undefined();});Fay$$objConcat(Fay$$fayToJsHash,{"Nullable": function(type,argTypes,_obj){var obj_ = {"instance": "Nullable"};var obj_slot1 = Fay$$fayToJs(argTypes && (argTypes)[0] ? (argTypes)[0] : (type)[0] === "automatic" ? ["automatic"] : ["unknown"],_obj.slot1);if (undefined !== obj_slot1) {obj_['slot1'] = obj_slot1;}return obj_;},"Null": function(type,argTypes,_obj){var obj_ = {"instance": "Null"};return obj_;},"Defined": function(type,argTypes,_obj){var obj_ = {"instance": "Defined"};var obj_slot1 = Fay$$fayToJs(argTypes && (argTypes)[0] ? (argTypes)[0] : (type)[0] === "automatic" ? ["automatic"] : ["unknown"],_obj.slot1);if (undefined !== obj_slot1) {obj_['slot1'] = obj_slot1;}return obj_;},"Undefined": function(type,argTypes,_obj){var obj_ = {"instance": "Undefined"};return obj_;}});Fay$$objConcat(Fay$$jsToFayHash,{"Nullable": function(type,argTypes,obj){return new Fay.FFI._Nullable(Fay$$jsToFay(argTypes && (argTypes)[0] ? (argTypes)[0] : (type)[0] === "automatic" ? ["automatic"] : ["unknown"],obj["slot1"]));},"Null": function(type,argTypes,obj){return new Fay.FFI._Null();},"Defined": function(type,argTypes,obj){return new Fay.FFI._Defined(Fay$$jsToFay(argTypes && (argTypes)[0] ? (argTypes)[0] : (type)[0] === "automatic" ? ["automatic"] : ["unknown"],obj["slot1"]));},"Undefined": function(type,argTypes,obj){return new Fay.FFI._Undefined();}});var Prelude = {};Prelude._Just = function Just(slot1){this.slot1 = slot1;};Prelude._Just.prototype.instance = "Just";Prelude.Just = function(slot1){return new Fay$$$(function(){return new Prelude._Just(slot1);});};Prelude._Nothing = function Nothing(){};Prelude._Nothing.prototype.instance = "Nothing";Prelude.Nothing = new Fay$$$(function(){return new Prelude._Nothing();});Prelude._Left = function Left(slot1){this.slot1 = slot1;};Prelude._Left.prototype.instance = "Left";Prelude.Left = function(slot1){return new Fay$$$(function(){return new Prelude._Left(slot1);});};Prelude._Right = function Right(slot1){this.slot1 = slot1;};Prelude._Right.prototype.instance = "Right";Prelude.Right = function(slot1){return new Fay$$$(function(){return new Prelude._Right(slot1);});};Prelude.maybe = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){if (Fay$$_($p3) instanceof Prelude._Nothing) {var m = $p1;return m;}if (Fay$$_($p3) instanceof Prelude._Just) {var x = Fay$$_($p3).slot1;var f = $p2;return Fay$$_(f)(x);}throw ["unhandled case in maybe",[$p1,$p2,$p3]];});};};};Prelude.$62$$62$$61$ = function($p1){return function($p2){return new Fay$$$(function(){return Fay$$_(Fay$$bind($p1)($p2));});};};Prelude.$62$$62$ = function($p1){return function($p2){return new Fay$$$(function(){return Fay$$_(Fay$$then($p1)($p2));});};};Prelude.$_return = function($p1){return new Fay$$$(function(){return new Fay$$Monad(Fay$$jsToFay(["unknown"],Fay$$$_return(Fay$$fayToJs(["unknown"],$p1))));});};Prelude.fail = new Fay$$$(function(){return Prelude.error;});Prelude.when = function($p1){return function($p2){return new Fay$$$(function(){var m = $p2;var p = $p1;return Fay$$_(p) ? m : Fay$$_(Fay$$$_return)(Fay$$unit);});};};Prelude.unless = function($p1){return function($p2){return new Fay$$$(function(){var m = $p2;var p = $p1;return Fay$$_(p) ? Fay$$_(Fay$$$_return)(Fay$$unit) : m;});};};Prelude.forM = function($p1){return function($p2){return new Fay$$$(function(){var fn = $p2;var lst = $p1;return Fay$$_(Fay$$_(Prelude.$36$)(Prelude.sequence))(Fay$$_(Fay$$_(Prelude.map)(fn))(lst));});};};Prelude.forM_ = function($p1){return function($p2){return new Fay$$$(function(){var m = $p2;var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;return Fay$$_(Fay$$_(Fay$$then)(Fay$$_(m)(x)))(Fay$$_(Fay$$_(Prelude.forM_)(xs))(m));}if (Fay$$_($p1) === null) {return Fay$$_(Fay$$$_return)(Fay$$unit);}throw ["unhandled case in forM_",[$p1,$p2]];});};};Prelude.mapM = function($p1){return function($p2){return new Fay$$$(function(){var lst = $p2;var fn = $p1;return Fay$$_(Fay$$_(Prelude.$36$)(Prelude.sequence))(Fay$$_(Fay$$_(Prelude.map)(fn))(lst));});};};Prelude.mapM_ = function($p1){return function($p2){return new Fay$$$(function(){var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var m = $p1;return Fay$$_(Fay$$_(Fay$$then)(Fay$$_(m)(x)))(Fay$$_(Fay$$_(Prelude.mapM_)(m))(xs));}if (Fay$$_($p2) === null) {return Fay$$_(Fay$$$_return)(Fay$$unit);}throw ["unhandled case in mapM_",[$p1,$p2]];});};};Prelude.$61$$60$$60$ = function($p1){return function($p2){return new Fay$$$(function(){var x = $p2;var f = $p1;return Fay$$_(Fay$$_(Fay$$bind)(x))(f);});};};Prelude.$_void = function($p1){return new Fay$$$(function(){var f = $p1;return Fay$$_(Fay$$_(Fay$$then)(f))(Fay$$_(Fay$$$_return)(Fay$$unit));});};Prelude.$62$$61$$62$ = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var x = $p3;var g = $p2;var f = $p1;return Fay$$_(Fay$$_(Fay$$bind)(Fay$$_(f)(x)))(g);});};};};Prelude.$60$$61$$60$ = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var x = $p3;var f = $p2;var g = $p1;return Fay$$_(Fay$$_(Fay$$bind)(Fay$$_(f)(x)))(g);});};};};Prelude.sequence = function($p1){return new Fay$$$(function(){var ms = $p1;return (function(){var k = function($p1){return function($p2){return new Fay$$$(function(){var m$39$ = $p2;var m = $p1;return Fay$$_(Fay$$_(Fay$$bind)(m))(function($p1){var x = $p1;return Fay$$_(Fay$$_(Fay$$bind)(m$39$))(function($p1){var xs = $p1;return Fay$$_(Fay$$$_return)(Fay$$_(Fay$$_(Fay$$cons)(x))(xs));});});});};};return Fay$$_(Fay$$_(Fay$$_(Prelude.foldr)(k))(Fay$$_(Fay$$$_return)(null)))(ms);})();});};Prelude.sequence_ = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return Fay$$_(Fay$$$_return)(Fay$$unit);}var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var m = $tmp1.car;var ms = $tmp1.cdr;return Fay$$_(Fay$$_(Fay$$then)(m))(Fay$$_(Prelude.sequence_)(ms));}throw ["unhandled case in sequence_",[$p1]];});};Prelude._GT = function GT(){};Prelude._GT.prototype.instance = "GT";Prelude.GT = new Fay$$$(function(){return new Prelude._GT();});Prelude._LT = function LT(){};Prelude._LT.prototype.instance = "LT";Prelude.LT = new Fay$$$(function(){return new Prelude._LT();});Prelude._EQ = function EQ(){};Prelude._EQ.prototype.instance = "EQ";Prelude.EQ = new Fay$$$(function(){return new Prelude._EQ();});Prelude.compare = function($p1){return function($p2){return new Fay$$$(function(){var y = $p2;var x = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$gt)(x))(y)) ? Prelude.GT : Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(x))(y)) ? Prelude.LT : Prelude.EQ;});};};Prelude.succ = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$add)(x))(1);});};Prelude.pred = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$sub)(x))(1);});};Prelude.enumFrom = function($p1){return new Fay$$$(function(){var i = $p1;return Fay$$_(Fay$$_(Fay$$cons)(i))(Fay$$_(Prelude.enumFrom)(Fay$$_(Fay$$_(Fay$$add)(i))(1)));});};Prelude.enumFromTo = function($p1){return function($p2){return new Fay$$$(function(){var n = $p2;var i = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$gt)(i))(n)) ? null : Fay$$_(Fay$$_(Fay$$cons)(i))(Fay$$_(Fay$$_(Prelude.enumFromTo)(Fay$$_(Fay$$_(Fay$$add)(i))(1)))(n));});};};Prelude.enumFromBy = function($p1){return function($p2){return new Fay$$$(function(){var by = $p2;var fr = $p1;return Fay$$_(Fay$$_(Fay$$cons)(fr))(Fay$$_(Fay$$_(Prelude.enumFromBy)(Fay$$_(Fay$$_(Fay$$add)(fr))(by)))(by));});};};Prelude.enumFromThen = function($p1){return function($p2){return new Fay$$$(function(){var th = $p2;var fr = $p1;return Fay$$_(Fay$$_(Prelude.enumFromBy)(fr))(Fay$$_(Fay$$_(Fay$$sub)(th))(fr));});};};Prelude.enumFromByTo = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var to = $p3;var by = $p2;var fr = $p1;return (function(){var neg = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(x))(to)) ? null : Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(neg)(Fay$$_(Fay$$_(Fay$$add)(x))(by)));});};var pos = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$gt)(x))(to)) ? null : Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(pos)(Fay$$_(Fay$$_(Fay$$add)(x))(by)));});};return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(by))(0)) ? Fay$$_(neg)(fr) : Fay$$_(pos)(fr);})();});};};};Prelude.enumFromThenTo = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var to = $p3;var th = $p2;var fr = $p1;return Fay$$_(Fay$$_(Fay$$_(Prelude.enumFromByTo)(fr))(Fay$$_(Fay$$_(Fay$$sub)(th))(fr)))(to);});};};};Prelude.fromIntegral = function($p1){return new Fay$$$(function(){return $p1;});};Prelude.fromInteger = function($p1){return new Fay$$$(function(){return $p1;});};Prelude.not = function($p1){return new Fay$$$(function(){var p = $p1;return Fay$$_(p) ? false : true;});};Prelude.otherwise = true;Prelude.show = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_string(JSON.stringify(Fay$$fayToJs(["automatic"],$p1)));});};Prelude.error = function($p1){return new Fay$$$(function(){return Fay$$jsToFay(["unknown"],(function() { throw Fay$$fayToJs_string($p1) })());});};Prelude.$_undefined = new Fay$$$(function(){return Fay$$_(Prelude.error)(Fay$$list("Prelude.undefined"));});Prelude.either = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){if (Fay$$_($p3) instanceof Prelude._Left) {var a = Fay$$_($p3).slot1;var f = $p1;return Fay$$_(f)(a);}if (Fay$$_($p3) instanceof Prelude._Right) {var b = Fay$$_($p3).slot1;var g = $p2;return Fay$$_(g)(b);}throw ["unhandled case in either",[$p1,$p2,$p3]];});};};};Prelude.until = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var x = $p3;var f = $p2;var p = $p1;return Fay$$_(Fay$$_(p)(x)) ? x : Fay$$_(Fay$$_(Fay$$_(Prelude.until)(p))(f))(Fay$$_(f)(x));});};};};Prelude.$36$$33$ = function($p1){return function($p2){return new Fay$$$(function(){var x = $p2;var f = $p1;return Fay$$_(Fay$$_(Fay$$seq)(x))(Fay$$_(f)(x));});};};Prelude.$_const = function($p1){return function($p2){return new Fay$$$(function(){var a = $p1;return a;});};};Prelude.id = function($p1){return new Fay$$$(function(){var x = $p1;return x;});};Prelude.$46$ = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var x = $p3;var g = $p2;var f = $p1;return Fay$$_(f)(Fay$$_(g)(x));});};};};Prelude.$36$ = function($p1){return function($p2){return new Fay$$$(function(){var x = $p2;var f = $p1;return Fay$$_(f)(x);});};};Prelude.flip = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var y = $p3;var x = $p2;var f = $p1;return Fay$$_(Fay$$_(f)(y))(x);});};};};Prelude.curry = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var y = $p3;var x = $p2;var f = $p1;return Fay$$_(f)(Fay$$list([x,y]));});};};};Prelude.uncurry = function($p1){return function($p2){return new Fay$$$(function(){var p = $p2;var f = $p1;return (function($tmp1){if (Fay$$listLen(Fay$$_($tmp1),2)) {var x = Fay$$index(0,Fay$$_($tmp1));var y = Fay$$index(1,Fay$$_($tmp1));return Fay$$_(Fay$$_(f)(x))(y);}return (function(){ throw (["unhandled case",$tmp1]); })();})(p);});};};Prelude.snd = function($p1){return new Fay$$$(function(){if (Fay$$listLen(Fay$$_($p1),2)) {var x = Fay$$index(1,Fay$$_($p1));return x;}throw ["unhandled case in snd",[$p1]];});};Prelude.fst = function($p1){return new Fay$$$(function(){if (Fay$$listLen(Fay$$_($p1),2)) {var x = Fay$$index(0,Fay$$_($p1));return x;}throw ["unhandled case in fst",[$p1]];});};Prelude.div = function($p1){return function($p2){return new Fay$$$(function(){var y = $p2;var x = $p1;if (Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$gt)(x))(0)))(Fay$$_(Fay$$_(Fay$$lt)(y))(0)))) {return Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Fay$$_(Prelude.quot)(Fay$$_(Fay$$_(Fay$$sub)(x))(1)))(y)))(1);} else {if (Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$lt)(x))(0)))(Fay$$_(Fay$$_(Fay$$gt)(y))(0)))) {return Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Fay$$_(Prelude.quot)(Fay$$_(Fay$$_(Fay$$add)(x))(1)))(y)))(1);}}var y = $p2;var x = $p1;return Fay$$_(Fay$$_(Prelude.quot)(x))(y);});};};Prelude.mod = function($p1){return function($p2){return new Fay$$$(function(){var y = $p2;var x = $p1;if (Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$gt)(x))(0)))(Fay$$_(Fay$$_(Fay$$lt)(y))(0)))) {return Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Fay$$_(Prelude.rem)(Fay$$_(Fay$$_(Fay$$sub)(x))(1)))(y)))(y)))(1);} else {if (Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$lt)(x))(0)))(Fay$$_(Fay$$_(Fay$$gt)(y))(0)))) {return Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Fay$$_(Prelude.rem)(Fay$$_(Fay$$_(Fay$$add)(x))(1)))(y)))(y)))(1);}}var y = $p2;var x = $p1;return Fay$$_(Fay$$_(Prelude.rem)(x))(y);});};};Prelude.divMod = function($p1){return function($p2){return new Fay$$$(function(){var y = $p2;var x = $p1;if (Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$gt)(x))(0)))(Fay$$_(Fay$$_(Fay$$lt)(y))(0)))) {return (function($tmp1){if (Fay$$listLen(Fay$$_($tmp1),2)) {var q = Fay$$index(0,Fay$$_($tmp1));var r = Fay$$index(1,Fay$$_($tmp1));return Fay$$list([Fay$$_(Fay$$_(Fay$$sub)(q))(1),Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Fay$$_(Fay$$add)(r))(y)))(1)]);}return (function(){ throw (["unhandled case",$tmp1]); })();})(Fay$$_(Fay$$_(Prelude.quotRem)(Fay$$_(Fay$$_(Fay$$sub)(x))(1)))(y));} else {if (Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$lt)(x))(0)))(Fay$$_(Fay$$_(Fay$$gt)(y))(1)))) {return (function($tmp1){if (Fay$$listLen(Fay$$_($tmp1),2)) {var q = Fay$$index(0,Fay$$_($tmp1));var r = Fay$$index(1,Fay$$_($tmp1));return Fay$$list([Fay$$_(Fay$$_(Fay$$sub)(q))(1),Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Fay$$_(Fay$$add)(r))(y)))(1)]);}return (function(){ throw (["unhandled case",$tmp1]); })();})(Fay$$_(Fay$$_(Prelude.quotRem)(Fay$$_(Fay$$_(Fay$$add)(x))(1)))(y));}}var y = $p2;var x = $p1;return Fay$$_(Fay$$_(Prelude.quotRem)(x))(y);});};};Prelude.min = function($p1){return function($p2){return new Fay$$$(function(){return Fay$$jsToFay(["unknown"],Math.min(Fay$$_(Fay$$fayToJs(["unknown"],$p1)),Fay$$_(Fay$$fayToJs(["unknown"],$p2))));});};};Prelude.max = function($p1){return function($p2){return new Fay$$$(function(){return Fay$$jsToFay(["unknown"],Math.max(Fay$$_(Fay$$fayToJs(["unknown"],$p1)),Fay$$_(Fay$$fayToJs(["unknown"],$p2))));});};};Prelude.recip = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$divi)(1))(x);});};Prelude.negate = function($p1){return new Fay$$$(function(){var x = $p1;return (-(Fay$$_(x)));});};Prelude.abs = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(x))(0)) ? Fay$$_(Prelude.negate)(x) : x;});};Prelude.signum = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$gt)(x))(0)) ? 1 : Fay$$_(Fay$$_(Fay$$_(Fay$$eq)(x))(0)) ? 0 : (-(1));});};Prelude.pi = new Fay$$$(function(){return Fay$$jsToFay_double(Math.PI);});Prelude.exp = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.exp(Fay$$fayToJs_double($p1)));});};Prelude.sqrt = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.sqrt(Fay$$fayToJs_double($p1)));});};Prelude.log = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.log(Fay$$fayToJs_double($p1)));});};Prelude.$42$$42$ = new Fay$$$(function(){return Prelude.unsafePow;});Prelude.$94$$94$ = new Fay$$$(function(){return Prelude.unsafePow;});Prelude.unsafePow = function($p1){return function($p2){return new Fay$$$(function(){return Fay$$jsToFay(["unknown"],Math.pow(Fay$$_(Fay$$fayToJs(["unknown"],$p1)),Fay$$_(Fay$$fayToJs(["unknown"],$p2))));});};};Prelude.$94$ = function($p1){return function($p2){return new Fay$$$(function(){var b = $p2;var a = $p1;if (Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(b))(0))) {return Fay$$_(Prelude.error)(Fay$$list("(^): negative exponent"));} else {if (Fay$$_(Fay$$_(Fay$$_(Fay$$eq)(b))(0))) {return 1;} else {if (Fay$$_(Fay$$_(Prelude.even)(b))) {return (function(){return new Fay$$$(function(){var x = new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.$94$)(a))(Fay$$_(Fay$$_(Prelude.quot)(b))(2));});return Fay$$_(Fay$$_(Fay$$mult)(x))(x);});})();}}}var b = $p2;var a = $p1;return Fay$$_(Fay$$_(Fay$$mult)(a))(Fay$$_(Fay$$_(Prelude.$94$)(a))(Fay$$_(Fay$$_(Fay$$sub)(b))(1)));});};};Prelude.logBase = function($p1){return function($p2){return new Fay$$$(function(){var x = $p2;var b = $p1;return Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Prelude.log)(x)))(Fay$$_(Prelude.log)(b));});};};Prelude.sin = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.sin(Fay$$fayToJs_double($p1)));});};Prelude.tan = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.tan(Fay$$fayToJs_double($p1)));});};Prelude.cos = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.cos(Fay$$fayToJs_double($p1)));});};Prelude.asin = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.asin(Fay$$fayToJs_double($p1)));});};Prelude.atan = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.atan(Fay$$fayToJs_double($p1)));});};Prelude.acos = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.acos(Fay$$fayToJs_double($p1)));});};Prelude.sinh = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Prelude.exp)(x)))(Fay$$_(Prelude.exp)((-(Fay$$_(x)))))))(2);});};Prelude.tanh = function($p1){return new Fay$$$(function(){var x = $p1;return (function(){return new Fay$$$(function(){var a = new Fay$$$(function(){return Fay$$_(Prelude.exp)(x);});var b = new Fay$$$(function(){return Fay$$_(Prelude.exp)((-(Fay$$_(x))));});return Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Fay$$_(Fay$$sub)(a))(b)))(Fay$$_(Fay$$_(Fay$$add)(a))(b));});})();});};Prelude.cosh = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Prelude.exp)(x)))(Fay$$_(Prelude.exp)((-(Fay$$_(x)))))))(2);});};Prelude.asinh = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Prelude.log)(Fay$$_(Fay$$_(Fay$$add)(x))(Fay$$_(Prelude.sqrt)(Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Fay$$_(Prelude.$42$$42$)(x))(2)))(1))));});};Prelude.atanh = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Prelude.log)(Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Fay$$_(Fay$$add)(1))(x)))(Fay$$_(Fay$$_(Fay$$sub)(1))(x)))))(2);});};Prelude.acosh = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Prelude.log)(Fay$$_(Fay$$_(Fay$$add)(x))(Fay$$_(Prelude.sqrt)(Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Fay$$_(Prelude.$42$$42$)(x))(2)))(1))));});};Prelude.properFraction = function($p1){return new Fay$$$(function(){var x = $p1;return (function(){return new Fay$$$(function(){var a = new Fay$$$(function(){return Fay$$_(Prelude.truncate)(x);});return Fay$$list([a,Fay$$_(Fay$$_(Fay$$sub)(x))(Fay$$_(Prelude.fromIntegral)(a))]);});})();});};Prelude.truncate = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(x))(0)) ? Fay$$_(Prelude.ceiling)(x) : Fay$$_(Prelude.floor)(x);});};Prelude.round = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_int(Math.round(Fay$$fayToJs_double($p1)));});};Prelude.ceiling = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_int(Math.ceil(Fay$$fayToJs_double($p1)));});};Prelude.floor = function($p1){return new Fay$$$(function(){return Fay$$jsToFay_int(Math.floor(Fay$$fayToJs_double($p1)));});};Prelude.subtract = new Fay$$$(function(){return Fay$$_(Prelude.flip)(Fay$$sub);});Prelude.even = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$eq)(Fay$$_(Fay$$_(Prelude.rem)(x))(2)))(0);});};Prelude.odd = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Prelude.not)(Fay$$_(Prelude.even)(x));});};Prelude.gcd = function($p1){return function($p2){return new Fay$$$(function(){var b = $p2;var a = $p1;return (function(){var go = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === 0) {var x = $p1;return x;}var y = $p2;var x = $p1;return Fay$$_(Fay$$_(go)(y))(Fay$$_(Fay$$_(Prelude.rem)(x))(y));});};};return Fay$$_(Fay$$_(go)(Fay$$_(Prelude.abs)(a)))(Fay$$_(Prelude.abs)(b));})();});};};Prelude.quot = function($p1){return function($p2){return new Fay$$$(function(){var y = $p2;var x = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$eq)(y))(0)) ? Fay$$_(Prelude.error)(Fay$$list("Division by zero")) : Fay$$_(Fay$$_(Prelude.quot$39$)(x))(y);});};};Prelude.quot$39$ = function($p1){return function($p2){return new Fay$$$(function(){return Fay$$jsToFay_int(~~(Fay$$fayToJs_int($p1)/Fay$$fayToJs_int($p2)));});};};Prelude.quotRem = function($p1){return function($p2){return new Fay$$$(function(){var y = $p2;var x = $p1;return Fay$$list([Fay$$_(Fay$$_(Prelude.quot)(x))(y),Fay$$_(Fay$$_(Prelude.rem)(x))(y)]);});};};Prelude.rem = function($p1){return function($p2){return new Fay$$$(function(){var y = $p2;var x = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$eq)(y))(0)) ? Fay$$_(Prelude.error)(Fay$$list("Division by zero")) : Fay$$_(Fay$$_(Prelude.rem$39$)(x))(y);});};};Prelude.rem$39$ = function($p1){return function($p2){return new Fay$$$(function(){return Fay$$jsToFay_int(Fay$$fayToJs_int($p1) % Fay$$fayToJs_int($p2));});};};Prelude.lcm = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === 0) {return 0;}if (Fay$$_($p1) === 0) {return 0;}var b = $p2;var a = $p1;return Fay$$_(Prelude.abs)(Fay$$_(Fay$$_(Fay$$mult)(Fay$$_(Fay$$_(Prelude.quot)(a))(Fay$$_(Fay$$_(Prelude.gcd)(a))(b))))(b));});};};Prelude.find = function($p1){return function($p2){return new Fay$$$(function(){var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var p = $p1;return Fay$$_(Fay$$_(p)(x)) ? Fay$$_(Prelude.Just)(x) : Fay$$_(Fay$$_(Prelude.find)(p))(xs);}if (Fay$$_($p2) === null) {return Prelude.Nothing;}throw ["unhandled case in find",[$p1,$p2]];});};};Prelude.filter = function($p1){return function($p2){return new Fay$$$(function(){var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var p = $p1;return Fay$$_(Fay$$_(p)(x)) ? Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(Fay$$_(Prelude.filter)(p))(xs)) : Fay$$_(Fay$$_(Prelude.filter)(p))(xs);}if (Fay$$_($p2) === null) {return null;}throw ["unhandled case in filter",[$p1,$p2]];});};};Prelude.$_null = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return true;}return false;});};Prelude.map = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === null) {return null;}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var f = $p1;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$_(f)(x)))(Fay$$_(Fay$$_(Prelude.map)(f))(xs));}throw ["unhandled case in map",[$p1,$p2]];});};};Prelude.nub = function($p1){return new Fay$$$(function(){var ls = $p1;return Fay$$_(Fay$$_(Prelude.nub$39$)(ls))(null);});};Prelude.nub$39$ = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return null;}var ls = $p2;var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;return Fay$$_(Fay$$_(Fay$$_(Prelude.elem)(x))(ls)) ? Fay$$_(Fay$$_(Prelude.nub$39$)(xs))(ls) : Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(Fay$$_(Prelude.nub$39$)(xs))(Fay$$_(Fay$$_(Fay$$cons)(x))(ls)));}throw ["unhandled case in nub'",[$p1,$p2]];});};};Prelude.elem = function($p1){return function($p2){return new Fay$$$(function(){var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var y = $tmp1.car;var ys = $tmp1.cdr;var x = $p1;return Fay$$_(Fay$$_(Fay$$or)(Fay$$_(Fay$$_(Fay$$eq)(x))(y)))(Fay$$_(Fay$$_(Prelude.elem)(x))(ys));}if (Fay$$_($p2) === null) {return false;}throw ["unhandled case in elem",[$p1,$p2]];});};};Prelude.notElem = function($p1){return function($p2){return new Fay$$$(function(){var ys = $p2;var x = $p1;return Fay$$_(Prelude.not)(Fay$$_(Fay$$_(Prelude.elem)(x))(ys));});};};Prelude.sort = new Fay$$$(function(){return Fay$$_(Prelude.sortBy)(Prelude.compare);});Prelude.sortBy = function($p1){return new Fay$$$(function(){var cmp = $p1;return Fay$$_(Fay$$_(Prelude.foldr)(Fay$$_(Prelude.insertBy)(cmp)))(null);});};Prelude.insertBy = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){if (Fay$$_($p3) === null) {var x = $p2;return Fay$$list([x]);}var ys = $p3;var x = $p2;var cmp = $p1;return (function($tmp1){if (Fay$$_($tmp1) === null) {return Fay$$list([x]);}var $tmp2 = Fay$$_($tmp1);if ($tmp2 instanceof Fay$$Cons) {var y = $tmp2.car;var ys$39$ = $tmp2.cdr;return (function($tmp2){if (Fay$$_($tmp2) instanceof Prelude._GT) {return Fay$$_(Fay$$_(Fay$$cons)(y))(Fay$$_(Fay$$_(Fay$$_(Prelude.insertBy)(cmp))(x))(ys$39$));}return Fay$$_(Fay$$_(Fay$$cons)(x))(ys);})(Fay$$_(Fay$$_(cmp)(x))(y));}return (function(){ throw (["unhandled case",$tmp1]); })();})(ys);});};};};Prelude.conc = function($p1){return function($p2){return new Fay$$$(function(){var ys = $p2;var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;return Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(Fay$$_(Prelude.conc)(xs))(ys));}var ys = $p2;if (Fay$$_($p1) === null) {return ys;}throw ["unhandled case in conc",[$p1,$p2]];});};};Prelude.concat = new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.foldr)(Prelude.conc))(null);});Prelude.concatMap = function($p1){return new Fay$$$(function(){var f = $p1;return Fay$$_(Fay$$_(Prelude.foldr)(Fay$$_(Fay$$_(Prelude.$46$)(Prelude.$43$$43$))(f)))(null);});};Prelude.foldr = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){if (Fay$$_($p3) === null) {var z = $p2;return z;}var $tmp1 = Fay$$_($p3);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var z = $p2;var f = $p1;return Fay$$_(Fay$$_(f)(x))(Fay$$_(Fay$$_(Fay$$_(Prelude.foldr)(f))(z))(xs));}throw ["unhandled case in foldr",[$p1,$p2,$p3]];});};};};Prelude.foldr1 = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$listLen(Fay$$_($p2),1)) {var x = Fay$$index(0,Fay$$_($p2));return x;}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var f = $p1;return Fay$$_(Fay$$_(f)(x))(Fay$$_(Fay$$_(Prelude.foldr1)(f))(xs));}if (Fay$$_($p2) === null) {return Fay$$_(Prelude.error)(Fay$$list("foldr1: empty list"));}throw ["unhandled case in foldr1",[$p1,$p2]];});};};Prelude.foldl = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){if (Fay$$_($p3) === null) {var z = $p2;return z;}var $tmp1 = Fay$$_($p3);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var z = $p2;var f = $p1;return Fay$$_(Fay$$_(Fay$$_(Prelude.foldl)(f))(Fay$$_(Fay$$_(f)(z))(x)))(xs);}throw ["unhandled case in foldl",[$p1,$p2,$p3]];});};};};Prelude.foldl1 = function($p1){return function($p2){return new Fay$$$(function(){var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var f = $p1;return Fay$$_(Fay$$_(Fay$$_(Prelude.foldl)(f))(x))(xs);}if (Fay$$_($p2) === null) {return Fay$$_(Prelude.error)(Fay$$list("foldl1: empty list"));}throw ["unhandled case in foldl1",[$p1,$p2]];});};};Prelude.$43$$43$ = function($p1){return function($p2){return new Fay$$$(function(){var y = $p2;var x = $p1;return Fay$$_(Fay$$_(Prelude.conc)(x))(y);});};};Prelude.$33$$33$ = function($p1){return function($p2){return new Fay$$$(function(){var b = $p2;var a = $p1;return (function(){var go = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return Fay$$_(Prelude.error)(Fay$$list("(!!): index too large"));}if (Fay$$_($p2) === 0) {var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var h = $tmp1.car;return h;}}var n = $p2;var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var t = $tmp1.cdr;return Fay$$_(Fay$$_(go)(t))(Fay$$_(Fay$$_(Fay$$sub)(n))(1));}throw ["unhandled case in go",[$p1,$p2]];});};};return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(b))(0)) ? Fay$$_(Prelude.error)(Fay$$list("(!!): negative index")) : Fay$$_(Fay$$_(go)(a))(b);})();});};};Prelude.head = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return Fay$$_(Prelude.error)(Fay$$list("head: empty list"));}var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var h = $tmp1.car;return h;}throw ["unhandled case in head",[$p1]];});};Prelude.tail = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return Fay$$_(Prelude.error)(Fay$$list("tail: empty list"));}var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var t = $tmp1.cdr;return t;}throw ["unhandled case in tail",[$p1]];});};Prelude.init = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return Fay$$_(Prelude.error)(Fay$$list("init: empty list"));}if (Fay$$listLen(Fay$$_($p1),1)) {return null;}var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var h = $tmp1.car;var t = $tmp1.cdr;return Fay$$_(Fay$$_(Fay$$cons)(h))(Fay$$_(Prelude.init)(t));}throw ["unhandled case in init",[$p1]];});};Prelude.last = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return Fay$$_(Prelude.error)(Fay$$list("last: empty list"));}if (Fay$$listLen(Fay$$_($p1),1)) {var a = Fay$$index(0,Fay$$_($p1));return a;}var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var t = $tmp1.cdr;return Fay$$_(Prelude.last)(t);}throw ["unhandled case in last",[$p1]];});};Prelude.iterate = function($p1){return function($p2){return new Fay$$$(function(){var x = $p2;var f = $p1;return Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(Fay$$_(Prelude.iterate)(f))(Fay$$_(f)(x)));});};};Prelude.repeat = function($p1){return new Fay$$$(function(){var x = $p1;return Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(Prelude.repeat)(x));});};Prelude.replicate = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p1) === 0) {return null;}var x = $p2;var n = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(n))(0)) ? null : Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(Fay$$_(Prelude.replicate)(Fay$$_(Fay$$_(Fay$$sub)(n))(1)))(x));});};};Prelude.cycle = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return Fay$$_(Prelude.error)(Fay$$list("cycle: empty list"));}var xs = $p1;return (function(){var xs$39$ = new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.$43$$43$)(xs))(xs$39$);});return xs$39$;})();});};Prelude.take = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p1) === 0) {return null;}if (Fay$$_($p2) === null) {return null;}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var n = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(n))(0)) ? null : Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(Fay$$_(Prelude.take)(Fay$$_(Fay$$_(Fay$$sub)(n))(1)))(xs));}throw ["unhandled case in take",[$p1,$p2]];});};};Prelude.drop = function($p1){return function($p2){return new Fay$$$(function(){var xs = $p2;if (Fay$$_($p1) === 0) {return xs;}if (Fay$$_($p2) === null) {return null;}var xss = $p2;var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var xs = $tmp1.cdr;var n = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(n))(0)) ? xss : Fay$$_(Fay$$_(Prelude.drop)(Fay$$_(Fay$$_(Fay$$sub)(n))(1)))(xs);}throw ["unhandled case in drop",[$p1,$p2]];});};};Prelude.splitAt = function($p1){return function($p2){return new Fay$$$(function(){var xs = $p2;if (Fay$$_($p1) === 0) {return Fay$$list([null,xs]);}if (Fay$$_($p2) === null) {return Fay$$list([null,null]);}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var n = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(n))(0)) ? Fay$$list([null,Fay$$_(Fay$$_(Fay$$cons)(x))(xs)]) : (function($tmp1){if (Fay$$listLen(Fay$$_($tmp1),2)) {var a = Fay$$index(0,Fay$$_($tmp1));var b = Fay$$index(1,Fay$$_($tmp1));return Fay$$list([Fay$$_(Fay$$_(Fay$$cons)(x))(a),b]);}return (function(){ throw (["unhandled case",$tmp1]); })();})(Fay$$_(Fay$$_(Prelude.splitAt)(Fay$$_(Fay$$_(Fay$$sub)(n))(1)))(xs));}throw ["unhandled case in splitAt",[$p1,$p2]];});};};Prelude.takeWhile = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === null) {return null;}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var p = $p1;return Fay$$_(Fay$$_(p)(x)) ? Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(Fay$$_(Prelude.takeWhile)(p))(xs)) : null;}throw ["unhandled case in takeWhile",[$p1,$p2]];});};};Prelude.dropWhile = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === null) {return null;}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var p = $p1;return Fay$$_(Fay$$_(p)(x)) ? Fay$$_(Fay$$_(Prelude.dropWhile)(p))(xs) : Fay$$_(Fay$$_(Fay$$cons)(x))(xs);}throw ["unhandled case in dropWhile",[$p1,$p2]];});};};Prelude.span = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === null) {return Fay$$list([null,null]);}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var p = $p1;return Fay$$_(Fay$$_(p)(x)) ? (function($tmp1){if (Fay$$listLen(Fay$$_($tmp1),2)) {var a = Fay$$index(0,Fay$$_($tmp1));var b = Fay$$index(1,Fay$$_($tmp1));return Fay$$list([Fay$$_(Fay$$_(Fay$$cons)(x))(a),b]);}return (function(){ throw (["unhandled case",$tmp1]); })();})(Fay$$_(Fay$$_(Prelude.span)(p))(xs)) : Fay$$list([null,Fay$$_(Fay$$_(Fay$$cons)(x))(xs)]);}throw ["unhandled case in span",[$p1,$p2]];});};};Prelude.$_break = function($p1){return new Fay$$$(function(){var p = $p1;return Fay$$_(Prelude.span)(Fay$$_(Fay$$_(Prelude.$46$)(Prelude.not))(p));});};Prelude.zipWith = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var $tmp1 = Fay$$_($p3);if ($tmp1 instanceof Fay$$Cons) {var b = $tmp1.car;var bs = $tmp1.cdr;var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var a = $tmp1.car;var as = $tmp1.cdr;var f = $p1;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$_(Fay$$_(f)(a))(b)))(Fay$$_(Fay$$_(Fay$$_(Prelude.zipWith)(f))(as))(bs));}}return null;});};};};Prelude.zipWith3 = function($p1){return function($p2){return function($p3){return function($p4){return new Fay$$$(function(){var $tmp1 = Fay$$_($p4);if ($tmp1 instanceof Fay$$Cons) {var c = $tmp1.car;var cs = $tmp1.cdr;var $tmp1 = Fay$$_($p3);if ($tmp1 instanceof Fay$$Cons) {var b = $tmp1.car;var bs = $tmp1.cdr;var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var a = $tmp1.car;var as = $tmp1.cdr;var f = $p1;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$_(Fay$$_(Fay$$_(f)(a))(b))(c)))(Fay$$_(Fay$$_(Fay$$_(Fay$$_(Prelude.zipWith3)(f))(as))(bs))(cs));}}}return null;});};};};};Prelude.zip = function($p1){return function($p2){return new Fay$$$(function(){var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var b = $tmp1.car;var bs = $tmp1.cdr;var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var a = $tmp1.car;var as = $tmp1.cdr;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$list([a,b])))(Fay$$_(Fay$$_(Prelude.zip)(as))(bs));}}return null;});};};Prelude.zip3 = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var $tmp1 = Fay$$_($p3);if ($tmp1 instanceof Fay$$Cons) {var c = $tmp1.car;var cs = $tmp1.cdr;var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var b = $tmp1.car;var bs = $tmp1.cdr;var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var a = $tmp1.car;var as = $tmp1.cdr;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$list([a,b,c])))(Fay$$_(Fay$$_(Fay$$_(Prelude.zip3)(as))(bs))(cs));}}}return null;});};};};Prelude.unzip = function($p1){return new Fay$$$(function(){var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {if (Fay$$listLen(Fay$$_($tmp1.car),2)) {var x = Fay$$index(0,Fay$$_($tmp1.car));var y = Fay$$index(1,Fay$$_($tmp1.car));var ps = $tmp1.cdr;return (function($tmp1){if (Fay$$listLen(Fay$$_($tmp1),2)) {var xs = Fay$$index(0,Fay$$_($tmp1));var ys = Fay$$index(1,Fay$$_($tmp1));return Fay$$list([Fay$$_(Fay$$_(Fay$$cons)(x))(xs),Fay$$_(Fay$$_(Fay$$cons)(y))(ys)]);}return (function(){ throw (["unhandled case",$tmp1]); })();})(Fay$$_(Prelude.unzip)(ps));}}if (Fay$$_($p1) === null) {return Fay$$list([null,null]);}throw ["unhandled case in unzip",[$p1]];});};Prelude.unzip3 = function($p1){return new Fay$$$(function(){var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {if (Fay$$listLen(Fay$$_($tmp1.car),3)) {var x = Fay$$index(0,Fay$$_($tmp1.car));var y = Fay$$index(1,Fay$$_($tmp1.car));var z = Fay$$index(2,Fay$$_($tmp1.car));var ps = $tmp1.cdr;return (function($tmp1){if (Fay$$listLen(Fay$$_($tmp1),3)) {var xs = Fay$$index(0,Fay$$_($tmp1));var ys = Fay$$index(1,Fay$$_($tmp1));var zs = Fay$$index(2,Fay$$_($tmp1));return Fay$$list([Fay$$_(Fay$$_(Fay$$cons)(x))(xs),Fay$$_(Fay$$_(Fay$$cons)(y))(ys),Fay$$_(Fay$$_(Fay$$cons)(z))(zs)]);}return (function(){ throw (["unhandled case",$tmp1]); })();})(Fay$$_(Prelude.unzip3)(ps));}}if (Fay$$_($p1) === null) {return Fay$$list([null,null,null]);}throw ["unhandled case in unzip3",[$p1]];});};Prelude.lines = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return null;}var s = $p1;return (function(){var isLineBreak = function($p1){return new Fay$$$(function(){var c = $p1;return Fay$$_(Fay$$_(Fay$$or)(Fay$$_(Fay$$_(Fay$$eq)(c))("\r")))(Fay$$_(Fay$$_(Fay$$eq)(c))("\n"));});};return (function($tmp1){if (Fay$$listLen(Fay$$_($tmp1),2)) {var a = Fay$$index(0,Fay$$_($tmp1));if (Fay$$_(Fay$$index(1,Fay$$_($tmp1))) === null) {return Fay$$list([a]);}}if (Fay$$listLen(Fay$$_($tmp1),2)) {var a = Fay$$index(0,Fay$$_($tmp1));var $tmp2 = Fay$$_(Fay$$index(1,Fay$$_($tmp1)));if ($tmp2 instanceof Fay$$Cons) {var cs = $tmp2.cdr;return Fay$$_(Fay$$_(Fay$$cons)(a))(Fay$$_(Prelude.lines)(cs));}}return (function(){ throw (["unhandled case",$tmp1]); })();})(Fay$$_(Fay$$_(Prelude.$_break)(isLineBreak))(s));})();});};Prelude.unlines = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return null;}var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var l = $tmp1.car;var ls = $tmp1.cdr;return Fay$$_(Fay$$_(Prelude.$43$$43$)(l))(Fay$$_(Fay$$_(Fay$$cons)("\n"))(Fay$$_(Prelude.unlines)(ls)));}throw ["unhandled case in unlines",[$p1]];});};Prelude.words = function($p1){return new Fay$$$(function(){var str = $p1;return (function(){var words$39$ = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return null;}var s = $p1;return (function($tmp1){if (Fay$$listLen(Fay$$_($tmp1),2)) {var a = Fay$$index(0,Fay$$_($tmp1));var b = Fay$$index(1,Fay$$_($tmp1));return Fay$$_(Fay$$_(Fay$$cons)(a))(Fay$$_(Prelude.words)(b));}return (function(){ throw (["unhandled case",$tmp1]); })();})(Fay$$_(Fay$$_(Prelude.$_break)(isSpace))(s));});};var isSpace = function($p1){return new Fay$$$(function(){var c = $p1;return Fay$$_(Fay$$_(Prelude.elem)(c))(Fay$$list(" \t\r\n\u000c\u000b"));});};return Fay$$_(words$39$)(Fay$$_(Fay$$_(Prelude.dropWhile)(isSpace))(str));})();});};Prelude.unwords = new Fay$$$(function(){return Fay$$_(Prelude.intercalate)(Fay$$list(" "));});Prelude.and = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return true;}var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;return Fay$$_(Fay$$_(Fay$$and)(x))(Fay$$_(Prelude.and)(xs));}throw ["unhandled case in and",[$p1]];});};Prelude.or = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return false;}var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;return Fay$$_(Fay$$_(Fay$$or)(x))(Fay$$_(Prelude.or)(xs));}throw ["unhandled case in or",[$p1]];});};Prelude.any = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === null) {return false;}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var p = $p1;return Fay$$_(Fay$$_(Fay$$or)(Fay$$_(p)(x)))(Fay$$_(Fay$$_(Prelude.any)(p))(xs));}throw ["unhandled case in any",[$p1,$p2]];});};};Prelude.all = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === null) {return true;}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var p = $p1;return Fay$$_(Fay$$_(Fay$$and)(Fay$$_(p)(x)))(Fay$$_(Fay$$_(Prelude.all)(p))(xs));}throw ["unhandled case in all",[$p1,$p2]];});};};Prelude.intersperse = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === null) {return null;}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var sep = $p1;return Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(Fay$$_(Prelude.prependToAll)(sep))(xs));}throw ["unhandled case in intersperse",[$p1,$p2]];});};};Prelude.prependToAll = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === null) {return null;}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var sep = $p1;return Fay$$_(Fay$$_(Fay$$cons)(sep))(Fay$$_(Fay$$_(Fay$$cons)(x))(Fay$$_(Fay$$_(Prelude.prependToAll)(sep))(xs)));}throw ["unhandled case in prependToAll",[$p1,$p2]];});};};Prelude.intercalate = function($p1){return function($p2){return new Fay$$$(function(){var xss = $p2;var xs = $p1;return Fay$$_(Prelude.concat)(Fay$$_(Fay$$_(Prelude.intersperse)(xs))(xss));});};};Prelude.maximum = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return Fay$$_(Prelude.error)(Fay$$list("maximum: empty list"));}var xs = $p1;return Fay$$_(Fay$$_(Prelude.foldl1)(Prelude.max))(xs);});};Prelude.minimum = function($p1){return new Fay$$$(function(){if (Fay$$_($p1) === null) {return Fay$$_(Prelude.error)(Fay$$list("minimum: empty list"));}var xs = $p1;return Fay$$_(Fay$$_(Prelude.foldl1)(Prelude.min))(xs);});};Prelude.product = function($p1){return new Fay$$$(function(){var xs = $p1;return Fay$$_(Fay$$_(Fay$$_(Prelude.foldl)(Fay$$mult))(1))(xs);});};Prelude.sum = function($p1){return new Fay$$$(function(){var xs = $p1;return Fay$$_(Fay$$_(Fay$$_(Prelude.foldl)(Fay$$add))(0))(xs);});};Prelude.scanl = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var l = $p3;var z = $p2;var f = $p1;return Fay$$_(Fay$$_(Fay$$cons)(z))((function($tmp1){if (Fay$$_($tmp1) === null) {return null;}var $tmp2 = Fay$$_($tmp1);if ($tmp2 instanceof Fay$$Cons) {var x = $tmp2.car;var xs = $tmp2.cdr;return Fay$$_(Fay$$_(Fay$$_(Prelude.scanl)(f))(Fay$$_(Fay$$_(f)(z))(x)))(xs);}return (function(){ throw (["unhandled case",$tmp1]); })();})(l));});};};};Prelude.scanl1 = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === null) {return null;}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var f = $p1;return Fay$$_(Fay$$_(Fay$$_(Prelude.scanl)(f))(x))(xs);}throw ["unhandled case in scanl1",[$p1,$p2]];});};};Prelude.scanr = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){if (Fay$$_($p3) === null) {var z = $p2;return Fay$$list([z]);}var $tmp1 = Fay$$_($p3);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var z = $p2;var f = $p1;return (function($tmp1){var $tmp2 = Fay$$_($tmp1);if ($tmp2 instanceof Fay$$Cons) {var h = $tmp2.car;var t = $tmp2.cdr;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$_(Fay$$_(f)(x))(h)))(Fay$$_(Fay$$_(Fay$$cons)(h))(t));}return Prelude.$_undefined;})(Fay$$_(Fay$$_(Fay$$_(Prelude.scanr)(f))(z))(xs));}throw ["unhandled case in scanr",[$p1,$p2,$p3]];});};};};Prelude.scanr1 = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === null) {return null;}if (Fay$$listLen(Fay$$_($p2),1)) {var x = Fay$$index(0,Fay$$_($p2));return Fay$$list([x]);}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;var f = $p1;return (function($tmp1){var $tmp2 = Fay$$_($tmp1);if ($tmp2 instanceof Fay$$Cons) {var h = $tmp2.car;var t = $tmp2.cdr;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$_(Fay$$_(f)(x))(h)))(Fay$$_(Fay$$_(Fay$$cons)(h))(t));}return Prelude.$_undefined;})(Fay$$_(Fay$$_(Prelude.scanr1)(f))(xs));}throw ["unhandled case in scanr1",[$p1,$p2]];});};};Prelude.lookup = function($p1){return function($p2){return new Fay$$$(function(){if (Fay$$_($p2) === null) {var _key = $p1;return Prelude.Nothing;}var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {if (Fay$$listLen(Fay$$_($tmp1.car),2)) {var x = Fay$$index(0,Fay$$_($tmp1.car));var y = Fay$$index(1,Fay$$_($tmp1.car));var xys = $tmp1.cdr;var key = $p1;return Fay$$_(Fay$$_(Fay$$_(Fay$$eq)(key))(x)) ? Fay$$_(Prelude.Just)(y) : Fay$$_(Fay$$_(Prelude.lookup)(key))(xys);}}throw ["unhandled case in lookup",[$p1,$p2]];});};};Prelude.length = function($p1){return new Fay$$$(function(){var xs = $p1;return Fay$$_(Fay$$_(Prelude.length$39$)(0))(xs);});};Prelude.length$39$ = function($p1){return function($p2){return new Fay$$$(function(){var $tmp1 = Fay$$_($p2);if ($tmp1 instanceof Fay$$Cons) {var xs = $tmp1.cdr;var acc = $p1;return Fay$$_(Fay$$_(Prelude.length$39$)(Fay$$_(Fay$$_(Fay$$add)(acc))(1)))(xs);}var acc = $p1;return acc;});};};Prelude.reverse = function($p1){return new Fay$$$(function(){var $tmp1 = Fay$$_($p1);if ($tmp1 instanceof Fay$$Cons) {var x = $tmp1.car;var xs = $tmp1.cdr;return Fay$$_(Fay$$_(Prelude.$43$$43$)(Fay$$_(Prelude.reverse)(xs)))(Fay$$list([x]));}if (Fay$$_($p1) === null) {return null;}throw ["unhandled case in reverse",[$p1]];});};Prelude.print = function($p1){return new Fay$$$(function(){return new Fay$$Monad(Fay$$jsToFay(["unknown"],(function(x) { if (console && console.log) console.log(x) })(Fay$$fayToJs(["automatic"],$p1))));});};Prelude.putStrLn = function($p1){return new Fay$$$(function(){return new Fay$$Monad(Fay$$jsToFay(["unknown"],(function(x) { if (console && console.log) console.log(x) })(Fay$$fayToJs_string($p1))));});};Prelude.ifThenElse = function($p1){return function($p2){return function($p3){return new Fay$$$(function(){var b = $p3;var a = $p2;var p = $p1;return Fay$$_(p) ? a : b;});};};};Fay$$objConcat(Fay$$fayToJsHash,{"Just": function(type,argTypes,_obj){var obj_ = {"instance": "Just"};var obj_slot1 = Fay$$fayToJs(argTypes && (argTypes)[0] ? (argTypes)[0] : (type)[0] === "automatic" ? ["automatic"] : ["unknown"],_obj.slot1);if (undefined !== obj_slot1) {obj_['slot1'] = obj_slot1;}return obj_;},"Nothing": function(type,argTypes,_obj){var obj_ = {"instance": "Nothing"};return obj_;},"Left": function(type,argTypes,_obj){var obj_ = {"instance": "Left"};var obj_slot1 = Fay$$fayToJs(argTypes && (argTypes)[0] ? (argTypes)[0] : (type)[0] === "automatic" ? ["automatic"] : ["unknown"],_obj.slot1);if (undefined !== obj_slot1) {obj_['slot1'] = obj_slot1;}return obj_;},"Right": function(type,argTypes,_obj){var obj_ = {"instance": "Right"};var obj_slot1 = Fay$$fayToJs(argTypes && (argTypes)[1] ? (argTypes)[1] : (type)[0] === "automatic" ? ["automatic"] : ["unknown"],_obj.slot1);if (undefined !== obj_slot1) {obj_['slot1'] = obj_slot1;}return obj_;},"GT": function(type,argTypes,_obj){var obj_ = {"instance": "GT"};return obj_;},"LT": function(type,argTypes,_obj){var obj_ = {"instance": "LT"};return obj_;},"EQ": function(type,argTypes,_obj){var obj_ = {"instance": "EQ"};return obj_;}});Fay$$objConcat(Fay$$jsToFayHash,{"Just": function(type,argTypes,obj){return new Prelude._Just(Fay$$jsToFay(argTypes && (argTypes)[0] ? (argTypes)[0] : (type)[0] === "automatic" ? ["automatic"] : ["unknown"],obj["slot1"]));},"Nothing": function(type,argTypes,obj){return new Prelude._Nothing();},"Left": function(type,argTypes,obj){return new Prelude._Left(Fay$$jsToFay(argTypes && (argTypes)[0] ? (argTypes)[0] : (type)[0] === "automatic" ? ["automatic"] : ["unknown"],obj["slot1"]));},"Right": function(type,argTypes,obj){return new Prelude._Right(Fay$$jsToFay(argTypes && (argTypes)[1] ? (argTypes)[1] : (type)[0] === "automatic" ? ["automatic"] : ["unknown"],obj["slot1"]));},"GT": function(type,argTypes,obj){return new Prelude._GT();},"LT": function(type,argTypes,obj){return new Prelude._LT();},"EQ": function(type,argTypes,obj){return new Prelude._EQ();}});var FFI = {};
+var $jscomp=$jscomp||{};$jscomp.scope={};$jscomp.findInternal=function(a,b,c){a instanceof String&&(a=String(a));for(var d=a.length,e=0;e<d;e++){var f=a[e];if(b.call(c,f,e,a))return{i:e,v:f}}return{i:-1,v:void 0}};$jscomp.ASSUME_ES5=!1;$jscomp.ASSUME_NO_NATIVE_MAP=!1;$jscomp.ASSUME_NO_NATIVE_SET=!1;$jscomp.defineProperty=$jscomp.ASSUME_ES5||"function"==typeof Object.defineProperties?Object.defineProperty:function(a,b,c){a!=Array.prototype&&a!=Object.prototype&&(a[b]=c.value)};
+$jscomp.getGlobal=function(a){return"undefined"!=typeof window&&window===a?a:"undefined"!=typeof global&&null!=global?global:a};$jscomp.global=$jscomp.getGlobal(this);$jscomp.polyfill=function(a,b,c,d){if(b){c=$jscomp.global;a=a.split(".");for(d=0;d<a.length-1;d++){var e=a[d];e in c||(c[e]={});c=c[e]}a=a[a.length-1];d=c[a];b=b(d);b!=d&&null!=b&&$jscomp.defineProperty(c,a,{configurable:!0,writable:!0,value:b})}};
+$jscomp.polyfill("Array.prototype.find",function(a){return a?a:function(a,c){return $jscomp.findInternal(this,a,c).v}},"es6","es3");$jscomp.checkStringArgs=function(a,b,c){if(null==a)throw new TypeError("The 'this' value for String.prototype."+c+" must not be null or undefined");if(b instanceof RegExp)throw new TypeError("First argument to String.prototype."+c+" must not be a regular expression");return a+""};
+$jscomp.polyfill("String.prototype.repeat",function(a){return a?a:function(a){var b=$jscomp.checkStringArgs(this,null,"repeat");if(0>a||1342177279<a)throw new RangeError("Invalid count value");a|=0;for(var d="";a;)if(a&1&&(d+=b),a>>>=1)b+=b;return d}},"es6","es3");void 0===Object.create&&(Object.create=function(a){function b(){}b.prototype=a;return new b});function Fay$$objConcat(a,b){for(var c in b)b.hasOwnProperty(c)&&(a[c]=b[c]);return a}
+function Fay$$_(a,b){for(;a instanceof Fay$$$;)a=a.force(b);return a}function Fay$$__(){for(var a=arguments[0],b=1,c=arguments.length;b<c;b++)a=(a instanceof Fay$$$?Fay$$_(a):a)(arguments[b]);return a}function Fay$$$(a){this.forced=!1;this.value=a}Fay$$$.prototype.force=function(a){return a?this.value():this.forced?this.value:(this.value=this.value(),this.forced=!0,this.value)};function Fay$$seq(a){return function(b){Fay$$_(a,!1);return b}}
+function Fay$$seq$36$uncurried(a,b){Fay$$_(a,!1);return b}function Fay$$Monad(a){this.value=a}function Fay$$then(a){return function(b){return Fay$$bind(a)(function(a){return b})}}function Fay$$then$36$uncurried(a,b){return Fay$$bind$36$uncurried(a,function(a){return b})}function Fay$$bind(a){return function(b){return new Fay$$$(function(){var c=Fay$$_(a,!0);return Fay$$_(b)(c.value)})}}
+function Fay$$bind$36$uncurried(a,b){return new Fay$$$(function(){var c=Fay$$_(a,!0);return Fay$$_(b)(c.value)})}function Fay$$$_return(a){return new Fay$$Monad(a)}function Fay$$force(a){return function(b){return new Fay$$$(function(){Fay$$_(a,b);return new Fay$$Monad(Fay$$unit)})}}function Fay$$return$36$uncurried(a){return new Fay$$Monad(a)}var Fay$$unit=null;
+function Fay$$fayToJs(a,b){var c=a[0],d=a[1];if("action"==c)return function(){return Fay$$fayToJs(d[0],Fay$$_(b,!0).value)};if("function"==c)return function(){var a=b,c=d[d.length-1],h=d.length;if(1<h){a=Fay$$_(a,!0);if("automatic_function"==d){for(var g=0;g<arguments.length;g++)a=Fay$$_(a(Fay$$jsToFay(["automatic"],arguments[g])),!0);return Fay$$fayToJs(["automatic"],a)}for(g=0;g<h-1&&a instanceof Function;g++)a=Fay$$_(a(Fay$$jsToFay(d[g],arguments[g])),!0);h=c[1];return"action"==c[0]?Fay$$fayToJs(h[0],
+a.value):Fay$$fayToJs(c,a)}throw Error("Nullary function?");};if("string"==c)return Fay$$fayToJs_string(b);if("list"==c){a=[];for(b=Fay$$_(b);b instanceof Fay$$Cons;)a.push(Fay$$fayToJs(d[0],b.car)),b=Fay$$_(b.cdr);return a}if("tuple"==c){a=[];b=Fay$$_(b);for(c=0;b instanceof Fay$$Cons;)a.push(Fay$$fayToJs(d[c++],b.car)),b=Fay$$_(b.cdr);return a}if("defined"==c)return b=Fay$$_(b),b instanceof Fay.FFI._Undefined?void 0:Fay$$fayToJs(d[0],b.slot1);if("nullable"==c)return b=Fay$$_(b),b instanceof Fay.FFI._Null?
+null:Fay$$fayToJs(d[0],b.slot1);if("double"==c||"int"==c||"bool"==c)return Fay$$_(b);if("ptr"==c)return b;if("unknown"==c)return Fay$$fayToJs(["automatic"],b);if("automatic"==c&&b instanceof Function)return Fay$$fayToJs(["function","automatic_function"],b);if("automatic"==c||"user"==c){b=Fay$$_(b);if(b instanceof Fay$$Cons||null===b){for(a=[];b instanceof Fay$$Cons;)a.push(Fay$$fayToJs(["automatic"],b.car)),b=Fay$$_(b.cdr);return a}return(c=b&&b.instance&&Fay$$fayToJsHash[b.instance])?c(a,a[2],b):
+b}throw Error("Unhandled Fay->JS translation type: "+c);}var Fay$$fayToJsHash={};function Fay$$fayToJs_string(a){var b="";for(a=Fay$$_(a);a instanceof Fay$$Cons;)b+=Fay$$_(a.car),a=Fay$$_(a.cdr);return b}function Fay$$jsToFay_string(a){return Fay$$list(a)}function Fay$$jsToFay_int(a){return a}function Fay$$jsToFay_double(a){return a}function Fay$$jsToFay_bool(a){return a}function Fay$$fayToJs_int(a){return Fay$$_(a)}function Fay$$fayToJs_double(a){return Fay$$_(a)}
+function Fay$$fayToJs_bool(a){return Fay$$_(a)}
+function Fay$$jsToFay(a,b){var c=a[0],d=a[1];if("action"==c)return new Fay$$Monad(Fay$$jsToFay(d[0],b));if("function"==c){var e=d[d.length-1],f=d.slice(0,-1);if(0<b.length){var h=function(a){return function(c){c=Fay$$fayToJs(f[a.length],c);var d=a.concat([c]);return d.length==f.length?new Fay$$$(function(){return Fay$$jsToFay(e,b.apply(this,d))}):h(d)}};return h([])}return function(a){return Fay$$jsToFay(["automatic"],b(Fay$$fayToJs(["automatic"],a)))}}if("string"==c)return Fay$$list(b);if("list"==
+c){c=[];var g=0;for(a=b.length;g<a;g++)c.push(Fay$$jsToFay(d[0],b[g]));return Fay$$list(c)}if("tuple"==c){c=[];g=0;for(a=b.length;g<a;g++)c.push(Fay$$jsToFay(d[g],b[g]));return Fay$$list(c)}if("defined"==c)return void 0===b?new Fay.FFI._Undefined:new Fay.FFI._Defined(Fay$$jsToFay(d[0],b));if("nullable"==c)return null===b?new Fay.FFI._Null:new Fay.FFI.Nullable(Fay$$jsToFay(d[0],b));if("int"==c){g=Math.round(b);if(g!==b)throw"Argument "+b+" is not an integer!";return g}if("double"==c||"bool"==c||"ptr"==
+c)return b;if("unknown"==c)return Fay$$jsToFay(["automatic"],b);if("automatic"==c&&b instanceof Function){a=[["automatic"]];for(g=0;g<b.length;g++)a.push(["automatic"]);return Fay$$jsToFay(["function",a],b)}if("automatic"==c&&b instanceof Array){d=null;for(g=b.length-1;0<=g;g--)d=new Fay$$Cons(Fay$$jsToFay([c],b[g]),d);return d}if("automatic"==c||"user"==c)return b&&b.instance?(g=Fay$$jsToFayHash[b.instance])?g(a,a[2],b):b:b;throw Error("Unhandled JS->Fay translation type: "+c);}
+var Fay$$jsToFayHash={};function Fay$$Cons(a,b){this.car=a;this.cdr=b}function Fay$$list(a){for(var b=null,c=a.length-1;0<=c;c--)b=new Fay$$Cons(a[c],b);return b}function Fay$$cons(a){return function(b){return new Fay$$Cons(a,b)}}function Fay$$index(a,b){for(var c=0;c<a;c++)b=Fay$$_(b.cdr);return b.car}function Fay$$listLen(a,b){for(var c=0;null!==a&&c<b+1;c++)a=Fay$$_(a.cdr);return c==b}function Fay$$mult(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)*Fay$$_(b)})}}
+function Fay$$mult$36$uncurried(a,b){return new Fay$$$(function(){return Fay$$_(a)*Fay$$_(b)})}function Fay$$add(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)+Fay$$_(b)})}}function Fay$$add$36$uncurried(a,b){return new Fay$$$(function(){return Fay$$_(a)+Fay$$_(b)})}function Fay$$sub(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)-Fay$$_(b)})}}function Fay$$sub$36$uncurried(a,b){return new Fay$$$(function(){return Fay$$_(a)-Fay$$_(b)})}
+function Fay$$divi(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)/Fay$$_(b)})}}function Fay$$divi$36$uncurried(a,b){return new Fay$$$(function(){return Fay$$_(a)/Fay$$_(b)})}
+function Fay$$equal(a,b){a=Fay$$_(a);b=Fay$$_(b);if(a===b)return!0;if(a instanceof Array){if(a.length!=b.length)return!1;for(var c=a.length,d=0;d<c;d++)if(!Fay$$equal(a[d],b[d]))return!1;return!0}if(a instanceof Fay$$Cons&&b instanceof Fay$$Cons){do{if(!Fay$$equal(a.car,b.car))return!1;a=Fay$$_(a.cdr);b=Fay$$_(b.cdr);if(null===a||null===b)return a===b}while(1)}else{if("object"==typeof a&&"object"==typeof b&&a&&b&&a.instance===b.instance){for(c in a)if(!Fay$$equal(a[c],b[c]))return!1;return!0}return!1}}
+function Fay$$eq(a){return function(b){return new Fay$$$(function(){return Fay$$equal(a,b)})}}function Fay$$eq$36$uncurried(a,b){return new Fay$$$(function(){return Fay$$equal(a,b)})}function Fay$$neq(a){return function(b){return new Fay$$$(function(){return!Fay$$equal(a,b)})}}function Fay$$neq$36$uncurried(a,b){return new Fay$$$(function(){return!Fay$$equal(a,b)})}function Fay$$gt(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)>Fay$$_(b)})}}
+function Fay$$gt$36$uncurried(a,b){return new Fay$$$(function(){return Fay$$_(a)>Fay$$_(b)})}function Fay$$lt(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)<Fay$$_(b)})}}function Fay$$lt$36$uncurried(a,b){return new Fay$$$(function(){return Fay$$_(a)<Fay$$_(b)})}function Fay$$gte(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)>=Fay$$_(b)})}}function Fay$$gte$36$uncurried(a,b){return new Fay$$$(function(){return Fay$$_(a)>=Fay$$_(b)})}
+function Fay$$lte(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)<=Fay$$_(b)})}}function Fay$$lte$36$uncurried(a,b){return new Fay$$$(function(){return Fay$$_(a)<=Fay$$_(b)})}function Fay$$and(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)&&Fay$$_(b)})}}function Fay$$and$36$uncurried(a,b){return new Fay$$$(function(){return Fay$$_(a)&&Fay$$_(b)})}function Fay$$or(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)||Fay$$_(b)})}}
+function Fay$$or$36$uncurried(a,b){return new Fay$$$(function(){return Fay$$_(a)||Fay$$_(b)})}function Fay$$Ref(a){this.value=a}function Fay$$writeRef(a,b){a.value=b}function Fay$$readRef(a){return a.value}function Fay$$date(a){return Date.parse(a)}function Fay$$Ref2(a){this.val=a}function Fay$$Sig(){this.handlers=[]}function Fay$$Var(a){this.val=a;this.handlers=[]}
+function Fay$$broadcastInternal(a,b,c){for(var d=a.handlers,e=[],f=d.length,h=0;h<f;h++)try{c(d[h][1](b),!0)}catch(g){e.push(g)}if(0<e.length)for(console.error("Encountered "+e.length+" exception(s) while broadcasing a change to ",a),f=e.length,h=0;h<f;h++)(function(a){setTimeout(function(){throw a;},0)})(e[h])}
+function Fay$$setValue(a,b,c){if(a instanceof Fay$$Ref2)a.val=b;else if(a instanceof Fay$$Var)a.val=b,Fay$$broadcastInternal(a,b,c);else if(a instanceof Fay$$Sig)Fay$$broadcastInternal(a,b,c);else throw"Fay$$setValue given something that's not a Ref2, Var, or Sig";}
+function Fay$$subscribe(a,b){var c={};a.handlers.push([c,b]);var d=a.handlers.length-1;return function(b){for(var e=Math.min(d,a.handlers.length-1);0<=e;e--)if(a.handlers[e][0]==c){a.handlers=a.handlers.slice(0,e).concat(a.handlers.slice(e+1));return}return b}}var Data={Data:{}},Fay={FFI:{}};Fay.FFI._Nullable=function(a){this.slot1=a};Fay.FFI._Nullable.prototype.instance="Nullable";Fay.FFI.Nullable=function(a){return new Fay$$$(function(){return new Fay.FFI._Nullable(a)})};Fay.FFI._Null=function(){};
+Fay.FFI._Null.prototype.instance="Null";Fay.FFI.Null=new Fay$$$(function(){return new Fay.FFI._Null});Fay.FFI._Defined=function(a){this.slot1=a};Fay.FFI._Defined.prototype.instance="Defined";Fay.FFI.Defined=function(a){return new Fay$$$(function(){return new Fay.FFI._Defined(a)})};Fay.FFI._Undefined=function(){};Fay.FFI._Undefined.prototype.instance="Undefined";Fay.FFI.Undefined=new Fay$$$(function(){return new Fay.FFI._Undefined});
+Fay$$objConcat(Fay$$fayToJsHash,{Nullable:function(a,b,c){var d={instance:"Nullable"};a=Fay$$fayToJs(b&&b[0]?b[0]:"automatic"===a[0]?["automatic"]:["unknown"],c.slot1);void 0!==a&&(d.slot1=a);return d},Null:function(a,b,c){return{instance:"Null"}},Defined:function(a,b,c){var d={instance:"Defined"};a=Fay$$fayToJs(b&&b[0]?b[0]:"automatic"===a[0]?["automatic"]:["unknown"],c.slot1);void 0!==a&&(d.slot1=a);return d},Undefined:function(a,b,c){return{instance:"Undefined"}}});
+Fay$$objConcat(Fay$$jsToFayHash,{Nullable:function(a,b,c){return new Fay.FFI._Nullable(Fay$$jsToFay(b&&b[0]?b[0]:"automatic"===a[0]?["automatic"]:["unknown"],c.slot1))},Null:function(a,b,c){return new Fay.FFI._Null},Defined:function(a,b,c){return new Fay.FFI._Defined(Fay$$jsToFay(b&&b[0]?b[0]:"automatic"===a[0]?["automatic"]:["unknown"],c.slot1))},Undefined:function(a,b,c){return new Fay.FFI._Undefined}});var Prelude={_Just:function(a){this.slot1=a}};Prelude._Just.prototype.instance="Just";
+Prelude.Just=function(a){return new Fay$$$(function(){return new Prelude._Just(a)})};Prelude._Nothing=function(){};Prelude._Nothing.prototype.instance="Nothing";Prelude.Nothing=new Fay$$$(function(){return new Prelude._Nothing});Prelude._Left=function(a){this.slot1=a};Prelude._Left.prototype.instance="Left";Prelude.Left=function(a){return new Fay$$$(function(){return new Prelude._Left(a)})};Prelude._Right=function(a){this.slot1=a};Prelude._Right.prototype.instance="Right";Prelude.Right=function(a){return new Fay$$$(function(){return new Prelude._Right(a)})};
+Prelude.maybe=function(a){return function(b){return function(c){return new Fay$$$(function(){if(Fay$$_(c)instanceof Prelude._Nothing)return a;if(Fay$$_(c)instanceof Prelude._Just){var d=Fay$$_(c).slot1;return Fay$$_(b)(d)}throw["unhandled case in maybe",[a,b,c]];})}}};Prelude.$62$$62$$61$=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$bind(a)(b))})}};Prelude.$62$$62$=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$then(a)(b))})}};
+Prelude.$_return=function(a){return new Fay$$$(function(){return new Fay$$Monad(Fay$$jsToFay(["unknown"],Fay$$$_return(Fay$$fayToJs(["unknown"],a))))})};Prelude.fail=new Fay$$$(function(){return Prelude.error});Prelude.when=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)?b:Fay$$_(Fay$$$_return)(Fay$$unit)})}};Prelude.unless=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)?Fay$$_(Fay$$$_return)(Fay$$unit):b})}};Prelude.forM=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.$36$)(Prelude.sequence))(Fay$$_(Fay$$_(Prelude.map)(b))(a))})}};
+Prelude.forM_=function(a){return function(b){return new Fay$$$(function(){var c=Fay$$_(a);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$then)(Fay$$_(b)(d)))(Fay$$_(Fay$$_(Prelude.forM_)(c))(b))}if(null===Fay$$_(a))return Fay$$_(Fay$$$_return)(Fay$$unit);throw["unhandled case in forM_",[a,b]];})}};Prelude.mapM=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.$36$)(Prelude.sequence))(Fay$$_(Fay$$_(Prelude.map)(a))(b))})}};
+Prelude.mapM_=function(a){return function(b){return new Fay$$$(function(){var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$then)(Fay$$_(a)(d)))(Fay$$_(Fay$$_(Prelude.mapM_)(a))(c))}if(null===Fay$$_(b))return Fay$$_(Fay$$$_return)(Fay$$unit);throw["unhandled case in mapM_",[a,b]];})}};Prelude.$61$$60$$60$=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$bind)(b))(a)})}};Prelude.$_void=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$then)(a))(Fay$$_(Fay$$$_return)(Fay$$unit))})};
+Prelude.$62$$61$$62$=function(a){return function(b){return function(c){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$bind)(Fay$$_(a)(c)))(b)})}}};Prelude.$60$$61$$60$=function(a){return function(b){return function(c){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$bind)(Fay$$_(b)(c)))(a)})}}};Prelude.sequence=function(a){return new Fay$$$(function(){return function(){return Fay$$_(Fay$$_(Fay$$_(Prelude.foldr)(function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$bind)(a))(function(a){return Fay$$_(Fay$$_(Fay$$bind)(b))(function(b){return Fay$$_(Fay$$$_return)(Fay$$_(Fay$$_(Fay$$cons)(a))(b))})})})}}))(Fay$$_(Fay$$$_return)(null)))(a)}()})};
+Prelude.sequence_=function(a){return new Fay$$$(function(){if(null===Fay$$_(a))return Fay$$_(Fay$$$_return)(Fay$$unit);var b=Fay$$_(a);if(b instanceof Fay$$Cons){var c=b.car;b=b.cdr;return Fay$$_(Fay$$_(Fay$$then)(c))(Fay$$_(Prelude.sequence_)(b))}throw["unhandled case in sequence_",[a]];})};Prelude._GT=function(){};Prelude._GT.prototype.instance="GT";Prelude.GT=new Fay$$$(function(){return new Prelude._GT});Prelude._LT=function(){};Prelude._LT.prototype.instance="LT";Prelude.LT=new Fay$$$(function(){return new Prelude._LT});
+Prelude._EQ=function(){};Prelude._EQ.prototype.instance="EQ";Prelude.EQ=new Fay$$$(function(){return new Prelude._EQ});Prelude.compare=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Fay$$gt)(a))(b))?Prelude.GT:Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(a))(b))?Prelude.LT:Prelude.EQ})}};Prelude.succ=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$add)(a))(1)})};Prelude.pred=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$sub)(a))(1)})};
+Prelude.enumFrom=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$cons)(a))(Fay$$_(Prelude.enumFrom)(Fay$$_(Fay$$_(Fay$$add)(a))(1)))})};Prelude.enumFromTo=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Fay$$gt)(a))(b))?null:Fay$$_(Fay$$_(Fay$$cons)(a))(Fay$$_(Fay$$_(Prelude.enumFromTo)(Fay$$_(Fay$$_(Fay$$add)(a))(1)))(b))})}};Prelude.enumFromBy=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$cons)(a))(Fay$$_(Fay$$_(Prelude.enumFromBy)(Fay$$_(Fay$$_(Fay$$add)(a))(b)))(b))})}};
+Prelude.enumFromThen=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.enumFromBy)(a))(Fay$$_(Fay$$_(Fay$$sub)(b))(a))})}};
+Prelude.enumFromByTo=function(a){return function(b){return function(c){return new Fay$$$(function(){return function(){var d=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(a))(c))?null:Fay$$_(Fay$$_(Fay$$cons)(a))(Fay$$_(d)(Fay$$_(Fay$$_(Fay$$add)(a))(b)))})},e=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Fay$$gt)(a))(c))?null:Fay$$_(Fay$$_(Fay$$cons)(a))(Fay$$_(e)(Fay$$_(Fay$$_(Fay$$add)(a))(b)))})};return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(b))(0))?
+Fay$$_(d)(a):Fay$$_(e)(a)}()})}}};Prelude.enumFromThenTo=function(a){return function(b){return function(c){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Prelude.enumFromByTo)(a))(Fay$$_(Fay$$_(Fay$$sub)(b))(a)))(c)})}}};Prelude.fromIntegral=function(a){return new Fay$$$(function(){return a})};Prelude.fromInteger=function(a){return new Fay$$$(function(){return a})};Prelude.not=function(a){return new Fay$$$(function(){return Fay$$_(a)?!1:!0})};Prelude.otherwise=!0;
+Prelude.show=function(a){return new Fay$$$(function(){return Fay$$jsToFay_string(JSON.stringify(Fay$$fayToJs(["automatic"],a)))})};Prelude.error=function(a){return new Fay$$$(function(){throw Fay$$fayToJs_string(a);})};Prelude.$_undefined=new Fay$$$(function(){return Fay$$_(Prelude.error)(Fay$$list("Prelude.undefined"))});
+Prelude.either=function(a){return function(b){return function(c){return new Fay$$$(function(){if(Fay$$_(c)instanceof Prelude._Left){var d=Fay$$_(c).slot1;return Fay$$_(a)(d)}if(Fay$$_(c)instanceof Prelude._Right)return d=Fay$$_(c).slot1,Fay$$_(b)(d);throw["unhandled case in either",[a,b,c]];})}}};Prelude.until=function(a){return function(b){return function(c){return new Fay$$$(function(){return Fay$$_(Fay$$_(a)(c))?c:Fay$$_(Fay$$_(Fay$$_(Prelude.until)(a))(b))(Fay$$_(b)(c))})}}};
+Prelude.$36$$33$=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$seq)(b))(Fay$$_(a)(b))})}};Prelude.$_const=function(a){return function(b){return new Fay$$$(function(){return a})}};Prelude.id=function(a){return new Fay$$$(function(){return a})};Prelude.$46$=function(a){return function(b){return function(c){return new Fay$$$(function(){return Fay$$_(a)(Fay$$_(b)(c))})}}};Prelude.$36$=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(a)(b)})}};
+Prelude.flip=function(a){return function(b){return function(c){return new Fay$$$(function(){return Fay$$_(Fay$$_(a)(c))(b)})}}};Prelude.curry=function(a){return function(b){return function(c){return new Fay$$$(function(){return Fay$$_(a)(Fay$$list([b,c]))})}}};Prelude.uncurry=function(a){return function(b){return new Fay$$$(function(){if(Fay$$listLen(Fay$$_(b),2)){var c=Fay$$index(0,Fay$$_(b));var d=Fay$$index(1,Fay$$_(b));c=Fay$$_(Fay$$_(a)(c))(d)}else throw["unhandled case",b];return c})}};
+Prelude.snd=function(a){return new Fay$$$(function(){if(Fay$$listLen(Fay$$_(a),2))return Fay$$index(1,Fay$$_(a));throw["unhandled case in snd",[a]];})};Prelude.fst=function(a){return new Fay$$$(function(){if(Fay$$listLen(Fay$$_(a),2))return Fay$$index(0,Fay$$_(a));throw["unhandled case in fst",[a]];})};
+Prelude.div=function(a){return function(b){return new Fay$$$(function(){var c=b,d=a;if(Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$gt)(d))(0)))(Fay$$_(Fay$$_(Fay$$lt)(c))(0))))return Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Fay$$_(Prelude.quot)(Fay$$_(Fay$$_(Fay$$sub)(d))(1)))(c)))(1);if(Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$lt)(d))(0)))(Fay$$_(Fay$$_(Fay$$gt)(c))(0))))return Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Fay$$_(Prelude.quot)(Fay$$_(Fay$$_(Fay$$add)(d))(1)))(c)))(1);c=b;d=a;return Fay$$_(Fay$$_(Prelude.quot)(d))(c)})}};
+Prelude.mod=function(a){return function(b){return new Fay$$$(function(){var c=b,d=a;if(Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$gt)(d))(0)))(Fay$$_(Fay$$_(Fay$$lt)(c))(0))))return Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Fay$$_(Prelude.rem)(Fay$$_(Fay$$_(Fay$$sub)(d))(1)))(c)))(c)))(1);if(Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$lt)(d))(0)))(Fay$$_(Fay$$_(Fay$$gt)(c))(0))))return Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Fay$$_(Prelude.rem)(Fay$$_(Fay$$_(Fay$$add)(d))(1)))(c)))(c)))(1);
+c=b;d=a;return Fay$$_(Fay$$_(Prelude.rem)(d))(c)})}};
+Prelude.divMod=function(a){return function(b){return new Fay$$$(function(){var c=b,d=a;if(Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$gt)(d))(0)))(Fay$$_(Fay$$_(Fay$$lt)(c))(0))))return function(a){if(Fay$$listLen(Fay$$_(a),2)){var b=Fay$$index(0,Fay$$_(a));a=Fay$$index(1,Fay$$_(a));return Fay$$list([Fay$$_(Fay$$_(Fay$$sub)(b))(1),Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Fay$$_(Fay$$add)(a))(c)))(1)])}throw["unhandled case",a];}(Fay$$_(Fay$$_(Prelude.quotRem)(Fay$$_(Fay$$_(Fay$$sub)(d))(1)))(c));if(Fay$$_(Fay$$_(Fay$$_(Fay$$and)(Fay$$_(Fay$$_(Fay$$lt)(d))(0)))(Fay$$_(Fay$$_(Fay$$gt)(c))(1))))return function(a){if(Fay$$listLen(Fay$$_(a),
+2)){var b=Fay$$index(0,Fay$$_(a));a=Fay$$index(1,Fay$$_(a));return Fay$$list([Fay$$_(Fay$$_(Fay$$sub)(b))(1),Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Fay$$_(Fay$$add)(a))(c)))(1)])}throw["unhandled case",a];}(Fay$$_(Fay$$_(Prelude.quotRem)(Fay$$_(Fay$$_(Fay$$add)(d))(1)))(c));c=b;d=a;return Fay$$_(Fay$$_(Prelude.quotRem)(d))(c)})}};
+Prelude.min=function(a){return function(b){return new Fay$$$(function(){return Fay$$jsToFay(["unknown"],Math.min(Fay$$_(Fay$$fayToJs(["unknown"],a)),Fay$$_(Fay$$fayToJs(["unknown"],b))))})}};Prelude.max=function(a){return function(b){return new Fay$$$(function(){return Fay$$jsToFay(["unknown"],Math.max(Fay$$_(Fay$$fayToJs(["unknown"],a)),Fay$$_(Fay$$fayToJs(["unknown"],b))))})}};Prelude.recip=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$divi)(1))(a)})};Prelude.negate=function(a){return new Fay$$$(function(){return-Fay$$_(a)})};
+Prelude.abs=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(a))(0))?Fay$$_(Prelude.negate)(a):a})};Prelude.signum=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Fay$$gt)(a))(0))?1:Fay$$_(Fay$$_(Fay$$_(Fay$$eq)(a))(0))?0:-1})};Prelude.pi=new Fay$$$(function(){return Fay$$jsToFay_double(Math.PI)});Prelude.exp=function(a){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.exp(Fay$$fayToJs_double(a)))})};Prelude.sqrt=function(a){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.sqrt(Fay$$fayToJs_double(a)))})};
+Prelude.log=function(a){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.log(Fay$$fayToJs_double(a)))})};Prelude.$42$$42$=new Fay$$$(function(){return Prelude.unsafePow});Prelude.$94$$94$=new Fay$$$(function(){return Prelude.unsafePow});Prelude.unsafePow=function(a){return function(b){return new Fay$$$(function(){return Fay$$jsToFay(["unknown"],Math.pow(Fay$$_(Fay$$fayToJs(["unknown"],a)),Fay$$_(Fay$$fayToJs(["unknown"],b))))})}};
+Prelude.$94$=function(a){return function(b){return new Fay$$$(function(){var c=b,d=a;if(Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(c))(0)))return Fay$$_(Prelude.error)(Fay$$list("(^): negative exponent"));if(Fay$$_(Fay$$_(Fay$$_(Fay$$eq)(c))(0)))return 1;if(Fay$$_(Fay$$_(Prelude.even)(c)))return function(){return new Fay$$$(function(){var a=new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.$94$)(d))(Fay$$_(Fay$$_(Prelude.quot)(c))(2))});return Fay$$_(Fay$$_(Fay$$mult)(a))(a)})}();c=b;d=a;return Fay$$_(Fay$$_(Fay$$mult)(d))(Fay$$_(Fay$$_(Prelude.$94$)(d))(Fay$$_(Fay$$_(Fay$$sub)(c))(1)))})}};
+Prelude.logBase=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Prelude.log)(b)))(Fay$$_(Prelude.log)(a))})}};Prelude.sin=function(a){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.sin(Fay$$fayToJs_double(a)))})};Prelude.tan=function(a){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.tan(Fay$$fayToJs_double(a)))})};Prelude.cos=function(a){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.cos(Fay$$fayToJs_double(a)))})};
+Prelude.asin=function(a){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.asin(Fay$$fayToJs_double(a)))})};Prelude.atan=function(a){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.atan(Fay$$fayToJs_double(a)))})};Prelude.acos=function(a){return new Fay$$$(function(){return Fay$$jsToFay_double(Math.acos(Fay$$fayToJs_double(a)))})};Prelude.sinh=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Prelude.exp)(a)))(Fay$$_(Prelude.exp)(-Fay$$_(a)))))(2)})};
+Prelude.tanh=function(a){return new Fay$$$(function(){return function(){return new Fay$$$(function(){var b=new Fay$$$(function(){return Fay$$_(Prelude.exp)(a)}),c=new Fay$$$(function(){return Fay$$_(Prelude.exp)(-Fay$$_(a))});return Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Fay$$_(Fay$$sub)(b))(c)))(Fay$$_(Fay$$_(Fay$$add)(b))(c))})}()})};Prelude.cosh=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Prelude.exp)(a)))(Fay$$_(Prelude.exp)(-Fay$$_(a)))))(2)})};
+Prelude.asinh=function(a){return new Fay$$$(function(){return Fay$$_(Prelude.log)(Fay$$_(Fay$$_(Fay$$add)(a))(Fay$$_(Prelude.sqrt)(Fay$$_(Fay$$_(Fay$$add)(Fay$$_(Fay$$_(Prelude.$42$$42$)(a))(2)))(1))))})};Prelude.atanh=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Prelude.log)(Fay$$_(Fay$$_(Fay$$divi)(Fay$$_(Fay$$_(Fay$$add)(1))(a)))(Fay$$_(Fay$$_(Fay$$sub)(1))(a)))))(2)})};Prelude.acosh=function(a){return new Fay$$$(function(){return Fay$$_(Prelude.log)(Fay$$_(Fay$$_(Fay$$add)(a))(Fay$$_(Prelude.sqrt)(Fay$$_(Fay$$_(Fay$$sub)(Fay$$_(Fay$$_(Prelude.$42$$42$)(a))(2)))(1))))})};
+Prelude.properFraction=function(a){return new Fay$$$(function(){return function(){return new Fay$$$(function(){var b=new Fay$$$(function(){return Fay$$_(Prelude.truncate)(a)});return Fay$$list([b,Fay$$_(Fay$$_(Fay$$sub)(a))(Fay$$_(Prelude.fromIntegral)(b))])})}()})};Prelude.truncate=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(a))(0))?Fay$$_(Prelude.ceiling)(a):Fay$$_(Prelude.floor)(a)})};Prelude.round=function(a){return new Fay$$$(function(){return Fay$$jsToFay_int(Math.round(Fay$$fayToJs_double(a)))})};
+Prelude.ceiling=function(a){return new Fay$$$(function(){return Fay$$jsToFay_int(Math.ceil(Fay$$fayToJs_double(a)))})};Prelude.floor=function(a){return new Fay$$$(function(){return Fay$$jsToFay_int(Math.floor(Fay$$fayToJs_double(a)))})};Prelude.subtract=new Fay$$$(function(){return Fay$$_(Prelude.flip)(Fay$$sub)});Prelude.even=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$eq)(Fay$$_(Fay$$_(Prelude.rem)(a))(2)))(0)})};Prelude.odd=function(a){return new Fay$$$(function(){return Fay$$_(Prelude.not)(Fay$$_(Prelude.even)(a))})};
+Prelude.gcd=function(a){return function(b){return new Fay$$$(function(){return function(){var c=function(a){return function(b){return new Fay$$$(function(){if(0===Fay$$_(b)){var d=a;return d}d=a;return Fay$$_(Fay$$_(c)(b))(Fay$$_(Fay$$_(Prelude.rem)(d))(b))})}};return Fay$$_(Fay$$_(c)(Fay$$_(Prelude.abs)(a)))(Fay$$_(Prelude.abs)(b))}()})}};
+Prelude.quot=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Fay$$eq)(b))(0))?Fay$$_(Prelude.error)(Fay$$list("Division by zero")):Fay$$_(Fay$$_(Prelude.quot$39$)(a))(b)})}};Prelude.quot$39$=function(a){return function(b){return new Fay$$$(function(){return Fay$$jsToFay_int(~~(Fay$$fayToJs_int(a)/Fay$$fayToJs_int(b)))})}};Prelude.quotRem=function(a){return function(b){return new Fay$$$(function(){return Fay$$list([Fay$$_(Fay$$_(Prelude.quot)(a))(b),Fay$$_(Fay$$_(Prelude.rem)(a))(b)])})}};
+Prelude.rem=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Fay$$eq)(b))(0))?Fay$$_(Prelude.error)(Fay$$list("Division by zero")):Fay$$_(Fay$$_(Prelude.rem$39$)(a))(b)})}};Prelude.rem$39$=function(a){return function(b){return new Fay$$$(function(){return Fay$$jsToFay_int(Fay$$fayToJs_int(a)%Fay$$fayToJs_int(b))})}};Prelude.lcm=function(a){return function(b){return new Fay$$$(function(){return 0===Fay$$_(b)||0===Fay$$_(a)?0:Fay$$_(Prelude.abs)(Fay$$_(Fay$$_(Fay$$mult)(Fay$$_(Fay$$_(Prelude.quot)(a))(Fay$$_(Fay$$_(Prelude.gcd)(a))(b))))(b))})}};
+Prelude.find=function(a){return function(b){return new Fay$$$(function(){var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(a)(d))?Fay$$_(Prelude.Just)(d):Fay$$_(Fay$$_(Prelude.find)(a))(c)}if(null===Fay$$_(b))return Prelude.Nothing;throw["unhandled case in find",[a,b]];})}};
+Prelude.filter=function(a){return function(b){return new Fay$$$(function(){var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(a)(d))?Fay$$_(Fay$$_(Fay$$cons)(d))(Fay$$_(Fay$$_(Prelude.filter)(a))(c)):Fay$$_(Fay$$_(Prelude.filter)(a))(c)}if(null===Fay$$_(b))return null;throw["unhandled case in filter",[a,b]];})}};Prelude.$_null=function(a){return new Fay$$$(function(){return null===Fay$$_(a)?!0:!1})};
+Prelude.map=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(b))return null;var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$_(a)(d)))(Fay$$_(Fay$$_(Prelude.map)(a))(c))}throw["unhandled case in map",[a,b]];})}};Prelude.nub=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.nub$39$)(a))(null)})};
+Prelude.nub$39$=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(a))return null;var c=Fay$$_(a);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$_(Prelude.elem)(d))(b))?Fay$$_(Fay$$_(Prelude.nub$39$)(c))(b):Fay$$_(Fay$$_(Fay$$cons)(d))(Fay$$_(Fay$$_(Prelude.nub$39$)(c))(Fay$$_(Fay$$_(Fay$$cons)(d))(b)))}throw["unhandled case in nub'",[a,b]];})}};
+Prelude.elem=function(a){return function(b){return new Fay$$$(function(){var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$or)(Fay$$_(Fay$$_(Fay$$eq)(a))(d)))(Fay$$_(Fay$$_(Prelude.elem)(a))(c))}if(null===Fay$$_(b))return!1;throw["unhandled case in elem",[a,b]];})}};Prelude.notElem=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Prelude.not)(Fay$$_(Fay$$_(Prelude.elem)(a))(b))})}};Prelude.sort=new Fay$$$(function(){return Fay$$_(Prelude.sortBy)(Prelude.compare)});
+Prelude.sortBy=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.foldr)(Fay$$_(Prelude.insertBy)(a)))(null)})};
+Prelude.insertBy=function(a){return function(b){return function(c){return new Fay$$$(function(){if(null===Fay$$_(c)){var d=b;return Fay$$list([d])}d=b;if(null===Fay$$_(c))d=Fay$$list([d]);else{var e=Fay$$_(c);if(e instanceof Fay$$Cons){var f=e.car;e=e.cdr;var h=Fay$$_(Fay$$_(a)(d))(f);d=Fay$$_(h)instanceof Prelude._GT?Fay$$_(Fay$$_(Fay$$cons)(f))(Fay$$_(Fay$$_(Fay$$_(Prelude.insertBy)(a))(d))(e)):Fay$$_(Fay$$_(Fay$$cons)(d))(c)}else throw["unhandled case",c];}return d})}}};
+Prelude.conc=function(a){return function(b){return new Fay$$$(function(){var c=b,d=Fay$$_(a);if(d instanceof Fay$$Cons){var e=d.car;d=d.cdr;return Fay$$_(Fay$$_(Fay$$cons)(e))(Fay$$_(Fay$$_(Prelude.conc)(d))(c))}c=b;if(null===Fay$$_(a))return c;throw["unhandled case in conc",[a,b]];})}};Prelude.concat=new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.foldr)(Prelude.conc))(null)});Prelude.concatMap=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.foldr)(Fay$$_(Fay$$_(Prelude.$46$)(Prelude.$43$$43$))(a)))(null)})};
+Prelude.foldr=function(a){return function(b){return function(c){return new Fay$$$(function(){if(null===Fay$$_(c)){var d=b;return d}d=Fay$$_(c);if(d instanceof Fay$$Cons){var e=d.car,f=d.cdr;d=b;return Fay$$_(Fay$$_(a)(e))(Fay$$_(Fay$$_(Fay$$_(Prelude.foldr)(a))(d))(f))}throw["unhandled case in foldr",[a,b,c]];})}}};
+Prelude.foldr1=function(a){return function(b){return new Fay$$$(function(){if(Fay$$listLen(Fay$$_(b),1)){var c=Fay$$index(0,Fay$$_(b));return c}var d=Fay$$_(b);if(d instanceof Fay$$Cons)return c=d.car,d=d.cdr,Fay$$_(Fay$$_(a)(c))(Fay$$_(Fay$$_(Prelude.foldr1)(a))(d));if(null===Fay$$_(b))return Fay$$_(Prelude.error)(Fay$$list("foldr1: empty list"));throw["unhandled case in foldr1",[a,b]];})}};
+Prelude.foldl=function(a){return function(b){return function(c){return new Fay$$$(function(){if(null===Fay$$_(c)){var d=b;return d}d=Fay$$_(c);if(d instanceof Fay$$Cons){var e=d.car,f=d.cdr;d=b;return Fay$$_(Fay$$_(Fay$$_(Prelude.foldl)(a))(Fay$$_(Fay$$_(a)(d))(e)))(f)}throw["unhandled case in foldl",[a,b,c]];})}}};
+Prelude.foldl1=function(a){return function(b){return new Fay$$$(function(){var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$_(Prelude.foldl)(a))(d))(c)}if(null===Fay$$_(b))return Fay$$_(Prelude.error)(Fay$$list("foldl1: empty list"));throw["unhandled case in foldl1",[a,b]];})}};Prelude.$43$$43$=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.conc)(a))(b)})}};
+Prelude.$33$$33$=function(a){return function(b){return new Fay$$$(function(){return function(){var c=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(a))return Fay$$_(Prelude.error)(Fay$$list("(!!): index too large"));if(0===Fay$$_(b)){var d=Fay$$_(a);if(d instanceof Fay$$Cons)return d.car}d=Fay$$_(a);if(d instanceof Fay$$Cons)return d=d.cdr,Fay$$_(Fay$$_(c)(d))(Fay$$_(Fay$$_(Fay$$sub)(b))(1));throw["unhandled case in go",[a,b]];})}};return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(b))(0))?
+Fay$$_(Prelude.error)(Fay$$list("(!!): negative index")):Fay$$_(Fay$$_(c)(a))(b)}()})}};Prelude.head=function(a){return new Fay$$$(function(){if(null===Fay$$_(a))return Fay$$_(Prelude.error)(Fay$$list("head: empty list"));var b=Fay$$_(a);if(b instanceof Fay$$Cons)return b.car;throw["unhandled case in head",[a]];})};
+Prelude.tail=function(a){return new Fay$$$(function(){if(null===Fay$$_(a))return Fay$$_(Prelude.error)(Fay$$list("tail: empty list"));var b=Fay$$_(a);if(b instanceof Fay$$Cons)return b.cdr;throw["unhandled case in tail",[a]];})};
+Prelude.init=function(a){return new Fay$$$(function(){if(null===Fay$$_(a))return Fay$$_(Prelude.error)(Fay$$list("init: empty list"));if(Fay$$listLen(Fay$$_(a),1))return null;var b=Fay$$_(a);if(b instanceof Fay$$Cons){var c=b.car;b=b.cdr;return Fay$$_(Fay$$_(Fay$$cons)(c))(Fay$$_(Prelude.init)(b))}throw["unhandled case in init",[a]];})};
+Prelude.last=function(a){return new Fay$$$(function(){if(null===Fay$$_(a))return Fay$$_(Prelude.error)(Fay$$list("last: empty list"));if(Fay$$listLen(Fay$$_(a),1))return Fay$$index(0,Fay$$_(a));var b=Fay$$_(a);if(b instanceof Fay$$Cons)return b=b.cdr,Fay$$_(Prelude.last)(b);throw["unhandled case in last",[a]];})};Prelude.iterate=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$cons)(b))(Fay$$_(Fay$$_(Prelude.iterate)(a))(Fay$$_(a)(b)))})}};Prelude.repeat=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$cons)(a))(Fay$$_(Prelude.repeat)(a))})};
+Prelude.replicate=function(a){return function(b){return new Fay$$$(function(){return 0===Fay$$_(a)?null:Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(a))(0))?null:Fay$$_(Fay$$_(Fay$$cons)(b))(Fay$$_(Fay$$_(Prelude.replicate)(Fay$$_(Fay$$_(Fay$$sub)(a))(1)))(b))})}};Prelude.cycle=function(a){return new Fay$$$(function(){return null===Fay$$_(a)?Fay$$_(Prelude.error)(Fay$$list("cycle: empty list")):function(){var b=new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.$43$$43$)(a))(b)});return b}()})};
+Prelude.take=function(a){return function(b){return new Fay$$$(function(){if(0===Fay$$_(a)||null===Fay$$_(b))return null;var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(a))(0))?null:Fay$$_(Fay$$_(Fay$$cons)(d))(Fay$$_(Fay$$_(Prelude.take)(Fay$$_(Fay$$_(Fay$$sub)(a))(1)))(c))}throw["unhandled case in take",[a,b]];})}};
+Prelude.drop=function(a){return function(b){return new Fay$$$(function(){var c=b;if(0===Fay$$_(a))return c;if(null===Fay$$_(b))return null;c=Fay$$_(b);if(c instanceof Fay$$Cons)return c=c.cdr,Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(a))(0))?b:Fay$$_(Fay$$_(Prelude.drop)(Fay$$_(Fay$$_(Fay$$sub)(a))(1)))(c);throw["unhandled case in drop",[a,b]];})}};
+Prelude.splitAt=function(a){return function(b){return new Fay$$$(function(){var c=b;if(0===Fay$$_(a))return Fay$$list([null,c]);if(null===Fay$$_(b))return Fay$$list([null,null]);c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;if(Fay$$_(Fay$$_(Fay$$_(Fay$$lt)(a))(0)))d=Fay$$list([null,Fay$$_(Fay$$_(Fay$$cons)(d))(c)]);else{var e=Fay$$_(Fay$$_(Prelude.splitAt)(Fay$$_(Fay$$_(Fay$$sub)(a))(1)))(c);if(Fay$$listLen(Fay$$_(e),2))c=Fay$$index(0,Fay$$_(e)),e=Fay$$index(1,Fay$$_(e)),d=Fay$$list([Fay$$_(Fay$$_(Fay$$cons)(d))(c),
+e]);else throw["unhandled case",e];}return d}throw["unhandled case in splitAt",[a,b]];})}};Prelude.takeWhile=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(b))return null;var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(a)(d))?Fay$$_(Fay$$_(Fay$$cons)(d))(Fay$$_(Fay$$_(Prelude.takeWhile)(a))(c)):null}throw["unhandled case in takeWhile",[a,b]];})}};
+Prelude.dropWhile=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(b))return null;var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(a)(d))?Fay$$_(Fay$$_(Prelude.dropWhile)(a))(c):Fay$$_(Fay$$_(Fay$$cons)(d))(c)}throw["unhandled case in dropWhile",[a,b]];})}};
+Prelude.span=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(b))return Fay$$list([null,null]);var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;if(Fay$$_(Fay$$_(a)(d))){var e=Fay$$_(Fay$$_(Prelude.span)(a))(c);if(Fay$$listLen(Fay$$_(e),2))c=Fay$$index(0,Fay$$_(e)),e=Fay$$index(1,Fay$$_(e)),d=Fay$$list([Fay$$_(Fay$$_(Fay$$cons)(d))(c),e]);else throw["unhandled case",e];}else d=Fay$$list([null,Fay$$_(Fay$$_(Fay$$cons)(d))(c)]);return d}throw["unhandled case in span",
+[a,b]];})}};Prelude.$_break=function(a){return new Fay$$$(function(){return Fay$$_(Prelude.span)(Fay$$_(Fay$$_(Prelude.$46$)(Prelude.not))(a))})};Prelude.zipWith=function(a){return function(b){return function(c){return new Fay$$$(function(){var d=Fay$$_(c);if(d instanceof Fay$$Cons){var e=d.car,f=d.cdr;d=Fay$$_(b);if(d instanceof Fay$$Cons){var h=d.car;d=d.cdr;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$_(Fay$$_(a)(h))(e)))(Fay$$_(Fay$$_(Fay$$_(Prelude.zipWith)(a))(d))(f))}}return null})}}};
+Prelude.zipWith3=function(a){return function(b){return function(c){return function(d){return new Fay$$$(function(){var e=Fay$$_(d);if(e instanceof Fay$$Cons){var f=e.car,h=e.cdr;e=Fay$$_(c);if(e instanceof Fay$$Cons){var g=e.car,k=e.cdr;e=Fay$$_(b);if(e instanceof Fay$$Cons){var l=e.car;e=e.cdr;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$_(Fay$$_(Fay$$_(a)(l))(g))(f)))(Fay$$_(Fay$$_(Fay$$_(Fay$$_(Prelude.zipWith3)(a))(e))(k))(h))}}}return null})}}}};
+Prelude.zip=function(a){return function(b){return new Fay$$$(function(){var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car,e=c.cdr;c=Fay$$_(a);if(c instanceof Fay$$Cons){var f=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$list([f,d])))(Fay$$_(Fay$$_(Prelude.zip)(c))(e))}}return null})}};
+Prelude.zip3=function(a){return function(b){return function(c){return new Fay$$$(function(){var d=Fay$$_(c);if(d instanceof Fay$$Cons){var e=d.car,f=d.cdr;d=Fay$$_(b);if(d instanceof Fay$$Cons){var h=d.car,g=d.cdr;d=Fay$$_(a);if(d instanceof Fay$$Cons){var k=d.car;d=d.cdr;return Fay$$_(Fay$$_(Fay$$cons)(Fay$$list([k,h,e])))(Fay$$_(Fay$$_(Fay$$_(Prelude.zip3)(d))(g))(f))}}}return null})}}};
+Prelude.unzip=function(a){return new Fay$$$(function(){var b=Fay$$_(a);if(b instanceof Fay$$Cons&&Fay$$listLen(Fay$$_(b.car),2)){var c=Fay$$index(0,Fay$$_(b.car)),d=Fay$$index(1,Fay$$_(b.car));b=b.cdr;var e=Fay$$_(Prelude.unzip)(b);if(Fay$$listLen(Fay$$_(e),2))b=Fay$$index(0,Fay$$_(e)),e=Fay$$index(1,Fay$$_(e)),c=Fay$$list([Fay$$_(Fay$$_(Fay$$cons)(c))(b),Fay$$_(Fay$$_(Fay$$cons)(d))(e)]);else throw["unhandled case",e];return c}if(null===Fay$$_(a))return Fay$$list([null,null]);throw["unhandled case in unzip",
+[a]];})};
+Prelude.unzip3=function(a){return new Fay$$$(function(){var b=Fay$$_(a);if(b instanceof Fay$$Cons&&Fay$$listLen(Fay$$_(b.car),3)){var c=Fay$$index(0,Fay$$_(b.car)),d=Fay$$index(1,Fay$$_(b.car)),e=Fay$$index(2,Fay$$_(b.car));b=b.cdr;var f=Fay$$_(Prelude.unzip3)(b);if(Fay$$listLen(Fay$$_(f),3)){b=Fay$$index(0,Fay$$_(f));var h=Fay$$index(1,Fay$$_(f));f=Fay$$index(2,Fay$$_(f));c=Fay$$list([Fay$$_(Fay$$_(Fay$$cons)(c))(b),Fay$$_(Fay$$_(Fay$$cons)(d))(h),Fay$$_(Fay$$_(Fay$$cons)(e))(f)])}else throw["unhandled case",f];
+return c}if(null===Fay$$_(a))return Fay$$list([null,null,null]);throw["unhandled case in unzip3",[a]];})};
+Prelude.lines=function(a){return new Fay$$$(function(){return null===Fay$$_(a)?null:function(){return function(a){if(Fay$$listLen(Fay$$_(a),2)){var b=Fay$$index(0,Fay$$_(a));if(null===Fay$$_(Fay$$index(1,Fay$$_(a))))return Fay$$list([b])}if(Fay$$listLen(Fay$$_(a),2)){b=Fay$$index(0,Fay$$_(a));var d=Fay$$_(Fay$$index(1,Fay$$_(a)));if(d instanceof Fay$$Cons)return a=d.cdr,Fay$$_(Fay$$_(Fay$$cons)(b))(Fay$$_(Prelude.lines)(a))}throw["unhandled case",a];}(Fay$$_(Fay$$_(Prelude.$_break)(function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$or)(Fay$$_(Fay$$_(Fay$$eq)(a))("\r")))(Fay$$_(Fay$$_(Fay$$eq)(a))("\n"))})}))(a))}()})};
+Prelude.unlines=function(a){return new Fay$$$(function(){if(null===Fay$$_(a))return null;var b=Fay$$_(a);if(b instanceof Fay$$Cons){var c=b.car;b=b.cdr;return Fay$$_(Fay$$_(Prelude.$43$$43$)(c))(Fay$$_(Fay$$_(Fay$$cons)("\n"))(Fay$$_(Prelude.unlines)(b)))}throw["unhandled case in unlines",[a]];})};
+Prelude.words=function(a){return new Fay$$$(function(){return function(){var b=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.elem)(a))(Fay$$list(" \t\r\n\f\x0B"))})};return Fay$$_(function(a){return new Fay$$$(function(){if(null===Fay$$_(a))var c=null;else{var e=Fay$$_(Fay$$_(Prelude.$_break)(b))(a);if(Fay$$listLen(Fay$$_(e),2))c=Fay$$index(0,Fay$$_(e)),e=Fay$$index(1,Fay$$_(e)),c=Fay$$_(Fay$$_(Fay$$cons)(c))(Fay$$_(Prelude.words)(e));else throw["unhandled case",e];}return c})})(Fay$$_(Fay$$_(Prelude.dropWhile)(b))(a))}()})};
+Prelude.unwords=new Fay$$$(function(){return Fay$$_(Prelude.intercalate)(Fay$$list(" "))});Prelude.and=function(a){return new Fay$$$(function(){if(null===Fay$$_(a))return!0;var b=Fay$$_(a);if(b instanceof Fay$$Cons){var c=b.car;b=b.cdr;return Fay$$_(Fay$$_(Fay$$and)(c))(Fay$$_(Prelude.and)(b))}throw["unhandled case in and",[a]];})};
+Prelude.or=function(a){return new Fay$$$(function(){if(null===Fay$$_(a))return!1;var b=Fay$$_(a);if(b instanceof Fay$$Cons){var c=b.car;b=b.cdr;return Fay$$_(Fay$$_(Fay$$or)(c))(Fay$$_(Prelude.or)(b))}throw["unhandled case in or",[a]];})};
+Prelude.any=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(b))return!1;var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$or)(Fay$$_(a)(d)))(Fay$$_(Fay$$_(Prelude.any)(a))(c))}throw["unhandled case in any",[a,b]];})}};
+Prelude.all=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(b))return!0;var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$and)(Fay$$_(a)(d)))(Fay$$_(Fay$$_(Prelude.all)(a))(c))}throw["unhandled case in all",[a,b]];})}};
+Prelude.intersperse=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(b))return null;var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$cons)(d))(Fay$$_(Fay$$_(Prelude.prependToAll)(a))(c))}throw["unhandled case in intersperse",[a,b]];})}};
+Prelude.prependToAll=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(b))return null;var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$cons)(a))(Fay$$_(Fay$$_(Fay$$cons)(d))(Fay$$_(Fay$$_(Prelude.prependToAll)(a))(c)))}throw["unhandled case in prependToAll",[a,b]];})}};Prelude.intercalate=function(a){return function(b){return new Fay$$$(function(){return Fay$$_(Prelude.concat)(Fay$$_(Fay$$_(Prelude.intersperse)(a))(b))})}};
+Prelude.maximum=function(a){return new Fay$$$(function(){return null===Fay$$_(a)?Fay$$_(Prelude.error)(Fay$$list("maximum: empty list")):Fay$$_(Fay$$_(Prelude.foldl1)(Prelude.max))(a)})};Prelude.minimum=function(a){return new Fay$$$(function(){return null===Fay$$_(a)?Fay$$_(Prelude.error)(Fay$$list("minimum: empty list")):Fay$$_(Fay$$_(Prelude.foldl1)(Prelude.min))(a)})};Prelude.product=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Prelude.foldl)(Fay$$mult))(1))(a)})};
+Prelude.sum=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Fay$$_(Prelude.foldl)(Fay$$add))(0))(a)})};Prelude.scanl=function(a){return function(b){return function(c){return new Fay$$$(function(){var d=Fay$$_(Fay$$_(Fay$$cons)(b));if(null===Fay$$_(c))var e=null;else{var f=Fay$$_(c);if(f instanceof Fay$$Cons)e=f.car,f=f.cdr,e=Fay$$_(Fay$$_(Fay$$_(Prelude.scanl)(a))(Fay$$_(Fay$$_(a)(b))(e)))(f);else throw["unhandled case",c];}return d(e)})}}};
+Prelude.scanl1=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(b))return null;var c=Fay$$_(b);if(c instanceof Fay$$Cons){var d=c.car;c=c.cdr;return Fay$$_(Fay$$_(Fay$$_(Prelude.scanl)(a))(d))(c)}throw["unhandled case in scanl1",[a,b]];})}};
+Prelude.scanr=function(a){return function(b){return function(c){return new Fay$$$(function(){if(null===Fay$$_(c)){var d=b;return Fay$$list([d])}d=Fay$$_(c);if(d instanceof Fay$$Cons){var e=d.car,f=d.cdr;d=b;d=Fay$$_(Fay$$_(Fay$$_(Prelude.scanr)(a))(d))(f);f=Fay$$_(d);f instanceof Fay$$Cons?(d=f.car,f=f.cdr,e=Fay$$_(Fay$$_(Fay$$cons)(Fay$$_(Fay$$_(a)(e))(d)))(Fay$$_(Fay$$_(Fay$$cons)(d))(f))):e=Prelude.$_undefined;return e}throw["unhandled case in scanr",[a,b,c]];})}}};
+Prelude.scanr1=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(b))return null;if(Fay$$listLen(Fay$$_(b),1)){var c=Fay$$index(0,Fay$$_(b));return Fay$$list([c])}var d=Fay$$_(b);if(d instanceof Fay$$Cons){c=d.car;d=d.cdr;d=Fay$$_(Fay$$_(Prelude.scanr1)(a))(d);var e=Fay$$_(d);e instanceof Fay$$Cons?(d=e.car,e=e.cdr,c=Fay$$_(Fay$$_(Fay$$cons)(Fay$$_(Fay$$_(a)(c))(d)))(Fay$$_(Fay$$_(Fay$$cons)(d))(e))):c=Prelude.$_undefined;return c}throw["unhandled case in scanr1",[a,b]];
+})}};Prelude.lookup=function(a){return function(b){return new Fay$$$(function(){if(null===Fay$$_(b))return Prelude.Nothing;var c=Fay$$_(b);if(c instanceof Fay$$Cons&&Fay$$listLen(Fay$$_(c.car),2)){var d=Fay$$index(0,Fay$$_(c.car)),e=Fay$$index(1,Fay$$_(c.car));c=c.cdr;return Fay$$_(Fay$$_(Fay$$_(Fay$$eq)(a))(d))?Fay$$_(Prelude.Just)(e):Fay$$_(Fay$$_(Prelude.lookup)(a))(c)}throw["unhandled case in lookup",[a,b]];})}};Prelude.length=function(a){return new Fay$$$(function(){return Fay$$_(Fay$$_(Prelude.length$39$)(0))(a)})};
+Prelude.length$39$=function(a){return function(b){return new Fay$$$(function(){var c=Fay$$_(b);if(c instanceof Fay$$Cons){c=c.cdr;var d=a;return Fay$$_(Fay$$_(Prelude.length$39$)(Fay$$_(Fay$$_(Fay$$add)(d))(1)))(c)}return d=a})}};
+Prelude.reverse=function(a){return new Fay$$$(function(){var b=Fay$$_(a);if(b instanceof Fay$$Cons){var c=b.car;b=b.cdr;return Fay$$_(Fay$$_(Prelude.$43$$43$)(Fay$$_(Prelude.reverse)(b)))(Fay$$list([c]))}if(null===Fay$$_(a))return null;throw["unhandled case in reverse",[a]];})};Prelude.print=function(a){return new Fay$$$(function(){var b=Fay$$jsToFay,c=Fay$$fayToJs(["automatic"],a);console&&console.log&&console.log(c);return new Fay$$Monad(b(["unknown"],void 0))})};
+Prelude.putStrLn=function(a){return new Fay$$$(function(){var b=Fay$$jsToFay,c=Fay$$fayToJs_string(a);console&&console.log&&console.log(c);return new Fay$$Monad(b(["unknown"],void 0))})};Prelude.ifThenElse=function(a){return function(b){return function(c){return new Fay$$$(function(){return Fay$$_(a)?b:c})}}};
+Fay$$objConcat(Fay$$fayToJsHash,{Just:function(a,b,c){var d={instance:"Just"};a=Fay$$fayToJs(b&&b[0]?b[0]:"automatic"===a[0]?["automatic"]:["unknown"],c.slot1);void 0!==a&&(d.slot1=a);return d},Nothing:function(a,b,c){return{instance:"Nothing"}},Left:function(a,b,c){var d={instance:"Left"};a=Fay$$fayToJs(b&&b[0]?b[0]:"automatic"===a[0]?["automatic"]:["unknown"],c.slot1);void 0!==a&&(d.slot1=a);return d},Right:function(a,b,c){var d={instance:"Right"};a=Fay$$fayToJs(b&&b[1]?b[1]:"automatic"===a[0]?
+["automatic"]:["unknown"],c.slot1);void 0!==a&&(d.slot1=a);return d},GT:function(a,b,c){return{instance:"GT"}},LT:function(a,b,c){return{instance:"LT"}},EQ:function(a,b,c){return{instance:"EQ"}}});
+Fay$$objConcat(Fay$$jsToFayHash,{Just:function(a,b,c){return new Prelude._Just(Fay$$jsToFay(b&&b[0]?b[0]:"automatic"===a[0]?["automatic"]:["unknown"],c.slot1))},Nothing:function(a,b,c){return new Prelude._Nothing},Left:function(a,b,c){return new Prelude._Left(Fay$$jsToFay(b&&b[0]?b[0]:"automatic"===a[0]?["automatic"]:["unknown"],c.slot1))},Right:function(a,b,c){return new Prelude._Right(Fay$$jsToFay(b&&b[1]?b[1]:"automatic"===a[0]?["automatic"]:["unknown"],c.slot1))},GT:function(a,b,c){return new Prelude._GT},
+LT:function(a,b,c){return new Prelude._LT},EQ:function(a,b,c){return new Prelude._EQ}});var FFI={};

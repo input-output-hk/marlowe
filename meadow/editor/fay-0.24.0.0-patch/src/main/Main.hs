@@ -5,23 +5,14 @@ module Main where
 
 import           Fay
 import Fay.Compiler
-import Fay.Types
 import GHCJS.Types (JSVal)
 import Data.JSString (JSString, pack, unpack)
 import GHCJS.Foreign.Callback (Callback, asyncCallback)
 
 foreign import javascript safe
-   "eval($1);"
+   "try { eval($1); } catch (err) { document.getElementById('textarea').value = 'Error while executing Fay code:\\n\\n' + err; }"
    evalAux :: JSString -> IO ()
-
-foreign import javascript safe
-   "$r = window.prompt(\"Insert Haskell code\",\"main = putStrLn \\\"Hello World!\\\"\");"
-   promptAux :: IO JSString
-
-
 eval = evalAux . pack
-
-prompt = do {x <- promptAux; return $ unpack x}
 
 doCompile :: String -> IO (Maybe String)
 doCompile source = do res <- compileViaStr "Main.hs" (defaultConfig {configTypecheck = False, configExportRuntime = False, configExportStdlib = False}) (compileToplevelModuleText "Main.hs" source) source
@@ -142,4 +133,4 @@ main = do setOnClick "compile" compile
 
 prefix = "module Main where\n\nimport Marlowe\nimport Fay.FFI (ffi)\n\nsetCode :: String -> Fay ()\nsetCode = ffi \"document.getElementById('textarea').value = %1\"\n\nmain :: Fay ()\nmain = setCode (prettyPrintContract contract)\n\n-------------------------------------\n---- Write your code below this line --\n---------------------------------------\n\n\ncontract :: Contract\ncontract = "
 
-explanation = "This iframe allows you to generate Marlowe code by using its Fay embedding. Fay is a subset of Haskell (https://github.com/faylang/fay/wiki).\n\nYou can click \"Execute code\" to compile and see the generated code in this text area, and click \"Send result to Meadow\" to use the generated code in Meadow.\n\nMake sure you save your Fay code since it will be discarded after this iframe is closed.\n\nYou can also click \"Cancel\" to close this iframe without making changes to Meadow. And \"Rollback code\" to restore the iframe to its original state.\n\nBelow you can find an example of how to use the embedding to write Marlowe contracts more concisely.\n\n----------------------------------------\n-- Escrow example using Fay embedding --\n----------------------------------------\n\ncontract :: Contract\ncontract = CommitCash iCC1 1\n                      (ConstMoney 450)\n                      10 100\n                      (When (OrObs (two_chose 1 2 3 0)\n                                   (two_chose 1 2 3 1))\n                            90\n                            (Choice (two_chose 1 2 3 1)\n                                    (Pay iP1 1 2\n                                         (AvailableMoney iCC1)\n                                         100\n                                         redeem_original)\n                                    redeem_original)\n                            redeem_original)\n                      Null\n\nchose :: Int -> ConcreteChoice -> Observation\nchose per c =  PersonChoseThis (IdentChoice per) per c\n\none_chose :: Person -> Person -> ConcreteChoice -> Observation\none_chose per per' val = (OrObs (chose per val) (chose per' val)) \n                                  \ntwo_chose :: Person -> Person -> Person -> ConcreteChoice -> Observation\ntwo_chose p1 p2 p3 c = OrObs (AndObs (chose p1 c) (one_chose p2 p3 c))\n                             (AndObs (chose p2 c) (chose p3 c))\n\nredeem_original :: Contract\nredeem_original = RedeemCC iCC1 Null\n\niCC1 :: IdentCC\niCC1 = IdentCC 1\n\niP1 :: IdentPay\niP1 = IdentPay 1\n\n\n"
+explanation = "This iframe allows you to generate Marlowe code by using its Fay embedding. Fay is a subset of Haskell (https://github.com/faylang/fay/wiki).\n\nYou can click \"Execute code\" to compile and see the generated code in this text area, and click \"Send result to Meadow\" to use the generated code in Meadow.\n\nMake sure you save your Fay code since it will be discarded after this iframe is closed.\n\nYou can also click \"Cancel\" to close this iframe without making changes to Meadow. And \"Rollback code\" to restore the iframe to its original state.\n\nPlease note that the compiler does not do type-checking of the code provided, this is because the Fay compiler relies on GHC for that, and this demo runs in the browser (so it does not have access to GHC). You can use GHC offline in order to type-check you programs, the source for the module Marlowe can be found in the path \"/meadow/editor/fay-code\" of the github repository.\n\nBelow you can find an example of how to use the embedding to write Marlowe contracts more concisely.\n\n----------------------------------------\n-- Escrow example using Fay embedding --\n----------------------------------------\n\ncontract :: Contract\ncontract = CommitCash iCC1 1\n                      (ConstMoney 450)\n                      10 100\n                      (When (OrObs (two_chose 1 2 3 0)\n                                   (two_chose 1 2 3 1))\n                            90\n                            (Choice (two_chose 1 2 3 1)\n                                    (Pay iP1 1 2\n                                         (AvailableMoney iCC1)\n                                         100\n                                         redeem_original)\n                                    redeem_original)\n                            redeem_original)\n                      Null\n\nchose :: Int -> ConcreteChoice -> Observation\nchose per c =  PersonChoseThis (IdentChoice per) per c\n\none_chose :: Person -> Person -> ConcreteChoice -> Observation\none_chose per per' val = (OrObs (chose per val) (chose per' val)) \n                                  \ntwo_chose :: Person -> Person -> Person -> ConcreteChoice -> Observation\ntwo_chose p1 p2 p3 c = OrObs (AndObs (chose p1 c) (one_chose p2 p3 c))\n                             (AndObs (chose p2 c) (chose p3 c))\n\nredeem_original :: Contract\nredeem_original = RedeemCC iCC1 Null\n\niCC1 :: IdentCC\niCC1 = IdentCC 1\n\niP1 :: IdentPay\niP1 = IdentPay 1\n\n\n"

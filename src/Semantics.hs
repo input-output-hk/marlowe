@@ -2,7 +2,6 @@ module Semantics where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
-import qualified IStack
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
 
@@ -89,12 +88,6 @@ newtype IdentChoice = IdentChoice Int
 newtype IdentPay = IdentPay Int
                deriving (Eq,Ord,Show,Read)
 
-newtype IdentCBind = IdentCBind Int
-               deriving (Eq,Ord,Show,Read)
-
-newtype IdentOBind = IdentOBind Int
-               deriving (Eq,Ord,Show,Read)
-
 -- A cash commitment is made by a person, for a particular amount and timeout.               
 
 data CC = CC IdentCC Person Cash Timeout
@@ -156,9 +149,7 @@ data Action =   SuccessfulPay IdentPay Person Person Cash |
                 CommitRedeemed IdentCC Person Cash |
                 ExpiredCommitRedeemed IdentCC Person Cash |
                 DuplicateRedeem IdentCC Person |
-                ChoiceMade IdentChoice Person ConcreteChoice |
-                FailedCReplace IdentCBind | FailedOReplace IdentOBind |
-                FailedCUnbind IdentCBind | FailedOUnbind IdentOBind
+                ChoiceMade IdentChoice Person ConcreteChoice
                     deriving (Eq,Ord,Show,Read)
 
 type AS = [Action]
@@ -179,17 +170,6 @@ data State = State {
                sch :: Map.Map (IdentChoice, Person) ConcreteChoice
              }
                deriving (Eq,Ord,Show,Read)
-
-data Environment = Environment {
-                     cbin  :: IStack.IStack IdentCBind Contract,
-                     obin  :: IStack.IStack IdentOBind Observation,
-                     bindOrder :: [Either IdentCBind IdentOBind]
-                   }
-               deriving (Eq,Ord,Show,Read)
-
--- Empty environment definition
-emptyEnvironment :: Environment
-emptyEnvironment = Environment { cbin = IStack.empty, obin = IStack.empty, bindOrder = [] }
 
 type CCStatus = (Person,CCRedeemStatus)
 data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
@@ -233,37 +213,32 @@ data Observation =  BelowTimeout Timeout | -- are we still on time for something
                     PersonChoseThis IdentChoice Person ConcreteChoice |
                     PersonChoseSomething IdentChoice Person |
                     ValueGE Money Money | -- is first ammount is greater or equal than the second?
-                    TrueObs | FalseObs | OReplace IdentOBind
+                    TrueObs | FalseObs
                     deriving (Eq,Ord,Show,Read)
-
 
 -- Semantics of observations
 
-interpretObs :: State -> Environment -> Observation -> OS -> Either Bool [Action]
+interpretObs :: State -> Observation -> OS -> Bool
 
-interpretObs _ _ (BelowTimeout n) os
-    = Left $ not $ expired (blockNumber os) n
-interpretObs st env (AndObs obs1 obs2) os
-    = combineUsing (&&) (interpretObs st env obs1 os) (interpretObs st env obs2 os)
-interpretObs st env (OrObs obs1 obs2) os
-    = combineUsing (||) (interpretObs st env obs1 os) (interpretObs st env obs2 os)
-interpretObs st env (NotObs obs) os
-    = case interpretObs st env obs os of
-        Left res -> Left $ not res
-        res -> res
-interpretObs st _ (PersonChoseThis choice_id person reference_choice) _
+interpretObs _ (BelowTimeout n) os
+    = not $ expired (blockNumber os) n
+interpretObs st (AndObs obs1 obs2) os
+    = interpretObs st obs1 os && interpretObs st obs2 os
+interpretObs st (OrObs obs1 obs2) os
+    = interpretObs st obs1 os || interpretObs st obs2 os
+interpretObs st (NotObs obs) os
+    = not (interpretObs st obs os)
+interpretObs st (PersonChoseThis choice_id person reference_choice) _
     = case Map.lookup (choice_id, person) (sch st) of
-        Just actual_choice -> Left (actual_choice == reference_choice)
-        Nothing -> Left False
-interpretObs st _ (PersonChoseSomething choice_id person) _
-    = Left $ Map.member (choice_id, person) (sch st)
-interpretObs st _ (ValueGE a b) _ = Left $ evalMoney st a >= evalMoney st b
-interpretObs _ _ TrueObs _ = Left True
-interpretObs _ _ FalseObs _ = Left False
-interpretObs st env (OReplace ident) os
-  = case oreplaceUpdate ident env of
-     Just (o, nenv) -> interpretObs st nenv o os
-     Nothing -> Right [FailedOReplace ident]
+        Just actual_choice -> actual_choice == reference_choice
+        Nothing -> False
+interpretObs st (PersonChoseSomething choice_id person) _
+    = Map.member (choice_id, person) (sch st)
+interpretObs st (ValueGE a b) _ = evalMoney st a >= evalMoney st b
+interpretObs _ TrueObs _
+    = True
+interpretObs _ FalseObs _
+    = False
 
 -- The type of contracts
 
@@ -274,12 +249,9 @@ data Contract =
     Pay IdentPay Person Person Money Timeout Contract |
     Both Contract Contract |
     Choice Observation Contract Contract |
-    When Observation Timeout Contract Contract |
-    CReplace IdentCBind | CBind IdentCBind Contract Contract |
-    CUnbind IdentCBind Contract |
-    OUnbind IdentOBind Contract |
-    OBind IdentOBind Observation Contract
+    When Observation Timeout Contract Contract
                deriving (Eq,Ord,Show,Read)
+
 
 {-------------
  - Semantics -
@@ -287,11 +259,11 @@ data Contract =
 
 -- A single computation step in evaluating a contract.
 
-step :: Input -> State -> Environment -> Contract -> OS -> (State,Contract,AS)
+step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
 
-step _ st _ Null _ = (st, Null, [])
+step _ st Null _ = (st, Null, [])
 
-step inp st _ c@(Pay idpay from to val expi con) os
+step inp st c@(Pay idpay from to val expi con) os
   | expired (blockNumber os) expi = (st, con, [ExpiredPay idpay from to cval])
   | right_claim =
     if committed st from bn >= cval
@@ -311,32 +283,29 @@ step inp st _ c@(Pay idpay from to val expi con) os
 -- CHECK: the clause for Both could use a commitment twice,
 -- but only if the identity is duplicated, and should not be possible.
 
-step comms st env (Both con1 con2) os =
+step comms st (Both con1 con2) os =
     (st2, result, ac1 ++ ac2)
     where
         result | res1 == Null = res2
                | res2 == Null = res1
                | otherwise = Both res1 res2
-        (st1,res1,ac1) = step comms st env con1 os
-        (st2,res2,ac2) = step comms st1 env con2 os
+        (st1,res1,ac1) = step comms st con1 os
+        (st2,res2,ac2) = step comms st1 con2 os
 
-step _ st env (Choice obs conT conF) os =
-  case interpretObs st env obs os of
-    Left True -> (st,conT,[])
-    Left False -> (st,conF,[])
-    Right ac -> (st,Null,ac)
+step _ st (Choice obs conT conF) os =
+    if interpretObs st obs os
+        then (st,conT,[])
+        else (st,conF,[])
 
-step _ st env (When obs expi con con2) os
+step _ st (When obs expi con con2) os
   | expired (blockNumber os) expi = (st,con2,[])
-  | otherwise = case interpretObs st env obs os of
-                   Left True -> (st,con,[])
-                   Left False -> (st, When obs expi con con2, [])
-                   Right ac -> (st, Null, ac)
+  | interpretObs st obs os = (st,con,[])
+  | otherwise = (st, When obs expi con con2, [])
 
 -- Note that conformance of the commitment here is exact
 -- May want to relax this
 
-step commits st _ c@(CommitCash ident person val start_timeout end_timeout con1 con2) os
+step commits st c@(CommitCash ident person val start_timeout end_timeout con1 con2) os
   | cexe || cexs = (st {sc = ust}, con2, [])
   | Set.member (CC ident person cval end_timeout) (cc commits)
         = (st {sc = ust}, con1, [SuccessfulCommit ident person cval])
@@ -351,7 +320,7 @@ step commits st _ c@(CommitCash ident person val start_timeout end_timeout con1 
 -- Note: there is no possibility of payment failure here
 -- Also: look at partial redemption: currently it is all or nothing.
 
-step commits st _ c@(RedeemCC ident con) _ =
+step commits st c@(RedeemCC ident con) _ =
     case Map.lookup ident ccs of
       Just (person, NotRedeemed val _) ->
         let newstate = st {sc = Map.insert ident (person, ManuallyRedeemed) ccs} in
@@ -363,49 +332,6 @@ step commits st _ c@(RedeemCC ident con) _ =
       Nothing -> (st,c,[])
     where
         ccs = sc st
-
-step commits st env (CBind ident c1 c2) os = (ns, CBind ident c1 nc2, na)
-  where
-    cb = cbin env
-    bo = bindOrder env
-    nenv = env {cbin = IStack.insert ident c1 cb, bindOrder = Left ident : bo}
-    (ns, nc2, na) = step commits st nenv c2 os
-
-step commits st env (OBind ident o c) os = (ns, OBind ident o nc, na)
-  where
-    ob = obin env
-    bo = bindOrder env
-    nenv = env {obin = IStack.insert ident o ob, bindOrder = Right ident : bo}
-    (ns, nc, na) = step commits st nenv c os
-
-step _ st env (CReplace ident) _
-  = case IStack.lookup ident cb of
-     Just c -> (st, unbinds (Left ident : us) c, [])
-     Nothing -> (st, Null, [FailedCReplace ident])
-  where
-    cb = cbin env
-    bo = bindOrder env
-    us = takeWhile (/= Left ident) bo
-
-step commits st env (CUnbind ident c) os =
-  case IStack.lookup ident cb of
-    Just _ -> (nst, CUnbind ident nc, na)
-    Nothing -> (st, Null, [FailedCUnbind ident])
-  where
-    cb = cbin env
-    bo = bindOrder env
-    nenv = env {cbin = IStack.pop ident cb, bindOrder = removeFirst (Left ident) bo}
-    (nst, nc, na) = step commits st nenv c os
-
-step commits st env (OUnbind ident c) os =
-  case IStack.lookup ident ob of
-    Just _ -> (nst, OUnbind ident nc, na)
-    Nothing -> (st, Null, [FailedOUnbind ident])
-  where
-    ob = obin env
-    bo = bindOrder env
-    nenv = env {obin = IStack.pop ident ob, bindOrder = removeFirst (Right ident) bo}
-    (nst, nc, na) = step commits st nenv c os
 
 -------------------------
 -- stepAll & stepBlock --
@@ -430,7 +356,6 @@ recordChoices :: Input -> Map.Map (IdentChoice, Person) Int -> (Map.Map (IdentCh
 recordChoices input recorded_choices = Map.foldlWithKey addNewChoices (recorded_choices, []) (ic input)
 
 -- Checks whether the provided cash commit is claimed in the input
-
 isClaimed :: Input -> IdentCC -> CCStatus -> Bool
 
 isClaimed inp ident status
@@ -478,14 +403,14 @@ stepAllAux com st con os ac
   | (nst == st) && (ncon == con) && null nac = (st, con, ac)
   | otherwise = stepAllAux com nst ncon os (nac ++ ac)
   where
-    (nst, ncon, nac) = step com st emptyEnvironment con os
+    (nst, ncon, nac) = step com st con os
 
 -- Wraps stepAll function to carry out actions that need to be
 -- done once per block (refund expired cash commitments, and record choices)
 
 stepBlock :: Input -> State -> Contract -> OS -> (State, Contract, AS)
 
-stepBlock inp st con os = (rs, removeUnusedBinds rcon, nas)
+stepBlock inp st con os = (rs, rcon, nas)
   where (nsch, chas) = recordChoices inp (sch st)
         (nsc, pas) = expireCommits inp (sc st) os
         nst = st { sc = nsc, sch = nsch }
@@ -495,186 +420,6 @@ stepBlock inp st con os = (rs, removeUnusedBinds rcon, nas)
 -------------------------
 -- Auxiliary functions --
 -------------------------
-
--- Extracts the specified bound observation from the environment
-
-oreplaceUpdate :: IdentOBind -> Environment -> Maybe (Observation, Environment)
-oreplaceUpdate ident env =
-  case IStack.lookup ident ob of
-    Just o -> Just (o, nenv)
-    Nothing -> Nothing
-  where
-    (us, _:rest) = span (/= Right ident) bo
-    bo = bindOrder env
-    ob = obin env
-    cb = cbin env
-    nob = IStack.popAll [x | Right x <- Right ident : us] ob
-    ncb = IStack.popAll [x | Left x <- us] cb
-    nenv = env {obin = nob, cbin = ncb, bindOrder = rest}
-
--- Extracts the specified bound contract from the environment
-
-creplaceUpdate :: IdentCBind -> Environment -> Maybe (Contract, Environment)
-creplaceUpdate ident env =
-  case IStack.lookup ident cb of
-    Just c -> Just (c, nenv)
-    Nothing -> Nothing
-  where
-    (us, _:rest) = span (/= Left ident) bo
-    bo = bindOrder env
-    ob = obin env
-    cb = cbin env
-    nob = IStack.popAll [x | Right x <- us] ob
-    ncb = IStack.popAll [x | Left x <- Left ident : us] cb
-    nenv = env {obin = nob, cbin = ncb, bindOrder = rest}
-
--- Remove first occurrence of an element from the list
-
-removeFirst :: Eq a => a -> [a] -> [a]
-removeFirst _ [] = []
-removeFirst a (h:t)
-  | a == h = t
-  | otherwise = h : removeFirst a t
-
--- Finds out whether the given observation uses replace on the given identifier
-
-isBindUsedObs :: Observation -> Either IdentCBind IdentOBind -> Environment -> Bool
-isBindUsedObs _ (Left _) _ = False
-isBindUsedObs (BelowTimeout _) _ _ = False
-isBindUsedObs (AndObs obs1 obs2) ident env = any (\x -> isBindUsedObs x ident env) [obs1, obs2]
-isBindUsedObs (OrObs obs1 obs2) ident env = any (\x -> isBindUsedObs x ident env) [obs1, obs2]
-isBindUsedObs (NotObs obs) ident env = isBindUsedObs obs ident env
-isBindUsedObs (PersonChoseThis _ _ _) _ _  = False
-isBindUsedObs (PersonChoseSomething _ _) _ _ = False
-isBindUsedObs (ValueGE _ _) _ _  = False
-isBindUsedObs TrueObs _ _ = False
-isBindUsedObs FalseObs _ _ = False
-isBindUsedObs (OReplace identOBind) ide@(Right identOBind2) env
-  | identOBind == identOBind2 = True
-  | otherwise = case oreplaceUpdate identOBind env of
-                  Just (o, nenv) -> isBindUsedObs o ide nenv
-                  Nothing -> False
-
--- Finds out whether the given contract uses replace on the given identifier
-
-isBindUsed :: Contract -> Either IdentCBind IdentOBind -> Environment -> Bool
-isBindUsed Null _ _ = False
-isBindUsed (CommitCash _ _ _ _ _ c1 c2) ident env = any (\x -> isBindUsed x ident env) [c1, c2]
-isBindUsed (RedeemCC _ c) ident env = isBindUsed c ident env
-isBindUsed (Pay _ _ _ _ _ c) ident env = isBindUsed c ident env
-isBindUsed (Both c1 c2) ident env = any (\x -> isBindUsed x ident env) [c1, c2]
-isBindUsed (Choice o c1 c2) ident env = isBindUsedObs o ident env || any (\x -> isBindUsed x ident env) [c1, c2]
-isBindUsed (When o _ c1 c2) ident env = isBindUsedObs o ident env || any (\x -> isBindUsed x ident env) [c1, c2]
-isBindUsed (CReplace identCBind) ident env
-  | Left identCBind == ident = True
-  | otherwise = case creplaceUpdate identCBind env of
-                  Just (o, nenv) -> isBindUsed o ident nenv
-                  Nothing -> False
-isBindUsed (CBind identCBind c1 c2) ident env
-  | Left identCBind == ident = isBindUsed c1 ident env
-  | otherwise = isBindUsed c2 ident nenv
-  where
-    cb = cbin env
-    bo = bindOrder env
-    nenv = env {cbin = IStack.insert identCBind c1 cb, bindOrder = Left identCBind : bo}
-isBindUsed (OBind identOBind o c) ident env
-  | Right identOBind == ident = isBindUsedObs o ident env
-  | otherwise = isBindUsed c ident nenv
-  where
-    ob = obin env
-    bo = bindOrder env
-    nenv = env {obin = IStack.insert identOBind o ob, bindOrder = Right identOBind : bo}
-isBindUsed (CUnbind identCBind c) ident env
-  | Left identCBind == ident = False
-  | otherwise =
-    case IStack.lookup identCBind cb of
-      Just _ -> isBindUsed c ident nenv
-      Nothing -> False
-  where
-    cb = cbin env
-    bo = bindOrder env
-    nenv = env {cbin = IStack.pop identCBind cb, bindOrder = removeFirst (Left identCBind) bo}
-isBindUsed (OUnbind identOBind c) ident env
-  | Right identOBind == ident = False
-  | otherwise =
-    case IStack.lookup identOBind ob of
-      Just _ -> isBindUsed c ident nenv
-      Nothing -> False
-  where
-    ob = obin env
-    bo = bindOrder env
-    nenv = env {obin = IStack.pop identOBind ob, bindOrder = removeFirst (Right identOBind) bo}
-
--- Removes unbinds with the given identifier from the contract
-
-removeUnbind :: Contract -> Either IdentCBind IdentOBind -> Contract
-removeUnbind Null _ = Null
-removeUnbind (CommitCash identCC p m t1 t2 c1 c2) ident = CommitCash identCC p m t1 t2 nc1 nc2
-  where [nc1, nc2] = map (`removeUnbind` ident) [c1, c2]
-removeUnbind (RedeemCC identCC c) ident = RedeemCC identCC (removeUnbind c ident)
-removeUnbind (Pay identPay p1 p2 m t c) ident = Pay identPay p1 p2 m t (removeUnbind c ident)
-removeUnbind (Both c1 c2) ident = Both nc1 nc2
-  where [nc1, nc2] = map (`removeUnbind` ident) [c1, c2]
-removeUnbind (Choice o c1 c2) ident = Choice o nc1 nc2
-  where [nc1, nc2] = map (`removeUnbind` ident) [c1, c2]
-removeUnbind (When o t c1 c2) ident = When o t nc1 nc2
-  where [nc1, nc2] = map (`removeUnbind` ident) [c1, c2]
-removeUnbind (CReplace identCBind) _ = CReplace identCBind
-removeUnbind (CBind identCBind c1 c2) ident
-  | Left identCBind == ident = CBind identCBind (removeUnbind c1 ident) c2
-  | otherwise = CBind identCBind (removeUnbind c1 ident) (removeUnbind c2 ident)
-removeUnbind (OBind identOBind o c) ident
-  | Right identOBind == ident = OBind identOBind o c
-  | otherwise = OBind identOBind o (removeUnbind c ident)
-removeUnbind (CUnbind identCBind c) ident
-  | Left identCBind == ident = c
-  | otherwise = CUnbind identCBind (removeUnbind c ident)
-removeUnbind (OUnbind identOBind c) ident
-  | Right identOBind == ident = c
-  | otherwise = OUnbind identOBind (removeUnbind c ident)
-
--- Removes unused binds
-
-removeUnusedBinds :: Contract -> Contract
-removeUnusedBinds Null = Null
-removeUnusedBinds (CommitCash identCC p m t1 t2 c1 c2) = CommitCash identCC p m t1 t2 nc1 nc2
-  where [nc1, nc2] = map removeUnusedBinds [c1, c2]
-removeUnusedBinds (RedeemCC identCC c) = RedeemCC identCC (removeUnusedBinds c)
-removeUnusedBinds (Pay identPay p1 p2 m t c) = Pay identPay p1 p2 m t (removeUnusedBinds c)
-removeUnusedBinds (Both c1 c2) = Both nc1 nc2
-  where [nc1, nc2] = map removeUnusedBinds [c1, c2]
-removeUnusedBinds (Choice o c1 c2) = Choice o nc1 nc2
-  where [nc1, nc2] = map removeUnusedBinds [c1, c2]
-removeUnusedBinds (When o t c1 c2) = When o t nc1 nc2
-  where [nc1, nc2] = map removeUnusedBinds [c1, c2]
-removeUnusedBinds (CReplace identCBind) = CReplace identCBind
-removeUnusedBinds (CBind identCBind c1 c2)
-  | isBindUsed c2 (Left identCBind) emptyEnvironment = CBind identCBind nc1 nc2
-  | otherwise = removeUnusedBinds (removeUnbind c2 (Left identCBind))
-  where [nc1, nc2] = map removeUnusedBinds [c1, c2]
-removeUnusedBinds n@(OBind identOBind o c)
-  | isBindUsed c (Right identOBind) emptyEnvironment = OBind identOBind o nc
-  | otherwise = removeUnusedBinds (removeUnbind c (Right identOBind))
-  where nc = removeUnusedBinds c
-removeUnusedBinds (CUnbind identCBind c) = CUnbind identCBind (removeUnusedBinds c)
-removeUnusedBinds (OUnbind identOBind c) = OUnbind identOBind (removeUnusedBinds c)
-
--- Creates a chain to unbind the identifiers provided
-
-unbinds :: [Either IdentCBind IdentOBind] -> Contract -> Contract
-unbinds [] c = c
-unbinds (Left c1 : r) c2 = CUnbind c1 (unbinds r c2)
-unbinds (Right o : r) c = OUnbind o (unbinds r c)
-
--- If both are Left apply the function, otherwise concatenate the Rights
-
-combineUsing :: (Bool -> Bool -> Bool) -> Either Bool [Action] ->
-                Either Bool [Action] -> Either Bool [Action]
-
-combineUsing f (Left l) (Left r) = Left $ f l r
-combineUsing _ (Left _) (Right r) = Right r
-combineUsing _ (Right l) (Left _) = Right l
-combineUsing _ (Right l) (Right r) = Right (l ++ r)
 
 -- How much money is committed by a person, and is still unexpired?
 

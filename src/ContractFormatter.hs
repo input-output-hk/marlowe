@@ -13,8 +13,6 @@ data ASTNode = ASTNodeC Contract
              | ASTNodeCC IdentCC
              | ASTNodeIC IdentChoice
              | ASTNodeIP IdentPay
-             | ASTNodeBC IdentCBind
-             | ASTNodeBO IdentOBind
              | ASTNodeI Int
 
 listCurryType :: ASTNode -> (String, [ASTNode])
@@ -42,16 +40,6 @@ listCurryType (ASTNodeO (ValueGE money1 money2))
  = ("ValueGE", [ASTNodeM money1, ASTNodeM money2])
 listCurryType (ASTNodeO TrueObs) = ("TrueObs", [])
 listCurryType (ASTNodeO FalseObs) = ("FalseObs", [])
-listCurryType (ASTNodeO (OReplace ident)) = ("OReplace", [ASTNodeBO ident])
-listCurryType (ASTNodeC (CReplace ident)) = ("CReplace", [ASTNodeBC ident])
-listCurryType (ASTNodeC (CBind ident contract1 contract2))
- = ("CBind", [ASTNodeBC ident, ASTNodeC contract1, ASTNodeC contract2])
-listCurryType (ASTNodeC (CUnbind ident contract))
- = ("CUnbind", [ASTNodeBC ident, ASTNodeC contract])
-listCurryType (ASTNodeC (OBind ident observation contract))
- = ("OBind", [ASTNodeBO ident, ASTNodeO observation, ASTNodeC contract])
-listCurryType (ASTNodeC (OUnbind ident contract))
- = ("OUnbind", [ASTNodeBO ident, ASTNodeC contract])
 listCurryType (ASTNodeC Null) = ("Null", [])
 listCurryType (ASTNodeC (CommitCash identCC person cash timeout1 timeout2 contract1 contract2))
  = ("CommitCash", [ASTNodeCC identCC, ASTNodeI person, ASTNodeM cash, ASTNodeI timeout1,
@@ -70,8 +58,6 @@ listCurryType (ASTNodeC (When observation timeout contract1 contract2))
 listCurryType (ASTNodeCC (IdentCC int)) = ("IdentCC", [ASTNodeI int])
 listCurryType (ASTNodeIC (IdentChoice int)) = ("IdentChoice", [ASTNodeI int])
 listCurryType (ASTNodeIP (IdentPay int)) = ("IdentPay", [ASTNodeI int])
-listCurryType (ASTNodeBC (IdentCBind int)) = ("IdentCBind", [ASTNodeI int])
-listCurryType (ASTNodeBO (IdentOBind int)) = ("IdentOBind", [ASTNodeI int])
 listCurryType (ASTNodeI int) = (show int, [])
 
 isComplex :: ASTNode -> Bool

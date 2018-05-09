@@ -1,4 +1,4 @@
-module Marlowe(Money(..), Observation(..), Contract(..), Person, Random, BlockNumber, Cash, ConcreteChoice, Timeout, IdentCC(..), IdentChoice(..), IdentPay(..), IdentCBind(..), IdentOBind(..), prettyPrintContract) where
+module Marlowe(Money(..), Observation(..), Contract(..), Person, Random, BlockNumber, Cash, ConcreteChoice, Timeout, IdentCC(..), IdentChoice(..), IdentPay(..), prettyPrintContract) where
 
 -- Standard library functions
 
@@ -64,12 +64,6 @@ newtype IdentChoice = IdentChoice Int
 newtype IdentPay = IdentPay Int
                deriving (Eq)
 
-newtype IdentCBind = IdentCBind Int
-               deriving (Eq)
-
-newtype IdentOBind = IdentOBind Int
-               deriving (Eq)
-
 -- Money is a set of contract primitives that represent constants,
 -- functions, and variables that can be evaluated as an ammount
 -- of money.
@@ -96,7 +90,7 @@ data Observation =  BelowTimeout Timeout | -- are we still on time for something
                     PersonChoseThis IdentChoice Person ConcreteChoice |
                     PersonChoseSomething IdentChoice Person |
                     ValueGE Money Money | -- is first ammount is greater or equal than the second?
-                    TrueObs | FalseObs | OReplace IdentOBind
+                    TrueObs | FalseObs
                     deriving (Eq)
 
 showObservation :: Observation -> String
@@ -109,7 +103,6 @@ showObservation (PersonChoseSomething (IdentChoice ic) per) = "(PersonChoseSomet
 showObservation (ValueGE m1 m2) = "(ValueGE " ++ (showMoney m1) ++ " " ++ (showMoney m2) ++ ")"
 showObservation TrueObs = "TrueObs"
 showObservation FalseObs = "FalseObs"
-showObservation (OReplace (IdentOBind iob)) = "(OReplace (IdentOBind " ++ (show iob) ++ "))"
  
 -- The type of contracts
 
@@ -120,11 +113,7 @@ data Contract =
     Pay IdentPay Person Person Money Timeout Contract |
     Both Contract Contract |
     Choice Observation Contract Contract |
-    When Observation Timeout Contract Contract |
-    CReplace IdentCBind | CBind IdentCBind Contract Contract |
-    CUnbind IdentCBind Contract |
-    OUnbind IdentOBind Contract |
-    OBind IdentOBind Observation Contract
+    When Observation Timeout Contract Contract
                deriving (Eq)
 
 showContract Null = "Null"
@@ -134,11 +123,6 @@ showContract (Pay (IdentPay idp) per1 per2 mon tim con) = "(Pay (IdentPay " ++ (
 showContract (Both con1 con2) = "(Both " ++ (showContract con1) ++ " " ++ (showContract con2) ++ ")"
 showContract (Choice obs con1 con2) = "(Choice " ++ (showObservation obs) ++ " " ++ (showContract con1) ++ " " ++ (showContract con2) ++ ")"
 showContract (When obs tim con1 con2) = "(When " ++ (showObservation obs) ++ " " ++ (show tim) ++ " " ++ (showContract con1) ++ " " ++ (showContract con2) ++ ")"
-showContract (CReplace (IdentCBind idb)) = "(CReplace (IdentCBind " ++ (show idb) ++ "))"
-showContract (CBind (IdentCBind idb) con1 con2) = "(CBind (IdentCBind " ++ (show idb) ++ ") " ++ (showContract con1) ++ " " ++ (showContract con2) ++ ")"
-showContract (CUnbind (IdentCBind idb) con) = "(CUnbind (IdentCBind " ++ (show idb) ++ ") " ++ (showContract con) ++ ")"
-showContract (OUnbind (IdentOBind idb) con) = "(OUnbind (IdentOBind " ++ (show idb) ++ ") " ++ (showContract con) ++ ")"
-showContract (OBind (IdentOBind idb) obs con) = "(OBind (IdentOBind " ++ (show idb) ++ ") " ++ (showObservation obs) ++ " " ++ (showContract con) ++ ")"
  
 
 ------------------------
@@ -151,8 +135,6 @@ data ASTNode = ASTNodeC Contract
              | ASTNodeCC IdentCC
              | ASTNodeIC IdentChoice
              | ASTNodeIP IdentPay
-             | ASTNodeBC IdentCBind
-             | ASTNodeBO IdentOBind
              | ASTNodeI Int
 
 listCurryType :: ASTNode -> (String, [ASTNode])
@@ -180,16 +162,6 @@ listCurryType (ASTNodeO (ValueGE money1 money2))
  = ("ValueGE", [ASTNodeM money1, ASTNodeM money2])
 listCurryType (ASTNodeO TrueObs) = ("TrueObs", [])
 listCurryType (ASTNodeO FalseObs) = ("FalseObs", [])
-listCurryType (ASTNodeO (OReplace ident)) = ("OReplace", [ASTNodeBO ident])
-listCurryType (ASTNodeC (CReplace ident)) = ("CReplace", [ASTNodeBC ident])
-listCurryType (ASTNodeC (CBind ident contract1 contract2))
- = ("CBind", [ASTNodeBC ident, ASTNodeC contract1, ASTNodeC contract2])
-listCurryType (ASTNodeC (CUnbind ident contract))
- = ("CUnbind", [ASTNodeBC ident, ASTNodeC contract])
-listCurryType (ASTNodeC (OBind ident observation contract))
- = ("OBind", [ASTNodeBO ident, ASTNodeO observation, ASTNodeC contract])
-listCurryType (ASTNodeC (OUnbind ident contract))
- = ("OUnbind", [ASTNodeBO ident, ASTNodeC contract])
 listCurryType (ASTNodeC Null) = ("Null", [])
 listCurryType (ASTNodeC (CommitCash identCC person cash timeout1 timeout2 contract1 contract2))
  = ("CommitCash", [ASTNodeCC identCC, ASTNodeI person, ASTNodeM cash, ASTNodeI timeout1,
@@ -208,8 +180,6 @@ listCurryType (ASTNodeC (When observation timeout contract1 contract2))
 listCurryType (ASTNodeCC (IdentCC int)) = ("IdentCC", [ASTNodeI int])
 listCurryType (ASTNodeIC (IdentChoice int)) = ("IdentChoice", [ASTNodeI int])
 listCurryType (ASTNodeIP (IdentPay int)) = ("IdentPay", [ASTNodeI int])
-listCurryType (ASTNodeBC (IdentCBind int)) = ("IdentCBind", [ASTNodeI int])
-listCurryType (ASTNodeBO (IdentOBind int)) = ("IdentOBind", [ASTNodeI int])
 listCurryType (ASTNodeI int) = (show int, [])
 
 isComplex :: ASTNode -> Bool

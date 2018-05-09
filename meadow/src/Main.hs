@@ -218,10 +218,6 @@ obs_to_blockly (PersonChoseThis (IdentChoice id) p cv) =
 obs_to_blockly TrueObs =
   do tb <- create_block "observation_trueobs"
      return tb
-obs_to_blockly (OReplace (IdentOBind id)) =
-  do tb <- create_block "observation_replaceobservationbind"
-     set_field_value tb "obind_id" id
-     return tb
 
 block_to_blockly :: Contract -> IO Block
 block_to_blockly (Null) = create_block "contract_null"
@@ -280,38 +276,6 @@ block_to_blockly (When obs b c1 c2) =
      connect_obs_as_input "observation" tb obb
      connect_as_input "contract1" tb cb1
      connect_as_input "contract2" tb cb2
-     return tb
-block_to_blockly (CBind (IdentCBind id) c1 c2) =
-  do cb1 <- block_to_blockly c1
-     cb2 <- block_to_blockly c2
-     tb <- create_block "contract_bindcontract"
-     set_field_value tb "cbind_id" id
-     connect_as_input "contract1" tb cb1
-     connect_as_input "contract2" tb cb2
-     return tb
-block_to_blockly (OBind (IdentOBind id) obs c) =
-  do obb <- obs_to_blockly obs
-     cb <- block_to_blockly c
-     tb <- create_block "contract_bindobservation"
-     set_field_value tb "obind_id" id
-     connect_value_as_input "observation" tb obb
-     connect_as_input "contract" tb cb
-     return tb
-block_to_blockly (CUnbind (IdentCBind id) c) =
-  do cb <- block_to_blockly c
-     tb <- create_block "contract_unbindcontract"
-     set_field_value tb "cbind_id" id
-     connect_as_input "contract" tb cb
-     return tb
-block_to_blockly (OUnbind (IdentOBind id) c) =
-  do cb <- block_to_blockly c
-     tb <- create_block "contract_unbindobservation"
-     set_field_value tb "obind_id" id
-     connect_as_input "contract" tb cb
-     return tb
-block_to_blockly (CReplace (IdentCBind id)) =
-  do tb <- create_block "contract_replacecontractbind"
-     set_field_value tb "obind_id" id
      return tb
 
 -- clearWorkspace

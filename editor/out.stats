@@ -7,7 +7,7 @@ charset-0.3.7.1-1onXHKjwJxB1oiCN9rzkDT:27897
 containers-0.5.7.1-84bgGSqjZJw8aeDIt4YHcf:361529
 deepseq-1.4.2.0-AXN9m3fSihQGdKj3mivvO2:881
 directory-1.2.6.2-KTt3sqe7DovE5E1jlkbs8y:2299
-fay-0.24.0.0-Az4HuA4lFir4RHrC5Q2U7E:4410623
+fay-0.24.0.0-Az4HuA4lFir4RHrC5Q2U7E:4408602
 filepath-1.4.1.1-LMfWXMHax50IGNkqBflRNr:29282
 ghc-paths-0.1.0.9-9LP3vN9Gcdt7LUsgLEWXEb:165
 ghc-prim:                36863
@@ -147,7 +147,7 @@ fay-0.24.0.0-Az4HuA4lFir4RHrC5Q2U7E
     Fay.Compiler.Exp:                   235558
     Fay.Compiler.FFI:                   182402
     Fay.Compiler.GADT:                  2098
-    Fay.Compiler.Import:                83224
+    Fay.Compiler.Import:                81203
     Fay.Compiler.InitialPass:           125379
     Fay.Compiler.Misc:                  75663
     Fay.Compiler.ModuleT:               18958

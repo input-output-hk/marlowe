@@ -93,6 +93,7 @@ compile = do setValue "textarea" "Compiling...\n\nThis could take more than one 
              disableButton "compile"
              disableButton "reset"
              disableButton "submit"
+             disableButton "example"
              disableButton "cancel"
              y <- getCodeMirrorValue
              x <- doCompile y
@@ -101,6 +102,7 @@ compile = do setValue "textarea" "Compiling...\n\nThis could take more than one 
                 Nothing -> enableButton "submit"
              enableButton "compile"
              enableButton "reset"
+             enableButton "example"
              enableButton "cancel"
 
 embedCode :: [String] -> String
@@ -122,6 +124,9 @@ submit = do x <- getValue "textarea"
 cancel :: IO ()
 cancel = destroyIFrame 
 
+example :: IO ()
+example = setCodeMirrorValue example
+
 main :: IO ()
 main = do setOnClick "compile" compile 
           setOnClick "reset" reset 
@@ -129,9 +134,11 @@ main = do setOnClick "compile" compile
           setOnClick "cancel" cancel 
           enableButton "compile"
           enableButton "reset"
+          enableButton "example"
           enableButton "cancel"
           reset
 
-prefix = "module Main where\n\nimport Marlowe\nimport Fay.FFI (ffi)\n\nsetCode :: String -> Fay ()\nsetCode = ffi \"document.getElementById('textarea').value = %1\"\n\nmain :: Fay ()\nmain = setCode (prettyPrintContract contract)\n\n-------------------------------------\n---- Write your code below this line --\n---------------------------------------\n\n\ncontract :: Contract\ncontract = "
+prefix = "module Main where\n\nimport Marlowe\nimport Fay.FFI (ffi)\n\nsetCode :: String -> Fay ()\nsetCode = ffi \"document.getElementById('textarea').value = %1\"\n\nmain :: Fay ()\nmain = setCode (prettyPrintContract contract)\n\n-------------------------------------\n-- Write your code below this line --\n-------------------------------------\n\n\ncontract :: Contract\ncontract = "
 
-explanation = "This iframe allows you to generate Marlowe code by using its Fay embedding. Fay is a subset of Haskell (https://github.com/faylang/fay/wiki).\n\nYou can click \"Execute code\" to compile and see the generated code in this text area, and click \"Send result to Meadow\" to use the generated code in Meadow.\n\nMake sure you save your Fay code since it will be discarded after this iframe is closed.\n\nYou can also click \"Cancel\" to close this iframe without making changes to Meadow. And \"Rollback code\" to restore the iframe to its original state.\n\nPlease note that the compiler does not do type-checking of the code provided. This is because the Fay compiler relies on GHC for that, and this demo runs in the browser (so it does not have access to GHC). You can use GHC offline in order to type-check your programs, the source for the Marlowe module can be found in the path \"/meadow/editor/fay-code\" of the Github repository.\n\nBelow, you can find an example of how to use the embedding to write Marlowe contracts more concisely.\n\n----------------------------------------\n-- Escrow example using Fay embedding --\n----------------------------------------\n\ncontract :: Contract\ncontract = CommitCash iCC1 1\n                      (ConstMoney 450)\n                      10 100\n                      (When (OrObs (two_chose 1 2 3 0)\n                                   (two_chose 1 2 3 1))\n                            90\n                            (Choice (two_chose 1 2 3 1)\n                                    (Pay iP1 1 2\n                                         (AvailableMoney iCC1)\n                                         100\n                                         redeem_original)\n                                    redeem_original)\n                            redeem_original)\n                      Null\n\nchose :: Int -> ConcreteChoice -> Observation\nchose per c =  PersonChoseThis (IdentChoice per) per c\n\none_chose :: Person -> Person -> ConcreteChoice -> Observation\none_chose per per' val = (OrObs (chose per val) (chose per' val)) \n                                  \ntwo_chose :: Person -> Person -> Person -> ConcreteChoice -> Observation\ntwo_chose p1 p2 p3 c = OrObs (AndObs (chose p1 c) (one_chose p2 p3 c))\n                             (AndObs (chose p2 c) (chose p3 c))\n\nredeem_original :: Contract\nredeem_original = RedeemCC iCC1 Null\n\niCC1 :: IdentCC\niCC1 = IdentCC 1\n\niP1 :: IdentPay\niP1 = IdentPay 1\n\n\n"
+explanation = "This iframe allows you to generate Marlowe code by using its Fay embedding. Fay is a subset of Haskell (https://github.com/faylang/fay/wiki).\n\nYou can click \"Execute code\" to compile and see the generated code in this text area, and click \"Send result to Meadow\" to use the generated code in Meadow.\n\nMake sure you save your Fay code since it will be discarded after this iframe is closed.\n\nYou can also click \"Cancel\" to close this iframe without making changes to Meadow. And \"Rollback code\" to restore the iframe to its original state.\n\nPlease note that the compiler does not do type-checking of the code provided. This is because the Fay compiler relies on GHC for that, and this demo runs in the browser (so it does not have access to GHC). You can use GHC offline in order to type-check your programs, the source for the Marlowe module can be found in the path \"/meadow/editor/fay-code\" of the Github repository.\n\nYou can see an example of how to use the embedding to write Marlowe contracts more concisely by clicking the button \"Load escrow example\".\n\n\n"
+example = "module Main where\n\nimport Marlowe\nimport Fay.FFI (ffi)\n\nsetCode :: String -> Fay ()\nsetCode = ffi \"document.getElementById('textarea').value = %1\"\n\nmain :: Fay ()\nmain = setCode (prettyPrintContract contract)\n\n-------------------------------------\n-- Write your code below this line --\n-------------------------------------\n\n-- Escrow example using embedding\n\ncontract :: Contract\ncontract = CommitCash iCC1 1\n                      (ConstMoney 450)\n                      10 100\n                      (When (OrObs (two_chose 1 2 3 0)\n                                   (two_chose 1 2 3 1))\n                            90\n                            (Choice (two_chose 1 2 3 1)\n                                    (Pay iP1 1 2\n                                         (AvailableMoney iCC1)\n                                         100\n                                         redeem_original)\n                                    redeem_original)\n                            redeem_original)\n                      Null\n\nchose :: Int -> ConcreteChoice -> Observation\nchose per c =  PersonChoseThis (IdentChoice per) per c\n\none_chose :: Person -> Person -> ConcreteChoice -> Observation\none_chose per per' val = (OrObs (chose per val) (chose per' val)) \n                                  \ntwo_chose :: Person -> Person -> Person -> ConcreteChoice -> Observation\ntwo_chose p1 p2 p3 c = OrObs (AndObs (chose p1 c) (one_chose p2 p3 c))\n                             (AndObs (chose p2 c) (chose p3 c))\n\nredeem_original :: Contract\nredeem_original = RedeemCC iCC1 Null\n\niCC1 :: IdentCC\niCC1 = IdentCC 1\n\niP1 :: IdentPay\niP1 = IdentPay 1\n\n\n"

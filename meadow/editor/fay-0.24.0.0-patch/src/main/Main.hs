@@ -8,6 +8,7 @@ import Fay.Types
 import Fay.Compiler
 import GHCJS.Types (JSVal)
 import Data.JSString (JSString, pack, unpack)
+import GHCJS.Foreign (fromJSBool)
 import GHCJS.Foreign.Callback (Callback, asyncCallback)
 
 foreign import javascript safe
@@ -88,12 +89,50 @@ foreign import javascript safe
   "parent.document.getElementById('c2b').click();"
   codeToBlockly :: IO ()
 
+foreign import javascript safe
+    "var element = document.createElement('a'); \
+    \element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent($1)); \
+    \element.setAttribute('download', $2); \
+    \element.style.display = 'none'; \
+    \document.body.appendChild(element); \
+    \element.click(); \
+    \document.body.removeChild(element);"
+  downloadFileAux :: JSString -> JSString -> IO ()
+downloadFile :: String -> String -> IO ()
+downloadFile content name = downloadFileAux (pack content) (pack name)
+
+foreign import javascript safe
+    "        function handleFileSelect(evt) { \
+    \            var files = evt.target.files; \
+    \            var reader = new FileReader(); \
+    \              reader.onload = (function(theFile) { \
+    \                return function(e) { \
+    \                  myCodeMirror.setValue(e.target.result); \
+    \                }; \
+    \              })(files[0]); \
+    \              reader.readAsText(files[0]); \
+    \        }; \
+    \        var input = $(document.createElement(\"input\")); \
+    \        input.attr(\"type\", \"file\"); \
+    \        input.attr(\"accept\", \".hs\"); \
+    \        input.change(handleFileSelect); \
+    \        input.trigger(\"click\");"
+  uploadFile :: IO ()
+
+foreign import javascript safe
+    "if (window.File && window.FileReader && window.FileList && window.Blob) { $r = true; } else { $r = false; };"
+  isUploadSupportedAux :: IO JSVal
+isUploadSupported :: IO Bool
+isUploadSupported = do b <- isUploadSupportedAux
+                       return (fromJSBool b)
+
 compile :: IO ()
 compile = do setValue "textarea" "Compiling...\n\nThis could take more than one minute."
              disableButton "compile"
              disableButton "reset"
              disableButton "submit"
              disableButton "example"
+             disableButton "upload"
              disableButton "cancel"
              y <- getCodeMirrorValue
              x <- doCompile y
@@ -103,6 +142,8 @@ compile = do setValue "textarea" "Compiling...\n\nThis could take more than one 
              enableButton "compile"
              enableButton "reset"
              enableButton "example"
+             ies <- isUploadSupported
+             if (ies) then enableButton "upload" else (return ())
              enableButton "cancel"
 
 embedCode :: [String] -> String
@@ -121,6 +162,13 @@ submit = do x <- getValue "textarea"
             codeToBlockly
             destroyIFrame
 
+download :: IO ()
+download = do c <- getCodeMirrorValue
+              downloadFile c "Main.hs" 
+
+upload :: IO ()
+upload = return ()
+
 cancel :: IO ()
 cancel = destroyIFrame 
 
@@ -132,10 +180,15 @@ main = do setOnClick "compile" compile
           setOnClick "reset" reset 
           setOnClick "example" example
           setOnClick "submit" submit
+          setOnClick "download" download
+          setOnClick "upload" uploadFile
           setOnClick "cancel" cancel 
           enableButton "compile"
           enableButton "reset"
           enableButton "example"
+          enableButton "download"
+          ies <- isUploadSupported
+          if (ies) then enableButton "upload" else (return ())
           enableButton "cancel"
           reset
 

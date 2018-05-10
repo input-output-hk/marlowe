@@ -1,6 +1,7 @@
 <html>
 <head>
 <title>Embedded Marlowe in Fay</title>
+    <script language="javascript" src="../jquery/jquery.min.js"></script>
     <script language="javascript" src="rts.js"></script>
     <script language="javascript" src="lib.js"></script>
     <script language="javascript" src="out.js"></script>
@@ -16,7 +17,7 @@
       width: 100%;
       left: 0px;
       top: 0px;
-      height: 100%;
+      bottom: 4em;
       position: absolute;
     }
     #left {
@@ -30,11 +31,11 @@
       overflow: hidden;
     }
     #editor {
-      margin-right: 0px;
+      margin-right: 10px;
     }
     #buttons {
       width: 100%;
-      height: 10%;
+      height: 100%;
     }
     #right {
       position: relative;
@@ -45,15 +46,18 @@
       width: 100%;
       height: 100%;
     }
-    #separator {
-      width: 10px;
-    }
     .button {
       height: 100%;
       width: 100%;
     }
     .clear {
       clear: both;
+    }
+    #footer {
+      width: 100%;
+      height: 4em;
+      bottom: 0px;
+      position: absolute;
     }
   </style>
 </head>
@@ -65,7 +69,14 @@
     <div id="left">
       <div id="editor">
       </div>
-      <div id="buttons">
+    </div>
+    <div id="right">
+<textarea id="textarea" readonly style="resize: none; height: 100%; width: 100%;">Loading...</textarea>
+    </div>
+    <div class="clear"></div>
+  </div>
+  <div id="footer">
+<div id="buttons">
       <table id="table">
       <tr><td>
       <button class="button" disabled id="compile">Execute code</button>
@@ -76,23 +87,22 @@
       </td><td>
       <button class="button" disabled id="submit">Send result to Meadow</button>
       </td><td>
+      <button class="button" disabled id="upload">Load code</button>
+      </td><td>
+      <button class="button" disabled id="dowload">Save code</button>
+      </td><td>
       <button class="button" disabled id="cancel">Cancel</button>
-      </td><td id="separator">
       </td></tr>
       </table>
       </div>
-    </div>
-    <div id="right">
-<textarea id="textarea" readonly style="resize: none; height: 100%; width: 100%;">Loading...</textarea>
-    </div>
-    <div class="clear"></div>
+
   </div>
 <script>
 window.myCodeMirror = CodeMirror(document.getElementById("editor"), {
   value: "Loading...",
   mode:  "text/x-haskell"
 });
-window.myCodeMirror.setSize("100%", "90%");
+window.myCodeMirror.setSize("100%", "100%");
 </script>
   <script language="javascript" src="runmain.js" defer></script>
 </body>

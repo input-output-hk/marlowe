@@ -9,6 +9,9 @@
   <script src="jquery/jquery.min.js"></script>
   <script src="jquery_resize/jquery.elementresize.js"></script>
   <script src="jquery-ui/jquery-ui.js"></script>
+  <script src="codemirror/lib/codemirror.js"></script>
+  <script src="codemirror/mode/haskell/haskell.js"></script>
+  <link rel="stylesheet" href="codemirror/lib/codemirror.css">
   <link rel="stylesheet" href="jquery-ui/jquery-ui.css">
   <script>$( function() { $( "#tabs" ).tabs({ active: 0 }); } );</script>
     <style type="text/css">
@@ -73,10 +76,12 @@
 	position:absolute;
        	z-index: 100;
       }
-      #codeArea {
+      #codeAreaDiv {
         overflow: auto;
         height: 25%;
         width: 100%;
+	padding-bottom: 20px;
+	resize: vertical;
       }
       #c2b {
         width: 25%;
@@ -149,25 +154,15 @@
   <div id="main">
     <div id="blocklyArea"></div>
     <div id="ui">
-<textarea id="codeArea">
-CommitCash (IdentCC 1) 1
-           (ConstMoney 100)
-           10 200
-           (CommitCash (IdentCC 2) 2
-                       (ConstMoney 20)
-                       20 200
-                       (When (PersonChoseSomething (IdentChoice 1) 1)
-                             100
-                             (Both (RedeemCC (IdentCC 1) Null)
-                                   (RedeemCC (IdentCC 2) Null))
-                             (Pay (IdentPay 1) 2 1
-                                  (ConstMoney 20)
-                                  200
-                                  (Both (RedeemCC (IdentCC 1) Null)
-                                        (RedeemCC (IdentCC 2) Null))))
-                       (RedeemCC (IdentCC 1) Null))
-           Null
-</textarea>
+      <div id="codeAreaDiv">
+      </div>
+<script>
+codeArea = CodeMirror(document.getElementById("codeAreaDiv"), {
+  value: "CommitCash (IdentCC 1) 1\n           (ConstMoney 100)\n           10 200\n           (CommitCash (IdentCC 2) 2\n                       (ConstMoney 20)\n                       20 200\n                       (When (PersonChoseSomething (IdentChoice 1) 1)\n                             100\n                             (Both (RedeemCC (IdentCC 1) Null)\n                                   (RedeemCC (IdentCC 2) Null))\n                             (Pay (IdentPay 1) 2 1\n                                  (ConstMoney 20)\n                                  200\n                                  (Both (RedeemCC (IdentCC 1) Null)\n                                        (RedeemCC (IdentCC 2) Null))))\n                       (RedeemCC (IdentCC 1) Null))\n           Null",
+  mode:  "text/x-haskell"
+});
+codeArea.setSize("100%", "100%");
+</script>
 <button id="b2c" onclick="Haste.b2c()">-&gt; Blockly to Code</button><button id="c2b" onclick="Haste.c2b()">Code to Blockly &lt;-</button><button id="clear" onclick="Haste.clear_workspace()">Clear</button><button id="execute" onclick="Haste.execute()">Execute</button>
 <button id="embedding" onclick="if (document.getElementById('iframe') == null) {var ifr=document.createElement('iframe');ifr.setAttribute('id', 'iframe');document.body.appendChild(ifr);ifr.setAttribute('src', 'editor/index.html');}">Use Haskell embedding editor (Fay)</button>
 <br /><br />

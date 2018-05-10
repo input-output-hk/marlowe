@@ -288,11 +288,17 @@ set_text t str = F.ffi (J.pack "(function (t, s) {document.getElementById(t).val
 get_text :: String -> IO (String)
 get_text t = F.ffi (J.pack "(function (t) {return document.getElementById(t).value})") t
 
+set_code_text :: String -> String -> IO ()
+set_code_text t str = F.ffi (J.pack "(function (t, s) {window[t].setValue(s)})") t str 
+
+get_code_text :: String -> IO (String)
+get_code_text t = F.ffi (J.pack "(function (t) {return window[t].getValue()})") t
+
 set_code :: String -> IO ()
-set_code = set_text "codeArea" 
+set_code = set_code_text "codeArea" 
 
 get_code :: IO String
-get_code = get_text "codeArea" 
+get_code = get_code_text "codeArea" 
 
 -- block num
 

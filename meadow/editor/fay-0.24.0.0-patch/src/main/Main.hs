@@ -59,7 +59,7 @@ foreign import javascript safe
 setValue i v = setValueAux (pack i) (pack v)
 
 foreign import javascript safe
-  "parent.document.getElementById($1).value = $2;"
+  "parent[$1].setValue($2);"
    setValueParentAux :: JSString -> JSString -> IO ()
 setValueParent i v = setValueParentAux (pack i) (pack v)
 
@@ -76,7 +76,7 @@ getValue i = do r <- getValueAux (pack i)
                 return (unpack r)
 
 foreign import javascript safe
-  "$r = parent.document.getElementById($1).value;"
+  "$r = parent[$1].getValue();"
    getValueParentAux :: JSString -> IO JSString
 getValueParent i = do r <- getValueParentAux (pack i)
                       return (unpack r)

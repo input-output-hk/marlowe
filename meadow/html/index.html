@@ -67,7 +67,7 @@
       }
       #iframe {
         background-color: white;
-	display: float;
+	display: block;
 	position: absolute;
 	left: 5%;
 	top: 5%;
@@ -164,7 +164,7 @@ codeArea = CodeMirror(document.getElementById("codeAreaDiv"), {
 codeArea.setSize("100%", "100%");
 </script>
 <button id="b2c" onclick="Haste.b2c()">-&gt; Blockly to Code</button><button id="c2b" onclick="Haste.c2b()">Code to Blockly &lt;-</button><button id="clear" onclick="Haste.clear_workspace()">Clear</button><button id="execute" onclick="Haste.execute()">Execute</button>
-<button id="embedding" onclick="if (document.getElementById('iframe') == null) {var ifr=document.createElement('iframe');ifr.setAttribute('id', 'iframe');document.body.appendChild(ifr);ifr.setAttribute('src', 'editor/index.html');}">Use Haskell embedding editor (Fay)</button>
+<button id="embedding" onclick="ifr=document.getElementById('iframe'); if (ifr == null) {var ifr=document.createElement('iframe');ifr.setAttribute('id', 'iframe');document.body.appendChild(ifr);ifr.setAttribute('src', 'editor/index.html');} else { ifr.style.display = 'block'; }">Use Haskell embedding editor (Fay)</button>
 <br /><br />
     <div><p style="display:inline;">Current block: </p><input style="display:inline;" type="number" id="currBlock" value="0"></input></div>
     <div><h3>Contract state:</h3></div>

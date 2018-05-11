@@ -12,14 +12,15 @@ import GHCJS.Foreign (fromJSBool)
 import GHCJS.Foreign.Callback (Callback, asyncCallback)
 
 foreign import javascript safe
-   "try { eval($1); } catch (err) { document.getElementById('textarea').value = 'Error while executing Fay code:\\n\\n' + err; }"
+   "try { eval($1); } catch (err) { textarea.setValue('Error while executing Fay code:\\n\\n' + err); textarea.setOption('mode', 'text/plain'); }"
    evalAux :: JSString -> IO ()
 eval = evalAux . pack
 
 doCompile :: String -> IO (Maybe String)
 doCompile source = do res <- compileViaStr "Main.hs" (defaultConfig {configTypecheck = False, configExportRuntime = False, configExportStdlib = False}) (compileToplevelModuleText "Main.hs" source) source
                       case res of
-                        Right (b , _, _) -> do {setValue "textarea" "";
+                        Right (b , _, _) -> do {setCodeMirrorValue2 "";
+                                                setCodeMirror2Highlight;
                                                 eval (rt ++ (pwOutputString (execPrinter b defaultPrintReader)) ++ "Fay$$_(Main.main, true);");
                                                 return Nothing}
                         Left o -> return $ Just $ show o
@@ -54,6 +55,18 @@ foreign import javascript safe
 setCodeMirrorValue v = setCodeMirrorValueAux (pack v)
 
 foreign import javascript safe
+  "textarea.setValue($1);"
+  setCodeMirrorValueAux2 :: JSString -> IO ()
+setCodeMirrorValue2 v = setCodeMirrorValueAux2 (pack v)
+
+foreign import javascript safe
+  "textarea.setOption('mode', $1);"
+  setCodeMirrorModeAux2 :: JSString -> IO ()
+setCodeMirrorMode2 v = setCodeMirrorModeAux2 (pack v)
+setCodeMirror2Highlight = setCodeMirrorMode2 "text/x-haskell"
+setCodeMirror2Plain = setCodeMirrorMode2 "text/plain"
+
+foreign import javascript safe
   "document.getElementById($1).value = $2;"
    setValueAux :: JSString -> JSString -> IO ()
 setValue i v = setValueAux (pack i) (pack v)
@@ -68,6 +81,12 @@ foreign import javascript safe
    getCodeMirrorValueAux :: IO JSString
 getCodeMirrorValue = do r <- getCodeMirrorValueAux
                         return (unpack r)
+
+foreign import javascript safe
+  "$r = textarea.getValue();"
+  getCodeMirrorValueAux2 :: IO JSString
+getCodeMirrorValue2 = do r <- getCodeMirrorValueAux2
+                         return (unpack r)
 
 foreign import javascript safe
   "$r = document.getElementById($1).value;"
@@ -88,6 +107,10 @@ foreign import javascript safe
 foreign import javascript safe
   "parent.document.getElementById('c2b').click();"
   codeToBlockly :: IO ()
+
+foreign import javascript safe
+  "parent.document.getElementById('iframe').style.display = 'none';"
+  hideIFrame :: IO ()
 
 foreign import javascript safe
     "var element = document.createElement('a'); \
@@ -127,7 +150,8 @@ isUploadSupported = do b <- isUploadSupportedAux
                        return (fromJSBool b)
 
 compile :: IO ()
-compile = do setValue "textarea" "Compiling...\n\nThis could take more than one minute."
+compile = do setCodeMirrorValue2 "Compiling...\n\nThis could take more than one minute."
+             setCodeMirror2Plain
              disableButton "compile"
              disableButton "reset"
              disableButton "submit"
@@ -137,13 +161,15 @@ compile = do setValue "textarea" "Compiling...\n\nThis could take more than one 
              y <- getCodeMirrorValue
              x <- doCompile y
              case x of
-                Just x -> setValue "textarea" ("Compilation error:\n\n" ++ x)
-                Nothing -> enableButton "submit"
+                Just x -> do { setCodeMirrorValue2 ("Compilation error:\n\n" ++ x);
+                               setCodeMirror2Plain }
+                Nothing -> do { enableButton "submit" }
              enableButton "compile"
              enableButton "reset"
              enableButton "example"
              ies <- isUploadSupported
              if (ies) then enableButton "upload" else (return ())
+             enableButton "minimise"
              enableButton "cancel"
 
 embedCode :: [String] -> String
@@ -153,14 +179,14 @@ embedCode (h:t) = (prefix ++ (h ++ "\n")) ++ (unlines (map ((take 11 $ repeat ' 
 reset :: IO ()
 reset = do x <- getValueParent "codeArea"
            setCodeMirrorValue $ embedCode $ lines x
-           setValue "textarea" explanation
+           setCodeMirrorValue2 explanation
+           setCodeMirror2Plain
            disableButton "submit"
 
 submit :: IO ()
-submit = do x <- getValue "textarea"
+submit = do x <- getCodeMirrorValue2
             setValueParent "codeArea" x
             codeToBlockly
-            destroyIFrame
 
 download :: IO ()
 download = do c <- getCodeMirrorValue
@@ -168,6 +194,9 @@ download = do c <- getCodeMirrorValue
 
 upload :: IO ()
 upload = return ()
+
+minimise :: IO ()
+minimise = hideIFrame
 
 cancel :: IO ()
 cancel = destroyIFrame 
@@ -182,6 +211,7 @@ main = do setOnClick "compile" compile
           setOnClick "submit" submit
           setOnClick "download" download
           setOnClick "upload" uploadFile
+          setOnClick "minimise" minimise
           setOnClick "cancel" cancel 
           enableButton "compile"
           enableButton "reset"
@@ -189,11 +219,12 @@ main = do setOnClick "compile" compile
           enableButton "download"
           ies <- isUploadSupported
           if (ies) then enableButton "upload" else (return ())
+          enableButton "minimise"
           enableButton "cancel"
           reset
 
-prefix = "module Main where\n\nimport Marlowe\nimport Fay.FFI (ffi)\n\nsetCode :: String -> Fay ()\nsetCode = ffi \"document.getElementById('textarea').value = %1\"\n\nmain :: Fay ()\nmain = setCode (prettyPrintContract contract)\n\n-------------------------------------\n-- Write your code below this line --\n-------------------------------------\n\n\ncontract :: Contract\ncontract = "
+prefix = "module Main where\n\nimport Marlowe\nimport Fay.FFI (ffi)\n\nsetCode :: String -> Fay ()\nsetCode = ffi \"textarea.setValue(%1)\"\n\nmain :: Fay ()\nmain = setCode (prettyPrintContract contract)\n\n-------------------------------------\n-- Write your code below this line --\n-------------------------------------\n\n\ncontract :: Contract\ncontract = "
 
-explanation = "This iframe allows you to generate Marlowe code by using its Fay embedding. Fay is a subset of Haskell (https://github.com/faylang/fay/wiki).\n\nYou can click \"Execute code\" to compile and see the generated code in this text area, and click \"Send result to Meadow\" to use the generated code in Meadow.\n\nMake sure you save your Fay code since it will be discarded after this iframe is closed.\n\nYou can also click \"Cancel\" to close this iframe without making changes to Meadow. And \"Rollback code\" to restore the iframe to its original state.\n\nPlease note that the compiler does not do type-checking of the code provided. This is because the Fay compiler relies on GHC for that, and this demo runs in the browser (so it does not have access to GHC). You can use GHC offline in order to type-check your programs, the source for the Marlowe module can be found in the path \"/meadow/editor/fay-code\" of the Github repository.\n\nYou can see an example of how to use the embedding to write Marlowe contracts more concisely by clicking the button \"Load escrow example\".\n\n\n"
+explanation = "Embedded Fay code editor\n========================\n\nYou can use this editor to generate Marlowe code (to use with Meadow) by using\nMarlowe's Fay embedding.\n\nFay is a subset of Haskell (https://github.com/faylang/fay/wiki)\n\nThe editor includes a pruned version of the Fay compiler. You can control the\neditor and the compiler by using the buttons at the bottom:\n\n* Execute Fay code - compiles and runs the fay code on the left panel and\nwrites the output to this panel.\n\n* Import Meadow to Fay code - creates a template based on the Marlowe contract\nin Meadow (under the editor). If you have just opened the Fay editor the code\nin Meadow has already been imported.\n\n* Load escrow example - loads, in the left panel, an example of how the Fay\nembedding of Marlowe can be used to implement an escrow contract.\n\n* Export Fay code to Meadow - once you have successfully generated a Marlowe\ncontract from the Fay code (by clicking the \"Execute Fay code\" button), this\nbutton will allow you to copy the generated contract (which will appear on this\n panel) back to Marlowe (under this editor).\n\n* Load Fay code from file - allows you to select a file from your computer that\nwill be displayed on the left panel.\n\n* Save Fay code to file - allows you to save the code on the left panel to a\nfile in your computer.\n\n* Minimise Fay editor - will hide the Fay editor so that you can keep using\nMeadow, but it will not delete its contents. If Fay code is being executed or\ncompiled when you minimise the editor, the process will continue in the\nbackground.\n\n* Close Fay editor - it closes the editor. WARNING: if you close the editor or\nnavigate away from this page, the contents of the editor will be lost. Make\nsure you save them to a file in your computer before that.\n\nPlease note that the compiler included does not do type-checking of the code\nprovided. This is because the Fay compiler relies on GHC for that, and this\ndemo runs in the browser (so it does not have access to GHC). You can use GHC\noffline in order to type-check your programs, the source for the Marlowe module\ncan be found in the path \"/meadow/editor/fay-code\" of the Github repository.\n\n"
 
-exampleCode = "module Main where\n\nimport Marlowe\nimport Fay.FFI (ffi)\n\nsetCode :: String -> Fay ()\nsetCode = ffi \"document.getElementById('textarea').value = %1\"\n\nmain :: Fay ()\nmain = setCode (prettyPrintContract contract)\n\n-------------------------------------\n-- Write your code below this line --\n-------------------------------------\n\n-- Escrow example using embedding\n\ncontract :: Contract\ncontract = CommitCash iCC1 1\n                      (ConstMoney 450)\n                      10 100\n                      (When (OrObs (two_chose 1 2 3 0)\n                                   (two_chose 1 2 3 1))\n                            90\n                            (Choice (two_chose 1 2 3 1)\n                                    (Pay iP1 1 2\n                                         (AvailableMoney iCC1)\n                                         100\n                                         redeem_original)\n                                    redeem_original)\n                            redeem_original)\n                      Null\n\nchose :: Int -> ConcreteChoice -> Observation\nchose per c =  PersonChoseThis (IdentChoice per) per c\n\none_chose :: Person -> Person -> ConcreteChoice -> Observation\none_chose per per' val = (OrObs (chose per val) (chose per' val)) \n                                  \ntwo_chose :: Person -> Person -> Person -> ConcreteChoice -> Observation\ntwo_chose p1 p2 p3 c = OrObs (AndObs (chose p1 c) (one_chose p2 p3 c))\n                             (AndObs (chose p2 c) (chose p3 c))\n\nredeem_original :: Contract\nredeem_original = RedeemCC iCC1 Null\n\niCC1 :: IdentCC\niCC1 = IdentCC 1\n\niP1 :: IdentPay\niP1 = IdentPay 1\n\n\n"
+exampleCode = "module Main where\n\nimport Marlowe\nimport Fay.FFI (ffi)\n\nsetCode :: String -> Fay ()\nsetCode = ffi \"textarea.setValue(%1)\"\n\nmain :: Fay ()\nmain = setCode (prettyPrintContract contract)\n\n-------------------------------------\n-- Write your code below this line --\n-------------------------------------\n\n-- Escrow example using embedding\n\ncontract :: Contract\ncontract = CommitCash iCC1 1\n                      (ConstMoney 450)\n                      10 100\n                      (When (OrObs (two_chose 1 2 3 0)\n                                   (two_chose 1 2 3 1))\n                            90\n                            (Choice (two_chose 1 2 3 1)\n                                    (Pay iP1 1 2\n                                         (AvailableMoney iCC1)\n                                         100\n                                         redeem_original)\n                                    redeem_original)\n                            redeem_original)\n                      Null\n\nchose :: Int -> ConcreteChoice -> Observation\nchose per c =  PersonChoseThis (IdentChoice per) per c\n\none_chose :: Person -> Person -> ConcreteChoice -> Observation\none_chose per per' val = (OrObs (chose per val) (chose per' val)) \n                                  \ntwo_chose :: Person -> Person -> Person -> ConcreteChoice -> Observation\ntwo_chose p1 p2 p3 c = OrObs (AndObs (chose p1 c) (one_chose p2 p3 c))\n                             (AndObs (chose p2 c) (chose p3 c))\n\nredeem_original :: Contract\nredeem_original = RedeemCC iCC1 Null\n\niCC1 :: IdentCC\niCC1 = IdentCC 1\n\niP1 :: IdentPay\niP1 = IdentPay 1\n\n\n"

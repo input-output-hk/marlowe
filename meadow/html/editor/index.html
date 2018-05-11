@@ -59,6 +59,13 @@
       bottom: 0px;
       position: absolute;
     }
+    #textareaDiv {
+      resize: none;
+      height: 100%;
+      width: 100%;
+      border-style: solid;
+      border-width: 1px;
+    }
   </style>
 </head>
 <body>
@@ -71,7 +78,9 @@
       </div>
     </div>
     <div id="right">
-<textarea id="textarea" readonly style="resize: none; height: 100%; width: 100%;">Loading...</textarea>
+      <div id="textarea">
+      </div>
+      <div id="textareaDiv"></div>
     </div>
     <div class="clear"></div>
   </div>
@@ -79,23 +88,24 @@
 <div id="buttons">
       <table id="table">
       <tr><td>
-      <button class="button" disabled id="compile">Execute code</button>
+      <button class="button" disabled id="compile">Execute Fay code</button>
       </td><td>
-      <button class="button" disabled id="reset">Rollback code</button>
+      <button class="button" disabled id="reset">Import Meadow to Fay code and show help</button>
       </td><td>
       <button class="button" disabled id="example">Load escrow example</button>
       </td><td>
-      <button class="button" disabled id="submit">Send result to Meadow</button>
+      <button class="button" disabled id="submit">Export Fay code to Meadow</button>
       </td><td>
-      <button class="button" disabled id="upload">Load code</button>
+      <button class="button" disabled id="upload">Load Fay code from file</button>
       </td><td>
-      <button class="button" disabled id="download">Save code</button>
+      <button class="button" disabled id="download">Save Fay code to file</button>
       </td><td>
-      <button class="button" disabled id="cancel">Cancel</button>
+      <button class="button" disabled id="minimise">Minimise Fay editor</button>
+      </td><td>
+      <button class="button" disabled id="cancel">Close Fay editor</button>
       </td></tr>
       </table>
       </div>
-
   </div>
 <script>
 window.myCodeMirror = CodeMirror(document.getElementById("editor"), {
@@ -103,6 +113,12 @@ window.myCodeMirror = CodeMirror(document.getElementById("editor"), {
   mode:  "text/x-haskell"
 });
 window.myCodeMirror.setSize("100%", "100%");
+window.textarea = CodeMirror(document.getElementById("textareaDiv"), {
+  value: "Loading...",
+  readOnly: true,
+  mode: "text/plain"
+});
+window.textarea.setSize("100%", "100%");
 </script>
   <script language="javascript" src="runmain.js" defer></script>
 </body>

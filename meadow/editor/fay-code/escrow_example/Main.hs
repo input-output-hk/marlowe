@@ -4,7 +4,7 @@ import Marlowe
 import Fay.FFI (ffi)
 
 setCode :: String -> Fay ()
-setCode = ffi "document.getElementById('textarea').value = %1"
+setCode = ffi "textarea.setValue(%1)"
 
 main :: Fay ()
 main = setCode (prettyPrintContract contract)

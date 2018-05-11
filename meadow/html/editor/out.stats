@@ -11,12 +11,12 @@ fay-0.24.0.0-Az4HuA4lFir4RHrC5Q2U7E:4408602
 filepath-1.4.1.1-LMfWXMHax50IGNkqBflRNr:29282
 ghc-paths-0.1.0.9-9LP3vN9Gcdt7LUsgLEWXEb:165
 ghc-prim:                36863
-ghcjs-base-0.2.0.0-EbNCXkMU3wYGkRTGfIIwqK:4128
+ghcjs-base-0.2.0.0-EbNCXkMU3wYGkRTGfIIwqK:4283
 ghcjs-prim-0.1.0.0-GUpdXu72Ynv3kgdbcUykWj:11592
 haskell-src-exts-1.18.2-30qXsnemPT218DUKkddXYx:9177767
 integer-gmp:             87653
 language-ecmascript-0.17.2.0-9KIpVcAF7ns9tXktbVTolJ:2031366
-main:                    115968
+main:                    126323
 parsec-3.1.11-HjetOZ65CVdGCWpat65mSq:606478
 pretty-1.1.3.3-A6lZQ2N6G251GIDi21gnh2:63960
 process-1.4.2.0-5uje0q1zrvoKKgyUHuvM42:62828
@@ -202,7 +202,7 @@ ghc-prim
 
 ghcjs-base-0.2.0.0-EbNCXkMU3wYGkRTGfIIwqK
     Data.JSString:                      3861
-    Data.JSString.Internal.Type:        267
+    Data.JSString.Internal.Type:        422
 
 ghcjs-prim-0.1.0.0-GUpdXu72Ynv3kgdbcUykWj
     GHCJS.Prim:                         8371
@@ -232,7 +232,7 @@ language-ecmascript-0.17.2.0-9KIpVcAF7ns9tXktbVTolJ
     Language.ECMAScript3.Syntax:        456467
 
 main
-    Main:                               115968
+    Main:                               126323
 
 parsec-3.1.11-HjetOZ65CVdGCWpat65mSq
     Text.Parsec.Char:                   22349
@@ -288,5 +288,5 @@ utf8-string-1.0.1.1-6M1dBX6CnjR2kWVfoeQslv
 
 
 
-packed metadata: 4338256
+packed metadata: 4341320
 

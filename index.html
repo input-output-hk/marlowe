@@ -184,7 +184,7 @@ codeArea.setSize("100%", "100%");
 contractState = CodeMirror(document.getElementById("contractStateDiv"), {
   value: "([], [])",
   mode:  "text/x-haskell",
-  lineWrap: true
+  lineWrapping: true
 });
 contractState.setSize("100%", "100%");
 </script>
@@ -194,7 +194,7 @@ contractState.setSize("100%", "100%");
 contractInput = CodeMirror(document.getElementById("contractInputDiv"), {
   value: "([], [], [], [])",
   mode:  "text/x-haskell",
-  lineWrap: true
+  lineWrapping: true
 });
 contractInput.setSize("100%", "100%");
 </script>
@@ -232,7 +232,7 @@ contractInput.setSize("100%", "100%");
 contractOutput = CodeMirror(document.getElementById("contractOutputDiv"), {
   value: "",
   mode:  "text/x-haskell",
-  lineWrap: true
+  lineWrapping: true
 });
 contractOutput.setSize("100%", "100%");
 </script>

@@ -8,11 +8,11 @@ import Fay.Types
 import Fay.Compiler
 import GHCJS.Types (JSVal)
 import Data.JSString (JSString, pack, unpack)
-import GHCJS.Foreign (fromJSBool)
+import GHCJS.Foreign (fromJSBool, toJSBool)
 import GHCJS.Foreign.Callback (Callback, asyncCallback)
 
 foreign import javascript safe
-   "try { eval($1); } catch (err) { textarea.setValue('Error while executing Fay code:\\n\\n' + err); textarea.setOption('mode', 'text/plain'); }"
+   "try { eval($1); } catch (err) { textarea.setValue('Error while executing Fay code:\\n\\n' + err); textarea.setOption('mode', 'text/plain'); textarea.setOption('lineWrapping', true); }"
    evalAux :: JSString -> IO ()
 eval = evalAux . pack
 
@@ -63,8 +63,16 @@ foreign import javascript safe
   "textarea.setOption('mode', $1);"
   setCodeMirrorModeAux2 :: JSString -> IO ()
 setCodeMirrorMode2 v = setCodeMirrorModeAux2 (pack v)
-setCodeMirror2Highlight = setCodeMirrorMode2 "text/x-haskell"
-setCodeMirror2Plain = setCodeMirrorMode2 "text/plain"
+
+foreign import javascript safe
+  "textarea.setOption('lineWrapping', $1);"
+  setCodeMirrorWrappingAux2 :: JSVal -> IO ()
+setCodeMirrorWrapping2 v = setCodeMirrorWrappingAux2 (toJSBool v)
+
+setCodeMirror2Highlight = do setCodeMirrorMode2 "text/x-haskell"
+                             setCodeMirrorWrapping2 False
+setCodeMirror2Plain = do setCodeMirrorMode2 "text/plain"
+                         setCodeMirrorWrapping2 True
 
 foreign import javascript safe
   "document.getElementById($1).value = $2;"
@@ -225,6 +233,7 @@ main = do setOnClick "compile" compile
 
 prefix = "module Main where\n\nimport Marlowe\nimport Fay.FFI (ffi)\n\nsetCode :: String -> Fay ()\nsetCode = ffi \"textarea.setValue(%1)\"\n\nmain :: Fay ()\nmain = setCode (prettyPrintContract contract)\n\n-------------------------------------\n-- Write your code below this line --\n-------------------------------------\n\n\ncontract :: Contract\ncontract = "
 
-explanation = "Embedded Fay code editor\n========================\n\nYou can use this editor to generate Marlowe code (to use with Meadow) by using\nMarlowe's Fay embedding.\n\nFay is a subset of Haskell (https://github.com/faylang/fay/wiki)\n\nThe editor includes a pruned version of the Fay compiler. You can control the\neditor and the compiler by using the buttons at the bottom:\n\n* Execute Fay code - compiles and runs the fay code on the left panel and\nwrites the output to this panel.\n\n* Import Meadow to Fay code - creates a template based on the Marlowe contract\nin Meadow (under the editor). If you have just opened the Fay editor the code\nin Meadow has already been imported.\n\n* Load escrow example - loads, in the left panel, an example of how the Fay\nembedding of Marlowe can be used to implement an escrow contract.\n\n* Export Fay code to Meadow - once you have successfully generated a Marlowe\ncontract from the Fay code (by clicking the \"Execute Fay code\" button), this\nbutton will allow you to copy the generated contract (which will appear on this\n panel) back to Marlowe (under this editor).\n\n* Load Fay code from file - allows you to select a file from your computer that\nwill be displayed on the left panel.\n\n* Save Fay code to file - allows you to save the code on the left panel to a\nfile in your computer.\n\n* Minimise Fay editor - will hide the Fay editor so that you can keep using\nMeadow, but it will not delete its contents. If Fay code is being executed or\ncompiled when you minimise the editor, the process will continue in the\nbackground.\n\n* Close Fay editor - it closes the editor. WARNING: if you close the editor or\nnavigate away from this page, the contents of the editor will be lost. Make\nsure you save them to a file in your computer before that.\n\nPlease note that the compiler included does not do type-checking of the code\nprovided. This is because the Fay compiler relies on GHC for that, and this\ndemo runs in the browser (so it does not have access to GHC). You can use GHC\noffline in order to type-check your programs, the source for the Marlowe module\ncan be found in the path \"/meadow/editor/fay-code\" of the Github repository.\n\n"
-
 exampleCode = "module Main where\n\nimport Marlowe\nimport Fay.FFI (ffi)\n\nsetCode :: String -> Fay ()\nsetCode = ffi \"textarea.setValue(%1)\"\n\nmain :: Fay ()\nmain = setCode (prettyPrintContract contract)\n\n-------------------------------------\n-- Write your code below this line --\n-------------------------------------\n\n-- Escrow example using embedding\n\ncontract :: Contract\ncontract = CommitCash iCC1 1\n                      (ConstMoney 450)\n                      10 100\n                      (When (OrObs (two_chose 1 2 3 0)\n                                   (two_chose 1 2 3 1))\n                            90\n                            (Choice (two_chose 1 2 3 1)\n                                    (Pay iP1 1 2\n                                         (AvailableMoney iCC1)\n                                         100\n                                         redeem_original)\n                                    redeem_original)\n                            redeem_original)\n                      Null\n\nchose :: Int -> ConcreteChoice -> Observation\nchose per c =  PersonChoseThis (IdentChoice per) per c\n\none_chose :: Person -> Person -> ConcreteChoice -> Observation\none_chose per per' val = (OrObs (chose per val) (chose per' val)) \n                                  \ntwo_chose :: Person -> Person -> Person -> ConcreteChoice -> Observation\ntwo_chose p1 p2 p3 c = OrObs (AndObs (chose p1 c) (one_chose p2 p3 c))\n                             (AndObs (chose p2 c) (chose p3 c))\n\nredeem_original :: Contract\nredeem_original = RedeemCC iCC1 Null\n\niCC1 :: IdentCC\niCC1 = IdentCC 1\n\niP1 :: IdentPay\niP1 = IdentPay 1\n\n\n"
+
+explanation = "Embedded Fay code editor\n========================\n\nYou can use this editor to generate Marlowe code (to use with Meadow) by using Marlowe's Fay embedding.\n\nFay is a subset of Haskell (https://github.com/faylang/fay/wiki)\n\nThe editor includes a pruned version of the Fay compiler. You can control the editor and the compiler by using the buttons at the bottom:\n\n* Execute Fay code - compiles and runs the fay code on the left panel and writes the output to this panel.\n\n* Import Meadow to Fay code - creates a template based on the Marlowe contract in Meadow (under the editor). If you have just opened the Fay editor the code in Meadow has already been imported.\n\n* Load escrow example - loads, in the left panel, an example of how the Fay embedding of Marlowe can be used to implement an escrow contract.\n\n* Export Fay code to Meadow - once you have successfully generated a Marlowe contract from the Fay code (by clicking the \"Execute Fay code\" button), this button will allow you to copy the generated contract (which will appear on this panel) back to Marlowe (under this editor).\n\n* Load Fay code from file - allows you to select a file from your computer that will be displayed on the left panel.\n\n* Save Fay code to file - allows you to save the code on the left panel to a file in your computer.\n\n* Minimise Fay editor - will hide the Fay editor so that you can keep using Meadow, but it will not delete its contents. If Fay code is being executed or compiled when you minimise the editor, the process will continue in the background.\n\n* Close Fay editor - it closes the editor. WARNING: if you close the editor or navigate away from this page, the contents of the editor will be lost. Make sure you save them to a file in your computer before that.\n\nPlease note that the compiler included does not do type-checking of the code provided. This is because the Fay compiler relies on GHC for that, and this demo runs in the browser (so it does not have access to GHC). You can use GHC offline in order to type-check your programs, the source for the Marlowe module can be found in the path \"/meadow/editor/fay-code\" of the Github repository.\n\n\n"
+

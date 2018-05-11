@@ -116,6 +116,7 @@ window.myCodeMirror.setSize("100%", "100%");
 window.textarea = CodeMirror(document.getElementById("textareaDiv"), {
   value: "Loading...",
   readOnly: true,
+  lineWrapping: "true",
   mode: "text/plain"
 });
 window.textarea.setSize("100%", "100%");

@@ -318,10 +318,10 @@ state_unserial :: ([(IdentCC, CCStatus)], [((IdentChoice, Person), ConcreteChoic
 state_unserial (scv, schv) = State {sc = Map.fromList scv, sch = Map.fromList schv}
 
 get_state_text :: IO (String)
-get_state_text = get_text "contractState"
+get_state_text = get_code_text "contractState"
 
 set_state_text :: String -> IO ()
-set_state_text = set_text "contractState"
+set_state_text = set_code_text "contractState"
 
 get_state :: IO State
 get_state = Monad.liftM (state_unserial . read) get_state_text
@@ -339,10 +339,10 @@ input_unserial :: ([CC], [RC], [((IdentPay, Person), Cash)], [((IdentChoice, Per
 input_unserial (ccv, rcv, rpv, icv) = Input {cc = Set.fromList ccv, rc = Set.fromList rcv, rp = Map.fromList rpv, ic = Map.fromList icv}
 
 get_input_text :: IO (String)
-get_input_text = get_text "contractInput"
+get_input_text = get_code_text "contractInput"
 
 set_input_text :: String -> IO ()
-set_input_text = set_text "contractInput"
+set_input_text = set_code_text "contractInput"
 
 get_input :: IO Input
 get_input = Monad.liftM (input_unserial . read) get_input_text
@@ -353,10 +353,10 @@ set_input = set_input_text . show . input_serial
 -- output
 
 get_output_text :: IO (String)
-get_output_text = get_text "contractOutput"
+get_output_text = get_code_text "contractOutput"
 
 set_output_text :: String -> IO ()
-set_output_text = set_text "contractOutput"
+set_output_text = set_code_text "contractOutput"
 
 get_output :: IO AS
 get_output = Monad.liftM (read) get_output_text

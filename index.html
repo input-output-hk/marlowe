@@ -82,6 +82,8 @@
         width: 100%;
 	padding-bottom: 20px;
 	resize: vertical;
+	border-style: solid;
+	border-width: 1px;
       }
       #c2b {
         width: 25%;
@@ -106,6 +108,15 @@
       }
       #example3 {
         width: 34%;
+      }
+      .statusDiv {
+        width: 100%;
+	height: 5%;
+	border-style: solid;
+	border-width: 1px;
+	padding-bottom: 20px;
+	resize: vertical;
+	overflow: hidden;
       }
       input {
         -moz-user-select: -moz-text;
@@ -168,10 +179,26 @@ codeArea.setSize("100%", "100%");
 <br /><br />
     <div><p style="display:inline;">Current block: </p><input style="display:inline;" type="number" id="currBlock" value="0"></input></div>
     <div><h3>Contract state:</h3></div>
-         <textarea id="contractState" style="width: 100%; height: 5%; ">([], [])</textarea>
+         <div class="statusDiv" id="contractStateDiv"></div>
+<script>
+contractState = CodeMirror(document.getElementById("contractStateDiv"), {
+  value: "([], [])",
+  mode:  "text/x-haskell",
+  lineWrap: true
+});
+contractState.setSize("100%", "100%");
+</script>
     <div><h3>Input:</h3></div>
-         <textarea id="contractInput" style="width: 100%; height: 5%; ">([], [], [], [])</textarea>
-    <div id="tabs">
+         <div class="statusDiv" id="contractInputDiv"></div>
+<script>
+contractInput = CodeMirror(document.getElementById("contractInputDiv"), {
+  value: "([], [], [], [])",
+  mode:  "text/x-haskell",
+  lineWrap: true
+});
+contractInput.setSize("100%", "100%");
+</script>
+     <div id="tabs">
       <ul>
         <li><a draggable="false" href="#tabs-1">Smart interface</a></li>
 	<li><a draggable="false" href="#tabs-2">Manual interface</a></li>
@@ -200,7 +227,15 @@ codeArea.setSize("100%", "100%");
       </div>
     </div>
     <div><h3>Output:</h3></div>
-         <textarea id="contractOutput" style="width: 100%; height: 5%; "></textarea>
+         <div class="statusDiv" id="contractOutputDiv"></div>
+<script>
+contractOutput = CodeMirror(document.getElementById("contractOutputDiv"), {
+  value: "",
+  mode:  "text/x-haskell",
+  lineWrap: true
+});
+contractOutput.setSize("100%", "100%");
+</script>
     <div><h3>Examples:</h3></div>
 <button id="example1" onclick="Haste.depositIncentive()">Deposit incentive</button><button id="example2" onclick="Haste.crowdFunding()">Crowd-funding</button><button id="example3" onclick="Haste.escrow()">Escrow</button>
   </div>

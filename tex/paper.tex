@@ -631,27 +631,32 @@ In the next section, we look at how to take advantage of Haskell embedding when 
 \section{Marlowe as a DSL embedded in Haskell}
 \label{section:example-escrow}
 
-In this section, we revisit the escrow example that we discussed briefly in the introduction, and show  how we can make Marlowe contracts that are easier to write, read, and 
-understand, by embedding them into Haskell code, taking advantage of the fact that Marlowe contracts are implemented as Haskell 
-terms.
+In this section, we revisit the escrow example that we discussed briefly in the introduction, and show how we can make 
+Marlowe contracts that are easier to write, read, and understand, by embedding them into Haskell code, taking advantage 
+of the fact that Marlowe contracts are implemented as Haskell terms. We used Haskell because it is the language in 
+which Marlowe is implemented, but it would be easy to embed Marlowe in any other languages. It would only be necessary 
+to translate its primitives into a data type in that language. In Meadow, we use Fay embedding, which is a subset of 
+Haskell (see Section~\ref{section:tool}).
 
-The example contract we use through this section implements an escrow contract. Let us imagine that participant \haskellinline{1} 
-is buying some item from participant \haskellinline{2}. On one hand, if participant \haskellinline{1} pays before receiving the item, there 
-is a risk that participant \haskellinline{2} will never give \haskellinline{1} the item. On the other hand, if participant \haskellinline{2} 
-gives participant \haskellinline{1} the item before \haskellinline{1} pays, then there is a risk that \haskellinline{1} will never 
-pay.
+The example contract we use through this section implements an escrow contract. Let us imagine that participant 
+\haskellinline{1} is buying some item from participant \haskellinline{2}. On one hand, if participant \haskellinline{1} 
+pays before receiving the item, there is a risk that participant \haskellinline{2} will never give \haskellinline{1} the 
+item. On the other hand, if participant \haskellinline{2} gives participant \haskellinline{1} the item before 
+\haskellinline{1} pays, then there is a risk that \haskellinline{1} will never pay.
 
-The escrow mechanism allows participant \haskellinline{1} to deposit the money into a contract, in a way that the money will only 
-be released when two out of three participants agree on whether participant \haskellinline{2} has indeed given participant \haskellinline{1} 
-the item. The third participant (participant \haskellinline{3}) is supposed to be a neutral third party that will decide in case of 
-dispute.
+The escrow mechanism allows participant \haskellinline{1} to deposit the money into a contract, in a way that the money 
+will only be released when two out of three participants agree on whether participant \haskellinline{2} has indeed given 
+participant \haskellinline{1} the item. The third participant (participant \haskellinline{3}) is supposed to be a 
+neutral third party that will decide in case of dispute.
 
-This way, if participants \haskellinline{1} and \haskellinline{2} are honest, they will just agree on the result of the transaction 
-and \haskellinline{3} will not need to do anything. If \haskellinline{1} and \haskellinline{2} disagree, participant \haskellinline{3} will be able to choose whether the money must go to \haskellinline{1} or to \haskellinline{2}.
+This way, if participants \haskellinline{1} and \haskellinline{2} are honest, they will just agree on the result of the 
+transaction and \haskellinline{3} will not need to do anything. If \haskellinline{1} and \haskellinline{2} disagree, 
+participant \haskellinline{3} will be able to choose whether the money must go to \haskellinline{1} or to 
+\haskellinline{2}.
 
-In addition to this, in our implementation, the money paid for the item is 450 ADA, it must be committed by 
-participant \haskellinline{1} before block \haskellinline{10}, and it will be refunded to participant \haskellinline{1} if there is no consensus before block 
-\haskellinline{90}.
+In addition to this, in our implementation, the money paid for the item is 450 ADA, it must be committed by participant 
+\haskellinline{1} before block \haskellinline{10}, and it will be refunded to participant \haskellinline{1} if there is 
+no consensus before block \haskellinline{90}.
 
 We start by defining some Haskell functions. We can encapsulate identifiers in functions to make the contract more 
 readable. That way we can generate an identifier for the cash commitment:
@@ -670,11 +675,11 @@ We can also create a sub-contract that allows the money to be redeemed by partic
 redeem_original :: Contract
 redeem_original = RedeemCC iCC1 Null
 \end{haskellcode}
-Each participant has a say on who deserves the money: either participant \haskellinline{1} deserves a refund, which we represent 
-with the number $0$; or participant \haskellinline{2} deserves a payment, which we represent with the number $1$. Because there is 
-only one choice to make per participant, we use the same \haskellinline{IdentChoice} as their participant id. We can 
-define a function that returns an observation that is true if and only if the participant \haskellinline{per} has 
-chosen the number \haskellinline{c} as follows:
+Each participant has a say on who deserves the money: either participant \haskellinline{1} deserves a refund, which we 
+represent with the number $0$; or participant \haskellinline{2} deserves a payment, which we represent with the number 
+$1$. Because there is only one choice to make per participant, we use the same \haskellinline{IdentChoice} as their 
+participant id. We can define a function that returns an observation that is true if and only if the participant 
+\haskellinline{per} has chosen the number \haskellinline{c} as follows:
 \begin{haskellcode}
 chose :: Int -> ConcreteChoice -> Observation
 chose per c = PersonChoseThis (IdentChoice per) per c
@@ -708,8 +713,8 @@ escrow = CommitCash iCC1 1 (ConstMoney 450) 10 100
                     Null
 \end{haskellcode}
 
-The outermost primitive \haskellinline{CommitCash} allows the participant \haskellinline{1} to commit 450 ADA before block 10, 
-with the promise that money will be released on block 100 if they are not claimed before that.
+The outermost primitive \haskellinline{CommitCash} allows the participant \haskellinline{1} to commit 450 ADA before 
+block 10, with the promise that money will be released on block 100 if they are not claimed before that.
 
 The next primitive, \haskellinline{When}, waits for one of three things to happen:
 \begin{enumerate}
@@ -719,11 +724,14 @@ The next primitive, \haskellinline{When}, waits for one of three things to happe
 \end{enumerate}
 
 If the third option happens first, the money is refunded. Otherwise, there is a \haskellinline{Choice} that will 
-immediately refund the money to participant \haskellinline{1} unless two out of three chose option $1$; in the later case, 
-\haskellinline{Pay} will give participant \haskellinline{2} the opportunity to claim the funds available in \haskellinline{iCC1} 
-before block 100. If the funds are not claimed before block 100 they will also be refunded to participant \haskellinline{1}.
+immediately refund the money to participant \haskellinline{1} unless two out of three chose option $1$; in the later 
+case, \haskellinline{Pay} will give participant \haskellinline{2} the opportunity to claim the funds available in 
+\haskellinline{iCC1} before block 100. If the funds are not claimed before block 100 they will also be refunded to 
+participant \haskellinline{1}.
 
-Reflecting on the example we can see that using Haskell definitions has made the contract substantially more comprehensible; it will also support more efficient operation, if we were to replace the repeated  expression \haskellinline{two_chose 1 2 3 1} above by a \haskellinline{where} clause, 
+Reflecting on the example we can see that using Haskell definitions has made the contract substantially more 
+comprehensible; it will also support more efficient operation, if we were to replace the repeated  expression 
+\haskellinline{two_chose 1 2 3 1} above by a \haskellinline{where} clause, 
 \begin{haskellcode}
 escrow = ...
                     (When (OrObs (two_chose 1 2 3 0)
@@ -745,7 +753,7 @@ In the next section, we cover the online contract visualisation and interaction 
 
 One of the objectives of Marlowe is to be accessible to a wider audience
 than a general purpose language would. With this aim, and to aid Marlowe's
-usage by people that does not know is not familiar with its syntax,
+usage by people that does not know or is not familiar with its syntax,
 we have developed Meadow, a web tool that supports the interactive construction,
 edition, and simulation of smart-contracts written in Marlowe. The
 tool is publicly available in the url: \url{https://input-output-hk.github.io/scdsl/}.
@@ -754,15 +762,35 @@ of Meadow in the middle of simulating the execution of the ``incentivised
 saving'' contract described in Section~\ref{section:example-saving}.
 
 Meadow has been mainly written in Haskell and compiled to JavaScript
-by the Haste compiler~\cite{Haste}, it also relies on
-the Blockly library~\cite{Blockly} for providing a visual
-editor for smart contracts written in Marlowe. Blockly's editor allows
-the user to visualise and edit smart-contracts as interlocking blocks
-that can be dragged and dropped like pieces of a jigsaw puzzle (see
-Figure~\ref{fig:detail-of-block}). Meadow also provides functionality
-to generate syntactically correct and formatted code (that is displayed
-in the upper right corner of the application), and to convert the
-code back to its block representation.
+partially by the Haste compiler~\cite{Haste} and partially by GHCJS \cite{GHCJS};
+Meadow also relies on the Blockly library~\cite{Blockly} for providing a visual
+editor for smart contracts written in Marlowe. Embedding support in Meadow
+is provided throught a pruned and bundled version of the Fay compiler \cite{Fay},
+compiled to JavaScript using GHCJS. All text fields that edit and present Meadow and Fay code are
+instances of CodeMirror text editor \cite{CodeMirror}.
+
+Blockly's editor allows the user to visualise and edit
+smart-contracts as interlocking blocks that can be dragged and dropped
+like pieces of a jigsaw puzzle (see Figure~\ref{fig:detail-of-block}).
+Meadow also provides functionality to generate syntactically correct
+and formatted code (that is displayed in the upper right corner of the application),
+and to convert the code back to its block representation.
+
+Additionally, Meadow allows the user to use Meadow's Fay embedding from within the browser (see 
+Figure~\ref{fig:embedded-demo}). Meadow includes a pruned copy of the Fay compiler, bundled with its Prelude module, 
+its foreign interface, and a module with the definitions of the Marlowe primitives and a function to pretty-print 
+Marlowe contracts. This allows the user to compile and execute, inside the browser, Fay
+code that generates and prints a Meadow contract. When the user opens the embedded editor, the current Marlowe contract 
+is embedded into a template of a Fay program that prints it. The user is able to modify this code in the left 
+panel of the editor and use the advanced functionalities provided by Fay like, for example, bindings, 
+list-comprehensions, turing-complete functions definitions, etc.
+
+When the user clicks the execute button, the Fay code is 
+compiled to JavaScript and evaluated; this causes the Marlowe contract generated by the execution of the code to be 
+written to the panel on the right. Generated contracts can then be sent back to the main screen of Meadow, translated 
+to Blockly, and their execution can be simulated. The embedded editor also allows users to save the Fay code to a 
+file in their computers, to load code from a file in their computers, and to temporarily hide the editor while keeping 
+its contents in memory, even while the compilation and execution process is being carried out in the background.
 
 \begin{figure}
 \begin{centering}
@@ -819,7 +847,15 @@ operation whereas the former ``guesses'' the possible intentions
 of the user and usually can input new operations with a single click
 (except for choices, which still may require the user to input a number).
 
-In the next section we re-examine the model and the Marlowe language, looking at possible extensions, alternative design decisions and ways in which we can formally analyse Marlowe contracts.
+\begin{figure}
+\begin{centering}
+\includegraphics[width=1\textwidth]{/home/palas/Escritorio/scdsl/tex/pix/embedded.png}
+\par\end{centering}
+\caption{\label{fig:embedded-demo}Screenshot of Meadow's embedded Fay editor.}
+\end{figure}
+
+In the next section, we re-examine the model and the Marlowe language, looking at possible extensions, alternative 
+design decisions and ways in which we can formally analyse Marlowe contracts.
 
 \section{Reflection}
 \label{section:reflection}

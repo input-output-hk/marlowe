@@ -1,10 +1,4 @@
-\documentclass[
-      acmsmall
-    , screen
-%    , authordraft
-%    , anonymous
-%    , review=true
-  ]{acmart}
+\documentclass[runningheads]{llncs}
 
 % Metadata Information
 %\acmConference[DRAFT]{Draft paper}
@@ -19,7 +13,7 @@
 
 % Copyright
 %\setcopyright{acmcopyright}
-\setcopyright{acmlicensed}
+%\setcopyright{acmlicensed}
 %\setcopyright{rightsretained}
 %\setcopyright{usgov}
 %\setcopyright{usgovmixed}
@@ -34,7 +28,7 @@
 %\received[revised]{March 2009}
 %\received[accepted]{June 2009}
 
-\citestyle{acmauthoryear}
+%\citestyle{acmauthoryear}
 
 %%% PACKAGES %%%
 
@@ -57,22 +51,14 @@
 \usepackage[capitalise]{cleveref}
 
 
-%%% FIXME PACKAGE SETUP %%%
-
-\fxusetheme{color}
-\fxuseenvlayout{color}
-
-\FXRegisterAuthor{pls}{apls}{\color{teal}[Pablo]}
-\FXRegisterAuthor{sjt}{asjt}{\color{magenta}[Simon]}
-
 %%% MINTED COMMANDS FOR HASKELL %%%
 
 \newmint{haskell}{}
 \newminted{haskell}{}
 \newmintinline{haskell}{}
 
-
-
+\FXRegisterAuthor{pls}{apls}{\color{teal}[Pablo]}
+\FXRegisterAuthor{sjt}{asjt}{\color{magenta}[Simon]}
 
 %%% MACROS %%%
 
@@ -85,31 +71,26 @@
 % Document starts
 \begin{document}
 
+
+%
+%
 % Title portion. Note the short title for running heads
-\title
-  [Marlowe]
-  {Marlowe: financial contracts on blockchain}
+\title {Marlowe: financial contracts on blockchain\thanks{IOHK}}
+%
+%\titlerunning{Abbreviated paper title}
+% If the paper title is too long for the running head, you can set
+% an abbreviated paper title here
+%
+\author{Pablo Lamela Seijas\orcidID{0000-0002-1730-1219}\\
+\and Simon Thompson\orcidID{0000-0002-2350-301X}}
+%
+\authorrunning{P. Lamela Seijas and S. Thompson}
+% First names are abbreviated in the running head.
+% If there are more than two authors, 'et al.' is used.
+%
+\institute{University of Kent, Canterbury, CT2 7NF, Kent (UK)}
+\email{\{pl292,s.j.thompson\}@kent.ac.uk}
 
-\author{Pablo Lamela Seijas}
-\affiliation{%
-  \institution{University of Kent}
-%  \streetaddress{School of Computing}
-  \city{Canterbury}
-  \state{Kent}
-  \postcode{CT2 7NF}
-  \country{UK}}
-\email{pl292@kent.ac.uk}
-
-\author{Simon Thompson}
-\orcid{0000-0002-2350-301X}
-\affiliation{%
-  \institution{University of Kent}
-%  \streetaddress{School of Computing}
-  \city{Canterbury}
-  \state{Kent}
-  \postcode{CT2 7NF}
-  \country{UK}}
-\email{s.j.thompson@kent.ac.uk}
 
 \begin{abstract}
 
@@ -1097,7 +1078,7 @@ Kent and Leicester for their comments on previous presentations of this work.
 
 
 
-\bibliographystyle{ACM-Reference-Format}
+\bibliographystyle{splncs04}
 \bibliography{paper}
 
 \end{document}

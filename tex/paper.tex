@@ -522,7 +522,7 @@ step
 \smallskip
 In the first case, a \haskellinline{SuccessfulCommit} action is generated and the contract continues as 
 \haskellinline{k1}; in the second case no action is generated and the contract continues as 
-\haskellinline{k2}. While neither case holds the contract is quiescent, waiting for the cash to be committed. 
+\haskellinline{k2}. While neither case holds, the contract is quiescent, waiting for the cash to be committed. 
 
 If the cash is committed successfully and the timeout \haskellinline{t2} is reached, then it is impossible to further 
 spend the committed cash, and any unspent funds can be reclaimed by participant \haskellinline{p}.
@@ -612,7 +612,7 @@ step comms st (Both con1 con2) os =
 \end{haskellcode}
 \smallskip
 
-Because the model is stateful and produces output actions, to make a step it is necessary to execute a single step of 
+Because the model is stateful and produces output actions, to make a step, it is necessary to execute a single step of 
 each of  the contracts \haskellinline{k1} and \haskellinline{k2} in sequence: first \haskellinline{k1} then 
 \haskellinline{k2}.
 

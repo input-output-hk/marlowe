@@ -75,7 +75,8 @@
 %
 %
 % Title portion. Note the short title for running heads
-\title {Marlowe: financial contracts on blockchain\thanks{IOHK}}
+\title {Marlowe: financial contracts on blockchain\thanks{This work is a part of the Cardano project, and is
+supported by IOHK}}
 %
 %\titlerunning{Abbreviated paper title}
 % If the paper title is too long for the running head, you can set
@@ -177,7 +178,7 @@ There is also the question of how precisely the execution of the contract intera
 information is to be recorded on the chain. Finally, should the execution ``push'' for changes  to happen, or do 
 external actors have to ``pull'' to effect changes enabled by execution of the contract?
 
-The paper describes version 1.2 of Marlowe, and it should be seen as a work in progress. We have designed it to provide 
+The paper describes version 1.3 of Marlowe, and it should be seen as a work in progress. We have designed it to provide 
 financial contracts in Cardano, but also in order to start to answer the twin questions of what smart contracts will 
 look like in Cardano, and how those contracts will be implemented in the overall system.
 
@@ -200,7 +201,7 @@ Section \ref{section:reflection} reflects on the system design, and observes som
 
 \medskip
 \noindent
-In this section we look at existing work on smart contracts and blockchains in general, before exploring the rationale 
+In this section, we look at existing work on smart contracts and blockchains in general, before exploring the rationale 
 for building the Marlowe language.
 
 \subsection{Smart contracts on blockchains}
@@ -316,7 +317,7 @@ Bitcoin) and the channels of \ae{}ternity, introduced below.
 
 \subsection{Designing Marlowe}
 
-In designing, Marlowe we have chosen a number of options; this description applies to Marlowe version 1.2 
+In designing Marlowe, we have chosen a number of options; this description applies to Marlowe version 1.3. 
 
 \paragraph{Pull} 
 
@@ -963,7 +964,7 @@ design decisions and ways in which we can formally analyse Marlowe contracts.
 \label{section:reflection}
 
 We have given a concrete model and DSL, namely Marlowe version 
-1.2\footnote{\url{https://github.com/input-output-hk/scdsl/releases/tag/v1.2}}.
+1.3\footnote{\url{https://github.com/input-output-hk/scdsl/releases/tag/v1.3}}.
 In this section we examine how the model can be extended, how contacts can be analysed, reflect on different design 
 decisions that might be made and discuss some aspects of the implementation of Marlowe within a blockchain environment.
 
@@ -1186,7 +1187,7 @@ links from Marlowe to work on securing multiparty sidechain games/contracts (MPC
 \label{section:next-steps}
 
 We plan to continue the work with Marlowe in a number of directions. First, we need to sign off a definition of the 
-language, as the current status of Marlowe 1.2 is that of a proposal.
+language, as the current status of Marlowe 1.3 is that of a proposal.
 
 \paragraph{Context}
 

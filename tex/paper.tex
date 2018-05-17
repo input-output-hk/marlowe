@@ -170,11 +170,13 @@ participants stops interacting with it. We discuss this particular example in mo
 We make the following contributions in this paper.
 \begin{itemize}
 \item
-The design of the Marlowe language as a Haskell data type; Marlowe is made more expressible through its embedding in Haskell.
+The design of the Marlowe language.
 \item
 An executable, small-step semantics of Marlowe in Haskell.
+\item 
+Extending Marlowe's expressibility by embedding it as a Haskell \haskellinline{data} type.
 \item
-The Meadow tool that allows users to simulate the operation of Marlowe contracts, including ``embedded'' contracts that use features of Haskell. 
+The Meadow tool that allows users to interact with and simulate the operation of embedded Marlowe contracts. 
 \end{itemize}
 
 TO ADD
@@ -201,19 +203,20 @@ focus on some of the design decisions, but focus on the important aspects only a
 %The paper describes version 1.3 of Marlowe, and it should be seen as a work in progress. We have designed it to provide 
 %financial contracts in Cardano, but also in order to start to answer the twin questions of what smart contracts will 
 %look like in Cardano, and how those contracts will be implemented in the overall system.
-
-The paper is structured like this: REWRITE we begin in Section \ref{section:design} with a discussion of the design rationale 
-for Marlowe, including an overview of the various approaches to scripting in blockchain as well as the different designs 
-of the blockchains themselves. We conclude Section \ref{section:design} with a set of decisions about the blockchain 
-environment for Marlowe. The central part of the paper is Section \ref{section:model} where we introduce the Marlowe 
-model, including the assumptions made in designing it, the types of the principal functions and a description of the DSL 
-as an algebraic type, constructor by constructor. 
+ 
+The paper begins in Section \ref{section:model} by introducing the Marlowe 
+model, including the assumptions made in designing it, the types of the principal functions and a description of the DSL as an algebraic type, constructor by constructor. 
 %Section \ref{section:example-saving} presents an example of a larger Marlowe contract, for incentivised saving. 
 Section \ref{section:example-escrow} revisits the escrow example, and shows 
 how it is described using a combination of Marlowe and Haskell constructs: that is, we use Marlowe as an embedded DSL. 
 Section \ref{section:tool} introduces Meadow, our tool for visualising and interacting with Marlowe contracts.
 Section \ref{section:reflection} reflects on the system design, and observes some alternative designs and Section 
 \ref{section:next-steps} enumerates the next steps for the project.
+
+we begin in Section \ref{section:design} with a discussion of the design rationale 
+for Marlowe, including an overview of the various approaches to scripting in blockchain as well as the different designs 
+of the blockchains themselves. We conclude Section \ref{section:design} with a set of decisions about the blockchain 
+environment for Marlowe. 
 
 
 
@@ -327,10 +330,8 @@ The \haskellinline{step} function represents a \emph{single computation step} an
 step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
 \end{haskellcode}
 which is also illustrated in Figure \ref{fig:step-function}. 
-
 The \haskellinline{step} function is total, so that for every contract a result of stepping is defined. However, for 
-some kinds of contracts -- commits, redeems or time-shifted contracts -- it is possible that the result of a step is to 
-produce the same contract as the result; such a step is called \emph{quiescent} whereas all other steps \emph{make 
+some kinds of contracts -- commits, redeems or time-shifted contracts -- it is possible that performing  a step produces the same contract as the result; we call these \emph{quiescent} steps whereas all others \emph{make 
 progress}. We use this distinction in the explanation that follows.
 
 Execution of a contract will involve multiple blocks, with multiple steps in each block. The computation at a single block is given by the \haskellinline{stepBlock} function: this will call the \haskellinline{stepAll} function that calls \haskellinline{step} repeatedly
@@ -685,7 +686,7 @@ be a DSL embedded in Plutus or Plutus Core. The details of this remain to be dec
 
 } % end ignore
 
-\section{Marlowe as an embedded DSL in Haskell}
+\section{Marlowe as an embedded DSL}
 \label{section:example-escrow}
 
 In this section, we revisit the escrow example that we discussed briefly in the introduction, and show how we can make 
@@ -699,7 +700,7 @@ The example contract we use through this section implements an escrow contract. 
 \haskellinline{1} is buying some item from participant \haskellinline{2}. On one hand, if participant \haskellinline{1} 
 pays before receiving the item, there is a risk that participant \haskellinline{2} will never give \haskellinline{1} the 
 item. On the other hand, if participant \haskellinline{2} gives participant \haskellinline{1} the item before 
-\haskellinline{1} pays, then there is a risk that \haskellinline{1} will never pay.
+\haskellinline{1} pays,  there is a risk that \haskellinline{1} will never pay.
 
 The escrow mechanism allows participant \haskellinline{1} to deposit the money into a contract, in a way that the money 
 will only be released when two out of three participants agree on whether participant \haskellinline{2} has indeed given 
@@ -803,7 +804,7 @@ escrow = ...        (When (OrObs (two_chose 1 2 3 0)
 then the repeated computation of the expression will be avoided.
 In the next section, we cover the online contract visualisation and interaction tool for Marlowe.
 
-\section{Visualising and interacting with contracts}
+\section{Visualising and interacting with Marlowe contracts}
 
 \label{section:tool}
 

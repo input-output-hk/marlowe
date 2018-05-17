@@ -178,18 +178,7 @@ Embedding Marlowe as a Haskell \haskellinline{data} type to extend its expressib
 \item
 Developing the Meadow tool that allows users to interact with and simulate the operation of embedded Marlowe contracts. 
 \end{itemize}
-
-TO ADD
-\begin{itemize}
-\item 
-Model vs implementation: add a section on the letter e.g. about distributed computation.
-\item
-In particular we're agnostic about UTxO and accounts, but want to be implementable on both.
-\item
-focus on some of the design decisions, but focus on the important aspects only and cut the stuff that's  more speculative/internal
-\item  
-\ldots
-\end{itemize}
+Having established this model and its semantics we are able to do a number of other things, which we discuss in the paper. We can explore how the language will be implemented on an existing blockchain, such as Cardano, and our model has shown us that we will need to consider how the evolution of a contract interacts with the blockchain, with miners in the case of a `proof of work'-based chain, and with users participating in contract execution. We can also perform analyses of Marlowe contracts, based on its formal semantics. Finally, we can explore the design space for Marlowe, and explore potential alternative designs.
 
 
 %Moreover, there is not a single blockchain model, and we give a brief overview of the different mechanisms for 
@@ -213,7 +202,7 @@ Section \ref{section:tool} introduces Meadow, our tool for visualising and inter
 Section \ref{section:reflection} reflects on the system design, and observes some alternative designs and Section 
 \ref{section:next-steps} enumerates the next steps for the project.
 
-we begin in Section \ref{section:design} with a discussion of the design rationale 
+TO UPDATE \ldots we begin in Section \ref{section:design} with a discussion of the design rationale 
 for Marlowe, including an overview of the various approaches to scripting in blockchain as well as the different designs 
 of the blockchains themselves. We conclude Section \ref{section:design} with a set of decisions about the blockchain 
 environment for Marlowe. 
@@ -611,77 +600,6 @@ CommitCash (IdentCC 1) 1
 In the next section, we look at how to take advantage of Haskell embedding when implementing Marlowe contracts.
 
 
-
-
-\section{Design rationale}
-\label{section:design}
-
-\medskip
-\noindent
-In this section, we look at existing work on smart contracts and blockchains in general, before exploring the rationale 
-for building the Marlowe language.
-
-
-
-
-\subsection{Blockchain platforms: Cardano and others}
-
-There is not a single model of how a blockchain operates, and in this section we look at some of the tradeoffs possible 
-in this space. This allows us to give a context to some of the design decisions taken in designing Marlowe.  
-
-\paragraph{UTxO and accounts}
-
-The simplest blockchain is Bitcoin. Transactions on Bitcoin are made by spending the (as yet) unspent outputs of 
-previous transactions (`unspent transaction outputs' or UTxOs). The chain need not maintain any state, such as the 
-current value owned by any particular participant: such \emph{account} information is implicit and external to the 
-Bitcoin blockchain. On the other hand, the Ethereum model explicitly keeps track of account values, and so this 
-information needs to be kept as state information on chain. While it is possible to translate between UTxO-based and 
-account-based chains \sjtnote{cite Bruno paper} the UTxO model is more fundamental, and requires less support from the 
-implementation of the chain itself.
-
-\paragraph{Interaction modality}
-
-Contracts can be conceived of as acting in two ways. In a \emph{push} model, contracts are seen to be pro-active, and to 
-make things happen. In the case of blockchain, this would include making payments or transactions happen. 
-Alternatively, in the \emph{pull} model, contracts enable certain things to happen, such as transactions, but the 
-transactions need to be effected by an external actor. The pull model makes fewer demands on the blockchain 
-implementation than the push model, which requires the contract to be triggered automatically.
-
-\paragraph{Layered design and sidechains}
-
-Some chains have a layered design, in particular Cardano~\cite{cardano}. The Cardano Settlement Layer (SL) is to 
-support settlement of transactions but nothing more complicated, whereas the Computation Layer (or CL) supports more 
-powerful general computations over the chain. Moreover, the Cardano roadmap~\cite{cardano-rationale} envisages the 
-possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which 
-may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually 
-Bitcoin) and the channels of \ae{}ternity, introduced below.
-
-\subsection{Designing Marlowe}
-
-In designing Marlowe, we have chosen a number of options; this description applies to Marlowe version 1.3. 
-
-\paragraph{Pull} 
-
-While earlier versions used a ``push'' model of operations, we have revised the language to give a ``pull'' semantics. 
-This means, for example, that the language can \emph{enable} a payment to be made, but cannot make the payment happen. 
-It is up to the interested party (or parties) to make the change happen. It is therefore possible for the payment not to 
-happen, despite the fact that this is against the interest of the receiving party.
-
-
-\paragraph{UTxO vs.\ accounts}
-
-The language semantics is described in terms of \emph{commitments} of sums of cryptocurrency -- which we choose to 
-abbreviate to ``cash'' or ``money'' -- and so is agnostic of the underlying implementation.  However, the current 
-redemption mechanism in Plutus Core is not strong enough to support Marlowe, and we are actively investigating the best 
-way to extend this mechanism to implement Marlowe in full on Plutus Core.
-
-\paragraph{DSL or EDSL?}
-
-Marlowe is described as an algebraic \haskellinline{data} type in Haskell, and as such can be seen as a simple EDSL. 
-Note, however, that the implementation presented here is for the purposes of presenting the semantics and behaviour of 
-the language in the abstract. The implementation on the Cardano platform could be stand-alone, but more likely it will 
-be a DSL embedded in Plutus or Plutus Core. The details of this remain to be decided, as noted in the introduction.
-
 } % end ignore
 
 \section{Marlowe as an embedded DSL}
@@ -852,9 +770,9 @@ its contents in memory, even while the compilation and execution process is bein
 \begin{centering}
 \includegraphics[width=1.1\textwidth]{pix/screenshot1}
 \par\end{centering}
-\caption{\label{fig:full-screenshot-demo}Screenshot of Meadow tool
+\caption{\label{fig:full-screenshot-demo}The Meadow tool
 simulating the ``deposit incentive'' contract.}
-\vspace*{-8mm}
+\vspace*{-6mm}
 \end{figure}
 
 %\begin{figure}
@@ -913,6 +831,104 @@ of the user and usually can input new operations with a single click
 
 In the next section, we re-examine the model and the Marlowe language, looking at possible extensions, alternative 
 design decisions and ways in which we can formally analyse Marlowe contracts.
+
+
+
+
+\section{Implementation on blockchain}
+\label{section:towards-implementation}
+
+Marlowe is defined by its executable semantics, but to be deployed on blockchain it will have to be implemented on an existing distributed infrastructure.  We intend to deploy it on IOHK's Cardano infrastructure, but it can be implemented in other systems too, as we explain now.
+
+\subsection{Abstraction}
+
+Marlowe abstracts away from a number of concrete details of how blockchains operate. In particular, it is agnostic between UTxO-based systems, such as Bitcoin and Cardano SL, and account-based models such as Ethereum. 
+
+\paragraph{UTxO and accounts}
+
+The simplest blockchain is Bitcoin. Transactions on Bitcoin are made by spending the (as yet) unspent outputs of 
+previous transactions (`unspent transaction outputs' or UTxOs). The chain need not maintain any state, such as the 
+current value owned by any particular participant: such \emph{account} information is implicit and external to the 
+Bitcoin blockchain. On the other hand, the Ethereum model explicitly keeps track of account values, and so this 
+information needs to be kept as state information on chain. While it is possible to translate between UTxO-based and 
+account-based chains the UTxO model is more fundamental, and requires less support from the 
+implementation of the chain itself.
+
+\paragraph{Interaction modality}
+
+Contracts can be conceived of as acting in two ways. In a \emph{push} model, contracts are seen to make things happen. In the case of blockchain, this would include making payments or transactions take plade. 
+Alternatively, in a \emph{pull} model, contracts enable certain things, such as transactions,  to happen but the 
+transactions need to be effected by an external actor. The pull model makes fewer demands on the blockchain implementation than the push model.
+
+\paragraph{Layered design and sidechains}
+
+Some chains have a layered design, in particular Cardano~\cite{cardano}. The Cardano Settlement Layer (SL) is to support settlement of transactions but nothing more complicated, whereas the Computation Layer (or CL) supports more powerful general computations over the chain. Moreover, the Cardano roadmap~\cite{cardano-rationale} envisages the possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which 
+may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually Bitcoin) and the channels of \ae{}ternity, introduced below.
+
+
+
+\subsection{Compilation}
+
+We have designed Marlowe assuming that each contract would be compiled into
+\begin{itemize} 
+\item one or more on-chain programs and 
+\item a client side program or interface that has a limited number of choices to be made at each point in time (including an interface for the observables). 
+\end{itemize}
+The contracts implemented in the Marlowe language have an implicit interface defined for what would correspond to the client side of a distributed application, as shown by the interactive interface. 
+Of course, we probably do not want to give a user a programmatic interface but an actual application with user interface. So there is still some work to be done to create interfaces on top of the client side of the contracts.
+
+A contract written in Marlowe could also be potentially
+compiled to a smart-contract written in Ethereum. This could be done in two ways, it could be compiled so that an 
+smart-contract represents a single instance of the Marlowe contract (with a fixed set of participants), or 
+alternatively it would be possible to create a generic smart-contract with an extra ``instantiate'' operation that 
+sets-up a new Marlowe contract instance with a given set of participants (represented by a set of public keys).
+
+\paragraph{Transactions}
+
+In principle, we can directly translate each operation in the model (i.e: cash commitment, payment claim, choice, or
+redemption) into a separate transaction in the blockchain. In the Ethereum model this would work in the same 
+way that is simulated by Meadow: several operations can be issued in parallel and the blockchain subsystem will 
+automatically apply them in some order and integrate them into the next block.
+
+Another approach would be to use a UTxO model with continuations in which a UTxO represents a contract. In this model,
+an operation would correspond to a transaction that spends a UTxO and creates (at least) a new UTxO that represents the 
+contract after the operation.
+
+Usually, in the UTxO model, it is necessary that a UTxO is in the blockchain in order for another transaction to be able to spend it. This could potentially limit the number of operations that can be applied in a single block to one, which would make infeasible the approach of using the same UTxO to represent several instances of the same contract (since it would not scale).
+On the other hand, it would prevent non-determinism and, with it, it would remove the possibility of race-conditions. A change to the state of a contract before a transaction (and its corresponding operation) is accepted in the blockchain 
+would invalidate the transaction and require the user to issue it again.
+
+Even if we only allow one transaction per block, it would still be possible to combine several transactions off-chain 
+and to issue a transaction that contains several operations. However, that would require an offline protocol 
+independent from the blockchain and it would require participants to collaborate.
+
+\paragraph{Cost}
+
+The Cardano platform has a notion of cost, and Marlowe contracts will potentially incur costs of two kinds: The cost of a single transaction execution (e.g.\ a single Plutus validator), and the cost of the whole contract, which may consist of many transactions.
+
+Even in Ethereum this distinction is important because single contract execution is limited by gas (and is thus 
+finite), whereas the life of the whole contract may be unbounded and consist of an indefinite number of transactions.  
+So far we are assuming contracts defined in Marlowe to be finite in both aspects. 
+%They could be infinite if we were to 
+%define them co-inductively as recursive members of the DSL type.
+
+\paragraph{Recording information on chain}
+
+Commitments and values of observables need to be recorded somehow, and this raises the potential issue about bloating 
+the chain with data. In general, it will only be necessary to store a signed hash value of the observable, and this will 
+keep data usage bounded.
+
+
+\paragraph{General computations}
+
+If we have contracts that involve, for example, the oil price then we may need to convert a published price in USD into 
+ADA, using a value for the prevailing USD/ADA exchange rate. This will require a computation: in this case, a 
+multiplication. If Marlowe is to be stand-alone then we need to be extend it with arithmetic and other operations, but 
+we expect Marlowe to be embedded in a suitable language and so to be able to use the facilities of the host language here.
+
+\paragraph{Sidechains and wallets}
+
+The implementation may split contract execution between the main chain and a sidechain (or chains). This will allow links from Marlowe to work on securing multiparty sidechain games/contracts (MPCs).
 
 \section{Reflection}
 \label{section:reflection}
@@ -1058,83 +1074,7 @@ a failed payment.
 Some observables have a ``monotonicity'' property: once a choice is made, it is fixed forever; on the other hand, 
 something not yet chosen is only so thus far; do we need to reflect this in the observations that we allow?
 
-\subsection{Towards an implementation in Cardano}
-\label{section:towards-implementation}
 
-The contracts implemented in the Marlowe language have an implicit interface defined for what would correspond to the 
-client side of a distributed application, as shown by the interactive interface. 
-
-\paragraph{Compilation}
-
-We have designed Marlowe assuming that each contract would be compiled into
-\begin{itemize} 
-\item one or more smart contracts (potentially written in Plutus) and 
-\item a client side program or interface that has a limited number of choices to be made at each point in time 
-(including an interface for the observables). 
-\end{itemize}
-Of course, we probably do not want to give a user a programmatic interface but an actual application with user 
-interface. So there is still some work to be done to create interfaces on top of the client side of the contracts.
-
-Since the current version of Marlowe follows the `pull' model, a contract written in Marlowe could also be potentially
-compiled to a smart-contract written in Ethereum. This could be done in two ways, it could be compiled so that an 
-smart-contract represents a single instance of the Marlowe contract (with a fixed set of participants), or 
-alternatively it would be possible to create a generic smart-contract with an extra ``instantiate'' operation that 
-sets-up a new Marlowe contract instance with a given set of participants (represented by a set of public keys).
-
-\paragraph{Transactions}
-
-In principle, we can directly translate each operation in the model (i.e: cash commitment, payment claim, choice, or
-redemption) into a separate transaction in the blockchain. In Ethereum model this would work in the same 
-way that is simulated by Meadow: several operations can be issued in parallel and the blockchain subsystem will 
-automatically apply them in some order and integrate them into the next block.
-
-Another approach would be to use a UTXO model with continuations in which a UTXO represents a contract. In this model,
-an operation would correspond to a transaction that spends a UTXO and creates (at least) a new UTXO that represents the 
-contract after the operation.
-
-Usually, in the UTXO model, it is necessary that a UTXO is in the blockchain in order for another transaction to be able 
-to spend it. This could potentially limit the number of operations that can be applied in a single block to one, which 
-would make infeasible the approach of using the same UTXO to represent several instances of the same contract (since it 
-would not scale).
-
-On the other hand, it would prevent non-determinism and, with it, it would remove the possibility of race-conditions. A 
-change to the state of a contract before a transaction (and its corresponding operation) is accepted in the blockchain 
-would invalidate the transaction and require the user to issue it again.
-
-Even if we only allow one transaction per block, it would still be possible to combine several transactions off-chain 
-and to issue a transaction that contains several operations. However, that would require an offline protocol 
-independent from the blockchain and it would require participants to collaborate.
-
-\paragraph{Cost}
-
-The Cardano platform has a notion of cost, and Marlowe contracts will potentially incur costs of two kinds:
-\begin{itemize} 
-\item The cost of a single transaction execution (a single Plutus validator).
-\item The cost of the whole contract, which may consist of many transactions.
-\end{itemize} 
-Even in Ethereum this distinction is important because single contract execution is limited by gas (and is thus 
-finite), whereas the life of the whole contract may be unbounded and consist of an indefinite number of transactions.  
-So far we are assuming contracts defined in Marlowe to be finite in both aspects. They could be infinite if we were to 
-define them co-inductively as recursive members of the DSL type.
-
-\paragraph{Recording information on chain}
-
-Commitments and values of observables need to be recorded somehow, and this raises the potential issue about bloating 
-the chain with data. In general, it will only be necessary to store a signed hash value of the observable, and this will 
-keep data usage bounded.
-
-
-\paragraph{General computations}
-
-If we have contracts that involve, for example, the oil price then we may need to convert a published price in USD into 
-ADA, using a value for the prevailing USD/ADA exchange rate. This will require a computation: in this case, a 
-multiplication. If Marlowe is to be stand-alone then we need to be extend it with arithmetic and other operations, but 
-we expect Marlowe to be embedded in Plutus (Core) and so to be able to use the facilities of the host language here.
-
-\paragraph{Sidechains and wallets}
-
-The implementation may split contract execution between the main chain and a sidechain (or chains). This will allow 
-links from Marlowe to work on securing multiparty sidechain games/contracts (MPCs).
 
 \section{Related work}
 

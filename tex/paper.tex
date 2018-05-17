@@ -177,6 +177,19 @@ An executable, small-step semantics of Marlowe in Haskell.
 The Meadow tool that allows users to simulate the operation of Marlowe contracts, including ``embedded'' contracts that use features of Haskell. 
 \end{itemize}
 
+TO ADD
+\begin{itemize}
+\item 
+Model vs implementation: add a section on the letter e.g. about distributed computation.
+\item
+In particular we're agnostic about UTxO and accounts, but want to be implementable on both.
+\item
+focus on some of the design decisions, but focus on the important aspects only and cut the stuff that's  more speculative/internal
+\item  
+\ldots
+\end{itemize}
+
+
 %Moreover, there is not a single blockchain model, and we give a brief overview of the different mechanisms for 
 %scripting on blockchain (although this is not the primary purpose of this article). 
 %A particularly important technical distinction here is that between an account-style model as used by 
@@ -213,7 +226,7 @@ Section \ref{section:reflection} reflects on the system design, and observes som
 \end{figure}
 
 
-\section{The model}
+\section{The Marlowe model}
 \label{section:model}
 
 The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 

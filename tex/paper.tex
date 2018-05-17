@@ -316,9 +316,33 @@ contract. They can be deterministically established given the context, and they 
 the \haskellinline{stepBlock} function below).
 \end{itemize}
 
+\paragraph{Computations}
+
+Computation is modelled at two different levels. 
+
+The \haskellinline{step} function represents a \emph{single computation step} and has this type:
+\begin{haskellcode}
+step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
+\end{haskellcode}
+which is also illustrated in Figure \ref{fig:step-function}. 
+
+The \haskellinline{step} function is total, so that for every contract a result of stepping is defined. However, for 
+some kinds of contracts -- commits, redeems or time-shifted contracts -- it is possible that the result of a step is to 
+produce the same contract as the result; such a step is called \emph{quiescent} whereas all other steps \emph{make 
+progress}. We use this distinction in the explanation that follows.
+
+Execution of a contract will involve multiple blocks, with multiple steps in each block. The computation at a single block is given by the \haskellinline{stepBlock} function: this will call the \haskellinline{stepAll} function that calls \haskellinline{step} repeatedly
+until it is quiescent. In addition to 
+calling \haskellinline{stepAll}, \haskellinline{stepBlock} will first enable expired cash commitments to be refunded and record any choices made at that step. 
+The functions \haskellinline{stepAll} and \haskellinline{stepBlock} have the same type as \haskellinline{step} itself.
+
+
+
+
+
 \subsection{The \haskellinline{Contract} type}
 
-The type of contracts is given by
+The type of contracts is given by the Haskell data type
 
 \begin{haskellcode}
 data Contract =
@@ -338,28 +362,6 @@ data Contract =
 \subsection{The \haskellinline{step} function}
 
 
-
-The \haskellinline{step} function represents a \emph{single computation step} and has this type:
-
-\begin{haskellcode}
-step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
-\end{haskellcode}
-
-which is also shown in Figure \ref{fig:step-function}.
-
-
-
-
-The \haskellinline{step} function is total, so that for every contract a result of stepping is defined. However, for 
-some kinds of contracts -- commits, redeems or time-shifted contracts -- it is possible that the result of a step is to 
-produce the same contract as the result; such a step is called \emph{quiescent} whereas all other steps \emph{make 
-progress}. We use this distinction in the explanation that follows.
-
-
-The function \haskellinline{step} is wrapped by the \haskellinline{stepAll} function, which calls \haskellinline{step} 
-until it stops having any effects. For every block, the \haskellinline{stepBlock} function is called. In addition to 
-calling \haskellinline{stepAll}, \haskellinline{stepBlock} will first enable expired cash commitments to be refunded and 
-record any choices made at that step.
 
 The constructors are interpreted like this:
 

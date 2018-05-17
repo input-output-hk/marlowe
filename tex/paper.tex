@@ -318,7 +318,7 @@ contract. They can be deterministically established given the context, and they 
 the \haskellinline{stepBlock} function below).
 \end{itemize}
 
-\paragraph{Computations}
+\paragraph{Computation}
 
 Computation is modelled at two different levels. 
 
@@ -334,7 +334,9 @@ produce the same contract as the result; such a step is called \emph{quiescent} 
 progress}. We use this distinction in the explanation that follows.
 
 Execution of a contract will involve multiple blocks, with multiple steps in each block. The computation at a single block is given by the \haskellinline{stepBlock} function: this will call the \haskellinline{stepAll} function that calls \haskellinline{step} repeatedly
-until it is quiescent. In addition to 
+until it is quiescent. 
+
+In addition to 
 calling \haskellinline{stepAll}, \haskellinline{stepBlock} will first enable expired cash commitments to be refunded and record any choices made at that step. 
 The functions \haskellinline{stepAll} and \haskellinline{stepBlock} have the same type as \haskellinline{step} itself.
 
@@ -356,35 +358,33 @@ data Contract =
    Choice Observation Contract Contract |
    When Observation Timeout Contract Contract   
    \end{haskellcode}
-%Originally on "Choice": \footnote{Doesn't the step function need to record what observations are made, so they can be 
-%archived in the blockchain? I don't see how your design will support doing so.}\footnote{Yes, we assume that it is 
-%part of the infrastructure of this language to record the values of *observables* that are used. However, we have 
-%chosen no to make it part of the language itself.}
+Informally, this type provides a \haskellinline{Null} contract, which does nothing. The next three constructs form contracts that do something, and then continue according to another contract (which is one of the components of the original contract). \haskellinline{CommitCash} will wait for a participant to make a commitment,  
+\haskellinline{RedeemCC} allows for a commitment to be redeemed, and \haskellinline{Pay} for a payment to be made to another participant. 
 
+The remaining constructors form composite contracts from simpler components: \haskellinline{Both} has the behaviour of both its components, \haskellinline{Choice} chooses between two contracts on the basis of an observation, and \haskellinline{When} is quiescent until a condition -- i.e.\ an \haskellinline{Observation} -- becomes true.
+
+What many of the contracts also have are timeouts that also determine their behaviour. 
 \subsection{The \haskellinline{step} function}
 
-
-
-The constructors are interpreted like this:
-
-\begin{itemize} 
-
-\item \haskellinline{Null} is the null contract; it will always be quiescent:
+In this section we explain the detailed behaviour of \haskellinline{Contracts} through a discussion of the \haskellinline{step} function.
 
 \smallskip
+\noindent
+\haskellinline{Null} is the null contract; it will always be quiescent:
+
 \begin{haskellcode}
 step _ st Null _ = (st, Null, [])
 \end{haskellcode}
-\smallskip
 
-\item \haskellinline{CommitCash idCC p v t1 t2 k1 k2}  For this contract to make progress,\begin{itemize}
+\smallskip
+\noindent
+\haskellinline{CommitCash idCC p v t1 t2 k1 k2}  For this contract to make progress,\begin{itemize}
 \item either before the timeout \haskellinline{t1} the user \haskellinline{p} makes a cash commitment of value 
 \haskellinline{v} and timeout \haskellinline{t2}  with the identifier \haskellinline{idCC}, 
 \item
 or the timeout \haskellinline{t1} is exceed:
 \end{itemize} 
 
-\smallskip
 \begin{haskellcode}
 step 
   commits 
@@ -404,7 +404,6 @@ step
         ust = Map.insert ident cns ccs
         cval = evalMoney st val
 \end{haskellcode}
-\smallskip
 In the first case, a \haskellinline{SuccessfulCommit} action is generated and the contract continues as 
 \haskellinline{k1}; in the second case no action is generated and the contract continues as 
 \haskellinline{k2}. While neither case holds, the contract is quiescent, waiting for the cash to be committed. 
@@ -413,12 +412,13 @@ If the cash is committed successfully and the timeout \haskellinline{t2} is reac
 spend the committed cash, and any unspent funds can be reclaimed by participant \haskellinline{p}.
  This is performed by the \haskellinline{stepBlock} function, as noted above.
 
-\item \haskellinline{RedeemCC idCC k} (\haskellinline{CC} stands for cash commitment.) For this contract to make 
+\medskip
+\noindent
+\haskellinline{RedeemCC idCC k} (\haskellinline{CC} stands for cash commitment.) For this contract to make 
 progress, the creator of the cash commitment with identifier \haskellinline{idCC} is required to redeem the unspent 
 funds in that commitment; the contract then continues as \haskellinline{k}, and the action 
 \haskellinline{CommitRedeemed} is produced. 
 
-\smallskip
 \begin{haskellcode}
 step commits st c@(RedeemCC ident con) _ =
     case Map.lookup ident ccs of
@@ -434,8 +434,6 @@ step commits st c@(RedeemCC ident con) _ =
     where
         ccs = sc st
 \end{haskellcode}
-\smallskip
-
 Committed cash can only be redeemed once, and an attempt to redeem it a second time will produce a  
 \haskellinline{DuplicateRedeem} action, continuing as \haskellinline{k}.
 
@@ -451,11 +449,12 @@ immediately evolve to \haskellinline{k}.
 %\footnote{We specify the actions generated by each kind of constructor; at each step the list of such actions, of type 
 %          \haskellinline{AS}, is a component of the result.}. 
 
-\item \haskellinline{Pay p1 p2 v t k} makes it possible, assuming that sufficient funds are available, for 
+\medskip
+\noindent
+\haskellinline{Pay p1 p2 v t k} makes it possible, assuming that sufficient funds are available, for 
 \haskellinline{p1} to claim  a payment of \haskellinline{v} from \haskellinline{p2} before the timeout 
 \haskellinline{t}. The contract continues as \haskellinline{k}. 
 
-\smallskip
 \begin{haskellcode}
 step inp st c@(Pay idpay from to val expi con) os
   | expired (blockNumber os) expi = (st, con, [ExpiredPay idpay from to cval])
@@ -473,8 +472,6 @@ step inp st c@(Pay idpay from to val expi con) os
         Just claimed_val -> claimed_val == cval
         Nothing -> False
 \end{haskellcode}
-\smallskip
-
 By `available' we mean that sufficient commitments have 
 been made and  not yet expired to cover the payment; in this case the payment  uses the currency allocated by the cash 
 commitments made by \haskellinline{p1} that expire the earliest.
@@ -482,9 +479,9 @@ commitments made by \haskellinline{p1} that expire the earliest.
 This contract will result in a \haskellinline{FailedPay} action if the funds are not available; otherwise a 
 \haskellinline{SuccessfulPay} action is generated.
 
-\item \haskellinline{Both k1 k2} enforces the behaviour of both contracts \haskellinline{k1} and \haskellinline{k2}. 
-
-\smallskip
+\medskip
+\noindent
+\haskellinline{Both k1 k2} enforces the behaviour of both contracts \haskellinline{k1} and \haskellinline{k2}. 
 \begin{haskellcode}
 step comms st (Both con1 con2) os =
     (st2, result, ac1 ++ ac2)
@@ -495,41 +492,37 @@ step comms st (Both con1 con2) os =
         (st1,res1,ac1) = step comms st con1 os
         (st2,res2,ac2) = step comms st1 con2 os
 \end{haskellcode}
-\smallskip
-
 Because the model is stateful and produces output actions, to make a step, it is necessary to execute a single step of 
 each of  the contracts \haskellinline{k1} and \haskellinline{k2} in sequence: first \haskellinline{k1} then 
 \haskellinline{k2}.
 
-\item \haskellinline{Choice obs k1 k2} behaves as either \haskellinline{k1} or \haskellinline{k2} depending on the 
+\medskip
+\noindent
+\haskellinline{Choice obs k1 k2} behaves as either \haskellinline{k1} or \haskellinline{k2} depending on the 
 (Boolean) result of \haskellinline{obs} at the time that the observation is made, \haskellinline{k1} if it is 
 \haskellinline{True} and \haskellinline{k2} if \haskellinline{False}.
 
-\smallskip
 \begin{haskellcode}
 step _ st (Choice obs conT conF) os =
     if interpretObs st obs os
         then (st,conT,[])
         else (st,conF,[])
 \end{haskellcode}
-\smallskip
 
-\item \haskellinline{When obs timeout k def_k} This contract will not progress until \haskellinline{obs} is 
+\medskip
+\noindent
+\haskellinline{When obs timeout k def_k} This contract will not progress until \haskellinline{obs} is 
 \haskellinline{True} or until the current block number is greater than or equal to the one specified by timeout. In case 
 the timeout applies, the contract will continue as \haskellinline{def_k}, if the timeout does not apply and 
 \haskellinline{obs} is \haskellinline{True}, then the contract continues as \haskellinline{k}. Otherwise the contract is 
 quiescent.
 
-\smallskip
 \begin{haskellcode}
 step _ st (When obs expi con con2) os
   | expired (blockNumber os) expi = (st,con2,[])
   | interpretObs st obs os = (st,con,[])
   | otherwise = (st, When obs expi con con2, [])
   \end{haskellcode}
-\smallskip
-
-\end{itemize}
 We look next at an example of Marlowe in action.
 
 

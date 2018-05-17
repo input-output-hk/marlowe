@@ -204,75 +204,6 @@ Section \ref{section:reflection} reflects on the system design, and observes som
 
 
 
-\section{Design rationale}
-\label{section:design}
-
-\medskip
-\noindent
-In this section, we look at existing work on smart contracts and blockchains in general, before exploring the rationale 
-for building the Marlowe language.
-
-
-
-
-\subsection{Blockchain platforms: Cardano and others}
-
-There is not a single model of how a blockchain operates, and in this section we look at some of the tradeoffs possible 
-in this space. This allows us to give a context to some of the design decisions taken in designing Marlowe.  
-
-\paragraph{UTxO and accounts}
-
-The simplest blockchain is Bitcoin. Transactions on Bitcoin are made by spending the (as yet) unspent outputs of 
-previous transactions (`unspent transaction outputs' or UTxOs). The chain need not maintain any state, such as the 
-current value owned by any particular participant: such \emph{account} information is implicit and external to the 
-Bitcoin blockchain. On the other hand, the Ethereum model explicitly keeps track of account values, and so this 
-information needs to be kept as state information on chain. While it is possible to translate between UTxO-based and 
-account-based chains \sjtnote{cite Bruno paper} the UTxO model is more fundamental, and requires less support from the 
-implementation of the chain itself.
-
-\paragraph{Interaction modality}
-
-Contracts can be conceived of as acting in two ways. In a \emph{push} model, contracts are seen to be pro-active, and to 
-make things happen. In the case of blockchain, this would include making payments or transactions happen. 
-Alternatively, in the \emph{pull} model, contracts enable certain things to happen, such as transactions, but the 
-transactions need to be effected by an external actor. The pull model makes fewer demands on the blockchain 
-implementation than the push model, which requires the contract to be triggered automatically.
-
-\paragraph{Layered design and sidechains}
-
-Some chains have a layered design, in particular Cardano~\cite{cardano}. The Cardano Settlement Layer (SL) is to 
-support settlement of transactions but nothing more complicated, whereas the Computation Layer (or CL) supports more 
-powerful general computations over the chain. Moreover, the Cardano roadmap~\cite{cardano-rationale} envisages the 
-possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which 
-may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually 
-Bitcoin) and the channels of \ae{}ternity, introduced below.
-
-\subsection{Designing Marlowe}
-
-In designing Marlowe, we have chosen a number of options; this description applies to Marlowe version 1.3. 
-
-\paragraph{Pull} 
-
-While earlier versions used a ``push'' model of operations, we have revised the language to give a ``pull'' semantics. 
-This means, for example, that the language can \emph{enable} a payment to be made, but cannot make the payment happen. 
-It is up to the interested party (or parties) to make the change happen. It is therefore possible for the payment not to 
-happen, despite the fact that this is against the interest of the receiving party.
-
-
-\paragraph{UTxO vs.\ accounts}
-
-The language semantics is described in terms of \emph{commitments} of sums of cryptocurrency -- which we choose to 
-abbreviate to ``cash'' or ``money'' -- and so is agnostic of the underlying implementation.  However, the current 
-redemption mechanism in Plutus Core is not strong enough to support Marlowe, and we are actively investigating the best 
-way to extend this mechanism to implement Marlowe in full on Plutus Core.
-
-\paragraph{DSL or EDSL?}
-
-Marlowe is described as an algebraic \haskellinline{data} type in Haskell, and as such can be seen as a simple EDSL. 
-Note, however, that the implementation presented here is for the purposes of presenting the semantics and behaviour of 
-the language in the abstract. The implementation on the Cardano platform could be stand-alone, but more likely it will 
-be a DSL embedded in Plutus or Plutus Core. The details of this remain to be decided, as noted in the introduction.
-
 \begin{figure}[t]
 \begin{center}
 \includegraphics[width=0.6\textwidth]{pix/context.png}
@@ -286,10 +217,10 @@ be a DSL embedded in Plutus or Plutus Core. The details of this remain to be dec
 \label{section:model}
 
 The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
-We start by looking at the different types used by the model, then we look at the \haskellinline{Contract} DSL itself, 
-and finally we give its semantics in Haskell. Section \ref{section:example-saving} gives an example of Marlowe in 
-action, and Section
-\ref{section:example-escrow} shows the advantage of seeing Marlowe as a DSL embedded in Haskell.
+We start by looking at the different types used by the model, and the assumptions about the infrastructure in which contracts will be run. We then we look at the \haskellinline{Contract} DSL itself, 
+and finally we give its semantics in Haskell. Section 
+%\ref{section:example-saving} gives an example of Marlowe in action, and Section
+\ref{section:example-escrow} revisits the ``escrow'' example using the embedding of Marlowe as a DSL in Haskell.
 
 \subsection{The model types}
 
@@ -300,32 +231,42 @@ A running contract interacts with its environment in two ways, as in Figure \ref
 
 First, it will need to observe different kinds of varying quantities including, for example, the current time, the 
 current block number and, random numbers, as well as ``real world'' quantities like ``the price of oil'' or ``the 
-exchange rate between currencies A and B''. Each instance of such an observable will be recorded on the blockchain to 
-allow the computation to be repeated for verification purposes. It is assumed that at each step of the execution of the 
-contract, the values of some observables will be needed, and these values are (together) given by a value of type 
-\haskellinline{OS}. Note that these values are not determined by the participants in the contract, but rather by the 
-external environment.
+exchange rate between currencies A and B''. 
+As the examples illustrate, observables come both from aspects of the blockchain (e.g.\ the current block number) and 
+externally. In the latter case it will be necessary to agree a trusted oracle or beacon giving the value.
 
-As the examples illustrate, observables come both from aspects of the blockchain (e.g.\ current block number) and 
-externally. In the latter case it will be necessary to agree a trusted oracle or beacon giving the value, which can then 
-be stored (or a hash stored) on chain.
 
-\paragraph{Inputs}
+Each instance of such an observable will be observed at a particular time and in a particular context. We assume that the system infrastructure ensures that these values are recorded on the blockchain to 
+allow the computation to be repeated for verification purposes. 
+
+
+It is assumed that at each step of the execution of the 
+contract, the values of observables will be available if needed, and these values are (together) given by a value of type 
+\haskellinline{OS} (for ``observable set''), where individual observations are described in a 
+``little language'' for that purpose: \haskellinline{Observation}. 
+Note that these values are not determined by the participants in the contract, but rather by the 
+external environment in which the contract is run.
+
+ 
+
+\paragraph{Inputs and Commitments}
 
 
 On the other hand, at each step there are -- potentially, at least -- a variety of inputs available from the 
-participants. These include commitments of currency (or ``cash''), redemption of commitments, and claims of payments by 
-a participant; moreover it is also possible for a participant to input an arbitrary value (which we term a ``choice''). 
+participants themsleves. These include commitments of currency (or ``cash''), redemption of commitments, and claims of payments by 
+a participant. <oreover it is also possible for a participant to input an arbitrary value (which we term a ``choice''). 
 The particular inputs at a given step are described by a value of type \haskellinline{Input}.
 
-\paragraph{Commitments}
+%\paragraph{Commitments}
 
 
 While informally we might see a commitment to something as being indefinite, it is important to realise that on 
-blockchain a commitment needs to have a timeout so that progress can be forced in a game. After the timeout period the 
+blockchain a commitment needs to have a timeout so that progress can be forced in a contract. After the timeout period the 
 cash can be refunded through the user creating a transaction to reclaim the cash.
-Information about the commitments currently in force forms the \haskellinline{State}, which is (potentially) modified 
+Information about the commitments currently in force forms the \haskellinline{State}, which can be  modified 
 at each execution step. 
+
+\paragraph{Actions}
 
 Payments can be granted by using committed money, but they must be manually redeemed by the recipient, in the 
 same way that cash commitments are redeemed when they expire. The effects of the contract in the blockchain are 
@@ -340,41 +281,24 @@ the semantics.
 \end{center}
 \end{figure}
 
-\paragraph{The \haskellinline{step} function}
-
-
-This analysis justifies the type of the \haskellinline{step} function:
-
-\begin{haskellcode}
-step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
-\end{haskellcode}
-
-which is also shown in Figure \ref{fig:step-function}.
-
 \paragraph{Infrastructure}
 
 The model makes a number of assumptions about the blockchain infrastructure in which it is run.
 
 \begin{itemize}
 \item It is assumed that cryptographic functions and operations are provided by a layer external to the system, and so 
-they need not be modelled explicitly here.
-\item We assume that time is ``coarse grained'' and measured simply by block number, so that timeouts etc.\ are 
-delimited using nothing finer than block number. 
-\item Because we assume a ``pull'' model, making a commitment is not something that a contract can perform; rather, it 
-can enable that a commitment is made, but that then has to be established externally: hence the input of (a set of) 
-commitments at each step. The same observation also applies to redeeming a commitment of cash. Commitments that have 
-been made or redeemed need to be recorded somehow.
-
-\item Observables are observed at a particular time and in a particular context. We assume that the recording and 
-identification of each (instance of an) observation is provided by the infrastructure of the system. We provide a 
-``little language'' for describing observations: \haskellinline{Observation}. 
+they need not be modelled explicitly.
+\item We assume that time is ``coarse grained'' and measured by block number, so that in particular timeouts are 
+delimited using block numbers. 
+\item 
+Making a commitment is not something that a contract can perform; rather, it 
+can request that a commitment is made, but that then has to be established externally: hence the input of (a set of) 
+commitments at each step.
 \item
-Similar properties are true for
-\haskellinline{Money} amounts: their values are calculated depending on the inputs and state of execution of the 
-contract, they can be deterministically established given the context, and they are described through a small 
+IS THIS NEEDED???
+Amounts of \haskellinline{Money} amounts can be calculated depending on the inputs and state of execution of the 
+contract. They can be deterministically established given the context, and they are described through a small 
 ``expression language''.
-\item It is important to be aware that there may be different instances of contracts executed, and for each instance 
-there will typically be different instances of observables (and commitments) observed and recorded.
 \item The model manages the release of funds back to the committer when a cash commitment expires (see discussion of 
 the \haskellinline{stepBlock} function below).
 \end{itemize}
@@ -399,6 +323,18 @@ data Contract =
 %chosen no to make it part of the language itself.}
 
 \subsection{The \haskellinline{step} function}
+
+
+
+The \haskellinline{step} function represents a \emph{single computation step} and has this type:
+
+\begin{haskellcode}
+step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
+\end{haskellcode}
+
+which is also shown in Figure \ref{fig:step-function}.
+
+
 
 
 The \haskellinline{step} function is total, so that for every contract a result of stepping is defined. However, for 
@@ -579,6 +515,8 @@ step _ st (When obs expi con con2) os
 \end{itemize}
 We look next at an example of Marlowe in action.
 
+
+
 \ignore{ % begin ignore
 
 \section{Incentivised saving}
@@ -663,6 +601,77 @@ CommitCash (IdentCC 1) 1
 \end{haskellcode}
 
 In the next section, we look at how to take advantage of Haskell embedding when implementing Marlowe contracts.
+
+
+
+\section{Design rationale}
+\label{section:design}
+
+\medskip
+\noindent
+In this section, we look at existing work on smart contracts and blockchains in general, before exploring the rationale 
+for building the Marlowe language.
+
+
+
+
+\subsection{Blockchain platforms: Cardano and others}
+
+There is not a single model of how a blockchain operates, and in this section we look at some of the tradeoffs possible 
+in this space. This allows us to give a context to some of the design decisions taken in designing Marlowe.  
+
+\paragraph{UTxO and accounts}
+
+The simplest blockchain is Bitcoin. Transactions on Bitcoin are made by spending the (as yet) unspent outputs of 
+previous transactions (`unspent transaction outputs' or UTxOs). The chain need not maintain any state, such as the 
+current value owned by any particular participant: such \emph{account} information is implicit and external to the 
+Bitcoin blockchain. On the other hand, the Ethereum model explicitly keeps track of account values, and so this 
+information needs to be kept as state information on chain. While it is possible to translate between UTxO-based and 
+account-based chains \sjtnote{cite Bruno paper} the UTxO model is more fundamental, and requires less support from the 
+implementation of the chain itself.
+
+\paragraph{Interaction modality}
+
+Contracts can be conceived of as acting in two ways. In a \emph{push} model, contracts are seen to be pro-active, and to 
+make things happen. In the case of blockchain, this would include making payments or transactions happen. 
+Alternatively, in the \emph{pull} model, contracts enable certain things to happen, such as transactions, but the 
+transactions need to be effected by an external actor. The pull model makes fewer demands on the blockchain 
+implementation than the push model, which requires the contract to be triggered automatically.
+
+\paragraph{Layered design and sidechains}
+
+Some chains have a layered design, in particular Cardano~\cite{cardano}. The Cardano Settlement Layer (SL) is to 
+support settlement of transactions but nothing more complicated, whereas the Computation Layer (or CL) supports more 
+powerful general computations over the chain. Moreover, the Cardano roadmap~\cite{cardano-rationale} envisages the 
+possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which 
+may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually 
+Bitcoin) and the channels of \ae{}ternity, introduced below.
+
+\subsection{Designing Marlowe}
+
+In designing Marlowe, we have chosen a number of options; this description applies to Marlowe version 1.3. 
+
+\paragraph{Pull} 
+
+While earlier versions used a ``push'' model of operations, we have revised the language to give a ``pull'' semantics. 
+This means, for example, that the language can \emph{enable} a payment to be made, but cannot make the payment happen. 
+It is up to the interested party (or parties) to make the change happen. It is therefore possible for the payment not to 
+happen, despite the fact that this is against the interest of the receiving party.
+
+
+\paragraph{UTxO vs.\ accounts}
+
+The language semantics is described in terms of \emph{commitments} of sums of cryptocurrency -- which we choose to 
+abbreviate to ``cash'' or ``money'' -- and so is agnostic of the underlying implementation.  However, the current 
+redemption mechanism in Plutus Core is not strong enough to support Marlowe, and we are actively investigating the best 
+way to extend this mechanism to implement Marlowe in full on Plutus Core.
+
+\paragraph{DSL or EDSL?}
+
+Marlowe is described as an algebraic \haskellinline{data} type in Haskell, and as such can be seen as a simple EDSL. 
+Note, however, that the implementation presented here is for the purposes of presenting the semantics and behaviour of 
+the language in the abstract. The implementation on the Cardano platform could be stand-alone, but more likely it will 
+be a DSL embedded in Plutus or Plutus Core. The details of this remain to be decided, as noted in the introduction.
 
 } % end ignore
 

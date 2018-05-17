@@ -525,7 +525,6 @@ step _ st (When obs expi con con2) os
 We look next at an example of Marlowe in action.
 
 
-
 \ignore{ % begin ignore
 
 \section{Incentivised saving}
@@ -610,6 +609,7 @@ CommitCash (IdentCC 1) 1
 \end{haskellcode}
 
 In the next section, we look at how to take advantage of Haskell embedding when implementing Marlowe contracts.
+
 
 
 
@@ -813,8 +813,9 @@ we have developed Meadow, a web tool that supports the interactive construction,
 edition, and simulation of smart-contracts written in Marlowe. The
 tool is publicly available in the url: \url{https://input-output-hk.github.io/scdsl/}.
 In Figure~\ref{fig:full-screenshot-demo}, we provide a screenshot
-of Meadow in the middle of simulating the execution of the ``incentivised
-saving'' contract described in Section~\ref{section:example-saving}.
+of Meadow in the middle of simulating the execution of the ``deposit incentive'' contract available
+in the GitHub repository (in the file: \texttt{src/DepositIncentive.hs}) and in the examples section of Meadow (on the 
+bottom right part).
 
 Meadow has been mainly written in Haskell and compiled to JavaScript
 partially by the Haste compiler~\cite{Haste} and partially by GHCJS \cite{GHCJS};
@@ -852,7 +853,7 @@ its contents in memory, even while the compilation and execution process is bein
 \includegraphics[width=1.1\textwidth]{pix/screenshot1}
 \par\end{centering}
 \caption{\label{fig:full-screenshot-demo}Screenshot of Meadow tool
-simulating the incentivised deposit contract.}
+simulating the ``deposit incentive'' contract.}
 \vspace*{-8mm}
 \end{figure}
 

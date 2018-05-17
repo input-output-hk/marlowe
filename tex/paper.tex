@@ -136,7 +136,7 @@ Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains. This work 
 supported by IOHK,~\url{https://iohk.io}.
 
 In doing this, we are required to refine the model of contracts in a number of ways in order to fit with a radically 
-different context. Let us consider the following example of an ``escrow'' contract so that we can explain the motivation 
+different context. Consider the following example of an ``escrow'' contract so that we can explain the motivation 
 more concretely. The aim of this contract, written in functional pseudocode in the style of~\cite{PeytonJones:2000} 
 involves three participants \haskellinline{1}, \haskellinline{2} and \haskellinline{3}. Participant \haskellinline{1} is 
 to pay an amount of money to participant \haskellinline{2} on receipt of goods from her. Participant \haskellinline{1} 
@@ -157,31 +157,39 @@ participants opt to \haskellinline{refund} the money to \haskellinline{1}, that 
 
 In the traditional model, enforcement of the contract is the responsibility of the legal system. If participant 
 \haskellinline{1} does not pay the money into escrow, or participant \haskellinline{3} chooses to keep it for herself, 
-then we can assume that they can be sued for the money and probably damages on top, thus providing both legal and 
+then they can be sued for the money (and probably damages), thus providing both legal and 
 financial incentives for compliance. On the other hand, in the decentralised blockchain model, where there is no central 
-authority, the contract needs to be enforced by design. 
+authority, the contract needs to be enforced \emph{by design}. 
 
-This means that we require participants to commit money to cover all possible expenditure \emph{in advance of the 
+This means that we require participants to \emph{commit} money to cover all possible expenditure \emph{in advance of the 
 contract executing}. In order to make sure that participants continue to engage with a contract, we ensure urgency by 
-imposing timeouts: money is committed for a finite period, for example, and when waiting for a participant to make a 
-commitment we also impose a timeout to ensure that the contract does not become stuck even if one or more of the 
-participants stop interacting with it. We revisit this example in Section~\ref{section:example-escrow} where we show how 
-commitments, timeouts and other features of Marlowe are used to describe this as a self-enforcing contract ``on the 
-blockchain''.
+imposing \emph{timeouts}: money is committed for a finite period only. We also impose a timeout when  waiting for a participant to make a 
+commitment to ensure that the contract does not become stuck even if one of the 
+participants stops interacting with it. We discuss this particular example in more detail in Marlowe in Section~\ref{section:example-escrow} below.
 
-Moreover, there is not a single blockchain model, and we give a brief overview of the different mechanisms for 
-scripting on blockchain (although this is not the primary purpose of this article). 
-A particularly important technical distinction here is that between an account-style model as used by 
-Ethereum~\cite{EthereumRationale}, and the unspent transaction output (UTxO) model of bitcoin~\cite{sok}. 
-There is also the question of how precisely the execution of the contract interacts with the blockchain, and how 
-information is to be recorded on the chain. Finally, should the execution ``push'' for changes  to happen, or do 
-external actors have to ``pull'' to effect changes enabled by execution of the contract?
+We make the following contributions in this paper.
+\begin{itemize}
+\item
+The design of the Marlowe language as a Haskell data type; Marlowe is made more expressible through its embedding in Haskell.
+\item
+An executable, small-step semantics of Marlowe in Haskell.
+\item
+The Meadow tool that allows users to simulate the operation of Marlowe contracts, including ``embedded'' contracts that use features of Haskell. 
+\end{itemize}
 
-The paper describes version 1.3 of Marlowe, and it should be seen as a work in progress. We have designed it to provide 
-financial contracts in Cardano, but also in order to start to answer the twin questions of what smart contracts will 
-look like in Cardano, and how those contracts will be implemented in the overall system.
+%Moreover, there is not a single blockchain model, and we give a brief overview of the different mechanisms for 
+%scripting on blockchain (although this is not the primary purpose of this article). 
+%A particularly important technical distinction here is that between an account-style model as used by 
+%Ethereum~\cite{EthereumRationale}, and the unspent transaction output (UTxO) model of bitcoin~\cite{sok}. 
+%There is also the question of how precisely the execution of the contract interacts with the blockchain, and how 
+%information is to be recorded on the chain. Finally, should the execution ``push'' for changes  to happen, or do 
+%external actors have to ``pull'' to effect changes enabled by execution of the contract?
+%
+%The paper describes version 1.3 of Marlowe, and it should be seen as a work in progress. We have designed it to provide 
+%financial contracts in Cardano, but also in order to start to answer the twin questions of what smart contracts will 
+%look like in Cardano, and how those contracts will be implemented in the overall system.
 
-The paper is structured like this: we begin in Section \ref{section:design} with a discussion of the design rationale 
+The paper is structured like this: REWRITE we begin in Section \ref{section:design} with a discussion of the design rationale 
 for Marlowe, including an overview of the various approaches to scripting in blockchain as well as the different designs 
 of the blockchains themselves. We conclude Section \ref{section:design} with a set of decisions about the blockchain 
 environment for Marlowe. The central part of the paper is Section \ref{section:model} where we introduce the Marlowe 
@@ -204,82 +212,7 @@ Section \ref{section:reflection} reflects on the system design, and observes som
 In this section, we look at existing work on smart contracts and blockchains in general, before exploring the rationale 
 for building the Marlowe language.
 
-\subsection{Smart contracts on blockchains}
 
-As more than one wag has observed, many of the programs that run on blockchains are neither smart nor indeed form 
-contracts in any real sense. Nonetheless, this terminology has stuck, and has become shorthand for ``programmed 
-interactions on the blockchain''. In an earlier paper, we presented a survey of the approaches 
-available~\cite{cryptoeprint:2016:1156}; we give an overview here.
-
-Blockchains are executed in a replicated form by parties who cannot be guaranteed not to be hostile, either by directly 
-trying to change the contents of the chain, or through trying to affect other properties of the chain by indirect means 
-(such as swamping honest parties with work). Programming on the blockchain therefore needs to be constrained in some 
-ways, since it has to be amenable to replication or verification within a reasonable time if the security and integrity 
-of the chain are to be preserved. We look at representatives of the main approaches now.
-
-\paragraph{Bitcoin script}
-
-One approach to this is to choose mechanisms such as bitcoin script~\cite{BitcoinWikiScript} which are manifestly 
-non-Turing complete. A bitcoin script, written in a Forth-like language, is essentially linear: it can branch, but the 
-language contains neither looping constructs nor recursion. It is therefore straightforward not only to see that scripts 
-will terminate, but also to give an accurate estimate of the time taken to execute a script. 
-
-\paragraph{Ethereum}
-
-On the other hand, the Ethereum system~\cite{wood2014ethereum} provides a Turing-complete language for the EVM virtual 
-machine, and a higher-level programming language, Solidity, that compiles into EVM code. However, EVM and Solidity 
-programs are constrained \emph{post hoc} by two mechanisms: program execution must be paid for using `gas' proportional 
-to the effort expended, and a set of \emph{ad hoc} limits on program execution, e.g.\ on stack size.
-
-\paragraph{Nxt}
-
-In Nxt~\cite{Nxt}, programmability of the system is provided through a ``fat'' high-level 
-API, which is accessible from Nxt clients through a REST interface. The API provides functionality supporting various 
-kinds of transactions. The core software itself does not support any form of scripting language; rather, users are 
-expected to work with the built in transaction types and transactions that support some 250 primitive operations; these 
-can be ``scripted'' in a client (only) using a binding to the API, which is available, for instance, in JavaScript.
-
-\paragraph{Multiple languages}
-
-A common feature of many blockchain platforms is that they provide multiple scripting languages. As we noted earlier, 
-Ethereum can be programmed at the EVM level as well as by using the high-level Solidity language. 
-Tezos~\cite{tezos-white-paper} supports the stack-based, strongly-typed, functional language Michelson, but also 
-provides a high-level language, Liquidity, that compiles into Michelson. Liquidity is also functional and strongly 
-typed, but provides more constructs in a more familiar syntax, namely that of a subset of OCaml. 
-
-The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs~\cite{Stenman-CODE-BEAM}: the functional language  Sophia (akin to 
-Reason) and the Functional Typed Warded Virtual Machine (FTWVM) for safe ``system level programming'', the language 
-Varna and the HLM for simple contracts, and a (port of) Solidity and the EVM for compatibility with Ethereum. In a 
-similar way, Cardano provides support for IELE~\cite{IELE}, a rational reconstruction of the EVM, and thus for Solidity 
-contracts too. 
-
-\paragraph{Domain-specific languages} 
-
-A domain-specific language or DSL is a high-level language designed to work in a specific field or domain. The intention 
-is that because the users will know about the field, the constructs of the language can be designed to be meaningful to 
-them, and also that, because of its nature, the DSL need not include all the features of a general purpose language. 
-Removing this clutter and having the remaining operations directly reflect the application area is intended to make the 
-language more accessible to domain experts who do not necessarily see themselves as programmers.
-
-Stand-alone DSLs have the advantage of providing appropriate, domain-level error messages when things go wrong, but 
-suffer the disadvantage of having to be implemented from scratch. An alternative to this are \emph{embedded} DSLs 
-(EDSLs), which provide a ``little language'' for the particular domain embedded within a general-purpose host language. 
-This means that parts of the host -- such as arithmetical expressions, or list idioms --  can be used to extend the 
-expressibility of the DSL. A notable example of this is the financial contracts language described by Peyton Jones and 
-his collaborators~\cite{PeytonJones:2000}, which is embedded in Haskell.
-
-\paragraph{Other approaches}
-
-There are a variety of other approaches to scripting, including business process notations, such as the OMG's BPMN; 
-process calculi such as Rholang; logic rules (in Formal Contract Logic), and finite state machines. More details of 
-these are provided in~\cite{cryptoeprint:2016:1156}.
-
-\paragraph{Related work}
-
-The Findel project~\cite{findel} examines financial contracts on the Ethereum platform, based on the 
-seminal~\cite{PeytonJones:2000}, and the authors note that payments need to be bounded; this is made concrete in our 
-account by our notion of commitments. They take no account of commitments or timeouts as we do below, but it should be 
-noted that the Ethereum platform is more powerful than the one that we target in this paper.
 
 
 \subsection{Blockchain platforms: Cardano and others}
@@ -360,7 +293,7 @@ action, and Section
 
 \subsection{The model types}
 
-A running contract will interact with its environment in two ways, as shown in Figure \ref{fig:context}.
+A running contract interacts with its environment in two ways, as in Figure \ref{fig:context}.
 
 \paragraph{Observables}
 
@@ -916,7 +849,7 @@ which includes text fields to view and edit the current block number,
 the state of the contract, the current inputs, and the outputs from
 last block.
 
-\begin{figure}
+\begin{figure}[t]
 \centering{}\includegraphics[scale=0.5]{pix/detail2}\caption{\label{fig:detail-of-interface}Detail of the interface for 
 contract
 execution simulation.}
@@ -934,17 +867,17 @@ current inputs, state of the contract, block number, and remaining
 contract; and it provides them in a table with most of the parameters
 already filled in.
 \end{itemize}
-\begin{figure}
-\begin{centering}
-\includegraphics[scale=0.5]{pix/detail3}
-\par\end{centering}
-\caption{\label{fig:detail-of-manual-interface}Detail of the manual interface.}
-\end{figure}
-
-\begin{figure}
-\centering{}\includegraphics[scale=0.5]{pix/detail4}\caption{\label{fig:detail-of-smart-interface}Detail of the smart 
-interface.}
-\end{figure}
+%\begin{figure}
+%\begin{centering}
+%\includegraphics[scale=0.5]{pix/detail3}
+%\par\end{centering}
+%\caption{\label{fig:detail-of-manual-interface}Detail of the manual interface.}
+%\end{figure}
+%
+%\begin{figure}
+%\centering{}\includegraphics[scale=0.5]{pix/detail4}\caption{\label{fig:detail-of-smart-interface}Detail of the smart 
+%interface.}
+%\end{figure}
 
 The smart interface is usually more convenient to use than the manual
 interface since the later provides between 3 and 4 fields for each
@@ -1184,6 +1117,79 @@ we expect Marlowe to be embedded in Plutus (Core) and so to be able to use the f
 The implementation may split contract execution between the main chain and a sidechain (or chains). This will allow 
 links from Marlowe to work on securing multiparty sidechain games/contracts (MPCs).
 
+\section{Related work}
+
+
+Blockchains are executed in a replicated form by parties who cannot be guaranteed not to be hostile, either by directly 
+trying to change the contents of the chain, or through trying to affect other properties of the chain by indirect means 
+(such as swamping honest parties with work). Programming on the blockchain therefore needs to be constrained in some 
+ways, since it has to be amenable to replication or verification within a reasonable time if the security and integrity 
+of the chain are to be preserved. We look at representatives of the main approaches now; we discuss some of these in more detail in an earlier paper~\cite{cryptoeprint:2016:1156}.
+
+\paragraph{Bitcoin script}
+
+One approach to this is to choose mechanisms such as bitcoin script~\cite{BitcoinWikiScript} which are manifestly 
+non-Turing complete. A bitcoin script, written in a Forth-like language, is essentially linear: it can branch, but the 
+language contains neither looping constructs nor recursion. It is therefore straightforward not only to see that scripts 
+will terminate, but also to give an accurate estimate of the time taken to execute a script. 
+
+\paragraph{Ethereum}
+
+On the other hand, the Ethereum system~\cite{wood2014ethereum} provides a Turing-complete language for the EVM virtual 
+machine, and a higher-level programming language, Solidity, that compiles into EVM code. However, EVM and Solidity 
+programs are constrained \emph{post hoc} by two mechanisms: program execution must be paid for using `gas' proportional 
+to the effort expended, and a set of \emph{ad hoc} limits on program execution, e.g.\ on stack size.
+
+\paragraph{Nxt}
+
+In Nxt~\cite{Nxt}, programmability of the system is provided through a ``fat'' high-level 
+API, which is accessible from Nxt clients through a REST interface. The API provides functionality supporting various 
+kinds of transactions. The core software itself does not support any form of scripting language; rather, users are 
+expected to work with the built in transaction types and transactions that support some 250 primitive operations; these 
+can be ``scripted'' in a client (only) using a binding to the API, which is available, for instance, in JavaScript.
+
+\paragraph{Multiple languages}
+
+A common feature of many blockchain platforms is that they provide multiple scripting languages. As we noted earlier, 
+Ethereum can be programmed at the EVM level as well as by using the high-level Solidity language. 
+Tezos~\cite{tezos-white-paper} supports the stack-based, strongly-typed, functional language Michelson, but also 
+provides a high-level language, Liquidity, that compiles into Michelson. Liquidity is also functional and strongly 
+typed, but provides more constructs in a more familiar syntax, namely that of a subset of OCaml. 
+
+The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs~\cite{Stenman-CODE-BEAM}: the functional language  Sophia (akin to 
+Reason) and the Functional Typed Warded Virtual Machine (FTWVM) for safe ``system level programming'', the language 
+Varna and the HLM for simple contracts, and a (port of) Solidity and the EVM for compatibility with Ethereum. In a 
+similar way, Cardano provides support for IELE~\cite{IELE}, a rational reconstruction of the EVM, and thus for Solidity 
+contracts too. 
+
+\paragraph{Domain-specific languages} 
+
+A domain-specific language or DSL is a high-level language designed to work in a specific field or domain. The intention 
+is that because the users will know about the field, the constructs of the language can be designed to be meaningful to 
+them, and also that, because of its nature, the DSL need not include all the features of a general purpose language. 
+Removing this clutter and having the remaining operations directly reflect the application area is intended to make the 
+language more accessible to domain experts who do not necessarily see themselves as programmers.
+
+Stand-alone DSLs have the advantage of providing appropriate, domain-level error messages when things go wrong, but 
+suffer the disadvantage of having to be implemented from scratch. An alternative to this are \emph{embedded} DSLs 
+(EDSLs), which provide a ``little language'' for the particular domain embedded within a general-purpose host language. 
+This means that parts of the host -- such as arithmetical expressions, or list idioms --  can be used to extend the 
+expressibility of the DSL. A notable example of this is the financial contracts language described by Peyton Jones and 
+his collaborators~\cite{PeytonJones:2000}, which is embedded in Haskell.
+
+\paragraph{Other approaches}
+
+There are a variety of other approaches to scripting, including business process notations, such as the OMG's BPMN; 
+process calculi such as Rholang; logic rules (in Formal Contract Logic), and finite state machines. More details of 
+these are provided in~\cite{cryptoeprint:2016:1156}.
+
+\paragraph{Findel}
+
+The Findel project~\cite{findel} examines financial contracts on the Ethereum platform, based on the 
+seminal~\cite{PeytonJones:2000}, and the authors note that payments need to be bounded; this is made concrete in our 
+account by our notion of commitments. They take no account of commitments or timeouts as we do below, but it should be 
+noted that the Ethereum platform is more powerful than the one that we target in this paper.
+
 
 \section{Next steps}
 \label{section:next-steps}
@@ -1229,7 +1235,7 @@ definition, as well as formalise proofs of important properties, based on analys
 
 \section{Acknowledgements}
 
-Thanks to IOHK staff Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiayias, % Darryl McAdams, 
+Thanks to Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiayias, % Darryl McAdams, 
 Bruno Woltzenlogel Paleo, Rebecca Valentine and Phil Wadler for their collaboration, and to colleagues from the Universities of 
 Kent and Leicester for their comments on previous presentations of this work.
 

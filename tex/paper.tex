@@ -65,6 +65,7 @@
 \definecolor{myblue}{rgb}{0.2, 0.3, 1.0}
 \newcommand{\bluett}[1]{\textcolor{myblue}{\texttt{#1}}}
 \newenvironment{allbluett}{\begin{alltt}\color{myblue}}{\end{alltt}}
+\newcommand{\ignore}[1]{} % for commenting out large portions, surround by \ignore{ and }
 
 \setlength{\itemsep}{2pt}
 
@@ -185,8 +186,9 @@ for Marlowe, including an overview of the various approaches to scripting in blo
 of the blockchains themselves. We conclude Section \ref{section:design} with a set of decisions about the blockchain 
 environment for Marlowe. The central part of the paper is Section \ref{section:model} where we introduce the Marlowe 
 model, including the assumptions made in designing it, the types of the principal functions and a description of the DSL 
-as an algebraic type, constructor by constructor. Section \ref{section:example-saving} presents an example of a larger 
-Marlowe contract, for incentivised saving. Section \ref{section:example-escrow} revisits the escrow example, and shows 
+as an algebraic type, constructor by constructor. 
+%Section \ref{section:example-saving} presents an example of a larger Marlowe contract, for incentivised saving. 
+Section \ref{section:example-escrow} revisits the escrow example, and shows 
 how it is described using a combination of Marlowe and Haskell constructs: that is, we use Marlowe as an embedded DSL. 
 Section \ref{section:tool} introduces Meadow, our tool for visualising and interacting with Marlowe contracts.
 Section \ref{section:reflection} reflects on the system design, and observes some alternative designs and Section 
@@ -341,7 +343,7 @@ be a DSL embedded in Plutus or Plutus Core. The details of this remain to be dec
 \begin{figure}[t]
 \begin{center}
 \includegraphics[width=0.6\textwidth]{pix/context.png}
-\caption{The context for the contract}
+\caption{The context for a contract}
 \label{fig:context}
 \end{center}
 \end{figure}
@@ -644,6 +646,7 @@ step _ st (When obs expi con con2) os
 \end{itemize}
 We look next at an example of Marlowe in action.
 
+\ignore{ % begin ignore
 
 \section{Incentivised saving}
 \label{section:example-saving}
@@ -728,7 +731,9 @@ CommitCash (IdentCC 1) 1
 
 In the next section, we look at how to take advantage of Haskell embedding when implementing Marlowe contracts.
 
-\section{Marlowe as a DSL embedded in Haskell}
+} % end ignore
+
+\section{Marlowe as an embedded DSL in Haskell}
 \label{section:example-escrow}
 
 In this section, we revisit the escrow example that we discussed briefly in the introduction, and show how we can make 
@@ -871,13 +876,13 @@ instances of CodeMirror text editor \cite{CodeMirror}.
 
 Blockly's editor allows the user to visualise and edit
 smart-contracts as interlocking blocks that can be dragged and dropped
-like pieces of a jigsaw puzzle (see Figure~\ref{fig:detail-of-block}).
+like pieces of a jigsaw puzzle. % (see Figure~\ref{fig:detail-of-block}).
 Meadow also provides functionality to generate syntactically correct
 and formatted code (that is displayed in the upper right corner of the application),
 and to convert the code back to its block representation.
 
-Additionally, Meadow allows the user to use Meadow's Fay embedding from within the browser (see 
-Figure~\ref{fig:embedded-demo}). Meadow includes a pruned copy of the Fay compiler, bundled with its Prelude module, 
+Additionally, Meadow allows the user to use Meadow's Fay embedding from within the browser. % (see Figure~\ref{fig:embedded-demo}). 
+Meadow includes a pruned copy of the Fay compiler, bundled with its Prelude module, 
 its foreign interface, and a module with the definitions of the Marlowe primitives and a function to pretty-print 
 Marlowe contracts. This allows the user to compile and execute, inside the browser, Fay
 code that generates and prints a Meadow contract. When the user opens the embedded editor, the current Marlowe contract 
@@ -892,18 +897,18 @@ to Blockly, and their execution can be simulated. The embedded editor also allow
 file in their computers, to load code from a file in their computers, and to temporarily hide the editor while keeping 
 its contents in memory, even while the compilation and execution process is being carried out in the background.
 
-\begin{figure}
+\begin{figure}[t]
 \begin{centering}
-\includegraphics[width=1\textwidth]{pix/screenshot1}
+\includegraphics[width=1.1\textwidth]{pix/screenshot1}
 \par\end{centering}
 \caption{\label{fig:full-screenshot-demo}Screenshot of Meadow tool
 simulating the incentivised deposit contract.}
 \end{figure}
 
-\begin{figure}
-\centering{}\includegraphics[scale=0.5]{pix/detail1}\caption{\label{fig:detail-of-block}Detail of five interlocked 
-blocks.}
-\end{figure}
+%\begin{figure}
+%\centering{}\includegraphics[scale=0.5]{pix/detail1}\caption{\label{fig:detail-of-block}Detail of five interlocked 
+%blocks.}
+%\end{figure}
 
 The execution of complete contracts can be simulated block by block
 by using the panel on the right (see Figure~\ref{fig:detail-of-interface}),
@@ -947,12 +952,12 @@ operation whereas the former ``guesses'' the possible intentions
 of the user and usually can input new operations with a single click 
 (except for choices, which still may require the user to input a number).
 
-\begin{figure}
-\begin{centering}
-\includegraphics[width=1\textwidth]{pix/embedded.png}
-\par\end{centering}
-\caption{\label{fig:embedded-demo}Screenshot of Meadow's embedded Fay editor.}
-\end{figure}
+%\begin{figure}
+%\begin{centering}
+%\includegraphics[width=1\textwidth]{pix/embedded.png}
+%\par\end{centering}
+%\caption{\label{fig:embedded-demo}Screenshot of Meadow's embedded Fay editor.}
+%\end{figure}
 
 In the next section, we re-examine the model and the Marlowe language, looking at possible extensions, alternative 
 design decisions and ways in which we can formally analyse Marlowe contracts.
@@ -1224,8 +1229,8 @@ definition, as well as formalise proofs of important properties, based on analys
 
 \section{Acknowledgements}
 
-Thanks to IOHK staff Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiayias, Darryl 
-McAdams, Bruno Woltzenlogel Paleo, and Phil Wadler for their collaboration, and to colleagues from the Universities of 
+Thanks to IOHK staff Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiayias, % Darryl McAdams, 
+Bruno Woltzenlogel Paleo, Rebecca Valentine and Phil Wadler for their collaboration, and to colleagues from the Universities of 
 Kent and Leicester for their comments on previous presentations of this work.
 
 

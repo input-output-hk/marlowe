@@ -75,8 +75,7 @@
 %
 %
 % Title portion. Note the short title for running heads
-\title {Marlowe: financial contracts on blockchain\thanks{This work is a part of the Cardano project, and is
-supported by IOHK}}
+\title {Marlowe: financial contracts on blockchain}
 %
 %\titlerunning{Abbreviated paper title}
 % If the paper title is too long for the running head, you can set
@@ -89,7 +88,7 @@ supported by IOHK}}
 % First names are abbreviated in the running head.
 % If there are more than two authors, 'et al.' is used.
 %
-\institute{University of Kent, Canterbury, CT2 7NF, Kent (UK)}
+\institute{School of Computing, University of Kent, Canterbury, UK}
 \email{\{pl292,s.j.thompson\}@kent.ac.uk}
 
 
@@ -129,12 +128,11 @@ simplicity, and ease of analysis and use.
 
 
 
-This paper explores the design of a domain specific language, Marlowe,\footnote{Marlowe is named after Christopher 
-Marlowe, the Elizabethan poet, dramatist and spy, who was born and educated in Canterbury, which is also where our 
-university is based. \url{https://en.wikipedia.org/wiki/Christopher_Marlowe}}\footnote{The code for Marlowe is available 
+This paper explores the design of a domain specific language, Marlowe,\footnote{Named after Christopher 
+Marlowe, the Elizabethan poet, dramatist and spy, who was born and educated in Canterbury,  \url{en.wikipedia.org/wiki/Christopher_Marlowe}}\footnote{Marlowe is available 
 from \url{https://github.com/input-output-hk/scdsl}} targetted at the execution of financial contracts in the style of 
 Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains. This work is a part of the Cardano project, and is 
-supported by IOHK.\footnote{\url{https://iohk.io}}
+supported by IOHK,~\url{https://iohk.io}.
 
 In doing this, we are required to refine the model of contracts in a number of ways in order to fit with a radically 
 different context. Let us consider the following example of an ``escrow'' contract so that we can explain the motivation 
@@ -247,8 +245,7 @@ Tezos~\cite{tezos-white-paper} supports the stack-based, strongly-typed, functio
 provides a high-level language, Liquidity, that compiles into Michelson. Liquidity is also functional and strongly 
 typed, but provides more constructs in a more familiar syntax, namely that of a subset of OCaml. 
 
-The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs:\footnote{As presented by Erik Stenman at 
-CODE BEAM SF, March 2018, \url{https://www.youtube.com/watch?v=VXsqvfPIdWg}} the functional language  Sophia (akin to 
+The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs~\cite{Stenman-CODE-BEAM}: the functional language  Sophia (akin to 
 Reason) and the Functional Typed Warded Virtual Machine (FTWVM) for safe ``system level programming'', the language 
 Varna and the HLM for simple contracts, and a (port of) Solidity and the EVM for compatibility with Ethereum. In a 
 similar way, Cardano provides support for IELE~\cite{IELE}, a rational reconstruction of the EVM, and thus for Solidity 
@@ -1054,7 +1051,7 @@ The model outlined here raises a number of questions, or suggests a number of al
 The model does not take time as an observable, but rather it is defined in terms of \haskellinline{BlockNumber} only. 
 We could  use ``slot time'' instead: \emph{``We consider a setting where time is divided into discrete units called 
 slots. A ledger, described in more detail below, associates with each time slot (at most) one ledger 
-block.''}\footnote{\url{https://eprint.iacr.org/2016/889.pdf}}
+block.''}~\cite{Ouroboros}.
 
 \paragraph{Timelocks}
 

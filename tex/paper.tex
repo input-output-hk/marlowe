@@ -312,11 +312,6 @@ delimited using block numbers.
 Making a commitment is not something that a contract can perform; rather, it 
 can request that a commitment is made, but that then has to be established externally: hence the input of (a set of) 
 commitments at each step.
-\item
-IS THIS NEEDED???
-Amounts of \haskellinline{Money} amounts can be calculated depending on the inputs and state of execution of the 
-contract. They can be deterministically established given the context, and they are described through a small 
-``expression language''.
 \item The model manages the release of funds back to the committer when a cash commitment expires (see discussion of 
 the \haskellinline{stepBlock} function below).
 \end{itemize}

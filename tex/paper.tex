@@ -730,16 +730,18 @@ And an identifier for the payment:
 iP1 :: IdentPay
 iP1 = IdentPay 1
 \end{haskellcode}
-We can also create a sub-contract that allows the money to be redeemed by participant \haskellinline{1}:
+We can also create a sub-contract that allows the money from the commitment with identifier \haskellinline{IdentCC 1} to 
+be redeemed:
 \begin{haskellcode}
 redeem_original :: Contract
 redeem_original = RedeemCC iCC1 Null
 \end{haskellcode}
+Once redeemed, the contract continues as \haskellinline{Null} since we expect this to be the last thing that is done.
 Each participant has a say on who deserves the money: either participant \haskellinline{1} deserves a refund, which we 
 represent with the number $0$; or participant \haskellinline{2} deserves a payment, which we represent with the number 
 $1$. Because there is only one choice to make per participant, we use the same \haskellinline{IdentChoice} as their 
-participant id. We can define a function that returns an observation that is true if and only if the participant 
-\haskellinline{per} has chosen the number \haskellinline{c} as follows:
+participant id. We can define a function that returns an observation that is true if and only if
+\haskellinline{per} has chosen the number \haskellinline{c} for the choice \haskellinline{IdentChoice per} as follows:
 \begin{haskellcode}
 chose :: Int -> ConcreteChoice -> Observation
 chose per c = PersonChoseThis (IdentChoice per) per c
@@ -750,9 +752,9 @@ participants \haskellinline{per} and \haskellinline{per'} has chosen the number 
 one_chose :: Person -> Person -> ConcreteChoice -> Observation
 one_chose per per' val = (OrObs (chose per val) (chose per' val)) 
 \end{haskellcode}
-After that, we can write a function that returns an observation that is true if and only if at least 
-two of the three participants \haskellinline{p1}, \haskellinline{p2}, and \haskellinline{p3} have chosen the number 
-\haskellinline{c} as follows:
+Building on that, we can now write a function that returns an observation that is true if and only if at least 
+two out of the three participants \haskellinline{p1}, \haskellinline{p2}, and \haskellinline{p3} have agreed in 
+choosing the number \haskellinline{c} as follows:
 \begin{haskellcode}
 two_chose :: Person -> Person -> Person -> ConcreteChoice -> Observation
 two_chose p1 p2 p3 c = OrObs (AndObs (chose p1 c) (one_chose p2 p3 c))
@@ -778,18 +780,19 @@ block 10, with the promise that money will be released on block 100 if they are 
 
 The next primitive, \haskellinline{When}, waits for one of three things to happen:
 \begin{enumerate}
- \item Two out of three choose $0$, for `\haskellinline{pay}'. 
- \item Two out of three choose $1$, for `\haskellinline{refund}'.
- \item The block 90 is added to the blockchain.
+ \item The observation became true because two out of three have chosen $0$. 
+ \item The observation became true because two out of three have chosen $1$.
+ \item The observation remained false until 90 was published in the blockchain.
 \end{enumerate}
 
-If the third option happens first, the money is refunded. Otherwise, there is a \haskellinline{Choice} that will 
+If the third option happens, the money is refunded. Otherwise, there is a \haskellinline{Choice} that will 
 immediately refund the money to participant \haskellinline{1} unless two out of three chose option $1$; in the later 
 case, \haskellinline{Pay} will give participant \haskellinline{2} the opportunity to claim the funds available in 
-\haskellinline{iCC1} before block 100. If the funds are not claimed before block 100 they will also be refunded to 
+the commitment with identifier \haskellinline{iCC1} before block 100 (by using the identifier \haskellinline{iP1} for 
+the claim). If the funds are not claimed before block 100 they will also be refunded to 
 participant \haskellinline{1}.
 
-Reflecting on the example we can see that using Haskell definitions has made the contract substantially more 
+Reflecting on the example, we can see that using Haskell definitions has made the contract substantially more 
 comprehensible; it will also support more efficient operation, if we were to replace the repeated  expression 
 \haskellinline{two_chose 1 2 3 1} above by a \haskellinline{where} clause, 
 \begin{haskellcode}

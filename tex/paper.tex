@@ -102,8 +102,7 @@ exhibit behaviours of an unpredictable kind, and are also not easy to read or co
 
 An alternative solution is provided by domain-specific languages (DSLs), which are designed to express programs in a 
 particular field. This paper explores the design of one DSL, Marlowe, targeted at the execution of financial 
-contracts in the style of Peyton Jones \emph{et al} on blockchains. We have focused on predictability, enforceability, 
-simplicity, and ease of analysis and use.
+contracts in the style of Peyton Jones \emph{et al} on blockchains. We present an executable semantics of Marlowe in Haskell, an example of Marlowe in practice, and describe the Meadow tool that allows users to interact in-browser with simulations of Marlowe contracts.
 
 \end{abstract}
 
@@ -199,15 +198,8 @@ model, including the assumptions made in designing it, the types of the principa
 Section \ref{section:example-escrow} revisits the escrow example, and shows 
 how it is described using a combination of Marlowe and Haskell constructs: that is, we use Marlowe as an embedded DSL. 
 Section \ref{section:tool} introduces Meadow, our tool for visualising and interacting with Marlowe contracts.
-Section \ref{section:reflection} reflects on the system design, and observes some alternative designs and Section 
-\ref{section:next-steps} enumerates the next steps for the project.
-
-TO UPDATE \ldots we begin in Section \ref{section:design} with a discussion of the design rationale 
-for Marlowe, including an overview of the various approaches to scripting in blockchain as well as the different designs 
-of the blockchains themselves. We conclude Section \ref{section:design} with a set of decisions about the blockchain 
-environment for Marlowe. 
-
-
+Section \ref{sec:abstraction} reflects on the system design, showing how Marlowe can be supported on a variety of blockchains, and Section \ref{sec:compilation} explores how Marlowe can be implemented. Section \ref{sec:related} surveys related work and Section 
+\ref{section:next-steps} enumerates the next steps for the project after drawing some conclusions.
 
 \begin{figure}[t]
 \begin{center}
@@ -222,7 +214,7 @@ environment for Marlowe.
 \section{The Marlowe model}
 \label{section:model}
 
-The DSL is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
+The Marlowe domain-specific language (DSL) is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
 We start by looking at the different types used by the model, and the assumptions about the infrastructure in which contracts will be run. We then we look at the \haskellinline{Contract} DSL itself, 
 and finally we give its semantics in Haskell. Section 
 %\ref{section:example-saving} gives an example of Marlowe in action, and Section
@@ -841,33 +833,33 @@ design decisions and ways in which we can formally analyse Marlowe contracts.
 Marlowe is defined by its executable semantics, but to be deployed on blockchain it will have to be implemented on an existing distributed infrastructure.  We intend to deploy it on IOHK's Cardano infrastructure, but it can be implemented in other systems too, as we explain now.
 
 \subsection{Abstraction}
+\label{sec:abstraction}
 
-Marlowe abstracts away from a number of concrete details of how blockchains operate. In particular, it is agnostic between UTxO-based systems, such as Bitcoin and Cardano SL, and account-based models such as Ethereum. 
+Marlowe abstracts away from a number of concrete details of how blockchains operate. In particular, it is agnostic between UTxO-based systems, such as Bitcoin and Cardano SL, and account-based models such as Ethereum; it can be implemented on push or pull-based systems, and can be executed on or off-chain. 
 
 \paragraph{UTxO and accounts}
 
-The simplest blockchain is Bitcoin. Transactions on Bitcoin are made by spending the (as yet) unspent outputs of 
+Transactions on Bitcoin are made by spending the (as yet) unspent outputs of 
 previous transactions (`unspent transaction outputs' or UTxOs). The chain need not maintain any state, such as the 
 current value owned by any particular participant: such \emph{account} information is implicit and external to the 
-Bitcoin blockchain. On the other hand, the Ethereum model explicitly keeps track of account values, and so this 
-information needs to be kept as state information on chain. While it is possible to translate between UTxO-based and 
-account-based chains the UTxO model is more fundamental, and requires less support from the 
-implementation of the chain itself.
+Bitcoin blockchain. On the other hand, the Ethereum model explicitly keeps track of account values, and  this 
+information needs to be kept on chain. Of the two, the UTxO model is simpler and requires less support from the implementation of the chain itself.
 
 \paragraph{Interaction modality}
 
-Contracts can be conceived of as acting in two ways. In a \emph{push} model, contracts are seen to make things happen. In the case of blockchain, this would include making payments or transactions take plade. 
+Contracts can be conceived of as acting in two ways. In a \emph{push} model, contracts are seen to make things happen. In the case of blockchain, this would include making payments or transactions take place. 
 Alternatively, in a \emph{pull} model, contracts enable certain things, such as transactions,  to happen but the 
 transactions need to be effected by an external actor. The pull model makes fewer demands on the blockchain implementation than the push model.
 
 \paragraph{Layered design and sidechains}
 
 Some chains have a layered design, in particular Cardano~\cite{cardano}. The Cardano Settlement Layer (SL) is to support settlement of transactions but nothing more complicated, whereas the Computation Layer (or CL) supports more powerful general computations over the chain. Moreover, the Cardano roadmap~\cite{cardano-rationale} envisages the possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which 
-may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually Bitcoin) and the channels of \ae{}ternity, introduced below.
+may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually Bitcoin) and the channels of \ae{}ternity~\cite{aeternity}.
 
 
 
 \subsection{Compilation}
+\label{sec:compilation}
 
 We have designed Marlowe assuming that each contract would be compiled into
 \begin{itemize} 
@@ -875,13 +867,14 @@ We have designed Marlowe assuming that each contract would be compiled into
 \item a client side program or interface that has a limited number of choices to be made at each point in time (including an interface for the observables). 
 \end{itemize}
 The contracts implemented in the Marlowe language have an implicit interface defined for what would correspond to the client side of a distributed application, as shown by the interactive interface. 
-Of course, we probably do not want to give a user a programmatic interface but an actual application with user interface. So there is still some work to be done to create interfaces on top of the client side of the contracts.
+Of course, we probably do not want to give a user a programmatic interface but an actual application with user interface. 
+%So there is still some work to be done to create interfaces on top of the client side of the contracts.
 
 A contract written in Marlowe could also be potentially
-compiled to a smart-contract written in Ethereum. This could be done in two ways, it could be compiled so that an 
-smart-contract represents a single instance of the Marlowe contract (with a fixed set of participants), or 
-alternatively it would be possible to create a generic smart-contract with an extra ``instantiate'' operation that 
-sets-up a new Marlowe contract instance with a given set of participants (represented by a set of public keys).
+compiled to a smart-contract written in Ethereum. This could be done in two ways: it could be compiled so that a 
+smart contract represents a single instance of the Marlowe contract with a fixed set of participants; 
+alternatively it would be possible to create a generic contract with an extra ``instantiate'' operation that 
+sets up a new Marlowe contract instance with a given set of participants (set of public keys).
 
 \paragraph{Transactions}
 
@@ -924,11 +917,13 @@ keep data usage bounded.
 If we have contracts that involve, for example, the oil price then we may need to convert a published price in USD into 
 ADA, using a value for the prevailing USD/ADA exchange rate. This will require a computation: in this case, a 
 multiplication. If Marlowe is to be stand-alone then we need to be extend it with arithmetic and other operations, but 
-we expect Marlowe to be embedded in a suitable language and so to be able to use the facilities of the host language here.
+we expect Marlowe to be embedded in a suitable language that provides these facilities.
 
-\paragraph{Sidechains and wallets}
+%\paragraph{Sidechains and wallets}
+%
+%The implementation may split contract execution between the main chain and a sidechain (or chains). This will allow links from Marlowe to work on securing multiparty sidechain games/contracts (MPCs).
 
-The implementation may split contract execution between the main chain and a sidechain (or chains). This will allow links from Marlowe to work on securing multiparty sidechain games/contracts (MPCs).
+\ignore{ % begin ignore
 
 \section{Reflection}
 \label{section:reflection}
@@ -1074,10 +1069,10 @@ a failed payment.
 Some observables have a ``monotonicity'' property: once a choice is made, it is fixed forever; on the other hand, 
 something not yet chosen is only so thus far; do we need to reflect this in the observations that we allow?
 
-
+} % end ignore
 
 \section{Related work}
-
+\label{sec:related}
 
 Blockchains are executed in a replicated form by parties who cannot be guaranteed not to be hostile, either by directly 
 trying to change the contents of the chain, or through trying to affect other properties of the chain by indirect means 
@@ -1150,53 +1145,20 @@ account by our notion of commitments. They take no account of commitments or tim
 noted that the Ethereum platform is more powerful than the one that we target in this paper.
 
 
-\section{Next steps}
+\section{Conclusions and Future Work}
 \label{section:next-steps}
 
-We plan to continue the work with Marlowe in a number of directions. First, we need to sign off a definition of the 
-language, as the current status of Marlowe 1.3 is that of a proposal.
+In this paper we have presented Marlowe, a DSL for financial contracts on blockchains, based on earlier work on contracts~\cite{PeytonJones:2000}, together with examples of its use. We have seen that to make this operational on blockchain we need to add commitments and timeouts, and to design a semantics that reflects these. As we saw in Section~\ref{sec:abstraction}, Marlowe has been designed to make as few demands as possible on the underlying blockchain: it can be implemented on UTxO or account-based blockchains, for example.
 
-\paragraph{Context}
+We have also presented Meadow, that allows users to interact with and simulate the operation of Marlowe contracts, contributing to the potential adoptability of the system. We have also described the design rationale for Marlowe, and sketched ways in which it can be implemented.
 
-We should decide on the final form of the language -- for example, should it be monadic or not -- and the relation of 
-Marlowe to Plutus (Core). In particular, answering the latter question will require work on the current 
-redeemer/validator model of transactions in Plutus Core.
+We plan to continue the work with Marlowe in a number of directions. We will continue to develop the core language, for example considering the automation of generation of identifiers for commitments and others. We will then implement this version of Marlowe in Cardano, compiling from Marlowe contracts to on chain contracts and users' wallets, and deploy it in a test network to observe and measure its behaviour in practice.
 
-\paragraph{Implement in Cardano}
+Building on the operational semantics given here, we will develop analyses of Marlowe contracts -- such as to show that contracts cannot generate \haskellinline{FailedPay} actions in certain circumstances. We will also develop  QuickCheck-style property-based testing~\cite{quickCheck}, and properties developed here can become candidates for fully fledged verification in a formalisation of the semantics of Marlowe.
 
-An immediate goal is to implement Marlowe in Cardano, noting the observations of Section 
-\ref{section:towards-implementation} and to deploy it in a test network to observe and measure its behaviour in 
-practice.
-
-\paragraph{Compilation}
-
-Marlowe contracts could be generated by a compilation process from `vanilla' financial contracts. This also suggests 
-that models with off-chain enforcement could be investigated too, with an MPC foundation.
-
-\paragraph{Validation and Verification}
-
-Some degree of validation is provided by Meadow presented in Section \ref{section:tool}, albeit for smaller-scale 
-contracts, but there is a general question of how properties of contracts can be inferred. One relatively low-cost is to 
-use QuickCheck-style property-based testing~\cite{quickCheck}, and properties developed here become candidates for 
-fully fledged verification in a formalisation of the (semantics of) Marlowe.
-
-\paragraph{Analysis}
-
-As we noted in Section \ref{section:analysis} we can develop analyses of various aspects of Marlowe contracts. While 
-these might initially be ``pencil and paper'' analyses, we could expect these to be based on a formalisation of the 
-language and its semantics.
-
-\paragraph{Formalisation} 
-
-Marlowe and its semantics could be formalised in a theorem prover such as Isabelle~\cite{IsabelleHOL}, which has been 
-used in the formalisation of language semantics. A formalisation could provide a sanity check on the language 
-definition, as well as formalise proofs of important properties, based on analysis of the contract language.
-
-\section{Acknowledgements}
-
-Thanks to Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiayias, % Darryl McAdams, 
+We would like to thank Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiayias, % Darryl McAdams, 
 Bruno Woltzenlogel Paleo, Rebecca Valentine and Phil Wadler for their collaboration, and to colleagues from the Universities of 
-Kent and Leicester for their comments on previous presentations of this work.
+Kent and Leicester for their comments on this work.
 
 
 

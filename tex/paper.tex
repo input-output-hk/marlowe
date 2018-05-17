@@ -223,6 +223,7 @@ Section \ref{section:reflection} reflects on the system design, and observes som
 \caption{The context for a contract}
 \label{fig:context}
 \end{center}
+\vspace*{-8mm}
 \end{figure}
 
 
@@ -292,6 +293,7 @@ the semantics.
 \caption{The \haskellinline{step} function}
 \label{fig:step-function}
 \end{center}
+\vspace*{-8mm}
 \end{figure}
 
 \paragraph{Infrastructure}
@@ -798,18 +800,14 @@ Reflecting on the example, we can see that using Haskell definitions has made th
 comprehensible; it will also support more efficient operation, if we were to replace the repeated  expression 
 \haskellinline{two_chose 1 2 3 1} above by a \haskellinline{where} clause, 
 \begin{haskellcode}
-escrow = ...
-                    (When (OrObs (two_chose 1 2 3 0)
+escrow = ...        (When (OrObs (two_chose 1 2 3 0)
                                  chose_refund)
                           90
-                          (Choice chose_refund
+                          (Choice chose_refund ...
                            ...
-         ...
-         where 
-         chose_refund = two_chose 1 2 3 1                 
+         where chose_refund = two_chose 1 2 3 1                 
 \end{haskellcode}
 then the repeated computation of the expression will be avoided.
-
 In the next section, we cover the online contract visualisation and interaction tool for Marlowe.
 
 \section{Visualising and interacting with contracts}
@@ -863,6 +861,7 @@ its contents in memory, even while the compilation and execution process is bein
 \par\end{centering}
 \caption{\label{fig:full-screenshot-demo}Screenshot of Meadow tool
 simulating the incentivised deposit contract.}
+\vspace*{-8mm}
 \end{figure}
 
 %\begin{figure}
@@ -880,6 +879,7 @@ last block.
 \centering{}\includegraphics[scale=0.52]{pix/detail}\caption{\label{fig:detail-of-interface}Detail of the interface for 
 contract
 execution simulation.}
+\vspace*{-5mm}
 \end{figure}
 
 Additionally, to facilitate the introduction of inputs, Meadow provides

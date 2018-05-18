@@ -231,7 +231,7 @@ First, it will need to observe different kinds of varying quantities including, 
 current block number and, random numbers, as well as ``real world'' quantities like ``the price of oil'' or ``the 
 exchange rate between currencies A and B''. 
 As the examples illustrate, observables come both from aspects of the blockchain (e.g.\ the current block number) and 
-externally. In the latter case it will be necessary to agree a trusted oracle or beacon giving the value.
+externally. In the latter case, it will be necessary to agree a trusted oracle or beacon giving the value.
 
 
 Each instance of such an observable will be observed at a particular time and in a particular context. We assume that the system infrastructure ensures that these values are recorded on the blockchain to 
@@ -252,14 +252,14 @@ external environment in which the contract is run.
 
 On the other hand, at each step there are -- potentially, at least -- a variety of inputs available from the 
 participants themsleves. These include commitments of currency (or ``cash''), redemption of commitments, and claims of payments by 
-a participant. <oreover it is also possible for a participant to input an arbitrary value (which we term a ``choice''). 
+a participant. Moreover it is also possible for a participant to input an arbitrary value (which we term a ``choice''). 
 The particular inputs at a given step are described by a value of type \haskellinline{Input}.
 
 %\paragraph{Commitments}
 
 
-While informally we might see a commitment to something as being indefinite, it is important to realise that on 
-blockchain a commitment needs to have a timeout so that progress can be forced in a contract. After the timeout period the 
+While informally we might see a commitment to something as being indefinite, it is important to realise that, on
+blockchain, a commitment needs to have a timeout so that progress can be forced in a contract. After the timeout period the 
 cash can be refunded through the user creating a transaction to reclaim the cash.
 Information about the commitments currently in force forms the \haskellinline{State}, which can be  modified 
 at each execution step. 
@@ -287,7 +287,7 @@ The model makes a number of assumptions about the blockchain infrastructure in w
 \begin{itemize}
 \item It is assumed that cryptographic functions and operations are provided by a layer external to the system, and so 
 they need not be modelled explicitly.
-\item We assume that time is ``coarse grained'' and measured by block number, so that in particular timeouts are 
+\item We assume that time is ``coarse grained'' and measured by block number, so that, in particular, timeouts are 
 delimited using block numbers. 
 \item 
 Making a commitment is not something that a contract can perform; rather, it 
@@ -314,7 +314,7 @@ Execution of a contract will involve multiple blocks, with multiple steps in eac
 until it is quiescent. 
 
 In addition to 
-calling \haskellinline{stepAll}, \haskellinline{stepBlock} will first enable expired cash commitments to be refunded and record any choices made at that step. 
+calling \haskellinline{stepAll}, \haskellinline{stepBlock} will first enable expired cash commitments to be refunded and record, in the state, any choices made at that step. 
 The functions \haskellinline{stepAll} and \haskellinline{stepBlock} have the same type as \haskellinline{step} itself.
 
 
@@ -323,7 +323,7 @@ The functions \haskellinline{stepAll} and \haskellinline{stepBlock} have the sam
 
 \subsection{The \haskellinline{Contract} type}
 
-The type of contracts is given by the Haskell data type
+The type of contracts is given by the following Haskell data type:
 
 \begin{haskellcode}
 data Contract =
@@ -336,14 +336,14 @@ data Contract =
    When Observation Timeout Contract Contract   
    \end{haskellcode}
 Informally, this type provides a \haskellinline{Null} contract, which does nothing. The next three constructs form contracts that do something, and then continue according to another contract (which is one of the components of the original contract). \haskellinline{CommitCash} will wait for a participant to make a commitment,  
-\haskellinline{RedeemCC} allows for a commitment to be redeemed, and \haskellinline{Pay} for a payment to be made to another participant. 
+\haskellinline{RedeemCC} allows for a commitment to be redeemed, and \haskellinline{Pay} for a payment between participants to be claimed by the recipient. 
 
 The remaining constructors form composite contracts from simpler components: \haskellinline{Both} has the behaviour of both its components, \haskellinline{Choice} chooses between two contracts on the basis of an observation, and \haskellinline{When} is quiescent until a condition -- i.e.\ an \haskellinline{Observation} -- becomes true.
 
-What many of the contracts also have are timeouts that also determine their behaviour. 
+Additionally, many of the contracts have timeouts that also determine their behaviour. 
 \subsection{The \haskellinline{step} function}
 
-In this section we explain the detailed behaviour of \haskellinline{Contracts} through a discussion of the \haskellinline{step} function.
+In this section, we explain the detailed behaviour of \haskellinline{Contracts} through a discussion of the \haskellinline{step} function.
 
 \smallskip
 \noindent
@@ -357,7 +357,7 @@ step _ st Null _ = (st, Null, [])
 \noindent
 \haskellinline{CommitCash ident person val start_timeout end_timeout con1 con2}  For this contract to make 
 progress,\begin{itemize}
-\item either before the timeout \haskellinline{start_timeout} the user \haskellinline{person} makes a cash commitment of 
+\item either, before the timeout \haskellinline{start_timeout}, the user \haskellinline{person} makes a cash commitment of 
 value 
 \haskellinline{val} and timeout \haskellinline{end_timeout}  with the identifier \haskellinline{ident}, 
 \item
@@ -389,12 +389,12 @@ In the first case, a \haskellinline{SuccessfulCommit} action is generated and th
 
 If the cash is committed successfully and the timeout \haskellinline{end_timeout} is reached, then it is impossible to 
 further spend the committed cash, and any unspent funds can be reclaimed by participant \haskellinline{person}.
- This is performed by the \haskellinline{stepBlock} function, as noted above.
+ This is enforced by the \haskellinline{stepBlock} function, as noted above.
 
 \medskip
 \noindent
 \haskellinline{RedeemCC ident con} (\haskellinline{CC} stands for cash commitment.) For this contract to make 
-progress, the creator of the cash commitment with identifier \haskellinline{ident} is required to redeem the unspent 
+progress, the creator of the cash commitment with identifier \haskellinline{ident} is allowed to redeem the unspent 
 funds in that commitment; the contract then continues as \haskellinline{con}, and the action 
 \haskellinline{CommitRedeemed} is produced. 
 
@@ -453,7 +453,7 @@ step inp st c@(Pay idpay from to val expi con) os
         Nothing -> False
 \end{haskellcode}
 By `available' we mean that sufficient commitments have been made and not yet expired to cover the payment; in this 
-case the payment uses the currency allocated by the cash commitments made by \haskellinline{from} that expire the 
+case, the payment uses the currency allocated by the cash commitments made by \haskellinline{from} that expire the 
 earliest.
 
 This contract will result in a \haskellinline{FailedPay} action if the funds are not available; otherwise a 
@@ -652,13 +652,13 @@ participant id. We can define a function that returns an observation that is tru
 chose :: Int -> ConcreteChoice -> Observation
 chose per c = PersonChoseThis (IdentChoice per) per c
 \end{haskellcode}
-Then we can easily write a function that returns an observation that is true if and only if at least one of the 
-participants \haskellinline{per} and \haskellinline{per'} has chosen the number \haskellinline{c} as follows:
+Then, we can easily write a function that returns an observation that is \haskellinline{True} if and only if at least one of the 
+participants \haskellinline{per} and \haskellinline{per'} has chosen the number \haskellinline{val} as follows:
 \begin{haskellcode}
 one_chose :: Person -> Person -> ConcreteChoice -> Observation
 one_chose per per' val = (OrObs (chose per val) (chose per' val)) 
 \end{haskellcode}
-Building on that, we can now write a function that returns an observation that is true if and only if at least 
+Building on that, we can now write a function that returns an observation that is \haskellinline{True} if and only if at least 
 two out of the three participants \haskellinline{p1}, \haskellinline{p2}, and \haskellinline{p3} have agreed in 
 choosing the number \haskellinline{c} as follows:
 \begin{haskellcode}
@@ -681,21 +681,21 @@ escrow = CommitCash iCC1 1 (ConstMoney 450) 10 100
                     Null
 \end{haskellcode}
 
-The outermost primitive \haskellinline{CommitCash} allows the participant \haskellinline{1} to commit 450 ADA before 
-block 10, with the promise that money will be released on block 100 if they are not claimed before that.
+The outermost primitive \haskellinline{CommitCash} allows the participant \haskellinline{1} to commit \haskellinline{450} ADA before 
+block \haskellinline{10}, with the promise that money will be released on block \haskellinline{100} if they are not claimed before that.
 
 The next primitive, \haskellinline{When}, waits for one of three things to happen:
 \begin{enumerate}
- \item The observation became true because two out of three have chosen $0$. 
- \item The observation became true because two out of three have chosen $1$.
- \item The observation remained false until 90 was published in the blockchain.
+	\item The observation became \haskellinline{True} because two out of three have chosen \haskellinline{0}. 
+	\item The observation became \haskellinline{True} because two out of three have chosen \haskellinline{1}.
+	\item The observation remained \haskellinline{False} until \haskellinline{90} was published in the blockchain.
 \end{enumerate}
 
 If the third option happens, the money is refunded. Otherwise, there is a \haskellinline{Choice} that will 
-immediately refund the money to participant \haskellinline{1} unless two out of three chose option $1$; in the later 
+immediately refund the money to participant \haskellinline{1} unless two out of three chose option \haskellinline{1}; in the later 
 case, \haskellinline{Pay} will give participant \haskellinline{2} the opportunity to claim the funds available in 
-the commitment with identifier \haskellinline{iCC1} before block 100 (by using the identifier \haskellinline{iP1} for 
-the claim). If the funds are not claimed before block 100 they will also be refunded to 
+the commitment with identifier \haskellinline{iCC1} before block \haskellinline{100} (by using the identifier \haskellinline{iP1} for 
+the claim). If the funds are not claimed before block \haskellinline{100} they will also be refunded to 
 participant \haskellinline{1}.
 
 Reflecting on the example, we can see that using Haskell definitions has made the contract substantially more 
@@ -740,7 +740,7 @@ smart-contracts as interlocking blocks that can be dragged and dropped
 like pieces of a jigsaw puzzle. % (see Figure~\ref{fig:detail-of-block}).
 Meadow also provides functionality to generate syntactically correct
 and formatted code (that is displayed in the upper right corner of the application),
-and to convert the code back to its block representation.
+and to convert the code back to its blockly representation.
 
 Additionally, Meadow allows the user to use Meadow's Fay embedding from within the browser. % (see Figure~\ref{fig:embedded-demo}). 
 Meadow includes a pruned copy of the Fay compiler, bundled with its Prelude module, 
@@ -895,6 +895,10 @@ Even if we only allow one transaction per block, it would still be possible to c
 and to issue a transaction that contains several operations. However, that would require an offline protocol 
 independent from the blockchain and it would require participants to collaborate.
 
+Nevertheless, there already exists in Bitcoin a mechanism that allows the combination of several chained transactions within a single block while using the UTxO model, even though it is used to solve a different problem and it is not widely spread yet. This is the case of "child pays for parent", which allows the recipient of an unpublished transaction to issue another transaction that spends the former, with the aim of including enough fees for both transactions to have enough incentive to be included by a miner in a block (in which case both transactions would be included in the same block).
+
+The same mechanism could be used for allowing miners to aggregate several transactions that act as a chain in the same block. The clients would only need to monitor the transaction pool in order to send transactions that can be chained with the existing ones.
+
 \paragraph{Cost}
 
 The Cardano platform has a notion of cost, and Marlowe contracts will potentially incur costs of two kinds: The cost of a single transaction execution (e.g.\ a single Plutus validator), and the cost of the whole contract, which may consist of many transactions.
@@ -907,9 +911,9 @@ So far we are assuming contracts defined in Marlowe to be finite in both aspects
 
 \paragraph{Recording information on chain}
 
-Commitments and values of observables need to be recorded somehow, and this raises the potential issue about bloating 
+Inputs and values of observables need to be recorded somehow, and this raises the potential issue about bloating 
 the chain with data. In general, it will only be necessary to store a signed hash value of the observable, and this will 
-keep data usage bounded.
+keep data usage bounded; but the full information may still need to be posted in case of dispute.
 
 
 \paragraph{General computations}
@@ -1141,14 +1145,14 @@ these are provided in~\cite{cryptoeprint:2016:1156}.
 
 The Findel project~\cite{findel} examines financial contracts on the Ethereum platform, based on the 
 seminal~\cite{PeytonJones:2000}, and the authors note that payments need to be bounded; this is made concrete in our 
-account by our notion of commitments. They take no account of commitments or timeouts as we do below, but it should be 
+account by our notion of commitments. They take no account of commitments or timeouts as our approach does, but it should be 
 noted that the Ethereum platform is more powerful than the one that we target in this paper.
 
 
 \section{Conclusions and Future Work}
 \label{section:next-steps}
 
-In this paper we have presented Marlowe, a DSL for financial contracts on blockchains, based on earlier work on contracts~\cite{PeytonJones:2000}, together with examples of its use. We have seen that to make this operational on blockchain we need to add commitments and timeouts, and to design a semantics that reflects these. As we saw in Section~\ref{sec:abstraction}, Marlowe has been designed to make as few demands as possible on the underlying blockchain: it can be implemented on UTxO or account-based blockchains, for example.
+In this paper, we have presented Marlowe, a DSL for financial contracts on blockchains, based on earlier work on contracts~\cite{PeytonJones:2000}, together with examples of its use. We have seen that to make this operational on blockchain we need to add commitments and timeouts, and to design a semantics that reflects these. As we saw in Section~\ref{sec:abstraction}, Marlowe has been designed to make as few demands as possible on the underlying blockchain: it can be implemented on UTxO or account-based blockchains, for example.
 
 We have also presented Meadow, that allows users to interact with and simulate the operation of Marlowe contracts, contributing to the potential adoptability of the system. We have also described the design rationale for Marlowe, and sketched ways in which it can be implemented.
 

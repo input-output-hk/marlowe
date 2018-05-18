@@ -125,7 +125,7 @@ contracts in the style of Peyton Jones \emph{et al} on blockchains. We present a
 %\renewcommand{\shortauthors}{}
 
 \section{Introduction}
-
+\label{sec:intro}
 
 
 This paper explores the design of a domain specific language, Marlowe,\footnote{Named after Christopher 
@@ -599,29 +599,34 @@ In the next section, we look at how to take advantage of Haskell embedding when 
 
 In this section, we revisit the escrow example that we discussed briefly in the introduction, and show how we can make 
 Marlowe contracts that are easier to write, read, and understand, by embedding them into Haskell code, taking advantage 
-of the fact that Marlowe contracts are implemented as Haskell terms. We used Haskell because it is the language in 
-which Marlowe is implemented, but it would be easy to embed Marlowe in any other languages. It would only be necessary 
-to translate its primitives into a data type in that language. In Meadow, we use Fay embedding, which is a subset of 
+of the fact that Marlowe contracts are implemented as Haskell terms. 
+
+We used Haskell because it is the language in 
+which Marlowe is implemented, but it would be easy to embed Marlowe in any other language. It would only be necessary 
+to translate its primitives into a data type in that language. In Meadow we use Fay, which is a subset of 
 Haskell (see Section~\ref{section:tool}).
 
-The example contract we use through this section implements an escrow contract. Let us imagine that participant 
-\haskellinline{1} is buying some item from participant \haskellinline{2}. On one hand, if participant \haskellinline{1} 
-pays before receiving the item, there is a risk that participant \haskellinline{2} will never give \haskellinline{1} the 
-item. On the other hand, if participant \haskellinline{2} gives participant \haskellinline{1} the item before 
-\haskellinline{1} pays,  there is a risk that \haskellinline{1} will never pay.
-
+The example we use through this section implements an escrow contract, as first introduced in Section~\ref{sec:intro}. 
+%
+%Let us imagine that participant 
+%\haskellinline{1} is buying some item from participant \haskellinline{2}. On one hand, if participant \haskellinline{1} 
+%pays before receiving the item, there is a risk that participant \haskellinline{2} will never give \haskellinline{1} the 
+%item. On the other hand, if participant \haskellinline{2} gives participant \haskellinline{1} the item before 
+%\haskellinline{1} pays,  there is a risk that \haskellinline{1} will never pay.
+%
 The escrow mechanism allows participant \haskellinline{1} to deposit the money into a contract, in a way that the money 
 will only be released when two out of three participants agree on whether participant \haskellinline{2} has indeed given 
-participant \haskellinline{1} the item. The third participant (participant \haskellinline{3}) is supposed to be a 
-neutral third party that will decide in case of dispute.
+participant \haskellinline{1} the item. 
 
+The third participant (participant \haskellinline{3}) is supposed to be a 
+neutral third party that will decide in case of dispute.
 This way, if participants \haskellinline{1} and \haskellinline{2} are honest, they will just agree on the result of the 
 transaction and \haskellinline{3} will not need to do anything. If \haskellinline{1} and \haskellinline{2} disagree, 
 participant \haskellinline{3} will be able to choose whether the money must go to \haskellinline{1} or to 
 \haskellinline{2}.
 
-In addition to this, in our implementation, the money paid for the item is 450 ADA, it must be committed by participant 
-\haskellinline{1} before block \haskellinline{10}, and it will be refunded to participant \haskellinline{1} if there is 
+In our implementation we make things more specific: the money paid for the item is 450 ADA, and it must be committed by participant 
+\haskellinline{1} before block \haskellinline{10}; it will be refunded to participant \haskellinline{1} if there is 
 no consensus before block \haskellinline{90}.
 
 We start by defining some Haskell functions. We can encapsulate identifiers in functions to make the contract more 
@@ -699,8 +704,8 @@ the claim). If the funds are not claimed before block \haskellinline{100} they w
 participant \haskellinline{1}.
 
 Reflecting on the example, we can see that using Haskell definitions has made the contract substantially more 
-comprehensible; it will also support more efficient operation, if we were to replace the repeated  expression 
-\haskellinline{two_chose 1 2 3 1} above by a \haskellinline{where} clause, 
+comprehensible. While our current implementation does not do this, it is possible to modify the embedding to support more efficient operation, by preserving \emph{sharing} in the host language. For example, if we were to replace the repeated  expression 
+\haskellinline{two_chose 1 2 3 1} by a \haskellinline{where} clause, 
 \begin{haskellcode}
 escrow = ...        (When (OrObs (two_chose 1 2 3 0)
                                  chose_refund)
@@ -709,8 +714,8 @@ escrow = ...        (When (OrObs (two_chose 1 2 3 0)
                            ...
          where chose_refund = two_chose 1 2 3 1                 
 \end{haskellcode}
-then the repeated computation of the expression will be avoided.
-In the next section, we cover the online contract visualisation and interaction tool for Marlowe.
+then the repeated computation of the expression could be avoided.
+%In the next section, we cover the online contract visualisation and interaction tool for Marlowe.
 
 \section{Visualising and interacting with Marlowe contracts}
 
@@ -1117,8 +1122,7 @@ typed, but provides more constructs in a more familiar syntax, namely that of a 
 The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs~\cite{Stenman-CODE-BEAM}: the functional language  Sophia (akin to 
 Reason) and the Functional Typed Warded Virtual Machine (FTWVM) for safe ``system level programming'', the language 
 Varna and the HLM for simple contracts, and a (port of) Solidity and the EVM for compatibility with Ethereum. In a 
-similar way, Cardano provides support for IELE~\cite{IELE}, a rational reconstruction of the EVM, and thus for Solidity 
-contracts too. 
+similar way, Cardano provides support for IELE~\cite{IELE}, a rational reconstruction of the EVM, and thus for Solidity too. 
 
 \paragraph{Domain-specific languages} 
 
@@ -1135,11 +1139,11 @@ This means that parts of the host -- such as arithmetical expressions, or list i
 expressibility of the DSL. A notable example of this is the financial contracts language described by Peyton Jones and 
 his collaborators~\cite{PeytonJones:2000}, which is embedded in Haskell.
 
-\paragraph{Other approaches}
-
-There are a variety of other approaches to scripting, including business process notations, such as the OMG's BPMN; 
-process calculi such as Rholang; logic rules (in Formal Contract Logic), and finite state machines. More details of 
-these are provided in~\cite{cryptoeprint:2016:1156}.
+%\paragraph{Other approaches}
+%
+%There are a variety of other approaches to scripting, including business process notations, such as the OMG's BPMN; 
+%process calculi such as Rholang; logic rules (in Formal Contract Logic), and finite state machines. More details of 
+%these are provided in~\cite{cryptoeprint:2016:1156}.
 
 \paragraph{Findel}
 
@@ -1160,9 +1164,8 @@ We plan to continue the work with Marlowe in a number of directions. We will con
 
 Building on the operational semantics given here, we will develop analyses of Marlowe contracts -- such as to show that contracts cannot generate \haskellinline{FailedPay} actions in certain circumstances. We will also develop  QuickCheck-style property-based testing~\cite{quickCheck}, and properties developed here can become candidates for fully fledged verification in a formalisation of the semantics of Marlowe.
 
-We would like to thank Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiayias, % Darryl McAdams, 
-Bruno Woltzenlogel Paleo, Rebecca Valentine and Phil Wadler for their collaboration, and to colleagues from the Universities of 
-Kent and Leicester for their comments on this work.
+We would like to thank IOHK for supporting us: not only has this led us to work on Marlowe, but we have benefitted hugely from collaboration with colleagues including Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiayias, % Darryl McAdams, 
+Bruno Woltzenlogel Paleo, Rebecca Valentine and Phil Wadler. We are  very grateful to Thomas Arts and colleagues from \ae{}ternity for their convivial discussions on blockchain and contracts in G\"oteborg, and to colleagues from the Universities of Kent and Leicester for their comments too.
 
 
 

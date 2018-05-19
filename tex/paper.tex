@@ -133,9 +133,10 @@ This paper explores the design of a domain specific language, Marlowe,\footnote{
 Marlowe, the Elizabethan poet, dramatist and spy, who was born and educated in Canterbury,  \url{en.wikipedia.org/wiki/Christopher_Marlowe}}\footnote{Marlowe is available 
 from \url{https://github.com/input-output-hk/scdsl}} targetted at the execution of financial contracts in the style of 
 Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains.
-
 In doing this, we are required to refine the model of contracts in a number of ways in order to fit with a radically 
-different context. Consider the following example of an ``escrow'' contract so that we can explain the motivation 
+different context. 
+
+Consider the following example of an ``escrow'' contract so that we can explain the motivation 
 more concretely. The aim of this contract, written in functional pseudocode in the style of~\cite{PeytonJones:2000} 
 involves three participants \haskellinline{1}, \haskellinline{2} and \haskellinline{3}. Participant \haskellinline{1} is 
 to pay an amount of money to participant \haskellinline{2} on receipt of goods from her. Participant \haskellinline{1} 
@@ -343,7 +344,7 @@ The remaining constructors form composite contracts from simpler components: \ha
 Additionally, many of the contracts have timeouts that also determine their behaviour. 
 \subsection{The \haskellinline{step} function}
 
-In this section, we explain the detailed behaviour of \haskellinline{Contracts} through a discussion of the \haskellinline{step} function.
+In this section, we explain the detailed behaviour of contracts by describing how the \haskellinline{step} function operates on each of the constructors of the \haskellinline{Contract}  type.
 
 \begin{itemize}
 \item \haskellinline{Null} is the null contract; it will always be quiescent:

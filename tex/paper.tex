@@ -76,7 +76,8 @@
 %
 %
 % Title portion. Note the short title for running heads
-\title {Marlowe: financial contracts on blockchain}
+\title {Marlowe: financial contracts on blockchain\thanks{This work is part of the Cardano project 
+and is supported by IOHK,~\url{https://iohk.io}}}
 %
 %\titlerunning{Abbreviated paper title}
 % If the paper title is too long for the running head, you can set
@@ -131,8 +132,7 @@ contracts in the style of Peyton Jones \emph{et al} on blockchains. We present a
 This paper explores the design of a domain specific language, Marlowe,\footnote{Named after Christopher 
 Marlowe, the Elizabethan poet, dramatist and spy, who was born and educated in Canterbury,  \url{en.wikipedia.org/wiki/Christopher_Marlowe}}\footnote{Marlowe is available 
 from \url{https://github.com/input-output-hk/scdsl}} targetted at the execution of financial contracts in the style of 
-Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains. This work is a part of the Cardano project, and is 
-supported by IOHK,~\url{https://iohk.io}.
+Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains.
 
 In doing this, we are required to refine the model of contracts in a number of ways in order to fit with a radically 
 different context. Consider the following example of an ``escrow'' contract so that we can explain the motivation 
@@ -345,17 +345,16 @@ Additionally, many of the contracts have timeouts that also determine their beha
 
 In this section, we explain the detailed behaviour of \haskellinline{Contracts} through a discussion of the \haskellinline{step} function.
 
-\smallskip
-\noindent
-\haskellinline{Null} is the null contract; it will always be quiescent:
+\begin{itemize}
+\item \haskellinline{Null} is the null contract; it will always be quiescent:
 
 \begin{haskellcode}
 step _ st Null _ = (st, Null, [])
 \end{haskellcode}
 
-\smallskip
+\medskip
 \noindent
-\haskellinline{CommitCash ident person val start_timeout end_timeout con1 con2}  For this contract to make 
+\item \haskellinline{CommitCash ident person val start_timeout end_timeout con1 con2}  For this contract to make 
 progress,\begin{itemize}
 \item either, before the timeout \haskellinline{start_timeout}, the user \haskellinline{person} makes a cash commitment of 
 value 
@@ -393,7 +392,7 @@ further spend the committed cash, and any unspent funds can be reclaimed by part
 
 \medskip
 \noindent
-\haskellinline{RedeemCC ident con} (\haskellinline{CC} stands for cash commitment.) For this contract to make 
+\item \haskellinline{RedeemCC ident con} (\haskellinline{CC} stands for cash commitment.) For this contract to make 
 progress, the creator of the cash commitment with identifier \haskellinline{ident} is allowed to redeem the unspent 
 funds in that commitment; the contract then continues as \haskellinline{con}, and the action 
 \haskellinline{CommitRedeemed} is produced. 
@@ -431,9 +430,9 @@ immediately evolve to \haskellinline{con}.
 
 \medskip
 \noindent
-\haskellinline{Pay idpay from to val expi con} makes it possible, assuming that sufficient funds are available, for 
-\haskellinline{to} to claim a payment with id \haskellinline{idpay} of \haskellinline{val} from \haskellinline{from} 
-before the timeout \haskellinline{expi}. The contract continues as \haskellinline{con}. 
+\item \haskellinline{Pay idpay from to val expi con} makes it possible, assuming that sufficient funds are available, 
+for \haskellinline{to} to claim a payment with id \haskellinline{idpay} of \haskellinline{val} from 
+\haskellinline{from} before the timeout \haskellinline{expi}. The contract continues as \haskellinline{con}. 
 
 \begin{haskellcode}
 step inp st c@(Pay idpay from to val expi con) os
@@ -461,7 +460,8 @@ This contract will result in a \haskellinline{FailedPay} action if the funds are
 
 \medskip
 \noindent
-\haskellinline{Both con1 con2} enforces the behaviour of both contracts \haskellinline{con1} and \haskellinline{con2}. 
+\item \haskellinline{Both con1 con2} enforces the behaviour of both contracts \haskellinline{con1} and 
+\haskellinline{con2}. 
 \begin{haskellcode}
 step comms st (Both con1 con2) os =
     (st2, result, ac1 ++ ac2)
@@ -478,7 +478,8 @@ each of  the contracts \haskellinline{con1} and \haskellinline{con2} in sequence
 
 \medskip
 \noindent
-\haskellinline{Choice obs conT conF} behaves as either \haskellinline{conT} or \haskellinline{conF} depending on the 
+\item \haskellinline{Choice obs conT conF} behaves as either \haskellinline{conT} or \haskellinline{conF} depending on 
+the 
 (Boolean) result of \haskellinline{obs} at the time that the observation is made, \haskellinline{conT} if it is 
 \haskellinline{True} and \haskellinline{conF} if \haskellinline{False}.
 
@@ -491,7 +492,7 @@ step _ st (Choice obs conT conF) os =
 
 \medskip
 \noindent
-\haskellinline{When obs expi con con2} This contract will not progress until \haskellinline{obs} is 
+\item \haskellinline{When obs expi con con2} This contract will not progress until \haskellinline{obs} is 
 \haskellinline{True} or until the current block number is greater than or equal to the one specified by timeout 
 \haskellinline{expi}. In case the timeout applies, the contract will continue as \haskellinline{con2}, if the timeout 
 does not apply and \haskellinline{obs} is \haskellinline{True}, then the contract continues as \haskellinline{con}. 
@@ -503,6 +504,7 @@ step _ st (When obs expi con con2) os
   | interpretObs st obs os = (st,con,[])
   | otherwise = (st, When obs expi con con2, [])
   \end{haskellcode}
+\end{itemize}
 We look next at an example of Marlowe in action.
 
 

@@ -7,7 +7,11 @@ import Test.QuickCheck
 
 prop_observationSatisfied = forAll arbitraryObservation
     (\obs -> let res = satisfyObservation obs in
-             res /= Nothing ==> case res of
-                                  Just (st, os) -> interpretObs st obs os
-                                  Nothing -> False)
+             if (res /= Nothing)
+             then (case res of
+                     Just (st, os) -> interpretObs st obs os
+                     Nothing -> False)
+             else (case satisfyObservation (NotObs obs) of
+                     Just (st, os) -> not $ interpretObs st obs os
+                     Nothing -> False))
 

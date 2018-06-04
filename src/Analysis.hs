@@ -51,28 +51,29 @@ moneyToLogic idx (MoneyFromChoice identChoice person m) =(idx3, ([nv], nl))
     nl = Or [And [ml, choiceNotMade identChoice person, generateEq [nv] mv],
              choiceIs identChoice person [nv]]
 
-observationToLogic :: Integer -> Observation -> (Integer, Logic AnalysisVariable)
-observationToLogic idx (BelowTimeout x) = (idx, Not $ Eq $ LE [Const (fromIntegral x)] [Var CurrentBlock])
-observationToLogic idx (AndObs obs1 obs2) = (idx2, And [l1, l2])
+-- The third element in the result tuple represents the global constraints
+observationToLogic :: Integer -> Observation -> (Integer, Logic AnalysisVariable, Logic AnalysisVariable)
+observationToLogic idx (BelowTimeout x) = (idx, Not $ Eq $ LE [Const (fromIntegral x)] [Var CurrentBlock], And [])
+observationToLogic idx (AndObs obs1 obs2) = (idx2, And [l1, l2], And [g1, g2])
   where
-    (idx1, l1) = observationToLogic idx obs1
-    (idx2, l2) = observationToLogic idx1 obs2
-observationToLogic idx (OrObs obs1 obs2) = (idx2, Or [l1, l2])
+    (idx1, l1, g1) = observationToLogic idx obs1
+    (idx2, l2, g2) = observationToLogic idx1 obs2
+observationToLogic idx (OrObs obs1 obs2) = (idx2, Or [l1, l2], And [g1, g2])
   where
-    (idx1, l1) = observationToLogic idx obs1
-    (idx2, l2) = observationToLogic idx1 obs2
-observationToLogic idx (NotObs obs) = (idx1, Not l1)
+    (idx1, l1, g1) = observationToLogic idx obs1
+    (idx2, l2, g2) = observationToLogic idx1 obs2
+observationToLogic idx (NotObs obs) = (idx1, Not l1, g1)
   where
-    (idx1, l1) = observationToLogic idx obs
+    (idx1, l1, g1) = observationToLogic idx obs
 observationToLogic idx (PersonChoseThis idchoice per cchoice) =
-   (idx, choiceIs idchoice per [Const $ fromIntegral cchoice])
-observationToLogic idx (PersonChoseSomething idchoice per) = (idx, choiceMade idchoice per)
-observationToLogic idx (ValueGE m1 m2) = (idx2, And [l1, l2, Eq $ LE v2 v1])
+   (idx, choiceIs idchoice per [Const $ fromIntegral cchoice], And [])
+observationToLogic idx (PersonChoseSomething idchoice per) = (idx, choiceMade idchoice per, And [])
+observationToLogic idx (ValueGE m1 m2) = (idx2, Eq $ LE v2 v1, And [g1, g2])
   where
-    (idx1, (v1, l1)) = moneyToLogic idx m1
-    (idx2, (v2, l2)) = moneyToLogic idx1 m2
-observationToLogic idx TrueObs = (idx, And [])
-observationToLogic idx FalseObs = (idx, Or [])
+    (idx1, (v1, g1)) = moneyToLogic idx m1
+    (idx2, (v2, g2)) = moneyToLogic idx1 m2
+observationToLogic idx TrueObs = (idx, And [], And [])
+observationToLogic idx FalseObs = (idx, Or [], And [])
 
 updateStateOS :: (State, OS) -> (AnalysisVariable, Integer) -> (State, OS)
 updateStateOS (sta, obs) (CurrentBlock, val) = (sta, obs {blockNumber = fromIntegral val})
@@ -98,7 +99,7 @@ satisfyObservation obs =
   case maybeSols of
     Just sols -> Just $ foldl' updateStateOS emptyStateOS (sort sols)
     Nothing -> Nothing
-  where (_, log) = observationToLogic 1 obs
-        maybeSols = solveLogic log
+  where (_, log, glob) = observationToLogic 1 obs
+        maybeSols = solveLogic (And [log, glob])
 
  

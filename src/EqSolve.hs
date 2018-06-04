@@ -226,7 +226,7 @@ isOr (Or _) = True
 isOr _ = False
 
 negateEq :: Equation a -> Equation a
-negateEq (LE a b) = (LE b ((Const 1):a))
+negateEq (LE a b) = (LE (Const 1:b) a)
 
 negateLogic :: Logic a -> Logic a
 negateLogic (Eq x) = Eq (negateEq x)
@@ -272,7 +272,7 @@ pushAnds (Or l) = Or (map pushAnds l)
 
 flattenOrs :: Logic a -> Logic a
 flattenOrs (Eq x) = Eq x
-flattenOrs (Not _) = error "Not found in flatteOrs!"
+flattenOrs (Not _) = error "Not found in flattenOrs!"
 flattenOrs (And l) = And (map flattenOrs l)
 flattenOrs (Or l) =
   case findAndSeparateOrs l of

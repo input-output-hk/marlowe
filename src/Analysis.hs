@@ -52,7 +52,7 @@ moneyToLogic idx (MoneyFromChoice identChoice person m) =(idx3, ([nv], nl))
              choiceIs identChoice person [nv]]
 
 observationToLogic :: Integer -> Observation -> (Integer, Logic AnalysisVariable)
-observationToLogic idx (BelowTimeout x) = (idx, Eq $ LE [Const (fromIntegral x)] [Var CurrentBlock])
+observationToLogic idx (BelowTimeout x) = (idx, Not $ Eq $ LE [Const (fromIntegral x)] [Var CurrentBlock])
 observationToLogic idx (AndObs obs1 obs2) = (idx2, And [l1, l2])
   where
     (idx1, l1) = observationToLogic idx obs1

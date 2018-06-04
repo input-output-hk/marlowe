@@ -140,7 +140,7 @@ addAxis (m, r, c) = (nm, nr, c)
 solveLE :: Eq b => ([[Rational]], [a], [b]) -> [[(b, Rational)]]
 solveLE m = filter (checkSolutionLE m) [[(x, 0) | x <- ec] ++ sol | sol <- (catMaybes $ map solveExactSystem $ combinationsEq prunedEqs)]
   where instEqs = addAxis m
-        ((_, ec), prunedEqs) = separateEmptyColumns $ pullZeroColumns $ removeLinearDependent instEqs
+        ((_, ec), prunedEqs) = separateEmptyColumns $ pullZeroColumns $ instEqs
 
 nonFractional :: Rational -> Bool
 nonFractional d = (toRational $ ceiling d) == d

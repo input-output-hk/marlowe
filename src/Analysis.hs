@@ -37,7 +37,12 @@ choiceIs :: IdentChoice -> Person -> [EquationTerm AnalysisVariable] -> Logic An
 choiceIs x p c = And [choiceMade x p, generateEq c [Var $ ChoiceAV x p]]
 
 moneyToLogic :: Integer -> Money -> (Integer, ([EquationTerm AnalysisVariable], Logic AnalysisVariable))
-moneyToLogic idx (AvailableMoney x) = (idx, ([Var $ CommitAmmount x], commitExists x))
+moneyToLogic idx (AvailableMoney x) = (idx2, ([nv], And [zl]))
+  where
+   (idx2, nv) = generateAV idx
+   (xv, xl) = ([Var $ CommitAmmount x], commitExists x)
+   (yv, yl) = ([Const $ 0], commitDoesNotExist x) 
+   zl = Or [And [xl, generateEq xv [nv]], And [yl, generateEq yv [nv]]]
 moneyToLogic idx (AddMoney x y) = (idx3, (xv ++ yv, nl))
   where
    (idx2, (xv, xl)) = moneyToLogic idx x

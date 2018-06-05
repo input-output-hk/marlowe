@@ -1,6 +1,6 @@
 module Analysis where
 
-import EqSolve
+import LogicSolve
 import Semantics
 import Data.List (sort, foldl')
 import qualified Data.Map as M

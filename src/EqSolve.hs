@@ -1,4 +1,4 @@
-module EqSolve where
+module EqSolve(solveLEInt) where
 
 import Data.Maybe (listToMaybe, isJust, catMaybes)
 import Data.List (genericIndex, transpose, sortOn, genericTake, genericDrop, genericLength, nub)

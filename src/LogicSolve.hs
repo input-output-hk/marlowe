@@ -1,6 +1,6 @@
 module LogicSolve where
 
-import EqSolve
+import EqSolve (solveLEInt)
 import Data.List (foldl', nub, genericLength) 
 
 -- Symbolic reasoning

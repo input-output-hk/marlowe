@@ -4,7 +4,7 @@ import Data.Map((!))
 import Data.List(genericLength)
 import Data.LinearProgram.GLPK.Solver (msgLev, MsgLev (MsgOff), mipDefaults, glpSolveVars)
 import Data.LinearProgram.Common (LP)
-import Control.Monad.LPMonad (LPM, setDirection, setObjective, setVarKind, execLPM, leqTo)
+import Control.Monad.LPMonad (LPM, setDirection, setObjective, setVarKind, execLPM, leqTo, varLeq, varGeq)
 import Data.LinearProgram.Common(linCombination, VarKind(IntVar), Direction(Min) )
 import System.IO.Unsafe (unsafePerformIO)
 import Control.Monad (forM_)
@@ -13,6 +13,8 @@ lpm :: [[Double]] -> [String] -> LPM String Double ()
 lpm [] labels = do setDirection Min
                    setObjective $ linCombination [(0, l) | l <- labels]
                    forM_ labels (`setVarKind` IntVar) 
+                   forM_ labels (`varLeq` 1000) -- Set upper bound so that solver does not hang
+                   forM_ labels (`varGeq` (-1000)) -- Set lower bound so that solver does not hang
 lpm (h:t) labels = do leqTo (linCombination $ zip i labels) l
                       lpm t labels
  where

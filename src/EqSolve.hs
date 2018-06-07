@@ -187,11 +187,12 @@ splitOrConvert (m, r, c) sol =
     Nothing -> Nothing
 
 solveLEIntAux :: Eq a => Eq b => [([[Rational]], [a], [b])] -> Maybe [(b, Integer)]
+solveLEIntAux [] = Nothing
 solveLEIntAux (h:t) =
   case splitOrConvert h rSol of
     Just (Left nh) -> solveLEIntAux (nub (t ++ nh))
     Just (Right s) -> Just s
-    Nothing -> Nothing
+    Nothing -> solveLEIntAux t
   where
    rSol = solveLE h
 

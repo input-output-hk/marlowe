@@ -157,15 +157,14 @@ unBigM r c m om
 
 
 solveLE :: Eq b => ([[Rational]], [a], [b]) -> Maybe [(b, Rational)]
-solveLE (_, [], c) = Just $ zip c $ repeat 0
+solveLE (_, [], c) = Just $ zip (init c) $ repeat 0
 solveLE (_, _, []) = Just []
 solveLE (m, r, c)
  | anyAux = unBigM r c sol m
- | otherwise = Just $ zip c $ repeat 0
+ | otherwise = Just $ zip (init c) $ repeat 0
   where sol = solveSimplex $ bigM m
         auxIdx = map ((< 0) . last) $ m
         anyAux = any id $ auxIdx
-        
 
 nonFractional :: Rational -> Bool
 nonFractional d = (toRational $ ceiling d) == d

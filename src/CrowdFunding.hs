@@ -18,65 +18,62 @@ import Semantics
 
 crowdFunding :: Contract
 crowdFunding = Both (Both (Both (When (AndObs (PersonChoseSomething (IdentChoice 1) 1)
-                                               (ValueGE (MoneyFromChoice (IdentChoice 1) 1
-                                                                         (ConstMoney 0))
-                                                        (ConstMoney 1)))
-                                       10
-                                       (CommitCash (IdentCC 1) 1
-                                                   (MoneyFromChoice (IdentChoice 1) 1
-                                                                    (ConstMoney 0))
-                                                   10 20 Null Null)
-                                       Null)
-                                 (When (AndObs (PersonChoseSomething (IdentChoice 2) 2)
-                                               (ValueGE (MoneyFromChoice (IdentChoice 2) 2
-                                                                         (ConstMoney 0))
-                                                        (ConstMoney 1)))
-                                       10
-                                       (CommitCash (IdentCC 2) 2
-                                                   (MoneyFromChoice (IdentChoice 2) 2
-                                                                    (ConstMoney 0))
-                                                   10 20 Null Null)
-                                       Null))
-                           (Both (When (AndObs (PersonChoseSomething (IdentChoice 3) 3)
-                                               (ValueGE (MoneyFromChoice (IdentChoice 3) 3
-                                                                         (ConstMoney 0))
-                                                        (ConstMoney 1)))
-                                       10
-                                       (CommitCash (IdentCC 3) 3
-                                                   (MoneyFromChoice (IdentChoice 3) 3
-                                                                    (ConstMoney 0))
-                                                   10 20 Null Null)
-                                       Null)
-                                 (When (AndObs (PersonChoseSomething (IdentChoice 4) 4)
-                                               (ValueGE (MoneyFromChoice (IdentChoice 4) 4
-                                                                         (ConstMoney 0))
-                                                        (ConstMoney 1)))
-                                       10
-                                       (CommitCash (IdentCC 4) 4
-                                                   (MoneyFromChoice (IdentChoice 4) 4
-                                                                    (ConstMoney 0))
-                                                   10 20 Null Null)
-                                       Null)))
-                     (When FalseObs 10 Null
-                           (Choice (ValueGE (AddMoney (AddMoney (MoneyFromChoice (IdentChoice 1) 1
-                                                                                 (ConstMoney 0))
-                                                                (MoneyFromChoice (IdentChoice 2) 2
-                                                                                 (ConstMoney 0)))
-                                                      (AddMoney (MoneyFromChoice (IdentChoice 3) 3
-                                                                                 (ConstMoney 0))
-                                                                (MoneyFromChoice (IdentChoice 4) 4
-                                                                                 (ConstMoney 0))))
-                                            (ConstMoney 1000))
-                                   (Both (Both (Pay (IdentPay 1) 1 5
-                                                    (AvailableMoney (IdentCC 1))
-                                                    20 Null)
-                                               (Pay (IdentPay 2) 2 5
-                                                    (AvailableMoney (IdentCC 2))
-                                                    20 Null))
-                                         (Both (Pay (IdentPay 3) 3 5
-                                                    (AvailableMoney (IdentCC 3))
-                                                    20 Null)
-                                               (Pay (IdentPay 4) 4 5
-                                                    (AvailableMoney (IdentCC 4))
-                                                    20 Null)))
-                                   Null))
+                                              (ValueGE (MoneyFromChoice (IdentChoice 1) 1
+                                                                        (ConstMoney 0))
+                                                       (ConstMoney 1)))
+                                      10
+                                      (CommitCash (IdentCC 1) 1
+                                                  (MoneyFromChoice (IdentChoice 1) 1
+                                                                   (ConstMoney 0))
+                                                  10 20 Null Null)
+                                      Null)
+                                (When (AndObs (PersonChoseSomething (IdentChoice 2) 2)
+                                              (ValueGE (MoneyFromChoice (IdentChoice 2) 2
+                                                                        (ConstMoney 0))
+                                                       (ConstMoney 1)))
+                                      10
+                                      (CommitCash (IdentCC 2) 2
+                                                  (MoneyFromChoice (IdentChoice 2) 2
+                                                                   (ConstMoney 0))
+                                                  10 20 Null Null)
+                                      Null))
+                          (Both (When (AndObs (PersonChoseSomething (IdentChoice 3) 3)
+                                              (ValueGE (MoneyFromChoice (IdentChoice 3) 3
+                                                                        (ConstMoney 0))
+                                                       (ConstMoney 1)))
+                                      10
+                                      (CommitCash (IdentCC 3) 3
+                                                  (MoneyFromChoice (IdentChoice 3) 3
+                                                                   (ConstMoney 0))
+                                                  10 20 Null Null)
+                                      Null)
+                                (When (AndObs (PersonChoseSomething (IdentChoice 4) 4)
+                                              (ValueGE (MoneyFromChoice (IdentChoice 4) 4
+                                                                        (ConstMoney 0))
+                                                       (ConstMoney 1)))
+                                      10
+                                      (CommitCash (IdentCC 4) 4
+                                                  (MoneyFromChoice (IdentChoice 4) 4
+                                                                   (ConstMoney 0))
+                                                  10 20 Null Null)
+                                      Null)))
+                    (When FalseObs 10 Null
+                          (Choice (ValueGE (AddMoney (AddMoney (AvailableMoney (IdentCC 1))
+                                                               (AvailableMoney (IdentCC 2)))
+                                                     (AddMoney (AvailableMoney (IdentCC 3))
+                                                               (AvailableMoney (IdentCC 4))))
+                                           (ConstMoney 1000))
+                                  (Both (Both (Pay (IdentPay 1) 1 5
+                                                   (AvailableMoney (IdentCC 1))
+                                                   20 Null)
+                                              (Pay (IdentPay 2) 2 5
+                                                   (AvailableMoney (IdentCC 2))
+                                                   20 Null))
+                                        (Both (Pay (IdentPay 3) 3 5
+                                                   (AvailableMoney (IdentCC 3))
+                                                   20 Null)
+                                              (Pay (IdentPay 4) 4 5
+                                                   (AvailableMoney (IdentCC 4))
+                                                   20 Null)))
+                                  Null))
+

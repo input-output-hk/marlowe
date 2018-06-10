@@ -49,13 +49,20 @@ chooseColumnAux c@(Just (cp, cv)) (n@(_, nv):t)
 computeZj :: [[Rational]] -> [Rational] -> [Rational]
 computeZj tm ce = map (\(x, y) -> sum $ zipWith (*) x y) $ zip tm (repeat ce)
 
+addSameFst :: [(Integer, Rational)] -> [(Integer, Rational)]
+addSameFst [] = []
+addSameFst [a] = [a]
+addSameFst (f@(l1,r1):(st@((l2,r2):t)))
+ | l1 == l2 = addSameFst ((l1, r1 + r2):t)
+ | otherwise = f:(addSameFst st)
+
 computeCe :: [[Rational]] -> [Rational] -> [Rational]
 computeCe tm cj = ce
   where
-        (_, ce) = unzip $ sort $ concat $ [case onlyOneOne l of
-                                             Nothing -> []
-                                             Just x -> [(x, cj `genericIndex` p)]
-                                           | (p, l) <- zip [0..] tm]
+        (_, ce) = unzip $ addSameFst $ sort $ concat $ [case onlyOneOne l of
+                                                          Nothing -> []
+                                                          Just x -> [(x, cj `genericIndex` p)]
+                                                        | (p, l) <- zip [0..] tm]
 
 
 nullifyArtif :: [Rational] -> [Rational] -> [Rational]
@@ -113,8 +120,7 @@ solveSimplex m@(h:t) =
     Nothing -> m
     Just pc ->
        case chooseRow pc as (reverse (zip [0..] t)) of
-         Just (prb, pr, pra) -> -- trace ((show pc) ++ ", " ++ (show (length prb))) $ 
-                                let normRow = map (/ (pr `genericIndex` pc)) pr in
+         Just (prb, pr, pra) -> let normRow = map (/ (pr `genericIndex` pc)) pr in
                                 let fixRow a = (let coef = (a `genericIndex` pc) in
                                                 zipWith (\x y -> x - (y * coef)) a normRow) in
                                 let nm = h:((map fixRow prb) ++ (normRow:(map fixRow pra))) in
@@ -165,6 +171,19 @@ solveLE (m, r, c)
   where sol = solveSimplex $ bigM m
         auxIdx = map ((< 0) . last) $ m
         anyAux = any id $ auxIdx
+
+splitSol :: [(Either b b, Rational)] -> [(b, Rational)]
+splitSol [] = []
+splitSol [_] = error "Single result in splitSol"
+splitSol ((Left a, x):(Right _, y):t) = (a, x - y):(splitSol t)
+
+solveLEBS :: Eq b => ([[Rational]], [a], [b]) -> Maybe [(b, Rational)]
+solveLEBS (m, r, c) = case res of
+                        Just sol -> Just $ splitSol sol
+                        Nothing -> Nothing
+  where res = solveLE fm 
+        fm = ([init $ concat [[x, -x] | x <- l] | l <- m],
+               r, init $ concat [[Left x, Right x] | x <- c])
 
 nonFractional :: Rational -> Bool
 nonFractional d = (toRational $ ceiling d) == d
@@ -218,9 +237,8 @@ solveLEIntAux (h:t) =
     Just (Right s) -> Just s
     Nothing -> solveLEIntAux t
   where
-   rSol = solveLE h
+   rSol = solveLEBS h
 
 solveLEInt :: Eq a => Eq b => ([[Rational]], [a], [b]) -> Maybe [(b, Integer)]
-solveLEInt (m, a, b) = -- trace (show m) $
-                       solveLEIntAux [(m, map Right a, b)]
+solveLEInt (m, a, b) = solveLEIntAux [(m, map Right a, b)]
 

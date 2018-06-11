@@ -1,4 +1,4 @@
-module Analysis where
+module AnalysisObs where
 
 import LogicSolve
 import Semantics
@@ -97,7 +97,7 @@ updateStateOS (sta@(State {sc = scmap}), obs@(OS {blockNumber = bn})) (CommitExi
 updateStateOS (sta, obs) (TempVar _, _) = (sta, obs)
 
 emptyStateOS :: (State, OS)
-emptyStateOS = (State {sc = M.empty, sch = M.empty}, OS { random = 0, blockNumber = 0})
+emptyStateOS = (emptyState, emptyOS)
 
 satisfyObservation :: Observation -> Maybe (State, OS)
 satisfyObservation obs =

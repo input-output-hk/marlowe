@@ -60,6 +60,9 @@ data OS =  OS { random       :: Random,
                 blockNumber  :: BlockNumber }
                     deriving (Eq,Ord,Show,Read)
 
+emptyOS :: OS
+emptyOS = OS { random = 0, blockNumber = 0 }
+
 -- Inputs
 -- Types for cash commits, money redeems, and choices.
 --
@@ -170,6 +173,9 @@ data State = State {
                sch :: Map.Map (IdentChoice, Person) ConcreteChoice
              }
                deriving (Eq,Ord,Show,Read)
+
+emptyState :: State
+emptyState = State {sc = Map.empty, sch = Map.empty}
 
 type CCStatus = (Person,CCRedeemStatus)
 data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed

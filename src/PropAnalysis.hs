@@ -1,7 +1,7 @@
 module PropAnalysis where
 
 import Semantics
-import Analysis
+import AnalysisObs
 import GenSemantics
 import Test.QuickCheck
 

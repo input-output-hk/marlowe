@@ -30,13 +30,13 @@ import qualified Data.Maybe as Maybe
  -- People are represented by their public keys,
  -- which in turn are given by integers.
 
-type Key         = Int   -- Public key
+type Key         = Integer   -- Public key
 type Person      = Key
 
 -- Block numbers and random numbers are both integers.
  
-type Random      = Int
-type BlockNumber = Int
+type Random      = Integer
+type BlockNumber = Integer
 
 -- Observables are things which are recorded on the blockchain.
 --  e.g. "a random choice", the value of GBP/BTC exchange rate, …
@@ -69,8 +69,8 @@ emptyOS = OS { random = 0, blockNumber = 0 }
 -- A cash commitment is an integer (should be positive integer?)
 -- Concrete values are sometimes chosen too: these are integers for the sake of this model.
 
-type Cash     = Int
-type ConcreteChoice = Int
+type Cash     = Integer
+type ConcreteChoice = Integer
 
 -- We need to put timeouts on various operations. These could be some abstract time
 -- domain, but it only really makes sense for these to be block numbers.
@@ -82,13 +82,13 @@ type Timeout = BlockNumber
 -- be generated automatically (and so uniquely); here we simply assume that 
 -- they are unique.
 
-newtype IdentCC = IdentCC Int
+newtype IdentCC = IdentCC Integer
                deriving (Eq,Ord,Show,Read)
 
-newtype IdentChoice = IdentChoice Int
+newtype IdentChoice = IdentChoice Integer
                deriving (Eq,Ord,Show,Read)
 
-newtype IdentPay = IdentPay Int
+newtype IdentPay = IdentPay Integer
                deriving (Eq,Ord,Show,Read)
 
 -- A cash commitment is made by a person, for a particular amount and timeout.               
@@ -357,7 +357,7 @@ addNewChoices acc@(recorded_choices, action_list) (choice_id, person) choice_int
 
 -- It records all the choices in the input that have not been recorded before
 
-recordChoices :: Input -> Map.Map (IdentChoice, Person) Int -> (Map.Map (IdentChoice, Person) Int, [Action])
+recordChoices :: Input -> Map.Map (IdentChoice, Person) Integer -> (Map.Map (IdentChoice, Person) Integer, [Action])
 
 recordChoices input recorded_choices = Map.foldlWithKey addNewChoices (recorded_choices, []) (ic input)
 

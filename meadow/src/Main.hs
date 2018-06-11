@@ -109,7 +109,7 @@ get_fieldrow_list_element (BInput b) x = do r <- F.ffi (J.pack "(function (b, x)
 
 get_fieldrow_list_aux :: BInput -> [Int] -> IO [FieldRow]
 get_fieldrow_list_aux b [] = return []
-get_fieldrow_list_aux b (h:t) = do el <- get_fieldrow_list_element b h
+get_fieldrow_list_aux b (h:t) = do el <- get_fieldrow_list_element b (fromIntegral h)
                                    rest <- get_fieldrow_list_aux b t
                                    return (el:rest)
 
@@ -137,7 +137,7 @@ get_fieldrow_with_name_from_block str b =
 set_fieldrow_text :: FieldRow -> String -> IO ()
 set_fieldrow_text (FieldRow b) s = F.ffi (J.pack "(function (b, s) { return (b.setText(s)); })") b s
 
-set_field_value :: Block -> String -> Int -> IO ()
+set_field_value :: Block -> String -> Integer -> IO ()
 set_field_value b n v =
   do fr <- get_fieldrow_with_name_from_block n b
      set_fieldrow_text fr (show v)
@@ -302,10 +302,10 @@ get_code = get_code_text "codeArea"
 
 -- block num
 
-set_blocknum :: Int -> IO ()
+set_blocknum :: Integer -> IO ()
 set_blocknum = (set_text "currBlock") . show
 
-get_blocknum :: IO Int
+get_blocknum :: IO Integer
 get_blocknum = do txt <- (get_text "currBlock")
                   return $ read txt
 
@@ -426,25 +426,27 @@ c2b = do code <- get_code
 commit :: Int -> Int -> Int -> Int -> IO ()
 commit per cash id exp =
   do inp <- get_input
-     set_input (inp {cc = Set.insert (CC (IdentCC id) per cash exp) (cc inp)})
+     set_input (inp {cc = Set.insert (CC (IdentCC (fromIntegral id)) (fromIntegral per)
+                                                  (fromIntegral cash) (fromIntegral exp)) (cc inp)})
      refreshActions
 
 redeem :: Int -> Int -> Int -> IO ()
 redeem per cash id =
   do inp <- get_input
-     set_input (inp {rc = Set.insert (RC (IdentCC id) per cash) (rc inp)})
+     set_input (inp {rc = Set.insert (RC (IdentCC (fromIntegral id)) (fromIntegral per)
+                                                  (fromIntegral cash)) (rc inp)})
      refreshActions
 
 claim :: Int -> Int -> Int -> IO ()
 claim per cash id =
   do inp <- get_input
-     set_input (inp {rp = Map.insert (IdentPay id, per) cash (rp inp)})
+     set_input (inp {rp = Map.insert (IdentPay (fromIntegral id), (fromIntegral per)) (fromIntegral cash) (rp inp)})
      refreshActions
 
 choose :: Int -> Int -> Int -> IO ()
 choose per choice id =
   do inp <- get_input
-     set_input (inp {ic = Map.insert (IdentChoice id, per) choice (ic inp)})
+     set_input (inp {ic = Map.insert (IdentChoice (fromIntegral id), (fromIntegral per)) (fromIntegral choice) (ic inp)})
      refreshActions
 
 -- execute
@@ -518,12 +520,13 @@ refreshActions = do inputs <- get_input
 
 addAction :: String -> IO ()
 addAction x = case (read x) :: SmartInput of
-                   SICC (IdentCC ide) per cash tim -> commit per cash ide tim
-                   SIRC (IdentCC ide) per cash -> redeem per cash ide
-                   SIP (IdentPay ide) per cash -> claim per cash ide
+                   SICC (IdentCC ide) per cash tim -> commit (fromIntegral per) (fromIntegral cash)
+                                                             (fromIntegral ide) (fromIntegral tim)
+                   SIRC (IdentCC ide) per cash -> redeem (fromIntegral per) (fromIntegral cash) (fromIntegral ide)
+                   SIP (IdentPay ide) per cash -> claim (fromIntegral per) (fromIntegral cash) (fromIntegral ide)
 
 addActionWithNum :: String -> Int -> IO ()
-addActionWithNum x ch = choose per ch ide
+addActionWithNum x ch = choose (fromIntegral per) ch (fromIntegral ide)
   where (IdentChoice ide, per) = (read x) :: (IdentChoice, Person)
 
 -- alert

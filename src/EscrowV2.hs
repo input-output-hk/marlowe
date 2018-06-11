@@ -47,7 +47,7 @@ escrow = CommitCash iCC1 1
                           redeem_original)
                     Null
 
-chose :: Int -> ConcreteChoice -> Observation
+chose :: Integer -> ConcreteChoice -> Observation
 
 chose per c = 
         PersonChoseThis (IdentChoice per) per c

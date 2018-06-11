@@ -1,7 +1,7 @@
 module ContractFormatter where
 
 import Semantics
-import Data.List (groupBy, intercalate)
+import Data.List (groupBy, intercalate, genericLength, genericReplicate)
 
 ------------------------
 -- AST dependent code --
@@ -13,7 +13,7 @@ data ASTNode = ASTNodeC Contract
              | ASTNodeCC IdentCC
              | ASTNodeIC IdentChoice
              | ASTNodeIP IdentPay
-             | ASTNodeI Int
+             | ASTNodeI Integer
 
 listCurryType :: ASTNode -> (String, [ASTNode])
 listCurryType (ASTNodeM (AvailableMoney identCC))
@@ -74,8 +74,8 @@ data NodeType = Trivial (String, [ASTNode])
               | Simple (String, [ASTNode])
               | Complex (String, [ASTNode])
 
-tabulateLine :: Int -> String
-tabulateLine n = replicate n ' '
+tabulateLine :: Integer -> String
+tabulateLine n = genericReplicate n ' '
 
 classify :: ASTNode -> NodeType
 classify x
@@ -94,17 +94,17 @@ noneComplex _ (Complex _)= False
 noneComplex _ _ = True
 
 -- We assume that Simple nodes have Simple or Trivial children
-smartPrettyPrint :: Int -> NodeType -> String
+smartPrettyPrint :: Integer -> NodeType -> String
 smartPrettyPrint _ (Trivial a) = prettyPrint 0 a
 smartPrettyPrint _ (Simple a) = "(" ++ prettyPrint 0 a ++ ")"
 smartPrettyPrint spaces (Complex a) = "(" ++ prettyPrint (spaces + 1) a ++ ")"
 
-prettyPrint :: Int -> (String, [ASTNode]) -> String
+prettyPrint :: Integer -> (String, [ASTNode]) -> String
 prettyPrint _ (name, []) = name
 prettyPrint spaces (name, args) = intercalate "\n" (trivialNames : map (tabulateLine newSpaces ++) others)
   where
     classified = map classify args
-    newSpaces = spaces + length name + 1
+    newSpaces = spaces + genericLength name + 1
     groupedClassified = groupBy noneComplex classified
     trivialNames = unwords (name : map (smartPrettyPrint newSpaces) (head groupedClassified))
     others = map (unwords . map (smartPrettyPrint newSpaces)) (tail groupedClassified)

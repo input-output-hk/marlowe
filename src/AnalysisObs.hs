@@ -48,7 +48,7 @@ moneyToLogic idx (AddMoney x y) = (idx3, (xv ++ yv, nl))
    (idx2, (xv, xl)) = moneyToLogic idx x
    (idx3, (yv, yl)) = moneyToLogic idx2 y
    nl = And [xl,yl]
-moneyToLogic idx (ConstMoney x) = (idx, ([Const (fromIntegral x)], And []))
+moneyToLogic idx (ConstMoney x) = (idx, ([Const x], And []))
 moneyToLogic idx (MoneyFromChoice identChoice person m) =(idx3, ([nv], nl))
   where
     (idx2, (mv, ml)) = moneyToLogic idx m
@@ -58,7 +58,7 @@ moneyToLogic idx (MoneyFromChoice identChoice person m) =(idx3, ([nv], nl))
 
 -- The third element in the result tuple represents the global constraints
 observationToLogic :: Integer -> Observation -> (Integer, Logic AnalysisVariable, Logic AnalysisVariable)
-observationToLogic idx (BelowTimeout x) = (idx, Not $ Eq $ LE [Const (fromIntegral x)] [Var CurrentBlock], And [])
+observationToLogic idx (BelowTimeout x) = (idx, Not $ Eq $ LE [Const x] [Var CurrentBlock], And [])
 observationToLogic idx (AndObs obs1 obs2) = (idx2, And [l1, l2], And [g1, g2])
   where
     (idx1, l1, g1) = observationToLogic idx obs1
@@ -71,7 +71,7 @@ observationToLogic idx (NotObs obs) = (idx1, Not l1, g1)
   where
     (idx1, l1, g1) = observationToLogic idx obs
 observationToLogic idx (PersonChoseThis idchoice per cchoice) =
-   (idx, choiceIs idchoice per [Const $ fromIntegral cchoice], And [])
+   (idx, choiceIs idchoice per [Const $ cchoice], And [])
 observationToLogic idx (PersonChoseSomething idchoice per) = (idx, choiceMade idchoice per, And [])
 observationToLogic idx (ValueGE m1 m2) = (idx2, Eq $ LE v2 v1, And [g1, g2])
   where
@@ -81,11 +81,11 @@ observationToLogic idx TrueObs = (idx, And [], And [])
 observationToLogic idx FalseObs = (idx, Or [], And [])
 
 updateStateOS :: (State, OS) -> (AnalysisVariable, Integer) -> (State, OS)
-updateStateOS (sta, obs) (CurrentBlock, val) = (sta, obs {blockNumber = fromIntegral val})
+updateStateOS (sta, obs) (CurrentBlock, val) = (sta, obs {blockNumber = val})
 updateStateOS (sta@(State {sch = schmap}), obs) (ChoiceAV icho pe, val) =
-  (sta{sch = M.insert (icho, pe) (fromIntegral val) schmap}, obs)
+  (sta{sch = M.insert (icho, pe) val schmap}, obs)
 updateStateOS (sta@(State {sc = scmap}), obs@(OS {blockNumber = bn})) (CommitAmmount icom, val) =
-  (sta {sc = M.insert icom (0, NotRedeemed (fromIntegral val) (bn + 1)) scmap}, obs)
+  (sta {sc = M.insert icom (0, NotRedeemed val (bn + 1)) scmap}, obs)
 updateStateOS (sta@(State {sch = schmap}), obs) (ChoiceWasMade icho pe, val)
   | val >= 0 = (sta {sch = if (M.member (icho, pe) schmap)
                            then schmap else (M.insert (icho, pe) 0 schmap)}, obs)

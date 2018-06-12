@@ -104,7 +104,7 @@ satisfyObservation obs =
   case maybeSols of
     Just sols -> Just $ foldl' updateStateOS emptyStateOS (sort sols)
     Nothing -> Nothing
-  where (_, log, glob) = observationToLogic 1 obs
-        maybeSols = solveLogic (And [log, glob])
+  where (_, logi, glob) = observationToLogic 1 obs
+        maybeSols = solveLogic (And [logi, glob])
 
  

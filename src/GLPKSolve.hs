@@ -3,7 +3,6 @@ module GLPKSolve(solveLEInt) where
 import Data.Map((!))
 import Data.List(genericLength)
 import Data.LinearProgram.GLPK.Solver (msgLev, MsgLev (MsgOff), mipDefaults, glpSolveVars)
-import Data.LinearProgram.Common (LP)
 import Control.Monad.LPMonad (LPM, setDirection, setObjective, setVarKind, execLPM, leqTo, varLeq, varGeq)
 import Data.LinearProgram.Common(linCombination, VarKind(IntVar), Direction(Min) )
 import System.IO.Unsafe (unsafePerformIO)
@@ -26,10 +25,10 @@ solveLEIntAux l@(h:_) =
   case unsafePerformIO $ glpSolveVars (mipDefaults {msgLev = MsgOff}) $ execLPM $ lpm l labels of
     (_, Nothing) -> Nothing
     (_, Just (_, m)) -> Just $ map (m !) labels
-  where labels = map show [1..(genericLength h)]
+  where labels = map show ([1..(genericLength h)] :: [Integer])
 
 solveLEInt :: Eq a => Eq b => ([[Rational]], [a], [b]) -> Maybe [(b, Integer)]
-solveLEInt (m, r, c) =
+solveLEInt (m, _, c) =
   case solveLEIntAux nm of
     Just x -> Just $ zip c $ map round x
     Nothing -> Nothing

@@ -11,6 +11,7 @@ arbitraryMoneyAux s
                  ,(MoneyFromChoice . IdentChoice) <$> arbitrary <*> arbitrary <*> arbitraryMoneyAux (s - 1)]
  | s == 0 = oneof [(AvailableMoney . IdentCC) <$> arbitrary
                   ,ConstMoney <$> arbitrary]
+ | otherwise = error "Negative size in arbitraryMoney"
  
 arbitraryMoney :: Gen Money
 arbitraryMoney = sized arbitraryMoneyAux
@@ -29,6 +30,7 @@ arbitraryObservationAux s
                   ,(PersonChoseThis . IdentChoice) <$> arbitrary <*> arbitrary <*>  arbitrary
                   ,(PersonChoseSomething . IdentChoice) <$> arbitrary <*> arbitrary
                   ,pure TrueObs,pure FalseObs]
+ | otherwise = error "Negative size in arbitraryObservation"
 
 
 arbitraryObservation :: Gen Observation

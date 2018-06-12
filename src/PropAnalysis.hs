@@ -5,6 +5,7 @@ import AnalysisObs
 import GenSemantics
 import Test.QuickCheck
 
+prop_observationSatisfied :: Property
 prop_observationSatisfied = forAll arbitraryObservation
     (\obs -> let res = satisfyObservation obs in
              if (res /= Nothing)

@@ -1,7 +1,6 @@
 module SimplexSolve(solveLEInt) where
 
-import Data.Maybe (listToMaybe, isJust, catMaybes)
-import Data.List (genericIndex, transpose, sortOn, genericTake, genericDrop, genericLength, nub, foldl', sort, find)
+import Data.List (genericIndex, transpose, genericTake, genericDrop, genericLength, nub, sort, find)
 
 addSlack :: [[Rational]] -> Integer -> Integer -> [[Rational]]
 addSlack [] _ _ = []
@@ -17,10 +16,7 @@ addAux (h:t) (c:r) n l = (hi ++ [if (n == a && c) then 1 else 0 | a <- [0..l]] +
     incre = if c then 1 else 0
     hi = init h
     he = last h
-
-addRow :: [Rational] -> (Bool, [Rational]) -> [Rational]
-addRow acc (False, _) = acc
-addRow acc (True, row) = zipWith (+) acc row
+addAux _ _ _ _ = error "Index shorter than rows in addAux"
 
 bigM :: [[Rational]] -> [[Rational]]
 bigM m = obj:fm
@@ -29,7 +25,7 @@ bigM m = obj:fm
    im = map (\(x, y) -> if y then map (0 -) x else x) $ zip em auxIdx
    nm = addAux im auxIdx 0 (numAux - 1)
    fm = [0:x | x <- nm]
-   obj = ((0:(genericTake ((genericLength $ head m) - 1) (repeat 0))) ++
+   obj = ((0:(genericTake (((genericLength $ head m) - 1) :: Integer) (repeat 0))) ++
              (genericTake (numEqs) (repeat 0)) ++
              (genericTake (numAux) (repeat (-1))) ++ [0])
    auxIdx = map ((< 0) . last) $ m
@@ -42,7 +38,7 @@ chooseColumnAux (Just (x,_)) [] = Just x
 chooseColumnAux Nothing (n@(_, v):t)
  | v > 0 = chooseColumnAux (Just n) t
  | otherwise = chooseColumnAux Nothing t
-chooseColumnAux c@(Just (cp, cv)) (n@(_, nv):t)
+chooseColumnAux c@(Just (_, cv)) (n@(_, nv):t)
  | (nv > cv) = chooseColumnAux (Just n) t
  | otherwise = chooseColumnAux c t
 
@@ -62,7 +58,7 @@ computeCe tm cj = ce
         (_, ce) = unzip $ addSameFst $ sort $ concat $ [case onlyOneOne l of
                                                           Nothing -> []
                                                           Just x -> [(x, cj `genericIndex` p)]
-                                                        | (p, l) <- zip [0..] tm]
+                                                        | (p, l) <- zip [(0 :: Integer)..] tm]
 
 
 nullifyArtif :: [Rational] -> [Rational] -> [Rational]
@@ -75,20 +71,20 @@ nullifyBases tm l = [case x of
                      | (x, y) <- (zip (map onlyOneOne tm) l)]
 
 chooseColumn :: [[Rational]] -> Maybe Integer
-chooseColumn m@(h:t) = chooseColumnAux Nothing $ zip [1..] (init $ nullifyArtif h $ nullifyBases tm $ zipWith (-) cj zj)
+chooseColumn (h:t) = chooseColumnAux Nothing $ zip [1..] (init $ nullifyArtif h $ nullifyBases tm $ zipWith (-) cj zj)
   where
-        lc = map (last) t
         (_:tm) = init $ transpose t
         cj = tail $ init $ h 
         ce = computeCe tm cj
         zj = computeZj tm ce
+chooseColumn [] = error "Empty list in chooseColumn"
 
 chooseRowAux :: Integer -> [Integer] -> [(Integer, [Rational])] -> [[Rational]]
                   -> Maybe ([[Rational]], [Rational], [[Rational]], Rational)
                   -> Maybe ([[Rational]], [Rational], [[Rational]])
-chooseRowAux pc as [] _ Nothing = Nothing 
-chooseRowAux pc as [] acc (Just (b, m, a, _)) = Just (a, m, reverse b)
-chooseRowAux pc as ((c,h):t) acc Nothing
+chooseRowAux _ _ [] _ Nothing = Nothing 
+chooseRowAux _ _ [] _ (Just (b, m, a, _)) = Just (a, m, reverse b)
+chooseRowAux pc as ((_,h):t) acc Nothing
   | hh > 0 =
         chooseRowAux pc as t [] (Just (reverse acc, h, [], nv))
   | otherwise = chooseRowAux pc as t (h:acc) Nothing
@@ -107,7 +103,7 @@ chooseRow :: Integer -> [Integer] -> [(Integer, [Rational])] -> Maybe ([[Rationa
 chooseRow pc as l = chooseRowAux pc as l [] Nothing
 
 removeArtificial :: (Integer, Integer) -> [(Integer, Integer)] -> [[Rational]] -> [[Rational]]
-removeArtificial p@(_, c) es m =
+removeArtificial (_, c) es m =
   case (find (\(_,x) -> x == c) es) of
     Just (ec, _) -> transpose ((genericTake ec tm) ++ (genericDrop (ec + 1) tm))
     Nothing -> m
@@ -147,7 +143,7 @@ calculateSols m = [case onlyOneOne l of
                    | (_:l) <- transpose m]
 
 checkSolutionLE :: Eq b => ([[Rational]], [a], [b]) -> [(b, Rational)] -> Bool
-checkSolutionLE (m, r, c) s = all (\y -> (sum $ (zipWith (*) c3) $ init y) <= last y) m
+checkSolutionLE (m, _, c) s = all (\y -> (sum $ (zipWith (*) c3) $ init y) <= last y) m
    where c3 = [(case lookup e s of
                  Just x -> x
                  Nothing -> 0) | e <- c]
@@ -157,7 +153,7 @@ unBigM r c m om
   | checkSolutionLE (om, r, c) esols = Just esols
   | otherwise = Nothing
   where
-    x = genericLength c
+    x = (genericLength c) :: Integer
     (_:sols) = calculateSols m 
     esols = init $ zip c $ genericTake x sols
 
@@ -176,6 +172,8 @@ splitSol :: [(Either b b, Rational)] -> [(b, Rational)]
 splitSol [] = []
 splitSol [_] = error "Single result in splitSol"
 splitSol ((Left a, x):(Right _, y):t) = (a, x - y):(splitSol t)
+splitSol ((Left _, _):(Left _, _):_) = error "Two Left in a row in splitSol"
+splitSol ((Right _, _):_:_) = error "Right in odd position in splitSol"
 
 solveLEBS :: Eq b => ([[Rational]], [a], [b]) -> Maybe [(b, Rational)]
 solveLEBS (m, r, c) = case res of
@@ -186,7 +184,7 @@ solveLEBS (m, r, c) = case res of
                r, init $ concat [[Left x, Right x] | x <- c])
 
 nonFractional :: Rational -> Bool
-nonFractional d = (toRational $ ceiling d) == d
+nonFractional d = (toRational $ (ceiling d :: Integer)) == d
 
 splitOrConvertSolutionAux :: [(b, Rational)] -> [(b, Integer)] -> Either (b, Rational) [(b, Integer)]
 splitOrConvertSolutionAux [] l = Right l
@@ -217,12 +215,12 @@ splitOrConvert (m, r, c) msol =
   case msol of
     Just sol ->
       case splitOrConvertSolution sol of
-        Left (b, n) -> let t = toRational $ ceiling n in
-                              let f = toRational $ floor n in
-                              let p = genericElemIndex b c in
-                              let w = genericLength r in
-                              Just $ Left [(((addLE p f w):m), nel:r, c), (((addGE p f w):m), nel:r, c)]
-        Right sol -> Just $ Right sol
+        Left (b, n) -> let t = toRational $ ((ceiling n) :: Integer) in
+                       let f = toRational $ ((floor n) :: Integer) in
+                       let p = genericElemIndex b c in
+                       let w = genericLength r in
+                         Just $ Left [(((addLE p f w):m), nel:r, c), (((addGE p t w):m), nel:r, c)]
+        Right nsol -> Just $ Right nsol
     Nothing -> Nothing
   where nel = case r of
                 [] -> Left 0

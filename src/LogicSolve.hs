@@ -12,21 +12,27 @@ data Equation a = LE [EquationTerm a] [EquationTerm a]
 data Logic a = Eq (Equation a) | Not (Logic a) | And [Logic a] | Or [Logic a]
  deriving (Eq, Ord, Show, Read)
 
+isVar :: EquationTerm a -> Bool
 isVar (Var _) = True
 isVar _ = False
 
+getVar :: EquationTerm a -> a
 getVar (Var x) = x
 getVar _ = error "getVar: not a var!"
 
+isConst :: EquationTerm a -> Bool
 isConst (Const _) = True
 isConst _ = False
 
+getConst :: EquationTerm a -> Integer 
 getConst (Const x) = x
 getConst _ = error "getConst: not a const!"
 
+isAnd :: Logic a -> Bool
 isAnd (And _) = True
 isAnd _ = False
 
+isOr :: Logic a -> Bool
 isOr (Or _) = True
 isOr _ = False
 
@@ -46,7 +52,7 @@ removeNots (And l) = And $ map removeNots l
 removeNots (Or l) = Or $ map removeNots l
 
 findAndSeparateAux :: (a -> Bool) -> [a] -> [a] -> Maybe (a, [a])
-findAndSeparateAux _ [] acc = Nothing
+findAndSeparateAux _ [] _ = Nothing
 findAndSeparateAux f (h:t) acc
  | f h = Just (h, acc ++ t)
  | otherwise = findAndSeparateAux f t (h:acc)
@@ -101,9 +107,11 @@ collectVarsLogic (Or l) = foldl' (++) [] $ map collectVarsLogic l
 collectVars :: Eq a => Logic a -> [a]
 collectVars l = nub $ collectVarsLogic l
 
+add :: (Eq a) => Integer -> [(a, Integer)] -> a -> [(a, Integer)]
 add n ((s,v):t) el
  | s == el = (s,v + n):t
  | otherwise = (s,v):(add n t el)
+add _ [] _ = [] 
 
 toEquation :: Eq a => [a] -> Logic a -> [Rational]
 toEquation syms (Eq (LE l1 l2)) = (map toRational v) ++ [c]
@@ -128,7 +136,7 @@ toMatrix _ = error "Wrong format in toMatrix"
 getFirstResult :: [Maybe [(Maybe a, Integer)]] -> Maybe [(a, Integer)]
 getFirstResult [] = Nothing
 getFirstResult ((Nothing):t) = getFirstResult t
-getFirstResult ((Just x):t) = Just $ [(e, n) | (Just e, n) <- x]
+getFirstResult ((Just x):_) = Just $ [(e, n) | (Just e, n) <- x]
 
 solveLogic :: Eq a => Logic a -> Maybe [(a, Integer)]
 solveLogic l = getFirstResult res
@@ -138,5 +146,6 @@ solveLogic l = getFirstResult res
                Or r -> r
                r@(And _) -> [r]
                r@(Eq _) -> [And [r]]
+               r@(Not _) -> [And [r]]
 
 

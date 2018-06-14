@@ -5,7 +5,7 @@ import Data.List (foldl', nub, genericLength)
 
 -- Symbolic reasoning
 
-data EquationTerm a = Var a | Const Integer
+data EquationTerm a = NegVar a | Var a | Const Integer
  deriving (Eq, Ord, Show, Read)
 data Equation a = LE [EquationTerm a] [EquationTerm a]
  deriving (Eq, Ord, Show, Read)
@@ -13,12 +13,22 @@ data Logic a = Eq (Equation a) | Not (Logic a) | And [Logic a] | Or [Logic a]
  deriving (Eq, Ord, Show, Read)
 
 isVar :: EquationTerm a -> Bool
+isVar (NegVar _) = True
 isVar (Var _) = True
 isVar _ = False
 
 getVar :: EquationTerm a -> a
+getVar (NegVar x) = x
 getVar (Var x) = x
 getVar _ = error "getVar: not a var!"
+
+isPVar :: EquationTerm a -> Bool
+isPVar (Var _) = True
+isPVar _ = False
+
+isNVar :: EquationTerm a -> Bool
+isNVar (NegVar _) = True
+isNVar _ = False
 
 isConst :: EquationTerm a -> Bool
 isConst (Const _) = True
@@ -116,8 +126,8 @@ add _ [] _ = []
 toEquation :: Eq a => [a] -> Logic a -> [Rational]
 toEquation syms (Eq (LE l1 l2)) = (map toRational v) ++ [c]
   where csyms = zip syms $ repeat 0
-        pl1 = map getVar $ filter isVar l1
-        nl1 = map getVar $ filter isVar l2
+        pl1 = map getVar $ (filter isPVar l1) ++ (filter isNVar l2)
+        nl1 = map getVar $ (filter isPVar l2) ++ (filter isNVar l1)
         csyms2 = foldl' (add 1) csyms pl1
         csyms3 = foldl' (add (-1)) csyms2 nl1
         (_,v) = unzip csyms3

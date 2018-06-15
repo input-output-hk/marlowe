@@ -494,9 +494,13 @@ sortByExpirationDate = List.sortBy lowerExpirationDateButNotExpired
 -- Compares two cash commitments regarding their expiration date,
 -- it considers a commitment smaller the closer it is to its
 -- expiration but without having expired.
+-- In case of draw we choose the one with the lowest id
 lowerExpirationDateButNotExpired :: (IdentCC, CCStatus) -> (IdentCC, CCStatus) -> Ordering
 
-lowerExpirationDateButNotExpired (_, (_, NotRedeemed _ e)) (_, (_, NotRedeemed _ e2)) = compare e e2
+lowerExpirationDateButNotExpired (IdentCC id1, (_, NotRedeemed _ e)) (IdentCC id2, (_, NotRedeemed _ e2)) =
+  case compare e e2 of
+    EQ -> compare id1 id2 
+    o -> o
 lowerExpirationDateButNotExpired (_, (_, NotRedeemed _ _)) _ = LT
 lowerExpirationDateButNotExpired _ (_, (_, NotRedeemed _ _)) = GT
 lowerExpirationDateButNotExpired _ _ = EQ

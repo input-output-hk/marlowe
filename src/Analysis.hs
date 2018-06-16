@@ -143,13 +143,18 @@ compileListAux (SymbolicTrace {inputs = inps}) compMap (InputIssued ide, val)
   | val < 0 = compMap
   | otherwise = case Map.lookup ide inps of
                   Just x -> Map.insert ide (Nothing, (convertToEmptyConcreteData x)) compMap
-                  Nothing -> error "Inconsistent symbolic trace information in compileList"
+                  Nothing -> case ide of
+                                -- We make an exception for ChoiceId since there
+                                -- is not a clear time to issue them
+                                ChoiceID cid cper -> Map.insert ide (Nothing, (convertToEmptyConcreteData
+                                                                                (ChoiceDI cid cper))) compMap
+                                _ -> error "Inconsistent symbolic trace in compileList"
 compileListAux _ compMap (InputIssueBlock ide, val)
              -- We assume negative block is not possible (start at 0)
   | val < 0 = error "Negative block number in compileList" 
   | otherwise = case Map.lookup ide compMap of
                   Just (Nothing, cdat) -> Map.insert ide (Just val, cdat) compMap
-                  _ -> error "Inconsistent symbolic trace information in compileList"
+                  _ -> error "Inconsistent symbolic trace in compileList"
 compileListAux _ compMap (CommitAmmount ide, val)
              -- We assume is not possible to commit a negative ammount of money
   | val < 0 = error "Negative money committed in compileList" 
@@ -331,6 +336,17 @@ addCommit ide per veMon tim =
        Just _ -> destroyBranch
   where gIde = CommitID ide
 
+addRedeem :: IdentCC -> Person -> VarExpr -> SE ()
+addRedeem ide per veMon =
+  do currRedeem <- getInput gIde
+     case currRedeem of
+       Nothing -> do setInput gIde (RedeemDI ide per)
+                     setIssued gIde
+                     setIssueBlock gIde
+                     setAnalysisVar (RedeemAmmount ide) veMon
+       Just _ -> destroyBranch
+  where gIde = RedeemID ide
+
 addCommitToState :: IdentCC -> (Person, SCCRedeemStatus) -> SE () 
 addCommitToState ide val =
   do ssta <- getSymState
@@ -424,9 +440,72 @@ analyseMoney (ConstMoney x) =
 analyseMoney (MoneyFromChoice ide per m) =
   do bn <- getBlockNum
      ifThenElseSymb (gide `wasIssuedBeforeOrAt` bn)
-       (return [Var $ ChoiceValue ide per]) -- If choice issued before currentBlock return choice
+       (return [Var $ ChoiceValue ide per]) -- If choice issued before or in currentBlock return choice
        (analyseMoney m) -- Else return default
   where gide = ChoiceID ide per
+
+-- The returned integer represents True if ">= 0" or False if "<= -1"
+analyseObservation :: Observation -> SE VarExpr
+analyseObservation (BelowTimeout x) =
+  -- If not below the timeout
+  do symIfExpired (constant x)
+       -- Then return False
+       (return [Const (-1)])
+       -- Else return True
+       (return [Const 0])
+analyseObservation (AndObs obs1 obs2) =
+  do vobs1 <- analyseObservation obs1
+     vobs2 <- analyseObservation obs2 
+     -- If both observations are >= 0 
+     ifThenElseSymb (And [Eq $ LE [Const 0] vobs1, Eq $ LE [Const 0] vobs2])
+     -- Then
+       (return [Const 0])
+     -- Else
+       (return [Const (-1)])
+analyseObservation (OrObs obs1 obs2) =
+  do vobs1 <- analyseObservation obs1
+     vobs2 <- analyseObservation obs2 
+     -- If one observation is >= 0 
+     ifThenElseSymb (Or [Eq $ LE [Const 0] vobs1, Eq $ LE [Const 0] vobs2])
+     -- Then
+       (return [Const 0])
+     -- Else
+       (return [Const (-1)])
+analyseObservation (NotObs obs) =
+  do vobs <- analyseObservation obs
+     -- If observation is >= 0 
+     ifThenElseSymb (Eq $ LE [Const 0] vobs)
+     -- Then
+       (return [Const (-1)])
+     -- Else
+       (return [Const 0])
+analyseObservation (PersonChoseThis ide per cchoice) =
+  do bn <- getBlockNum
+     ifThenElseSymb (And [gide `wasIssuedBeforeOrAt` bn,
+                          generateEq [Const cchoice] [Var $ ChoiceValue ide per]])
+       (return [Const 0]) -- If choice issued before or in currentBlock and equals cchoice return True
+       (return [Const (-1)]) -- Else return False
+  where gide = ChoiceID ide per
+analyseObservation (PersonChoseSomething ide per) =
+  do bn <- getBlockNum
+     ifThenElseSymb (gide `wasIssuedBeforeOrAt` bn)
+       (return [Const 0]) -- If choice issued before or in currentBlock return True
+       (return [Const (-1)]) -- Else return False
+  where gide = ChoiceID ide per
+     
+analyseObservation (ValueGE m1 m2) =
+  do vmon1 <- analyseMoney m1
+     vmon2 <- analyseMoney m2
+     -- If m1 >= m2
+     ifThenElseSymb (Eq $ LE vmon2 vmon1)
+     -- Then
+       (return [Const 0])
+     -- Else
+       (return [Const 1])
+analyseObservation TrueObs =
+  return [Const 0]
+analyseObservation FalseObs =
+  return [Const (-1)]
 
 analyseContractStep :: Contract -> SE Contract
 analyseContractStep Null = destroyBranch 
@@ -459,6 +538,44 @@ analyseContractStep (CommitCash ident person val start_timeout end_timeout con1 
            addCommit ident person veMon end_timeout
            addCommitToState ident (person, SNotRedeemed veMon end_timeout)
            return con1)
+analyseContractStep (RedeemCC ident con) =
+  do allowWait
+     st <- getSymState
+     (let sccs = ssc st in
+      case Map.lookup ident sccs of
+        Just (person, SNotRedeemed val _) ->
+          (do setSymState $ st {ssc = Map.insert ident (person, SManuallyRedeemed) sccs}
+              addRedeem ident person val
+              return con)
+        Just (_, SManuallyRedeemed) -> return con
+        Nothing -> destroyBranch)
+analyseContractStep (Both con1 con2) =
+  do branch (do nc1 <- analyseContractStep con1
+                branch (do nc2 <- analyseContractStep con2
+                           return (Both nc1 nc2))
+                       (return (Both nc1 con2)))
+            (do nc2 <- analyseContractStep con2
+                return (Both con1 nc2))
+analyseContractStep (Choice obs conT conF) =
+  do vobs <- analyseObservation obs
+     -- If obs is True
+     ifThenElseSymb (Eq $ LE [Const 0] vobs)
+       -- Then
+       (return conT)
+       -- Else
+       (return conF)
+analyseContractStep (When obs expi con con2) =
+     -- If When is expired
+  do symIfExpired [Const expi]
+       -- Then
+       (return con2)
+       -- Else
+       (do vobs <- analyseObservation obs -- Ensure obs is true
+           -- Note: we are not filtering cases when blockNumber is not minimal
+           -- this may result in extra case, but filtering them would add a lot
+           -- of complexity so it is probably not a good idea
+           addConstraint (Eq $ LE [Const 0] vobs)
+           return con)
 
 analyseContractAux :: [(Contract, SymbolicTrace)] -> [SymbolicTrace]
 analyseContractAux [] = []
@@ -466,7 +583,9 @@ analyseContractAux ((c,st):t) = st:(analyseContractAux (t ++ (extractSymbolicTra
 
 extractBlockNum :: SymbolicTrace -> SymbolicTrace
 extractBlockNum (s@(SymbolicTrace {constraints = cons, currentBlock = var})) =
-  s {constraints = And [generateEq [Var $ CurrentBlock] var, cons]}
+  s {constraints = And ([generateEq [Var $ CurrentBlock] var,
+                         Eq $ LE [Const 0] [Var $ CurrentBlock], cons] ++
+                        [Eq $ LE [Const 0] [Var $ el] | el@(InputIssueBlock _) <- collectVars cons])}
 
 analyseContract :: Contract -> [SymbolicTrace]
 analyseContract c = map extractBlockNum $ analyseContractAux [(c, emptySymbolicTrace)]

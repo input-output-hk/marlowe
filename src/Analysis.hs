@@ -144,7 +144,7 @@ compileListAux (SymbolicTrace {inputs = inps}) compMap (InputIssued ide, val)
   | otherwise = case Map.lookup ide inps of
                   Just x -> Map.insert ide (Nothing, (convertToEmptyConcreteData x)) compMap
                   Nothing -> case ide of
-                                -- We make an exception for ChoiceId since there
+                                -- We make an exception for ChoiceID since there
                                 -- is not a clear time to issue them
                                 ChoiceID cid cper -> Map.insert ide (Nothing, (convertToEmptyConcreteData
                                                                                 (ChoiceDI cid cper))) compMap
@@ -427,9 +427,9 @@ analyseMoney :: Money -> SE VarExpr
 analyseMoney (AvailableMoney ide) =
   do ssta <- getSymState
      case Map.lookup ide $ ssc ssta of
-       Just (_, SNotRedeemed v e) -> symIfExpired (constant e)
-                                       (return [Const 0]) -- If expired return 0
-                                       (return v) -- If not expired return the value
+       Just (_, SNotRedeemed v e) -> symIfExpiredTV (constant e)
+                                       [Const 0] -- If expired return 0
+                                       v -- If not expired return the value
        _ -> return [Const 0] -- If not found return 0
 analyseMoney (AddMoney x y) =
   do vx <- analyseMoney x
@@ -439,69 +439,70 @@ analyseMoney (ConstMoney x) =
   return [Const x]
 analyseMoney (MoneyFromChoice ide per m) =
   do bn <- getBlockNum
-     ifThenElseSymb (gide `wasIssuedBeforeOrAt` bn)
-       (return [Var $ ChoiceValue ide per]) -- If choice issued before or in currentBlock return choice
-       (analyseMoney m) -- Else return default
+     vm <- analyseMoney m
+     ifThenElseSymTV (gide `wasIssuedBeforeOrAt` bn)
+       [Var $ ChoiceValue ide per] -- If choice issued before or in currentBlock return choice
+       vm -- Else return default
   where gide = ChoiceID ide per
 
 -- The returned integer represents True if ">= 0" or False if "<= -1"
 analyseObservation :: Observation -> SE VarExpr
 analyseObservation (BelowTimeout x) =
   -- If not below the timeout
-  do symIfExpired (constant x)
+  do symIfExpiredTV (constant x)
        -- Then return False
-       (return [Const (-1)])
+       [Const (-1)]
        -- Else return True
-       (return [Const 0])
+       [Const 0]
 analyseObservation (AndObs obs1 obs2) =
   do vobs1 <- analyseObservation obs1
      vobs2 <- analyseObservation obs2 
      -- If both observations are >= 0 
-     ifThenElseSymb (And [Eq $ LE [Const 0] vobs1, Eq $ LE [Const 0] vobs2])
+     ifThenElseSymTV (And [Eq $ LE [Const 0] vobs1, Eq $ LE [Const 0] vobs2])
      -- Then
-       (return [Const 0])
+       [Const 0]
      -- Else
-       (return [Const (-1)])
+       [Const (-1)]
 analyseObservation (OrObs obs1 obs2) =
   do vobs1 <- analyseObservation obs1
      vobs2 <- analyseObservation obs2 
      -- If one observation is >= 0 
-     ifThenElseSymb (Or [Eq $ LE [Const 0] vobs1, Eq $ LE [Const 0] vobs2])
+     ifThenElseSymTV (Or [Eq $ LE [Const 0] vobs1, Eq $ LE [Const 0] vobs2])
      -- Then
-       (return [Const 0])
+       [Const 0]
      -- Else
-       (return [Const (-1)])
+       [Const (-1)]
 analyseObservation (NotObs obs) =
   do vobs <- analyseObservation obs
      -- If observation is >= 0 
-     ifThenElseSymb (Eq $ LE [Const 0] vobs)
+     ifThenElseSymTV (Eq $ LE [Const 0] vobs)
      -- Then
-       (return [Const (-1)])
+       [Const (-1)]
      -- Else
-       (return [Const 0])
+       [Const 0]
 analyseObservation (PersonChoseThis ide per cchoice) =
   do bn <- getBlockNum
-     ifThenElseSymb (And [gide `wasIssuedBeforeOrAt` bn,
+     ifThenElseSymTV (And [gide `wasIssuedBeforeOrAt` bn,
                           generateEq [Const cchoice] [Var $ ChoiceValue ide per]])
-       (return [Const 0]) -- If choice issued before or in currentBlock and equals cchoice return True
-       (return [Const (-1)]) -- Else return False
+       [Const 0] -- If choice issued before or in currentBlock and equals cchoice return True
+       [Const (-1)] -- Else return False
   where gide = ChoiceID ide per
 analyseObservation (PersonChoseSomething ide per) =
   do bn <- getBlockNum
-     ifThenElseSymb (gide `wasIssuedBeforeOrAt` bn)
-       (return [Const 0]) -- If choice issued before or in currentBlock return True
-       (return [Const (-1)]) -- Else return False
+     ifThenElseSymTV (gide `wasIssuedBeforeOrAt` bn)
+       [Const 0] -- If choice issued before or in currentBlock return True
+       [Const (-1)] -- Else return False
   where gide = ChoiceID ide per
      
 analyseObservation (ValueGE m1 m2) =
   do vmon1 <- analyseMoney m1
      vmon2 <- analyseMoney m2
      -- If m1 >= m2
-     ifThenElseSymb (Eq $ LE vmon2 vmon1)
+     ifThenElseSymTV (Eq $ LE vmon2 vmon1)
      -- Then
-       (return [Const 0])
+       [Const 0]
      -- Else
-       (return [Const 1])
+       [Const 1]
 analyseObservation TrueObs =
   return [Const 0]
 analyseObservation FalseObs =
@@ -605,6 +606,20 @@ generateEq x y = And [Eq $ LE x y, Eq $ LE y x]
 
 symIsExpired :: VarExpr -> VarExpr -> SLogic
 symIsExpired e ee = Eq $ LE ee e
+
+ifThenElseSymTV :: SLogic -> VarExpr -> VarExpr -> SE VarExpr
+ifThenElseSymTV cond xv yv =
+  do nv <- newVar 
+     addConstraint $ Or [And [generateEq nv xv, xl], And [generateEq nv yv, yl]]
+     return nv 
+  where
+    xl = cond
+    yl = Not cond
+
+symIfExpiredTV :: VarExpr -> VarExpr -> VarExpr -> SE VarExpr
+symIfExpiredTV expi f1 f2 =
+  do bn <- getBlockNum
+     ifThenElseSymTV (symIsExpired bn expi) f1 f2
 
 symIfExpired :: VarExpr -> SE a -> SE a -> SE a
 symIfExpired expi f1 f2 =

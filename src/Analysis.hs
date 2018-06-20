@@ -4,7 +4,7 @@ module Analysis where
 import Semantics
 import LogicSolve
 import Data.List (foldl', sort, sortBy)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
@@ -89,11 +89,14 @@ emptySymbolicState :: SState
 emptySymbolicState = SState { ssc = Map.empty,
                               ssch = Map.empty } 
 
+type Explanation = String
+
 data SymbolicTrace = SymbolicTrace { lastIndex :: Integer,
                                      constraints :: SLogic,
                                      inputs :: Map.Map InputIdentifier InputDetInfo,
                                      currentBlock :: VarExpr,
-                                     symState :: SState }
+                                     symState :: SState,
+                                     explanation :: [Explanation] }
                deriving (Eq,Ord,Show,Read)
 
 emptySymbolicTrace :: SymbolicTrace
@@ -101,7 +104,8 @@ emptySymbolicTrace = SymbolicTrace { lastIndex = nind,
                                      constraints = (Eq $ LE (constant 0) tvar),
                                      inputs = Map.empty,
                                      currentBlock = tvar,
-                                     symState = emptySymbolicState }
+                                     symState = emptySymbolicState,
+                                     explanation = []}
   where (nind, tvar) = generateAV 0
 
 {---------------------------------------
@@ -294,6 +298,13 @@ addConstraintAux logi (st@(SymbolicTrace {constraints = ologi})) =
 
 addConstraint :: SLogic -> SE ()
 addConstraint x = makeSetter (addConstraintAux x)
+
+addExplanationAux :: Explanation -> (SymbolicTrace -> SymbolicTrace)
+addExplanationAux expl (x@(SymbolicTrace {explanation = ta})) =
+  x {explanation = expl:ta}
+
+addExplanation :: Explanation -> SE ()
+addExplanation x = makeSetter (addExplanationAux x)
 
 ifThenElseSymb :: SLogic -> SE a -> SE a -> SE a 
 ifThenElseSymb logi td ed = branch (do { addConstraint (logi) ; td })
@@ -515,7 +526,8 @@ analyseContractStep (Pay idpay from to val expi con) =
      -- If expired
      symIfExpired (constant expi)
         -- Then
-        (return con)
+        (do addExplanation ("Wait for payment \"" ++ show idpay ++ "\" to expire.")
+            return con)
         -- Else
         (do veMon <- analyseMoney val
             addClaim idpay to veMon
@@ -523,19 +535,23 @@ analyseContractStep (Pay idpay from to val expi con) =
             -- If enough money
             ifThenElseSymb (Eq $ LE veMon $ concat $ getCommVals remMon)
                 -- Then
-                (do discountMonFrom veMon remMon
+                (do addExplanation ("Claim payment \"" ++ show idpay ++ "\", there is enough money.")
+                    discountMonFrom veMon remMon
                     return con)
                 -- Else
-                (return con))
+                (do addExplanation ("Claim payment \"" ++ show idpay ++ "\", but there is not enough money.")
+                    return con))
 analyseContractStep (CommitCash ident person val start_timeout end_timeout con1 con2) =
   do allowWait
      -- If expired
      symIfExpired (constant $ min start_timeout end_timeout)
        -- Then
-       (do addCommitToState ident (person, SManuallyRedeemed)
+       (do addExplanation ("Wait for commit \"" ++ show ident ++ "\" to expire.")
+           addCommitToState ident (person, SManuallyRedeemed)
            return con2)
        -- Else
-       (do veMon <- analyseMoney val
+       (do addExplanation ("Satisfy the commit \"" ++ show ident ++ "\".")
+           veMon <- analyseMoney val
            addCommit ident person veMon end_timeout
            addCommitToState ident (person, SNotRedeemed veMon end_timeout)
            return con1)
@@ -545,12 +561,16 @@ analyseContractStep (RedeemCC ident con) =
      (let sccs = ssc st in
       case Map.lookup ident sccs of
         Just (person, SNotRedeemed val _) ->
-          (do setSymState $ st {ssc = Map.insert ident (person, SManuallyRedeemed) sccs}
+          (do addExplanation ("Redeem the commit \"" ++ show ident ++ "\".")
+              setSymState $ st {ssc = Map.insert ident (person, SManuallyRedeemed) sccs}
               addRedeem ident person val
               return con)
-        Just (_, SManuallyRedeemed) -> return con
+        Just (_, SManuallyRedeemed) -> (do addExplanation ("The commit \"" ++ show ident ++ "\" was already redeemed.")
+                                           return con)
         Nothing -> destroyBranch)
 analyseContractStep (Both con1 con2) =
+  -- Note: we are treating this as if you had the choice to not execute one of the
+  -- branches, this is not accurate, but it just adds some fake possibilities
   do branch (do nc1 <- analyseContractStep con1
                 branch (do nc2 <- analyseContractStep con2
                            return (Both nc1 nc2))
@@ -562,16 +582,20 @@ analyseContractStep (Choice obs conT conF) =
      -- If obs is True
      ifThenElseSymb (Eq $ LE [Const 0] vobs)
        -- Then
-       (return conT)
+       (do addExplanation ("We make sure that the following observation is satisfied: " ++ show obs)
+           return conT)
        -- Else
-       (return conF)
+       (do addExplanation ("We make sure that the following observation is not satisfied: " ++ show obs)
+           return conF)
 analyseContractStep (When obs expi con con2) =
      -- If When is expired
   do symIfExpired [Const expi]
        -- Then
-       (return con2)
+       (do addExplanation ("We wait for the When to expire without satisfying the following observation: " ++ show obs)
+           return con2)
        -- Else
-       (do vobs <- analyseObservation obs -- Ensure obs is true
+       (do addExplanation ("We make sure that the following observation in the When is satisfied: " ++ show obs)
+           vobs <- analyseObservation obs -- Ensure obs is true
            -- Note: we are not filtering cases when blockNumber is not minimal
            -- this may result in extra case, but filtering them would add a lot
            -- of complexity so it is probably not a good idea
@@ -588,8 +612,23 @@ extractBlockNum (s@(SymbolicTrace {constraints = cons, currentBlock = var})) =
                          Eq $ LE [Const 0] [Var $ CurrentBlock], cons] ++
                         [Eq $ LE [Const 0] [Var $ el] | el@(InputIssueBlock _) <- collectVars cons])}
 
+reverseExplanation :: SymbolicTrace -> SymbolicTrace
+reverseExplanation (s@(SymbolicTrace {explanation = expl})) = s {explanation = reverse expl}
+
 analyseContract :: Contract -> [SymbolicTrace]
-analyseContract c = map extractBlockNum $ analyseContractAux [(c, emptySymbolicTrace)]
+analyseContract c = map (reverseExplanation . extractBlockNum) $ analyseContractAux [(c, emptySymbolicTrace)]
+
+printExplanation :: (Integer, [Explanation]) -> IO ()
+printExplanation (n, []) = do putStrLn ("Trace " ++ show n ++ ":")
+                              putStrLn (" - Do nothing.")
+printExplanation (n, l) = do putStrLn ("Trace " ++ show n ++ ":")
+                             mapM_ (\x -> putStrLn (" - " ++ x)) l
+
+explainPossibleSymbolicTraces :: Contract -> IO ()
+explainPossibleSymbolicTraces c = mapM_ printExplanation posRes
+  where
+    res = analyseContract c
+    posRes = map (\(n, s) -> (n, explanation s)) $ zip [1..] $ filter (isJust . symbolicToConcreteTrace) res
 
 {----------------------
  - Auxiliar functions -

@@ -403,7 +403,7 @@ filterExpired ((h@(_, (_, SNotRedeemed _ e))):t) =
   -- If expired
   symIfExpired (constant e)
      -- Then
-     (return [])
+     (filterExpired t)
      -- Else
      (do rest <- filterExpired t
          return (h:rest))
@@ -439,9 +439,11 @@ discountMonFrom v1 ((i, (_, SNotRedeemed v2 _)):t) =
   -- If there is enough money in this commit
   ifThenElseSymb (Eq $ LE v1 v2)
     -- Then just discount the remaining v1
-    (updateCommValue i ((invertVarExpr v1) ++ v2))
+    (do addExplanation ("Get all remaining money needed for the payment from commit \"" ++ show i ++ "\", that is enough.")
+        updateCommValue i ((invertVarExpr v1) ++ v2))
     -- Else set to zero and continue with the difference
-    (do updateCommValue i [Const 0]
+    (do addExplanation ("Get all money remaining in commit \"" ++ show i ++ "\", but that is not enough.")
+        updateCommValue i [Const 0]
         discountMonFrom ((invertVarExpr v2) ++ v1) t)
 
 {----------------------
@@ -595,19 +597,20 @@ analyseContractStep (Choice obs conT conF) =
      -- If obs is True
      ifThenElseSymb (Eq $ LE [Const 0] vobs)
        -- Then
-       (do addExplanation ("We make sure that the following observation is satisfied: " ++ show obs)
+       (do addExplanation ("Make sure that the following observation is satisfied: " ++ show obs)
            return conT)
        -- Else
-       (do addExplanation ("We make sure that the following observation is not satisfied: " ++ show obs)
+       (do addExplanation ("Make sure that the following observation is not satisfied: " ++ show obs)
            return conF)
 analyseContractStep (When obs expi con con2) =
      -- If When is expired
-  do symIfExpired [Const expi]
+  do allowWait
+     symIfExpired [Const expi]
        -- Then
-       (do addExplanation ("We wait for the When to expire without satisfying the following observation: " ++ show obs)
+       (do addExplanation ("Wait for the When to expire without satisfying the following observation: " ++ show obs)
            return con2)
        -- Else
-       (do addExplanation ("We make sure that the following observation in the When is satisfied: " ++ show obs)
+       (do addExplanation ("Make sure that the following observation in the When is satisfied: " ++ show obs)
            vobs <- analyseObservation obs -- Ensure obs is true
            -- Note: we are not filtering cases when blockNumber is not minimal
            -- this may result in extra case, but filtering them would add a lot

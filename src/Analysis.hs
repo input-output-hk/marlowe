@@ -387,16 +387,16 @@ setSymState :: SState -> SE ()
 setSymState sstate = makeSetter (\str -> str {symState = sstate})
 
 sortSymByExpiration :: [(IdentCC, SCCStatus)] -> [(IdentCC, SCCStatus)]
-sortSymByExpiration = sortBy lowerExpirationDateButNotExpiredSym
+sortSymByExpiration = sortBy lowerExpirationDateSym
 
-lowerExpirationDateButNotExpiredSym :: (IdentCC, SCCStatus) -> (IdentCC, SCCStatus) -> Ordering
-lowerExpirationDateButNotExpiredSym (IdentCC id1, (_, SNotRedeemed _ e)) (IdentCC id2, (_, SNotRedeemed _ e2)) =
+lowerExpirationDateSym :: (IdentCC, SCCStatus) -> (IdentCC, SCCStatus) -> Ordering
+lowerExpirationDateSym (IdentCC id1, (_, SNotRedeemed _ e)) (IdentCC id2, (_, SNotRedeemed _ e2)) =
   case compare e e2 of
     EQ -> compare id1 id2
     o -> o
-lowerExpirationDateButNotExpiredSym (_, (_, SNotRedeemed _ _)) _ = LT
-lowerExpirationDateButNotExpiredSym _ (_, (_, SNotRedeemed _ _)) = GT
-lowerExpirationDateButNotExpiredSym _ _ = EQ
+lowerExpirationDateSym (_, (_, SNotRedeemed _ _)) _ = LT
+lowerExpirationDateSym _ (_, (_, SNotRedeemed _ _)) = GT
+lowerExpirationDateSym _ _ = EQ
 
 filterExpired :: [(IdentCC, SCCStatus)] -> SE [(IdentCC, SCCStatus)]
 filterExpired ((h@(_, (_, SNotRedeemed _ e))):t) =
@@ -518,7 +518,6 @@ analyseObservation (PersonChoseSomething ide per) =
        [Const 0] -- If choice issued before or in currentBlock return True
        [Const (-1)] -- Else return False
   where gide = ChoiceID ide per
-     
 analyseObservation (ValueGE m1 m2) =
   do vmon1 <- analyseMoney m1
      vmon2 <- analyseMoney m2

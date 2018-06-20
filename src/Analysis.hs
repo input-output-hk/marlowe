@@ -28,6 +28,20 @@ executeConcreteTrace contract concreteTrace = reverse $ finalAcc
                                            (nsta, ncon, incBlock os, (reverse naccs) ++ accs)
     (_, _, _, finalAcc) = foldl' stepFunc iniAcc concreteTrace
 
+displayTrace :: Maybe [Input] -> IO ()
+displayTrace Nothing = return ()
+displayTrace (Just x) = do putStrLn "******"
+                           mapM_ (putStrLn . show) x
+
+showConcreteTraces :: Contract -> IO ()
+showConcreteTraces c =
+  do putStrLn "Possible concrete traces:"
+     mapM_ (displayTrace) ct
+  where st = analyseContract c
+        ct = map symbolicToConcreteTrace st
+
+
+
 {---------------------------------
  - Abstract trace representation -
  ---------------------------------}
@@ -664,5 +678,4 @@ symIfExpired :: VarExpr -> SE a -> SE a -> SE a
 symIfExpired expi f1 f2 =
    do bn <- getBlockNum
       ifThenElseSymb (symIsExpired bn expi) f1 f2
-
 

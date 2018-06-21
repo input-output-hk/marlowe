@@ -5,6 +5,7 @@ import Semantics
 import LogicSolve
 import Data.List (foldl', sort, sortBy)
 import Data.Maybe (fromMaybe, isJust)
+import Control.Monad (replicateM)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
@@ -398,15 +399,19 @@ lowerExpirationDateSym (_, (_, SNotRedeemed _ _)) _ = LT
 lowerExpirationDateSym _ (_, (_, SNotRedeemed _ _)) = GT
 lowerExpirationDateSym _ _ = EQ
 
+-- Change expired values to zero
 filterExpired :: [(IdentCC, SCCStatus)] -> SE [(IdentCC, SCCStatus)]
-filterExpired ((h@(_, (_, SNotRedeemed _ e))):t) =
-  -- If expired
-  symIfExpired (constant e)
-     -- Then
-     (filterExpired t)
-     -- Else
-     (do rest <- filterExpired t
-         return (h:rest))
+filterExpired ((i, (p, SNotRedeemed v e)):t) =
+  do nvv <- nv
+     rest <- filterExpired t
+     return ((i, (p, SNotRedeemed nvv e)):rest)
+  where
+   nv = -- If expired
+        symIfExpiredTV (constant e)
+          -- Then
+          [Const 0]
+          -- Else
+          v
 filterExpired _ = return []
 
 getSortedUnexpiredCommitsBy :: Person -> SE [(IdentCC, SCCStatus)]
@@ -417,12 +422,13 @@ getSortedUnexpiredCommitsBy per =
 getCommVals :: [(IdentCC, SCCStatus)] -> [VarExpr]
 getCommVals l = [v | (_, (_, SNotRedeemed v _)) <- l]
 
-updateCommValue :: IdentCC -> [EquationTerm AnalysisVariable] -> SE ()
-updateCommValue ide val =
+-- Discount the provided (negative) ammount from the commit
+discountCommValue :: IdentCC -> VarExpr -> SE ()
+discountCommValue ide val =
   do ssta <- getSymState
      (let sscm = ssc ssta in
       case Map.lookup ide sscm of
-        Just (p, SNotRedeemed _ e) -> setSymState $ ssta {ssc = Map.insert ide (p, SNotRedeemed val e) sscm}
+        Just (p, SNotRedeemed v e) -> setSymState $ ssta {ssc = Map.insert ide (p, SNotRedeemed (v ++ val) e) sscm}
         _ -> error "Commit is not available in updateCommValue")
 
  
@@ -436,16 +442,17 @@ discountMonFrom :: VarExpr -> [(IdentCC, SCCStatus)] -> SE ()
 discountMonFrom _ [] = return () 
 discountMonFrom _ ((_, (_, SManuallyRedeemed)):_) = error "Redeemed commit in discountMonFrom"
 discountMonFrom v1 ((i, (_, SNotRedeemed v2 _)):t) = 
-  -- If there is enough money in this commit
-  ifThenElseSymb (Eq $ LE v1 v2)
-    -- Then just discount the remaining v1
-    (do addExplanation ("Get all remaining money needed for the payment from commit \"" ++ show i ++ "\", that is enough.")
-        updateCommValue i ((invertVarExpr v1) ++ v2))
-    -- Else set to zero and continue with the difference
-    (do addExplanation ("Get all money remaining in commit \"" ++ show i ++ "\", but that is not enough.")
-        updateCommValue i [Const 0]
-        discountMonFrom ((invertVarExpr v2) ++ v1) t)
-
+  do dv <- dvv
+     let idv = invertVarExpr dv in
+       (do discountCommValue i dv
+           discountMonFrom (v1 ++ dv) t)
+  where dvv = -- If there is enough money in this commit
+              ifThenElseSymTV (Eq $ LE v1 v2)
+                -- Then just discount the remaining v1
+                v1
+                -- Else discount the remaining v2
+                v2
+                              
 {----------------------
  - Symbolic execution -
  ----------------------}
@@ -680,6 +687,19 @@ ifThenElseSymTV cond xv yv =
      addConstraint $ Or [And [generateEq nv xv, xl], And [generateEq nv yv, yl]]
      return nv 
   where
+    xl = cond
+    yl = Not cond
+
+ifThenElseSymTVL :: SLogic -> [VarExpr] -> [VarExpr] -> SE [VarExpr]
+ifThenElseSymTVL cond xv yv =
+  if xlen /= ylen then error "Different length lists in ifThenElseSymTVL"
+  else (do nv <- replicateM xlen newVar
+           addConstraint $ Or [And (xl:[generateEq anv axv | (axv, anv) <- zip xv nv]),
+                               And (yl:[generateEq anv ayv | (ayv, anv) <- zip yv nv])]
+           return nv)
+  where
+    xlen = length xv
+    ylen = length yv
     xl = cond
     yl = Not cond
 

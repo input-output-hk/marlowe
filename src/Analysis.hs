@@ -3,6 +3,7 @@ module Analysis where
 
 import Semantics
 import LogicSolve
+import LogicDefs
 import Data.List (foldl', sort, sortBy)
 import Data.Maybe (fromMaybe, isJust)
 import Control.Monad (replicateM)

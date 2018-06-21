@@ -1,6 +1,7 @@
 module AnalysisObs where
 
 import LogicSolve
+import LogicDefs
 import Semantics
 import Data.List (sort, foldl')
 import qualified Data.Map as M

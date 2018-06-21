@@ -455,8 +455,8 @@ discountMonFrom _ ((_, (_, SManuallyRedeemed)):_) = error "Redeemed commit in di
 discountMonFrom v1 ((i, (_, SNotRedeemed v2 _)):t) = 
   do dv <- dvv
      let idv = invertVarExpr dv in
-       (do discountCommValue i dv
-           discountMonFrom (v1 ++ dv) t)
+       (do discountCommValue i idv
+           discountMonFrom (v1 ++ idv) t)
   where dvv = -- If there is enough money in this commit
               ifThenElseSymTV (Eq $ LE v1 v2)
                 -- Then just discount the remaining v1

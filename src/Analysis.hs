@@ -29,10 +29,21 @@ executeConcreteTrace contract concreteTrace = reverse $ finalAcc
                                            (nsta, ncon, incBlock os, (reverse naccs) ++ accs)
     (_, _, _, finalAcc) = foldl' stepFunc iniAcc concreteTrace
 
+printInputs :: [Input] -> Integer -> IO ()
+printInputs [] x
+ | x > 0 = putStrLn ("Wait for " ++ show x ++ " blocks")
+ | otherwise = return ()
+printInputs (i@(Input {cc = cci, rc = rci, rp = rpi, ic = ici}):t) x
+ | Set.null cci && Set.null rci && Map.null rpi && Map.null ici = printInputs t (x + 1)
+ | x > 0 = do putStrLn ("Wait for " ++ show x ++ " blocks")
+              printInputs (i:t) 0
+ | otherwise = do putStrLn (show i)
+                  printInputs t 0
+
 displayTrace :: Maybe [Input] -> IO ()
 displayTrace Nothing = return ()
 displayTrace (Just x) = do putStrLn "******"
-                           mapM_ (putStrLn . show) x
+                           printInputs x 0
 
 showConcreteTraces :: Contract -> IO ()
 showConcreteTraces c =

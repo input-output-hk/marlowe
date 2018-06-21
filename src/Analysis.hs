@@ -450,6 +450,15 @@ discountMonFrom v1 ((i, (_, SNotRedeemed v2 _)):t) =
  - Symbolic execution -
  ----------------------}
 
+allowsWait :: Contract -> Bool
+allowsWait Null = True
+allowsWait (CommitCash _ _ _ _ _ _ _) = True
+allowsWait (RedeemCC _ _) = True
+allowsWait (Pay _ _ _ _ _ _) = True
+allowsWait (Both x y) = (allowsWait x) && (allowsWait y)
+allowsWait (Choice _ _ _) = False
+allowsWait (When _ _ _ _) = False
+
 analyseMoney :: Money -> SE VarExpr
 analyseMoney (AvailableMoney ide) =
   do ssta <- getSymState
@@ -583,14 +592,17 @@ analyseContractStep (RedeemCC ident con) =
         Just (_, SManuallyRedeemed) -> (do addExplanation ("The commit \"" ++ show ident ++ "\" was already redeemed.")
                                            return con)
         Nothing -> destroyBranch)
-analyseContractStep (Both con1 con2) =
+analyseContractStep b@(Both con1 con2) =
   -- Note: we are treating this as if you had the choice to not execute one of the
   -- branches, this is not accurate, but it just adds some fake possibilities
-  do branch (do nc1 <- analyseContractStep con1
+  do if (allowsWait b) then allowWait else (return ())
+     branch (do nc1 <- analyseContractStep con1
                 branch (do nc2 <- analyseContractStep con2
                            return (Both nc1 nc2))
-                       (return (Both nc1 con2)))
-            (do nc2 <- analyseContractStep con2
+                       (do if (allowsWait con2) then (return ()) else destroyBranch
+                           return (Both nc1 con2)))
+            (do if (allowsWait con1) then (return ()) else destroyBranch
+                nc2 <- analyseContractStep con2
                 return (Both con1 nc2))
 analyseContractStep (Choice obs conT conF) =
   do vobs <- analyseObservation obs

@@ -1,7 +1,8 @@
 module LogicSolve(solveLogic) where
 
 import GLPKSolve (solveLEInt)
-import Data.List (foldl', genericLength) 
+import Data.List (foldl', genericLength, genericIndex, genericDrop)
+import Data.Maybe (isJust, fromJust)
 import LogicDefs
 
 -- Symbolic reasoning
@@ -22,14 +23,6 @@ getConst :: EquationTerm a -> Integer
 getConst (Const x) = x
 getConst _ = error "getConst: not a const!"
 
-isAnd :: Logic a -> Bool
-isAnd (And _) = True
-isAnd _ = False
-
-isOr :: Logic a -> Bool
-isOr (Or _) = True
-isOr _ = False
-
 negateEq :: Equation a -> Equation a
 negateEq (LE a b) = (LE (Const 1:b) a)
 
@@ -45,48 +38,75 @@ removeNots (Not l) = removeNots (negateLogic l)
 removeNots (And l) = And $ map removeNots l
 removeNots (Or l) = Or $ map removeNots l
 
-findAndSeparateAux :: (a -> Bool) -> [a] -> [a] -> Maybe (a, [a])
-findAndSeparateAux _ [] _ = Nothing
-findAndSeparateAux f (h:t) acc
- | f h = Just (h, acc ++ t)
- | otherwise = findAndSeparateAux f t (h:acc)
+data LogicIdx = IdxChoice Integer LogicIdx
+              | IdxAll [LogicIdx]
+              | IdxEq
+ deriving (Eq, Ord, Show, Read)
 
-findAndSeparate :: (a -> Bool) -> [a] -> Maybe (a, [a])
-findAndSeparate f l = findAndSeparateAux f l []
+idxToSystem :: Logic a -> LogicIdx -> [Equation a]
+idxToSystem (Eq x) IdxEq = [x]
+idxToSystem (And l1) (IdxAll l2) = concat $ zipWith (idxToSystem) l1 l2
+idxToSystem (Or l) (IdxChoice i e) = idxToSystem (l `genericIndex` i) e
+idxToSystem (Not _) _ = error "Not node in idxToSystem"
+idxToSystem _ _ = error "Index does not match logic in idxToSystem"
 
-findAndSeparateAnds :: [Logic a] -> Maybe (Logic a, [Logic a])
-findAndSeparateAnds = findAndSeparate isAnd
+stepAnd :: [Logic a] -> [LogicIdx] -> Maybe [LogicIdx]
+stepAnd [] [] = Nothing
+stepAnd (h1:t1) (h2:t2) =
+  case stepIdx h1 h2 of
+    Nothing -> case stepAnd t1 t2 of
+                 Nothing -> Nothing
+                 Just nt2 -> case initialIdx h1 of
+                               Just nh1 -> Just (nh1:nt2)
+                               Nothing -> Nothing
+    Just x -> Just (x:t2)
+stepAnd _ _ = error "Different lengths in stepAnd"
 
-findAndSeparateOrs :: [Logic a] -> Maybe (Logic a, [Logic a])
-findAndSeparateOrs = findAndSeparate isOr
+stepIdx :: Logic a -> LogicIdx -> Maybe LogicIdx
+stepIdx (Eq _) IdxEq = Nothing
+stepIdx (And l) (IdxAll l2) =
+  case stepAnd l l2 of
+    Just x -> Just $ IdxAll x
+    Nothing -> Nothing
+stepIdx (Or l) (IdxChoice i e) =
+  case stepIdx (l `genericIndex` i) e of
+    Nothing -> initialIdxOr l2 ni
+    Just x -> Just $ (IdxChoice i x)
+  where l2 = genericDrop ni l
+        ni = i + 1
+stepIdx (Not _) _ = error "Not node in stepIdx"
+stepIdx _ _ = error "Index does not match logic in stepIdx"
 
--- pushAnds: assumes there are no Not's
-pushAnds :: Logic a -> Logic a
-pushAnds (Eq x) = Eq x
-pushAnds (Not _) = error "Not found in pushAnds!"
-pushAnds (And l) =
-  case findAndSeparateAnds l of
-    Just (And h, t) -> pushAnds (And (h ++ t))
-    Just (_, _) -> error "findAndSeparateAnds found something other than an And!"
-    Nothing ->
-       case findAndSeparateOrs l of
-         Just (Or h, t) -> pushAnds $ Or [And (x:t) | x <- h]
-         Just (_, _) -> error "findAndSeparateOrs found something other than an Or!"
-         Nothing -> And (map pushAnds l)
-pushAnds (Or l) = Or (map pushAnds l)
+initialIdxOr :: [Logic a] -> Integer -> Maybe LogicIdx
+initialIdxOr [] _ = Nothing
+initialIdxOr (h:t) i = 
+  case initialIdx h of
+    Just x -> Just $ IdxChoice i x 
+    Nothing -> initialIdxOr t (i + 1)
 
-flattenOrs :: Logic a -> Logic a
-flattenOrs (Eq x) = Eq x
-flattenOrs (Not _) = error "Not found in flattenOrs!"
-flattenOrs (And l) = And (map flattenOrs l)
-flattenOrs (Or l) =
-  case findAndSeparateOrs l of
-    Just (Or h, t) -> flattenOrs $ Or (h ++ t)
-    Just (_, _) -> error "findAndSeparateOrs found something other than an Or!"
-    Nothing -> Or (map flattenOrs l)
+initialIdx :: Logic a -> Maybe LogicIdx
+initialIdx (Eq _) = Just IdxEq
+initialIdx (And l)
+  | all isJust v = Just $ IdxAll $ map fromJust $ v
+  | otherwise = Nothing
+  where v = map initialIdx l
+initialIdx (Or l) = initialIdxOr l 0
+initialIdx (Not _) = error "Not node in initailIdx"
 
-toDNF :: Logic a -> Logic a
-toDNF = flattenOrs . pushAnds . removeNots
+possibilitiesAux :: Logic a -> LogicIdx -> (Maybe LogicIdx, [Equation a])
+possibilitiesAux l i = (stepIdx l i, idxToSystem l i) 
+
+expandWithAcc :: (a -> (Maybe a, b)) -> a -> [b]
+expandWithAcc f a =
+  case f a of
+   (Just na, b) -> (b:(expandWithAcc f na))
+   (Nothing, b) -> [b]
+
+possibilities :: Logic a -> [[Equation a]]
+possibilities l =
+  case initialIdx l of
+    Nothing -> []
+    Just x -> expandWithAcc (possibilitiesAux l) x
 
 add :: (Eq a) => Integer -> [(a, Integer)] -> a -> [(a, Integer)]
 add n ((s,v):t) el
@@ -122,11 +142,6 @@ getFirstResult ((Just x):_) = Just $ [(e, n) | (Just e, n) <- x]
 solveLogic :: Eq a => Logic a -> Maybe [(a, Integer)]
 solveLogic l = getFirstResult res
   where
-   res = map (solveLEInt . toMatrix) options
-   options = case toDNF l of
-               Or r -> r
-               r@(And _) -> [r]
-               r@(Eq _) -> [And [r]]
-               r@(Not _) -> [And [r]]
-
+   res = map (solveLEInt . toMatrix . And . (map Eq)) options
+   options = possibilities $ removeNots l
 

@@ -2,7 +2,7 @@
 module Analysis where
 
 import Semantics
-import LogicSolve
+import SBVSolve
 import LogicDefs
 import Data.List (foldl', sort, sortBy)
 import Data.Maybe (fromMaybe, isJust)

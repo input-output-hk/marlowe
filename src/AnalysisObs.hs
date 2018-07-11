@@ -1,6 +1,6 @@
 module AnalysisObs where
 
-import LogicSolve
+import SBVSolve
 import LogicDefs
 import Semantics
 import Data.List (sort, foldl')

@@ -1213,7 +1213,12 @@ suffer the disadvantage of having to be implemented from scratch. An alternative
 (EDSLs), which provide a ``little language'' for the particular domain embedded within a general-purpose host language. 
 This means that parts of the host -- such as arithmetical expressions, or list idioms --  can be used to extend the 
 expressibility of the DSL. A notable example of this is the financial contracts language described by Peyton Jones and 
-his collaborators~\cite{PeytonJones:2000}, which is embedded in Haskell.
+his collaborators~\cite{PeytonJones:2000}, which is embedded in Haskell. Marlowe is similar to the 
+DSL in~\cite{PeytonJones:2000} in the use of Haskell embedding, in that the functionality provided is similar, in the use of 
+composable combinators, and in the declarative style that allows users to describe what needs to be enforced and not how. 
+However the two approaches differ in other aspects like the lack of Marlowe's reliance on the legal system for 
+enforcement, its support for multiple party contracts, its explicitness of choices, and its use of a pull model.
+
 
 %\paragraph{Other approaches}
 %

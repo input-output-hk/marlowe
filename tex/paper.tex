@@ -103,7 +103,9 @@ exhibit behaviours of an unpredictable kind, and are also not easy to read or co
 
 An alternative solution is provided by domain-specific languages (DSLs), which are designed to express programs in a 
 particular field. This paper explores the design of one DSL, Marlowe, targeted at the execution of financial 
-contracts in the style of Peyton Jones \emph{et al} on blockchains. We present an executable semantics of Marlowe in Haskell, an example of Marlowe in practice, and describe the Meadow tool that allows users to interact in-browser with simulations of Marlowe contracts.
+contracts in the style of Peyton Jones \emph{et al} on blockchains. We present an executable semantics of Marlowe in 
+Haskell, an example of Marlowe in practice, and describe the Meadow tool that allows users to interact in-browser with 
+simulations of Marlowe contracts.
 
 \end{abstract}
 
@@ -130,22 +132,27 @@ contracts in the style of Peyton Jones \emph{et al} on blockchains. We present a
 
 
 This paper explores the design of a domain specific language, Marlowe,\footnote{Named after Christopher 
-Marlowe, the Elizabethan poet, dramatist and spy, who was born and educated in Canterbury,  \url{en.wikipedia.org/wiki/Christopher_Marlowe}}\footnote{Marlowe is available 
-from \url{https://github.com/input-output-hk/scdsl}} targetted at the execution of financial contracts in the style of 
-Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains.
-In doing this, we are required to refine the model of contracts in a number of ways in order to fit with a radically 
-different context. 
+Marlowe, the Elizabethan poet, dramatist and spy, who was born and educated in Canterbury,  
+\url{en.wikipedia.org/wiki/Christopher_Marlowe}}\footnote{Marlowe is available from 
+\url{https://github.com/input-output-hk/scdsl}} targeted at the execution of financial contracts in the style of 
+Peyton Jones, Eber and Seward~\cite{PeytonJones:2000} on blockchains. In doing this, we are required to refine the 
+model of contracts in a number of ways in order to fit with a radically different context. 
 
 Consider the following example of an ``escrow'' contract so that we can explain the motivation 
 more concretely. The aim of this contract, written in functional pseudocode in the style of~\cite{PeytonJones:2000} 
 involves three participants \haskellinline{1}, \haskellinline{2} and \haskellinline{3}. Participant \haskellinline{1} is 
 to pay an amount of money to participant \haskellinline{2} on receipt of goods from her. Participant \haskellinline{1} 
-pays the money into escrow controlled by participant \haskellinline{3}. There are two options for the money: if two 
-participants agree to \haskellinline{pay} it to \haskellinline{2}, that goes ahead; if, on the other hand, two of the 
-participants opt to \haskellinline{refund} the money to \haskellinline{1}, that is done instead. The 
-\haskellinline{When} construct fires when its first argument -- a condition -- becomes true; the second argument, a 
-\haskellinline{Contract} itself, is then performed, and this makes the payment according to the participants' 
-\haskellinline{Choice}.
+pays the money into escrow controlled by participant \haskellinline{3}.
+
+There are two options for the money: if two participants agree to \haskellinline{pay} it to \haskellinline{2}, that goes 
+ahead; if, on the other hand, two of the participants opt to \haskellinline{refund} the money to \haskellinline{1}, that 
+is done instead.
+
+The outer primitive \haskellinline{When} waits until the condition -- its first argument -- 
+becomes true; in this case, the condition is the that either two participants choose \haskellinline{refund} or two 
+participants choose \haskellinline{pay}. The second argument of the \haskellinline{When} is itself another 
+\haskellinline{Contract}, which is performed after the condition of the \haskellinline{When} has been met, and it makes 
+the payment if two participants chose \haskellinline{pay}, otherwise it redeems previous money commitments.
 
 \begin{haskellcode}
 (When (Or (two_chose 1 2 3 refund)
@@ -155,17 +162,19 @@ participants opt to \haskellinline{refund} the money to \haskellinline{1}, that 
               redeem_original))
 \end{haskellcode}
 
-In the traditional model, enforcement of the contract is the responsibility of the legal system. If participant 
-\haskellinline{1} does not pay the money into escrow, or participant \haskellinline{3} chooses to keep it for herself, 
-then they can be sued for the money (and probably damages), thus providing both legal and 
-financial incentives for compliance. On the other hand, in the decentralised blockchain model, where there is no central 
-authority, the contract needs to be enforced \emph{by design}. 
+We discuss this particular example in more detail in Marlowe in Section~\ref{section:example-escrow} below; but it 
+already gives us an example of how traditional contracts are fundamentally different from contracts that are meant to 
+be run on top of the blockchain. In the traditional model, enforcement of the contract is the responsibility of the 
+legal system. If participant \haskellinline{1} does not pay the money into escrow, or participant \haskellinline{3} 
+chooses to keep it for herself, then they can be sued for the money (and probably damages), thus providing both legal 
+and financial incentives for compliance. On the other hand, in the decentralised blockchain model, where there is no 
+central authority, the contract needs to be enforced \emph{by design}. 
 
-This means that we require participants to \emph{commit} money to cover all possible expenditure \emph{in advance of the 
-contract executing}. In order to make sure that participants continue to engage with a contract, we ensure urgency by 
-imposing \emph{timeouts}: money is committed for a finite period only. We also impose a timeout when  waiting for a participant to make a 
-commitment to ensure that the contract does not become stuck even if one of the 
-participants stops interacting with it. We discuss this particular example in more detail in Marlowe in Section~\ref{section:example-escrow} below.
+This means that we must require participants to \emph{commit} money to cover all possible expenditure \emph{in advance 
+of the contract executing}. In order to make sure that participants continue to engage with a contract, we ensure 
+urgency by imposing \emph{timeouts}: money is committed for a finite period only. We also impose a timeout when waiting 
+for a participant to make a commitment to ensure that the contract does not become stuck even if one of the participants 
+stops interacting with it.
 
 We make the following contributions in this paper.
 \begin{itemize}
@@ -174,11 +183,19 @@ Designing a DSL for financial contracts on blockchains: Marlowe.
 \item
 Defining an executable, small-step semantics of Marlowe in Haskell.
 \item 
-Embedding Marlowe as a Haskell \haskellinline{data} type to extend its expressibility.
+Embedding of Marlowe in Haskell to extend its expressibility; that is: Marlowe is defined as a Haskell 
+\haskellinline{data} type so that generating Marlowe contracts from Haskell is straightforward.
 \item
-Developing the Meadow tool that allows users to interact with and simulate the operation of embedded Marlowe contracts. 
+Developing the Meadow tool that allows users to interact with and simulate the operation of Marlowe contracts 
+and embedded Marlowe contracts.
 \end{itemize}
-Having established this model and its semantics we are able to do a number of other things, which we discuss in the paper. We can explore how the language will be implemented on an existing blockchain, such as Cardano, and our model has shown us that we will need to consider how the evolution of a contract interacts with the blockchain, with miners in the case of a `proof of work'-based chain, and with users participating in contract execution. We can also perform analyses of Marlowe contracts, based on its formal semantics. Finally, we can explore the design space for Marlowe, and explore potential alternative designs.
+
+Having established this model and its semantics we are able to do a number of other things, which we discuss in the 
+paper. We can explore how the language will be implemented on an existing blockchain, such as Cardano, and our model has 
+shown us that we will need to consider how the evolution of a contract interacts with the blockchain, with miners in the 
+case of a `proof of work'-based chain, and with users participating in contract execution. We can also perform analyses 
+of Marlowe contracts, based on its formal semantics. Finally, we can explore the design space for Marlowe, and explore 
+potential alternative designs.
 
 
 %Moreover, there is not a single blockchain model, and we give a brief overview of the different mechanisms for 
@@ -194,12 +211,15 @@ Having established this model and its semantics we are able to do a number of ot
 %look like in Cardano, and how those contracts will be implemented in the overall system.
  
 The paper begins in Section \ref{section:model} by introducing the Marlowe 
-model, including the assumptions made in designing it, the types of the principal functions and a description of the DSL as an algebraic type, constructor by constructor. 
+model, including the assumptions made in designing it, the types of the principal functions and a description of the 
+DSL as an algebraic type, constructor by constructor. 
 %Section \ref{section:example-saving} presents an example of a larger Marlowe contract, for incentivised saving. 
 Section \ref{section:example-escrow} revisits the escrow example, and shows 
 how it is described using a combination of Marlowe and Haskell constructs: that is, we use Marlowe as an embedded DSL. 
 Section \ref{section:tool} introduces Meadow, our tool for visualising and interacting with Marlowe contracts.
-Section \ref{sec:abstraction} reflects on the system design, showing how Marlowe can be supported on a variety of blockchains, and Section \ref{sec:compilation} explores how Marlowe can be implemented. Section \ref{sec:related} surveys related work and Section 
+Section \ref{sec:abstraction} reflects on the system design, showing how Marlowe can be supported on a variety of 
+blockchains, and Section \ref{sec:compilation} explores how Marlowe can be implemented. Section \ref{sec:related} 
+surveys related work and Section 
 \ref{section:next-steps} enumerates the next steps for the project after drawing some conclusions.
 
 \begin{figure}[t]
@@ -215,8 +235,9 @@ Section \ref{sec:abstraction} reflects on the system design, showing how Marlowe
 \section{The Marlowe model}
 \label{section:model}
 
-The Marlowe domain-specific language (DSL) is modelled as an algebraic type in Haskell, together with an executable small-step semantics. 
-We start by looking at the different types used by the model, and the assumptions about the infrastructure in which contracts will be run. We then we look at the \haskellinline{Contract} DSL itself, 
+The Marlowe domain-specific language (DSL) is modelled as an algebraic type in Haskell, together with an executable 
+small-step semantics. We start by looking at the different types used by the model, and the assumptions about the 
+infrastructure in which contracts will be run. We then we look at the \haskellinline{Contract} DSL itself, 
 and finally we give its semantics in Haskell. Section 
 %\ref{section:example-saving} gives an example of Marlowe in action, and Section
 \ref{section:example-escrow} revisits the ``escrow'' example using the embedding of Marlowe as a DSL in Haskell.
@@ -235,16 +256,16 @@ As the examples illustrate, observables come both from aspects of the blockchain
 externally. In the latter case, it will be necessary to agree a trusted oracle or beacon giving the value.
 
 
-Each instance of such an observable will be observed at a particular time and in a particular context. We assume that the system infrastructure ensures that these values are recorded on the blockchain to 
-allow the computation to be repeated for verification purposes. 
+Each instance of such an observable will be observed at a particular time and in a particular context. We assume that 
+the system infrastructure ensures that these values are recorded on the blockchain to allow the computation to be 
+repeated for verification purposes. 
 
 
-It is assumed that at each step of the execution of the 
-contract, the values of observables will be available if needed, and these values are (together) given by a value of type 
-\haskellinline{OS} (for ``observable set''), where individual observations are described in a 
-``little language'' for that purpose: \haskellinline{Observation}. 
-Note that these values are not determined by the participants in the contract, but rather by the 
-external environment in which the contract is run.
+It is assumed that at each step of the execution of the contract, the values of observables will be available if 
+needed, and these values are (together) given by a value of type \haskellinline{OS} (for ``observable set''), where 
+individual observations are described in a ``little language'' for that purpose: \haskellinline{Observation}. 
+Note that these values are not determined by the participants in the contract, but rather by the external environment in 
+which the contract is run.
 
  
 
@@ -252,18 +273,17 @@ external environment in which the contract is run.
 
 
 On the other hand, at each step there are -- potentially, at least -- a variety of inputs available from the 
-participants themsleves. These include commitments of currency (or ``cash''), redemption of commitments, and claims of payments by 
-a participant. Moreover it is also possible for a participant to input an arbitrary value (which we term a ``choice''). 
-The particular inputs at a given step are described by a value of type \haskellinline{Input}.
+participants themselves. These include commitments of currency (or ``cash''), redemption of commitments, and claims of 
+payments by a participant. Moreover it is also possible for a participant to input an arbitrary value (which we term a 
+``choice''). The particular inputs at a given step are described by a value of type \haskellinline{Input}.
 
 %\paragraph{Commitments}
 
 
-While informally we might see a commitment to something as being indefinite, it is important to realise that, on
-blockchain, a commitment needs to have a timeout so that progress can be forced in a contract. After the timeout period the 
-cash can be refunded through the user creating a transaction to reclaim the cash.
-Information about the commitments currently in force forms the \haskellinline{State}, which can be  modified 
-at each execution step. 
+While informally we might see a commitment to something as being indefinite, it is important to realise that, 
+on blockchain, a commitment needs to have a timeout so that progress can be forced in a contract. After the timeout 
+period the cash can be refunded through the user creating a transaction to reclaim the cash. Information about the 
+commitments currently in force forms the \haskellinline{State}, which can be  modified at each execution step. 
 
 \paragraph{Actions}
 
@@ -308,15 +328,17 @@ step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
 \end{haskellcode}
 which is also illustrated in Figure \ref{fig:step-function}. 
 The \haskellinline{step} function is total, so that for every contract a result of stepping is defined. However, for 
-some kinds of contracts -- commits, redeems or time-shifted contracts -- it is possible that performing  a step produces the same contract as the result; we call these \emph{quiescent} steps whereas all others \emph{make 
+some kinds of contracts -- commits, redeems or time-shifted contracts -- it is possible that performing  a step 
+produces the same contract as the result; we call these \emph{quiescent} steps whereas all others \emph{make 
 progress}. We use this distinction in the explanation that follows.
 
-Execution of a contract will involve multiple blocks, with multiple steps in each block. The computation at a single block is given by the \haskellinline{stepBlock} function: this will call the \haskellinline{stepAll} function that calls \haskellinline{step} repeatedly
-until it is quiescent. 
+Execution of a contract will involve multiple blocks, with multiple steps in each block. The computation at a single 
+block is given by the \haskellinline{stepBlock} function: this will call the \haskellinline{stepAll} function that calls 
+\haskellinline{step} repeatedly until it is quiescent. 
 
-In addition to 
-calling \haskellinline{stepAll}, \haskellinline{stepBlock} will first enable expired cash commitments to be refunded and record, in the state, any choices made at that step. 
-The functions \haskellinline{stepAll} and \haskellinline{stepBlock} have the same type as \haskellinline{step} itself.
+In addition to calling \haskellinline{stepAll}, \haskellinline{stepBlock} will first enable expired cash commitments to 
+be refunded and record, in the state, any choices made at that step. The functions \haskellinline{stepAll} and 
+\haskellinline{stepBlock} have the same type as \haskellinline{step} itself.
 
 
 
@@ -336,15 +358,21 @@ data Contract =
    Choice Observation Contract Contract |
    When Observation Timeout Contract Contract   
    \end{haskellcode}
-Informally, this type provides a \haskellinline{Null} contract, which does nothing. The next three constructs form contracts that do something, and then continue according to another contract (which is one of the components of the original contract). \haskellinline{CommitCash} will wait for a participant to make a commitment,  
-\haskellinline{RedeemCC} allows for a commitment to be redeemed, and \haskellinline{Pay} for a payment between participants to be claimed by the recipient. 
+Informally, this type provides a \haskellinline{Null} contract, which does nothing. The next three constructs form 
+contracts that do something, and then continue according to another contract (which is one of the components of the 
+original contract). \haskellinline{CommitCash} will wait for a participant to make a commitment, 
+\haskellinline{RedeemCC} allows for a commitment to be redeemed, and \haskellinline{Pay} for a payment between 
+participants to be claimed by the recipient. 
 
-The remaining constructors form composite contracts from simpler components: \haskellinline{Both} has the behaviour of both its components, \haskellinline{Choice} chooses between two contracts on the basis of an observation, and \haskellinline{When} is quiescent until a condition -- i.e.\ an \haskellinline{Observation} -- becomes true.
+The remaining constructors form composite contracts from simpler components: \haskellinline{Both} has the behaviour of 
+both its components, \haskellinline{Choice} chooses between two contracts on the basis of an observation, and 
+\haskellinline{When} is quiescent until a condition -- i.e.\ an \haskellinline{Observation} -- becomes true.
 
 Additionally, many of the contracts have timeouts that also determine their behaviour. 
 \subsection{The \haskellinline{step} function}
 
-In this section, we explain the detailed behaviour of contracts by describing how the \haskellinline{step} function operates on each of the constructors of the \haskellinline{Contract}  type.
+In this section, we explain the detailed behaviour of contracts by describing how the \haskellinline{step} function 
+operates on each of the constructors of the \haskellinline{Contract}  type.
 
 \begin{itemize}
 \item \haskellinline{Null} is the null contract; it will always be quiescent:
@@ -357,8 +385,8 @@ step _ st Null _ = (st, Null, [])
 \noindent
 \item \haskellinline{CommitCash ident person val start_timeout end_timeout con1 con2}  For this contract to make 
 progress,\begin{itemize}
-\item either, before the timeout \haskellinline{start_timeout}, the user \haskellinline{person} makes a cash commitment of 
-value 
+\item either, before the timeout \haskellinline{start_timeout}, the user \haskellinline{person} makes a cash commitment 
+of value 
 \haskellinline{val} and timeout \haskellinline{end_timeout}  with the identifier \haskellinline{ident}, 
 \item
 or the timeout \haskellinline{start_timeout} is exceed:
@@ -601,13 +629,13 @@ In the next section, we look at how to take advantage of Haskell embedding when 
 \label{section:example-escrow}
 
 In this section, we revisit the escrow example that we discussed briefly in the introduction, and show how we can make 
-Marlowe contracts that are easier to write, read, and understand, by embedding them into Haskell code, taking advantage 
-of the fact that Marlowe contracts are implemented as Haskell terms. 
+Marlowe contracts that are easier to write, read, and understand, by embedding them into Haskell code, that is, taking 
+advantage of the fact that Marlowe contracts are implemented as Haskell terms to write Haskell programs that generate 
+Marlowe code, instead of writing Marlowe directly.
 
-We used Haskell because it is the language in 
-which Marlowe is implemented, but it would be easy to embed Marlowe in any other language. It would only be necessary 
-to translate its primitives into a data type in that language. In Meadow we use Fay, which is a subset of 
-Haskell (see Section~\ref{section:tool}).
+We used Haskell because it is the language in which Marlowe is implemented, but it would be easy to embed Marlowe in any 
+other language. It would only be necessary to translate its primitives into a data type in that language. In Meadow we 
+use Fay \cite{Fay}, which is a subset of Haskell (see Section~\ref{section:tool}).
 
 The example we use through this section implements an escrow contract, as first introduced in Section~\ref{sec:intro}. 
 %
@@ -628,9 +656,9 @@ transaction and \haskellinline{3} will not need to do anything. If \haskellinlin
 participant \haskellinline{3} will be able to choose whether the money must go to \haskellinline{1} or to 
 \haskellinline{2}.
 
-In our implementation we make things more specific: the money paid for the item is 450 ADA, and it must be committed by participant 
-\haskellinline{1} before block \haskellinline{10}; it will be refunded to participant \haskellinline{1} if there is 
-no consensus before block \haskellinline{90}.
+In our implementation we make things more specific: the money paid for the item is 450 ADA, and it must be committed by 
+participant \haskellinline{1} before block \haskellinline{10}; it will be refunded to participant \haskellinline{1} if 
+there is no consensus before block \haskellinline{90}.
 
 We start by defining some Haskell functions. We can encapsulate identifiers in functions to make the contract more 
 readable. That way we can generate an identifier for the cash commitment:
@@ -660,15 +688,16 @@ participant id. We can define a function that returns an observation that is tru
 chose :: Int -> ConcreteChoice -> Observation
 chose per c = PersonChoseThis (IdentChoice per) per c
 \end{haskellcode}
-Then, we can easily write a function that returns an observation that is \haskellinline{True} if and only if at least one of the 
-participants \haskellinline{per} and \haskellinline{per'} has chosen the number \haskellinline{val} as follows:
+Then, we can easily write a function that returns an observation that is \haskellinline{True} if and only if at least 
+one of the participants \haskellinline{per} and \haskellinline{per'} has chosen the number \haskellinline{val} as 
+follows:
 \begin{haskellcode}
 one_chose :: Person -> Person -> ConcreteChoice -> Observation
 one_chose per per' val = (OrObs (chose per val) (chose per' val)) 
 \end{haskellcode}
-Building on that, we can now write a function that returns an observation that is \haskellinline{True} if and only if at least 
-two out of the three participants \haskellinline{p1}, \haskellinline{p2}, and \haskellinline{p3} have agreed in 
-choosing the number \haskellinline{c} as follows:
+Building on that, we can now write a function that returns an observation that is \haskellinline{True} if and only if 
+at least two out of the three participants \haskellinline{p1}, \haskellinline{p2}, and \haskellinline{p3} have agreed 
+in choosing the number \haskellinline{c} as follows:
 \begin{haskellcode}
 two_chose :: Person -> Person -> Person -> ConcreteChoice -> Observation
 two_chose p1 p2 p3 c = OrObs (AndObs (chose p1 c) (one_chose p2 p3 c))
@@ -689,8 +718,9 @@ escrow = CommitCash iCC1 1 (ConstMoney 450) 10 100
                     Null
 \end{haskellcode}
 
-The outermost primitive \haskellinline{CommitCash} allows the participant \haskellinline{1} to commit \haskellinline{450} ADA before 
-block \haskellinline{10}, with the promise that money will be released on block \haskellinline{100} if they are not claimed before that.
+The outermost primitive \haskellinline{CommitCash} allows the participant \haskellinline{1} to commit 
+\haskellinline{450} ADA before block \haskellinline{10}, with the promise that money will be released on block 
+\haskellinline{100} if they are not claimed before that.
 
 The next primitive, \haskellinline{When}, waits for one of three things to happen:
 \begin{enumerate}
@@ -700,14 +730,16 @@ The next primitive, \haskellinline{When}, waits for one of three things to happe
 \end{enumerate}
 
 If the third option happens, the money is refunded. Otherwise, there is a \haskellinline{Choice} that will 
-immediately refund the money to participant \haskellinline{1} unless two out of three chose option \haskellinline{1}; in the later 
-case, \haskellinline{Pay} will give participant \haskellinline{2} the opportunity to claim the funds available in 
-the commitment with identifier \haskellinline{iCC1} before block \haskellinline{100} (by using the identifier \haskellinline{iP1} for 
-the claim). If the funds are not claimed before block \haskellinline{100} they will also be refunded to 
-participant \haskellinline{1}.
+immediately refund the money to participant \haskellinline{1} unless two out of three chose option \haskellinline{1}; 
+in the later case, \haskellinline{Pay} will give participant \haskellinline{2} the opportunity to claim the funds 
+available in the commitment with identifier \haskellinline{iCC1} before block \haskellinline{100} (by using the 
+identifier \haskellinline{iP1} for the claim). If the funds are not claimed before block \haskellinline{100} they will 
+also be refunded to participant \haskellinline{1}.
 
 Reflecting on the example, we can see that using Haskell definitions has made the contract substantially more 
-comprehensible. While our current implementation does not do this, it is possible to modify the embedding to support more efficient operation, by preserving \emph{sharing} in the host language. For example, if we were to replace the repeated  expression 
+comprehensible. While our current implementation does not do this, it is possible to modify the embedding to support 
+more efficient operation, by preserving \emph{sharing} in the host language. For example, if we were to replace the 
+repeated  expression 
 \haskellinline{two_chose 1 2 3 1} by a \haskellinline{where} clause, 
 \begin{haskellcode}
 escrow = ...        (When (OrObs (two_chose 1 2 3 0)
@@ -739,7 +771,7 @@ Meadow has been mainly written in Haskell and compiled to JavaScript
 partially by the Haste compiler~\cite{Haste} and partially by GHCJS \cite{GHCJS};
 Meadow also relies on the Blockly library~\cite{Blockly} for providing a visual
 editor for smart contracts written in Marlowe. Embedding support in Meadow
-is provided throught a pruned and bundled version of the Fay compiler \cite{Fay},
+is provided through a pruned and bundled version of the Fay compiler \cite{Fay},
 compiled to JavaScript using GHCJS. All text fields that edit and present Meadow and Fay code are
 instances of CodeMirror text editor \cite{CodeMirror}.
 
@@ -748,23 +780,35 @@ smart-contracts as interlocking blocks that can be dragged and dropped
 like pieces of a jigsaw puzzle. % (see Figure~\ref{fig:detail-of-block}).
 Meadow also provides functionality to generate syntactically correct
 and formatted code (that is displayed in the upper right corner of the application),
-and to convert the code back to its blockly representation.
+and to convert the code back to its Blockly representation.
 
 Additionally, Meadow allows the user to use Meadow's Fay embedding from within the browser. % (see Figure~\ref{fig:embedded-demo}). 
-Meadow includes a pruned copy of the Fay compiler, bundled with its Prelude module, 
-its foreign interface, and a module with the definitions of the Marlowe primitives and a function to pretty-print 
-Marlowe contracts. This allows the user to compile and execute, inside the browser, Fay
-code that generates and prints a Meadow contract. When the user opens the embedded editor, the current Marlowe contract 
-is embedded into a template of a Fay program that prints it. The user is able to modify this code in the left 
-panel of the editor and use the advanced functionalities provided by Fay like, for example, bindings, 
-list-comprehensions, turing-complete functions definitions, etc.
 
-When the user clicks the execute button, the Fay code is 
-compiled to JavaScript and evaluated; this causes the Marlowe contract generated by the execution of the code to be 
-written to the panel on the right. Generated contracts can then be sent back to the main screen of Meadow, translated 
-to Blockly, and their execution can be simulated. The embedded editor also allows users to save the Fay code to a 
-file in their computers, to load code from a file in their computers, and to temporarily hide the editor while keeping 
-its contents in memory, even while the compilation and execution process is being carried out in the background.
+The reason we chose Fay instead of Haskell for Meadow is a technical one: we wanted Meadow to be run completely inside 
+the browser, because that makes it easy to deploy, since the server is only required to send the page and not to 
+run any Marlowe-related computation. There exist compilers from Haskell to JavaScript but most of them are not easy to 
+bootstrap into JavaScript. Among other reasons, they often rely on the API of the host OS to read and write files.
+
+Fay compiler, on the other hand, is mostly written in pure Haskell, and it is not hard to compile to JavaScript by 
+using GHCJS. Nevertheless, it does not include a type checker, it relies in GHC's type-checker; and it also 
+tries to read its \haskellinline{Prelude} from disk. We have worked around these issues by disabling type-checking 
+within Meadow embedded editor, and by embedding all the required modules as constant strings in a modified version 
+of the Fay compiler.
+
+In particular, Meadow includes a pruned copy of the Fay compiler, bundled with its Prelude module, its foreign 
+interface, and a module with the definitions of the Marlowe primitives and a function to pretty-print 
+Marlowe contracts. This allows the user to compile and execute, inside Meadow, Fay code that generates and prints 
+a Marlowe contract. When the user opens the embedded editor, the current Marlowe contract is embedded into a template 
+of a Fay program that prints it. The user is able to modify this code in the left panel of the editor and use the 
+advanced functionalities provided by Fay like, for example, bindings, list-comprehensions, turing-complete functions 
+definitions, etc.
+
+When the user clicks the execute button, the Fay code is compiled to JavaScript and evaluated; this causes the Marlowe 
+contract generated by the execution of the code to be written to the panel on the right. Generated contracts can then be 
+sent back to the main screen of Meadow, translated to Blockly, and their execution can be simulated. The embedded editor 
+also allows users to save the Fay code to a file in their computers, to load code from a file in their computers, and to 
+temporarily hide the editor while keeping its contents in memory, even while the compilation and execution process is 
+being carried out in the background.
 
 \begin{figure}[t]
 \begin{centering}
@@ -838,12 +882,16 @@ design decisions and ways in which we can formally analyse Marlowe contracts.
 \section{Implementation on blockchain}
 \label{section:towards-implementation}
 
-Marlowe is defined by its executable semantics, but to be deployed on blockchain it will have to be implemented on an existing distributed infrastructure.  We intend to deploy it on IOHK's Cardano infrastructure, but it can be implemented in other systems too, as we explain now.
+Marlowe is defined by its executable semantics, but to be deployed on blockchain it will have to be implemented on an 
+existing distributed infrastructure.  We intend to deploy it on IOHK's Cardano infrastructure, but it can be implemented 
+in other systems too, as we explain now.
 
 \subsection{Abstraction}
 \label{sec:abstraction}
 
-Marlowe abstracts away from a number of concrete details of how blockchains operate. In particular, it is agnostic between UTxO-based systems, such as Bitcoin and Cardano SL, and account-based models such as Ethereum; it can be implemented on push or pull-based systems, and can be executed on or off-chain. 
+Marlowe abstracts away from a number of concrete details of how blockchains operate. In particular, it is agnostic 
+between UTxO-based systems, such as Bitcoin and Cardano SL, and account-based models such as Ethereum; it can be 
+implemented on push or pull-based systems, and can be executed on or off-chain. 
 
 \paragraph{UTxO and accounts}
 
@@ -851,18 +899,25 @@ Transactions on Bitcoin are made by spending the (as yet) unspent outputs of
 previous transactions (`unspent transaction outputs' or UTxOs). The chain need not maintain any state, such as the 
 current value owned by any particular participant: such \emph{account} information is implicit and external to the 
 Bitcoin blockchain. On the other hand, the Ethereum model explicitly keeps track of account values, and  this 
-information needs to be kept on chain. Of the two, the UTxO model is simpler and requires less support from the implementation of the chain itself.
+information needs to be kept on chain. Of the two, the UTxO model is simpler and requires less support from the 
+implementation of the chain itself.
 
 \paragraph{Interaction modality}
 
-Contracts can be conceived of as acting in two ways. In a \emph{push} model, contracts are seen to make things happen. In the case of blockchain, this would include making payments or transactions take place. 
+Contracts can be conceived of as acting in two ways. In a \emph{push} model, contracts are seen to make things happen. 
+In the case of blockchain, this would include making payments or transactions take place. 
 Alternatively, in a \emph{pull} model, contracts enable certain things, such as transactions,  to happen but the 
-transactions need to be effected by an external actor. The pull model makes fewer demands on the blockchain implementation than the push model.
+transactions need to be effected by an external actor. The pull model makes fewer demands on the blockchain 
+implementation than the push model.
 
 \paragraph{Layered design and sidechains}
 
-Some chains have a layered design, in particular Cardano~\cite{cardano}. The Cardano Settlement Layer (SL) is to support settlement of transactions but nothing more complicated, whereas the Computation Layer (or CL) supports more powerful general computations over the chain. Moreover, the Cardano roadmap~\cite{cardano-rationale} envisages the possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which 
-may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually Bitcoin) and the channels of \ae{}ternity~\cite{aeternity}.
+Some chains have a layered design, in particular Cardano~\cite{cardano}. The Cardano Settlement Layer (SL) is to 
+support settlement of transactions but nothing more complicated, whereas the Computation Layer (or CL) supports more 
+powerful general computations over the chain. Moreover, the Cardano roadmap~\cite{cardano-rationale} envisages the 
+possibility of computation taking place, in part at least, on a sidechain rather than on the main chain itself, which 
+may support only the SL. Other off-chain approaches include the Lightning network, overlaid on blockchains (usually 
+Bitcoin) and the channels of \ae{}ternity~\cite{aeternity}.
 
 
 
@@ -872,10 +927,12 @@ may support only the SL. Other off-chain approaches include the Lightning networ
 We have designed Marlowe assuming that each contract would be compiled into
 \begin{itemize} 
 \item one or more on-chain programs and 
-\item a client side program or interface that has a limited number of choices to be made at each point in time (including an interface for the observables). 
+\item a client side program or interface that has a limited number of choices to be made at each point in time 
+(including an interface for the observables). 
 \end{itemize}
-The contracts implemented in the Marlowe language have an implicit interface defined for what would correspond to the client side of a distributed application, as shown by the interactive interface. 
-Of course, we probably do not want to give a user a programmatic interface but an actual application with user interface. 
+The contracts implemented in the Marlowe language have an implicit interface defined for what would correspond to the 
+client side of a distributed application, as shown by the interactive interface. Of course, we probably do not want to 
+give a user a programmatic interface but an actual application with user interface. 
 %So there is still some work to be done to create interfaces on top of the client side of the contracts.
 
 A contract written in Marlowe could also be potentially
@@ -895,21 +952,34 @@ Another approach would be to use a UTxO model with continuations in which a UTxO
 an operation would correspond to a transaction that spends a UTxO and creates (at least) a new UTxO that represents the 
 contract after the operation.
 
-Usually, in the UTxO model, it is necessary that a UTxO is in the blockchain in order for another transaction to be able to spend it. This could potentially limit the number of operations that can be applied in a single block to one, which would make infeasible the approach of using the same UTxO to represent several instances of the same contract (since it would not scale).
-On the other hand, it would prevent non-determinism and, with it, it would remove the possibility of race-conditions. A change to the state of a contract before a transaction (and its corresponding operation) is accepted in the blockchain 
+Usually, in the UTxO model, it is necessary that a UTxO is in the blockchain in order for another transaction to be 
+able to spend it. This could potentially limit the number of operations that can be applied in a single block to one, 
+which would make infeasible the approach of using the same UTxO to represent several instances of the same contract 
+(since it would not scale).
+On the other hand, it would prevent non-determinism and, with it, it would remove the possibility of race-conditions. A 
+change to the state of a contract before a transaction (and its corresponding operation) is accepted in the blockchain 
 would invalidate the transaction and require the user to issue it again.
 
 Even if we only allow one transaction per block, it would still be possible to combine several transactions off-chain 
 and to issue a transaction that contains several operations. However, that would require an offline protocol 
 independent from the blockchain and it would require participants to collaborate.
 
-Nevertheless, there already exists in Bitcoin a mechanism that allows the combination of several chained transactions within a single block while using the UTxO model, even though it is used to solve a different problem and it is not widely spread yet. This is the case of "child pays for parent", which allows the recipient of an unpublished transaction to issue another transaction that spends the former, with the aim of including enough fees for both transactions to have enough incentive to be included by a miner in a block (in which case both transactions would be included in the same block).
+Nevertheless, there already exists in Bitcoin a mechanism that allows the combination of several chained transactions 
+within a single block while using the UTxO model, even though it is used to solve a different problem and it is not 
+widely spread yet. This is the case of "child pays for parent", which allows the recipient of an unpublished transaction 
+to issue another transaction that spends the former, with the aim of including enough fees for both transactions to have 
+enough incentive to be included by a miner in a block (in which case both transactions would be included in the same 
+block).
 
-The same mechanism could be used for allowing miners to aggregate several transactions that act as a chain in the same block. The clients would only need to monitor the transaction pool in order to send transactions that can be chained with the existing ones.
+The same mechanism could be used for allowing miners to aggregate several transactions that act as a chain in the same 
+block. The clients would only need to monitor the transaction pool in order to send transactions that can be chained 
+with the existing ones.
 
 \paragraph{Cost}
 
-The Cardano platform has a notion of cost, and Marlowe contracts will potentially incur costs of two kinds: The cost of a single transaction execution (e.g.\ a single Plutus validator), and the cost of the whole contract, which may consist of many transactions.
+The Cardano platform has a notion of cost, and Marlowe contracts will potentially incur costs of two kinds: The cost of 
+a single transaction execution (e.g.\ a single Plutus validator), and the cost of the whole contract, which may consist 
+of many transactions.
 
 Even in Ethereum this distinction is important because single contract execution is limited by gas (and is thus 
 finite), whereas the life of the whole contract may be unbounded and consist of an indefinite number of transactions.  
@@ -933,7 +1003,8 @@ we expect Marlowe to be embedded in a suitable language that provides these faci
 
 %\paragraph{Sidechains and wallets}
 %
-%The implementation may split contract execution between the main chain and a sidechain (or chains). This will allow links from Marlowe to work on securing multiparty sidechain games/contracts (MPCs).
+%The implementation may split contract execution between the main chain and a sidechain (or chains). This will allow 
+%links from Marlowe to work on securing multiparty sidechain games/contracts (MPCs).
 
 \ignore{ % begin ignore
 
@@ -1090,7 +1161,8 @@ Blockchains are executed in a replicated form by parties who cannot be guarantee
 trying to change the contents of the chain, or through trying to affect other properties of the chain by indirect means 
 (such as swamping honest parties with work). Programming on the blockchain therefore needs to be constrained in some 
 ways, since it has to be amenable to replication or verification within a reasonable time if the security and integrity 
-of the chain are to be preserved. We look at representatives of the main approaches now; we discuss some of these in more detail in an earlier paper~\cite{cryptoeprint:2016:1156}.
+of the chain are to be preserved. We look at representatives of the main approaches now; we discuss some of these in 
+more detail in an earlier paper~\cite{cryptoeprint:2016:1156}.
 
 \paragraph{Bitcoin script}
 
@@ -1122,10 +1194,11 @@ Tezos~\cite{tezos-white-paper} supports the stack-based, strongly-typed, functio
 provides a high-level language, Liquidity, that compiles into Michelson. Liquidity is also functional and strongly 
 typed, but provides more constructs in a more familiar syntax, namely that of a subset of OCaml. 
 
-The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs~\cite{Stenman-CODE-BEAM}: the functional language  Sophia (akin to 
-Reason) and the Functional Typed Warded Virtual Machine (FTWVM) for safe ``system level programming'', the language 
-Varna and the HLM for simple contracts, and a (port of) Solidity and the EVM for compatibility with Ethereum. In a 
-similar way, Cardano provides support for IELE~\cite{IELE}, a rational reconstruction of the EVM, and thus for Solidity too. 
+The \ae{}ternity system~\cite{aeternity} provides multiple languages and VMs~\cite{Stenman-CODE-BEAM}: the functional 
+language  Sophia (akin to Reason) and the Functional Typed Warded Virtual Machine (FTWVM) for safe ``system level 
+programming'', the language Varna and the HLM for simple contracts, and a (port of) Solidity and the EVM for 
+compatibility with Ethereum. In a similar way, Cardano provides support for IELE~\cite{IELE}, a rational reconstruction 
+of the EVM, and thus for Solidity too. 
 
 \paragraph{Domain-specific languages} 
 
@@ -1152,23 +1225,39 @@ his collaborators~\cite{PeytonJones:2000}, which is embedded in Haskell.
 
 The Findel project~\cite{findel} examines financial contracts on the Ethereum platform, based on the 
 seminal~\cite{PeytonJones:2000}, and the authors note that payments need to be bounded; this is made concrete in our 
-account by our notion of commitments. They take no account of commitments or timeouts as our approach does, but it should be 
-noted that the Ethereum platform is more powerful than the one that we target in this paper.
+account by our notion of commitments. They take no account of commitments or timeouts as our approach does, but it 
+should be noted that the Ethereum platform is more powerful than the one that we target in this paper.
 
 
 \section{Conclusions and Future Work}
 \label{section:next-steps}
 
-In this paper, we have presented Marlowe, a DSL for financial contracts on blockchains, based on earlier work on contracts~\cite{PeytonJones:2000}, together with examples of its use. We have seen that to make this operational on blockchain we need to add commitments and timeouts, and to design a semantics that reflects these. As we saw in Section~\ref{sec:abstraction}, Marlowe has been designed to make as few demands as possible on the underlying blockchain: it can be implemented on UTxO or account-based blockchains, for example.
+In this paper, we have presented Marlowe, a DSL for financial contracts on blockchains, based on earlier work on 
+contracts~\cite{PeytonJones:2000}, together with examples of its use. We have seen that to make this operational on 
+blockchain we need to add commitments and timeouts, and to design a semantics that reflects these. As we saw in 
+Section~\ref{sec:abstraction}, Marlowe has been designed to make as few demands as possible on the underlying 
+blockchain: it can be implemented on UTxO or account-based blockchains, for example.
 
-We have also presented Meadow, that allows users to interact with and simulate the operation of Marlowe contracts, contributing to the potential adoptability of the system. We have also described the design rationale for Marlowe, and sketched ways in which it can be implemented.
+We have also presented Meadow, that allows users to interact with and simulate the operation of Marlowe contracts, 
+contributing to the potential adoptability of the system. We have also described the design rationale for Marlowe, and 
+sketched ways in which it can be implemented.
 
-We plan to continue the work with Marlowe in a number of directions. We will continue to develop the core language, for example considering the automation of generation of identifiers for commitments and others. We will then implement this version of Marlowe in Cardano, compiling from Marlowe contracts to on chain contracts and users' wallets, and deploy it in a test network to observe and measure its behaviour in practice.
+We plan to continue the work with Marlowe in a number of directions. We will continue to develop the core language, for 
+example considering the automation of generation of identifiers for commitments and others. We will then implement this 
+version of Marlowe in Cardano, compiling from Marlowe contracts to on chain contracts and users' wallets, and deploy it 
+in a test network to observe and measure its behaviour in practice.
 
-Building on the operational semantics given here, we will develop analyses of Marlowe contracts -- such as to show that contracts cannot generate \haskellinline{FailedPay} actions in certain circumstances. We will also develop  QuickCheck-style property-based testing~\cite{quickCheck}, and properties developed here can become candidates for fully fledged verification in a formalisation of the semantics of Marlowe.
+Building on the operational semantics given here, we will develop analyses of Marlowe contracts -- such as to show that 
+contracts cannot generate \haskellinline{FailedPay} actions in certain circumstances. We will also develop  
+QuickCheck-style property-based testing~\cite{quickCheck}, and properties developed here can become candidates for fully 
+fledged verification in a formalisation of the semantics of Marlowe.
 
-We would like to thank IOHK for supporting us: not only has this led us to work on Marlowe, but we have benefitted hugely from collaboration with colleagues including Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles Hoskinson, Aggelos Kiayias, % Darryl McAdams, 
-Bruno Woltzenlogel Paleo, Rebecca Valentine and Phil Wadler. We are  very grateful to Thomas Arts and colleagues from \ae{}ternity for their convivial discussions on blockchain and contracts in G\"oteborg, and to colleagues from the Universities of Kent and Leicester for their comments too.
+We would like to thank IOHK for supporting us: not only has this led us to work on Marlowe, but we have benefited 
+hugely from collaboration with colleagues including Manuel Chakravarty, Duncan Coutts, Bernardo David, Charles 
+Hoskinson, Aggelos Kiayias, % Darryl McAdams,
+Bruno Woltzenlogel Paleo, Rebecca Valentine and Phil Wadler. We are  very 
+grateful to Thomas Arts and colleagues from \ae{}ternity for their convivial discussions on blockchain and contracts in 
+G\"oteborg, and to colleagues from the Universities of Kent and Leicester for their comments too.
 
 
 

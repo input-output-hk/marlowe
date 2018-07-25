@@ -51,3 +51,24 @@ arbitraryContractAux s
 arbitraryContract :: Gen Contract
 arbitraryContract = sized arbitraryContractAux
 
+arbitraryCC :: Gen CC
+arbitraryCC = (CC . IdentCC) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+arbitraryRC :: Gen RC
+arbitraryRC = (RC . IdentCC) <$> arbitrary <*> arbitrary <*> arbitrary
+
+arbitraryRPEntry :: Gen ((IdentPay, Person), Cash)
+arbitraryRPEntry = (\x y z -> ((IdentPay x, y), z)) <$> arbitrary <*> arbitrary <*> arbitrary
+
+arbitraryICEntry :: Gen ((IdentChoice, Person), ConcreteChoice)
+arbitraryICEntry = (\x y z -> ((IdentChoice x, y), z)) <$> arbitrary <*> arbitrary <*> arbitrary
+
+arbitraryInputAux :: Int -> Gen Input
+arbitraryInputAux s = (\w x y z -> Input (S.fromList w) (S.fromList x) (M.fromList y) (M.fromList z))
+                      <$> vectorOf s arbitraryCC <*> vectorOf s arbitraryRC <*> vectorOf s arbitraryRPEntry <*> vectorOf s arbitraryICEntry
+
+arbitraryInput :: Gen Input
+arbitraryInput = sized arbitraryInputAux
+
+
+

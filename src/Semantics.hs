@@ -272,7 +272,7 @@ step _ st Null _ = (st, Null, [])
 step inp st c@(Pay idpay from to val expi con) os
   | expired (blockNumber os) expi = (st, con, [ExpiredPay idpay from to cval])
   | right_claim =
-    if committed st from bn >= cval
+    if ((committed st from bn >= cval) && (cval >= 0))
       then (newstate, con, [SuccessfulPay idpay from to cval])
       else (st, con, [FailedPay idpay from to cval])
   | otherwise = (st, c, [])

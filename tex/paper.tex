@@ -183,8 +183,7 @@ Designing a DSL for financial contracts on blockchains: Marlowe.
 \item
 Defining an executable, small-step semantics of Marlowe in Haskell.
 \item 
-Embedding of Marlowe in Haskell to extend its expressibility; that is: Marlowe is defined as a Haskell 
-\haskellinline{data} type so that generating Marlowe contracts from Haskell is straightforward.
+Making Marlowe an embedded DSL in Haskell. This extends the expressibility of the language, as we can use all the facilities of Haskell in defining Marlowe contracts; we achieve this by defining Marlowe as  a Haskell \haskellinline{data} type.
 \item
 Developing the Meadow tool that allows users to interact with and simulate the operation of Marlowe contracts 
 and embedded Marlowe contracts.
@@ -194,8 +193,9 @@ Having established this model and its semantics we are able to do a number of ot
 paper. We can explore how the language will be implemented on an existing blockchain, such as Cardano, and our model has 
 shown us that we will need to consider how the evolution of a contract interacts with the blockchain, with miners in the 
 case of a `proof of work'-based chain, and with users participating in contract execution. We can also perform analyses 
-of Marlowe contracts, based on its formal semantics. Finally, we can explore the design space for Marlowe, and explore 
-potential alternative designs.
+of Marlowe contracts, based on its formal semantics. 
+
+In designing a language like Marlowe we are constrained by the blockchain domain, but within that we do have a range of choices. For example, should we base the language on a system with accounts, like Ethereum, or a UTxO-based model as used by bitcoin? We examine this and other choices after introducing the language and examples of its use. 
 
 
 %Moreover, there is not a single blockchain model, and we give a brief overview of the different mechanisms for 
@@ -217,7 +217,7 @@ DSL as an algebraic type, constructor by constructor.
 Section \ref{section:example-escrow} revisits the escrow example, and shows 
 how it is described using a combination of Marlowe and Haskell constructs: that is, we use Marlowe as an embedded DSL. 
 Section \ref{section:tool} introduces Meadow, our tool for visualising and interacting with Marlowe contracts.
-Section \ref{sec:abstraction} reflects on the system design, showing how Marlowe can be supported on a variety of 
+Section \ref{sec:abstraction} reflects on the design rationale for Marlowe, showing how it can be supported on a variety of 
 blockchains, and Section \ref{sec:compilation} explores how Marlowe can be implemented. Section \ref{sec:related} 
 surveys related work and Section 
 \ref{section:next-steps} enumerates the next steps for the project after drawing some conclusions.
@@ -635,7 +635,7 @@ Marlowe code, instead of writing Marlowe directly.
 
 We used Haskell because it is the language in which Marlowe is implemented, but it would be easy to embed Marlowe in any 
 other language. It would only be necessary to translate its primitives into a data type in that language. In Meadow we 
-use Fay \cite{Fay}, which is a subset of Haskell (see Section~\ref{section:tool}).
+use Fay \cite{Fay}, a subset of Haskell that we discuss in more detail in Section~\ref{section:tool}).
 
 The example we use through this section implements an escrow contract, as first introduced in Section~\ref{sec:intro}. 
 %
@@ -756,11 +756,12 @@ then the repeated computation of the expression could be avoided.
 
 \label{section:tool}
 
-One of the objectives of Marlowe is to be accessible to a wider audience
-than a general purpose language would. With this aim, and to aid Marlowe's
-usage by people that does not know or is not familiar with its syntax,
+For Marlowe to be usable in practice, users need to be able to understand how contracts will behave once deployed to the blockchain, but without doing the deployment. We can do that by simulating their behaviour off-chain, interactively stepping through the evaluation of a contract in a browser. We do this in two stages, first transforming an embedded contact (using features of Haskell) to a pure Marlowe contract, and then interactively stepping through that contract.
+
+To achieve this, and to aid Marlowe's take-up
+usage by people that does not know or are not familiar with its syntax,
 we have developed Meadow, a web tool that supports the interactive construction,
-edition, and simulation of smart-contracts written in Marlowe. The
+revision, and simulation of smart-contracts written in Marlowe. The
 tool is publicly available in the url: \url{https://input-output-hk.github.io/scdsl/}.
 In Figure~\ref{fig:full-screenshot-demo}, we provide a screenshot
 of Meadow in the middle of simulating the execution of the ``deposit incentive'' contract available
@@ -784,12 +785,12 @@ and to convert the code back to its Blockly representation.
 
 Additionally, Meadow allows the user to use Meadow's Fay embedding from within the browser. % (see Figure~\ref{fig:embedded-demo}). 
 
-The reason we chose Fay instead of Haskell for Meadow is a technical one: we wanted Meadow to be run completely inside 
+The reason that we chose Fay instead of Haskell for Meadow is a technical one: we wanted Meadow to be run completely inside 
 the browser, because that makes it easy to deploy, since the server is only required to send the page and not to 
 run any Marlowe-related computation. There exist compilers from Haskell to JavaScript but most of them are not easy to 
 bootstrap into JavaScript. Among other reasons, they often rely on the API of the host OS to read and write files.
 
-Fay compiler, on the other hand, is mostly written in pure Haskell, and it is not hard to compile to JavaScript by 
+The Fay compiler, on the other hand, is mostly written in pure Haskell, and it is not hard to compile to JavaScript by 
 using GHCJS. Nevertheless, it does not include a type checker, it relies in GHC's type-checker; and it also 
 tries to read its \haskellinline{Prelude} from disk. We have worked around these issues by disabling type-checking 
 within Meadow embedded editor, and by embedding all the required modules as constant strings in a modified version 
@@ -879,19 +880,20 @@ design decisions and ways in which we can formally analyse Marlowe contracts.
 
 
 
-\section{Implementation on blockchain}
+\section{Design and Implementation}
 \label{section:towards-implementation}
 
 Marlowe is defined by its executable semantics, but to be deployed on blockchain it will have to be implemented on an 
 existing distributed infrastructure.  We intend to deploy it on IOHK's Cardano infrastructure, but it can be implemented 
 in other systems too, as we explain now.
 
-\subsection{Abstraction}
+\subsection{Design Rationale}
 \label{sec:abstraction}
+\label{sec:design-rationale}
 
 Marlowe abstracts away from a number of concrete details of how blockchains operate. In particular, it is agnostic 
 between UTxO-based systems, such as Bitcoin and Cardano SL, and account-based models such as Ethereum; it can be 
-implemented on push or pull-based systems, and can be executed on or off-chain. 
+implemented on ``push'' or ``pull''-based systems, and can be executed on or off-chain. 
 
 \paragraph{UTxO and accounts}
 
@@ -1163,6 +1165,9 @@ trying to change the contents of the chain, or through trying to affect other pr
 ways, since it has to be amenable to replication or verification within a reasonable time if the security and integrity 
 of the chain are to be preserved. We look at representatives of the main approaches now; we discuss some of these in 
 more detail in an earlier paper~\cite{cryptoeprint:2016:1156}.
+
+\paragraph{Split contracts}
+An early work on smart contracts raises the issue that practical contractual situations may well not be amenable to complete formalisation, hence giving rise to a \emph{split}~\cite{split-contracts} between an automated part and a non-automated part that mediates, for example, real assets. We can foresee that this approach will be needed for Marlowe too, if it achieves read-world adoption.
 
 \paragraph{Bitcoin script}
 

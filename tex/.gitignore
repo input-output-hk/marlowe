@@ -31,7 +31,7 @@
 *.pdfsync
 
 ## Auxiliary and intermediate files from other packages:
-
+diffs/*
 
 # algorithms
 *.alg

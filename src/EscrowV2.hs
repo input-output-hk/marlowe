@@ -30,16 +30,24 @@ import Semantics
 -- refund = 0
 -- pay    = 1
 
+alice :: Person
+alice = 1
+
+bob :: Person
+bob = 2
+
+carol :: Person
+carol = 3
 
 escrow :: Contract
-escrow = CommitCash iCC1 1
+escrow = CommitCash iCC1 alice
                     (ConstMoney 450)
                     10 100
-                    (When (OrObs (two_chose 1 2 3 0)
-                                 (two_chose 1 2 3 1))
+                    (When (OrObs (two_chose alice bob carol 0)
+                                 (two_chose alice bob carol 1))
                           90
-                          (Choice (two_chose 1 2 3 1)
-                                  (Pay iP1 1 2
+                          (Choice (two_chose alice bob carol 1)
+                                  (Pay iP1 alice bob
                                        (AvailableMoney iCC1)
                                        100
                                        redeem_original)

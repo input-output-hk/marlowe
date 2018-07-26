@@ -677,13 +677,9 @@ iP1 = IdentPay 1
 \end{haskellcode}
 And we can create identifiers for all the participants:
 \begin{haskellcode}
-alice :: Person
+alice, bob, carol :: Person
 alice = 1
-
-bob :: Person
-bob = 2
-
-carol :: Person
+bob   = 2
 carol = 3
 \end{haskellcode}
 We can also create a sub-contract that allows the money from the commitment with identifier \haskellinline{IdentCC 1} 

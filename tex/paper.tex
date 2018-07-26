@@ -183,7 +183,9 @@ Designing a DSL for financial contracts on blockchains: Marlowe.
 \item
 Defining an executable, small-step semantics of Marlowe in Haskell.
 \item 
-Making Marlowe an embedded DSL in Haskell. This extends the expressibility of the language, as we can use all the facilities of Haskell in defining Marlowe contracts; we achieve this by defining Marlowe as  a Haskell \haskellinline{data} type.
+Making Marlowe an embedded DSL in Haskell. This extends the expressibility of the language, as we can use all the 
+facilities of Haskell in defining Marlowe contracts; we achieve this by defining Marlowe as  a Haskell 
+\haskellinline{data} type.
 \item
 Developing the Meadow tool that allows users to interact with and simulate the operation of Marlowe contracts 
 and embedded Marlowe contracts.
@@ -195,7 +197,9 @@ shown us that we will need to consider how the evolution of a contract interacts
 case of a `proof of work'-based chain, and with users participating in contract execution. We can also perform analyses 
 of Marlowe contracts, based on its formal semantics. 
 
-In designing a language like Marlowe we are constrained by the blockchain domain, but within that we do have a range of choices. For example, should we base the language on a system with accounts, like Ethereum, or a UTxO-based model as used by bitcoin? We examine this and other choices after introducing the language and examples of its use. 
+In designing a language like Marlowe we are constrained by the blockchain domain, but within that we do have a range of 
+choices. For example, should we base the language on a system with accounts, like Ethereum, or a UTxO-based model as 
+used by bitcoin? We examine this and other choices after introducing the language and examples of its use. 
 
 
 %Moreover, there is not a single blockchain model, and we give a brief overview of the different mechanisms for 
@@ -756,7 +760,10 @@ then the repeated computation of the expression could be avoided.
 
 \label{section:tool}
 
-For Marlowe to be usable in practice, users need to be able to understand how contracts will behave once deployed to the blockchain, but without doing the deployment. We can do that by simulating their behaviour off-chain, interactively stepping through the evaluation of a contract in a browser. We do this in two stages, first transforming an embedded contact (using features of Haskell) to a pure Marlowe contract, and then interactively stepping through that contract.
+For Marlowe to be usable in practice, users need to be able to understand how contracts will behave once deployed to 
+the blockchain, but without doing the deployment. We can do that by simulating their behaviour off-chain, interactively 
+stepping through the evaluation of a contract in a browser. We do this in two stages, first transforming an embedded 
+contact (using features of Haskell) to a pure Marlowe contract, and then interactively stepping through that contract.
 
 To achieve this, and to aid Marlowe's take-up
 usage by people that does not know or are not familiar with its syntax,
@@ -1167,7 +1174,10 @@ of the chain are to be preserved. We look at representatives of the main approac
 more detail in an earlier paper~\cite{cryptoeprint:2016:1156}.
 
 \paragraph{Split contracts}
-An early work on smart contracts raises the issue that practical contractual situations may well not be amenable to complete formalisation, hence giving rise to a \emph{split}~\cite{split-contracts} between an automated part and a non-automated part that mediates, for example, real assets. We can foresee that this approach will be needed for Marlowe too, if it achieves read-world adoption.
+An early work on smart contracts raises the issue that practical contractual situations may well not be amenable to 
+complete formalisation, hence giving rise to a \emph{split}~\cite{split-contracts} between an automated part and a 
+non-automated part that mediates, for example, real assets. We can foresee that this approach will be needed for Marlowe 
+too, if it achieves read-world adoption.
 
 \paragraph{Bitcoin script}
 

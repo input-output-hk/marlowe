@@ -149,7 +149,7 @@ There are two options for the money: if two out of the three participants agree 
 money to \haskellinline{alice}, that is done instead.
 
 The outer primitive \haskellinline{When} waits until the condition -- its first argument -- 
-becomes true; in this case, the condition is the that either two participants choose \haskellinline{refund} or two 
+becomes true; in this case, the condition is that either two participants choose \haskellinline{refund} or two 
 participants choose \haskellinline{pay}. The second argument of the \haskellinline{When} is itself another 
 \haskellinline{Contract}, which is performed after the condition of the \haskellinline{When} has been met, and it makes 
 the payment if two participants chose \haskellinline{pay}, otherwise it redeems previous money commitments.
@@ -278,7 +278,7 @@ which the contract is run.
 
 On the other hand, at each step there are -- potentially, at least -- a variety of inputs available from the 
 participants themselves. These include commitments of currency (or ``cash''), redemption of commitments, and claims of 
-payments by a participant. Moreover it is also possible for a participant to input an arbitrary value (which we term a 
+payments by a participant. Moreover, it is also possible for a participant to input an arbitrary value (which we term a 
 ``choice''). The particular inputs at a given step are described by a value of type \haskellinline{Input}.
 
 %\paragraph{Commitments}
@@ -549,7 +549,7 @@ We look next at an example of Marlowe in action.
 In this section, we show how Marlowe can be used for designing a contract that incentivises saving. We use the 
 following example: \haskellinline{bob} offers 20 ADA to \haskellinline{alice} in exchange for saving 100 ADA for 100 
 blocks. \haskellinline{alice} will be able to withdraw the savings after block 20, but if that option is chosen, then 
-\haskellinline{bob} will not pay the extra 20 ADA to participant \haskellinline{alice}.
+\haskellinline{bob} will not pay the extra 20 ADA to \haskellinline{alice}.
 
 We will start from outer to inner primitives. The first thing is to allow \haskellinline{alice} to commit the 
 100 ADA. The primitive says that with identity \haskellinline{IdentCC 1} (this is the identity of the commitment), 
@@ -660,7 +660,7 @@ the result of the transaction and \haskellinline{carol} will not need to do anyt
 \haskellinline{alice} or to \haskellinline{bob}.
 
 In our implementation we make things more specific: the money paid for the item is 450 ADA, and it must be committed by 
-\haskellinline{alice} before block \haskellinline{10}; it will be refunded to participant \haskellinline{alice} if 
+\haskellinline{alice} before block \haskellinline{10}; it will be refunded to \haskellinline{alice} if 
 there is no consensus before block \haskellinline{90}.
 
 We start by defining some Haskell functions. We can encapsulate identifiers in functions to make the contract more 
@@ -770,7 +770,7 @@ then the repeated computation of the expression could be avoided.
 For Marlowe to be usable in practice, users need to be able to understand how contracts will behave once deployed to 
 the blockchain, but without doing the deployment. We can do that by simulating their behaviour off-chain, interactively 
 stepping through the evaluation of a contract in a browser. We do this in two stages, first transforming an embedded 
-contact (using features of Haskell) to a pure Marlowe contract, and then interactively stepping through that contract.
+contract (using features of Haskell) to a pure Marlowe contract, and then interactively stepping through that contract.
 
 To achieve this, and to aid Marlowe's take-up
 usage by people that does not know or are not familiar with its syntax,
@@ -1014,7 +1014,7 @@ keep data usage bounded; but the full information may still need to be posted in
 
 If we have contracts that involve, for example, the oil price then we may need to convert a published price in USD into 
 ADA, using a value for the prevailing USD/ADA exchange rate. This will require a computation: in this case, a 
-multiplication. If Marlowe is to be stand-alone then we need to be extend it with arithmetic and other operations, but 
+multiplication. If Marlowe is to be stand-alone then we need to extend it with arithmetic and other operations, but 
 we expect Marlowe to be embedded in a suitable language that provides these facilities.
 
 %\paragraph{Sidechains and wallets}

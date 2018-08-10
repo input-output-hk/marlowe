@@ -8,7 +8,7 @@ import qualified Data.Map as M
 
 data AnalysisVariable = CurrentBlock
                       | ChoiceAV IdentChoice Person
-                      | CommitAmmount IdentCC
+                      | CommitAmount IdentCC
                       | ChoiceWasMade IdentChoice Person {- Positive (or zero): it was made; negative: it wasn't -}
                       | CommitExists IdentCC {- Positive (or zero): it exists; negative: it doesn't -}
 {-                    | Committer IdentChoice -}
@@ -23,7 +23,7 @@ generateEq x y = And [Eq $ LE x y, Eq $ LE y x]
 
 commitExists :: IdentCC -> Logic AnalysisVariable
 commitExists x = And [Eq $ LE [Const 0] [Var $ CommitExists x],
-                      Eq $ LE [Const 0] [Var $ CommitAmmount x]]
+                      Eq $ LE [Const 0] [Var $ CommitAmount x]]
 
 commitDoesNotExist :: IdentCC -> Logic AnalysisVariable
 commitDoesNotExist x = Eq $ LE [Var $ CommitExists x] [Const (-1)]
@@ -41,7 +41,7 @@ moneyToLogic :: Integer -> Money -> (Integer, ([EquationTerm AnalysisVariable], 
 moneyToLogic idx (AvailableMoney x) = (idx2, ([nv], And [zl]))
   where
    (idx2, nv) = generateAV idx
-   (xv, xl) = ([Var $ CommitAmmount x], commitExists x)
+   (xv, xl) = ([Var $ CommitAmount x], commitExists x)
    (yv, yl) = ([Const $ 0], commitDoesNotExist x) 
    zl = Or [And [xl, generateEq xv [nv]], And [yl, generateEq yv [nv]]]
 moneyToLogic idx (AddMoney x y) = (idx3, (xv ++ yv, nl))
@@ -85,7 +85,7 @@ updateStateOS :: (State, OS) -> (AnalysisVariable, Integer) -> (State, OS)
 updateStateOS (sta, obs) (CurrentBlock, val) = (sta, obs {blockNumber = val})
 updateStateOS (sta@(State {sch = schmap}), obs) (ChoiceAV icho pe, val) =
   (sta{sch = M.insert (icho, pe) val schmap}, obs)
-updateStateOS (sta@(State {sc = scmap}), obs@(OS {blockNumber = bn})) (CommitAmmount icom, val) =
+updateStateOS (sta@(State {sc = scmap}), obs@(OS {blockNumber = bn})) (CommitAmount icom, val) =
   (sta {sc = M.insert icom (0, NotRedeemed val (bn + 1)) scmap}, obs)
 updateStateOS (sta@(State {sch = schmap}), obs) (ChoiceWasMade icho pe, val)
   | val >= 0 = (sta {sch = if (M.member (icho, pe) schmap)

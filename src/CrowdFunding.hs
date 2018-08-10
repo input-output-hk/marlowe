@@ -9,8 +9,8 @@ import Semantics
 -- The contract allows a person 5 to collect 1000 ADA
 -- by inviting 4 people to donate.
 -- People 1 to 4 can first choose how much to donate
--- and then commit that ammount of money until
--- block 20. At block 10, if the ammount collected
+-- and then commit that amount of money until
+-- block 20. At block 10, if the amount collected
 -- is equal or higher than 1000 ADA, person 5 will
 -- have until block 20 to claim all of it.
 -- In any case, people 1 to 4 will be able to redeem

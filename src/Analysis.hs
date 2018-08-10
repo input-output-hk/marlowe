@@ -86,11 +86,11 @@ data AnalysisVariable = CurrentBlock {- Global (last block considered) -}
                       | InputIssued InputIdentifier {- Positive (or zero): issued; negative: not issued -}
                       | InputIssueBlock InputIdentifier {- Block number when issued (always positive or zero) -}
            -- Commit specific
-                      | CommitAmmount IdentCC {- Money committed -}
+                      | CommitAmount IdentCC {- Money committed -}
            -- Redeem specific
-                      | RedeemAmmount IdentCC {- Money redeemed -}
+                      | RedeemAmount IdentCC {- Money redeemed -}
            -- Payment specific
-                      | PaymentAmmount IdentPay Person {- Money claimed -}
+                      | PaymentAmount IdentPay Person {- Money claimed -}
            -- Choice specific
                       | ChoiceValue IdentChoice Person {- Concrete choice made -}
                deriving (Eq,Ord,Show,Read)
@@ -100,9 +100,9 @@ inputIdFromVariable CurrentBlock = Nothing
 inputIdFromVariable (TempVar _) = Nothing
 inputIdFromVariable (InputIssued ide) = Just $ ide 
 inputIdFromVariable (InputIssueBlock ide) = Just $ ide 
-inputIdFromVariable (CommitAmmount ide) = Just $ CommitID ide 
-inputIdFromVariable (RedeemAmmount ide) = Just $ RedeemID ide 
-inputIdFromVariable (PaymentAmmount ide per) = Just $ PaymentID ide per
+inputIdFromVariable (CommitAmount ide) = Just $ CommitID ide 
+inputIdFromVariable (RedeemAmount ide) = Just $ RedeemID ide 
+inputIdFromVariable (PaymentAmount ide per) = Just $ PaymentID ide per
 inputIdFromVariable (ChoiceValue ide per) = Just $ ChoiceID ide per
 
 type SCCStatus = (Person, SCCRedeemStatus)
@@ -186,24 +186,24 @@ compileListAux _ compMap (InputIssueBlock ide, val)
   | otherwise = case Map.lookup ide compMap of
                   Just (Nothing, cdat) -> Map.insert ide (Just val, cdat) compMap
                   _ -> error "Inconsistent symbolic trace in compileList"
-compileListAux _ compMap (CommitAmmount ide, val)
-             -- We assume is not possible to commit a negative ammount of money
+compileListAux _ compMap (CommitAmount ide, val)
+             -- We assume is not possible to commit a negative amount of money
   | val < 0 = error "Negative money committed in compileList" 
   | otherwise = case Map.lookup completeId compMap of
                   Just (tim, CommitCD cide per timout _) ->
                           Map.insert completeId (tim, CommitCD cide per timout $ Just val) compMap
                   _ -> Map.delete completeId compMap
   where completeId = CommitID ide
-compileListAux _ compMap (RedeemAmmount ide, val)
-             -- We assume is not possible to redeem a negative ammount of money
+compileListAux _ compMap (RedeemAmount ide, val)
+             -- We assume is not possible to redeem a negative amount of money
   | val < 0 = error "Negative money redeemed in compileList" 
   | otherwise = case Map.lookup completeId compMap of
                   Just (tim, RedeemCD cide per _) ->
                           Map.insert completeId (tim, RedeemCD cide per $ Just val) compMap
                   _ -> Map.delete completeId compMap
   where completeId = RedeemID ide
-compileListAux _ compMap (PaymentAmmount ide per, val)
-             -- We assume is not possible to pay a negative ammount of money
+compileListAux _ compMap (PaymentAmount ide per, val)
+             -- We assume is not possible to pay a negative amount of money
   | val < 0 = error "Negative money payed in compileList" 
   | otherwise = case Map.lookup completeId compMap of
                   Just (tim, PaymentCD cide cper _) ->
@@ -359,7 +359,7 @@ addClaim ide per veMon =
        Nothing -> do setInput gIde (PaymentDI ide per)
                      setIssued gIde
                      setIssueBlock gIde
-                     setAnalysisVar (PaymentAmmount ide per) veMon 
+                     setAnalysisVar (PaymentAmount ide per) veMon 
        Just _ -> destroyBranch
   where gIde = PaymentID ide per
 
@@ -370,7 +370,7 @@ addCommit ide per veMon tim =
        Nothing -> do setInput gIde (CommitDI ide per tim)
                      setIssued gIde
                      setIssueBlock gIde
-                     setAnalysisVar (CommitAmmount ide) veMon
+                     setAnalysisVar (CommitAmount ide) veMon
        Just _ -> destroyBranch
   where gIde = CommitID ide
 
@@ -381,7 +381,7 @@ addRedeem ide per veMon =
        Nothing -> do setInput gIde (RedeemDI ide per)
                      setIssued gIde
                      setIssueBlock gIde
-                     setAnalysisVar (RedeemAmmount ide) veMon
+                     setAnalysisVar (RedeemAmount ide) veMon
        Just _ -> destroyBranch
   where gIde = RedeemID ide
 
@@ -434,7 +434,7 @@ getSortedUnexpiredCommitsBy per =
 getCommVals :: [(IdentCC, SCCStatus)] -> [VarExpr]
 getCommVals l = [v | (_, (_, SNotRedeemed v _)) <- l]
 
--- Discount the provided (negative) ammount from the commit
+-- Discount the provided (negative) amount from the commit
 discountCommValue :: IdentCC -> VarExpr -> SE ()
 discountCommValue ide val =
   do ssta <- getSymState

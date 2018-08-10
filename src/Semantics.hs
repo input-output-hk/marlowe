@@ -112,7 +112,7 @@ data RC = RC IdentCC Person Cash
 -- entry per identifier and person pair and would
 -- make access more efficient if we needed to find
 -- an entry without knowing the concrete choice
--- or ammount of cash being claimed.
+-- or amount of cash being claimed.
 
 -- If we want to be able to accept commitments that are
 -- more generous than established we would need to make
@@ -182,7 +182,7 @@ data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
                deriving (Eq,Ord,Show,Read)
 
 -- Money is a set of contract primitives that represent constants,
--- functions, and variables that can be evaluated as an ammount
+-- functions, and variables that can be evaluated as an amount
 -- of money.
 
 data Money = AvailableMoney IdentCC |
@@ -218,7 +218,7 @@ data Observation =  BelowTimeout Timeout | -- are we still on time for something
                     NotObs Observation |
                     PersonChoseThis IdentChoice Person ConcreteChoice |
                     PersonChoseSomething IdentChoice Person |
-                    ValueGE Money Money | -- is first ammount is greater or equal than the second?
+                    ValueGE Money Money | -- is first amount is greater or equal than the second?
                     TrueObs | FalseObs
                     deriving (Eq,Ord,Show,Read)
 

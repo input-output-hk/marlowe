@@ -161,6 +161,40 @@ Defined.
     apply IHn.
   Defined.
 
+
+  Theorem eq_equiv : forall a b : list Z, (a = b) <-> conjWith Z.eq a b.
+    intros.
+    generalize b.
+    clear b.
+    induction a.
+    destruct b.
+    intuition.
+    split.
+    intros.
+    rewrite <- H.
+    intuition.
+    intros.
+    inversion H.
+    intros.
+    destruct b.
+    simpl.
+    intuition.
+    inversion H.
+    split; intros.
+    rewrite <- H.
+    simpl.
+    intuition.
+    apply IHa.
+    reflexivity.
+    inversion H.
+    inversion H0.
+    assert (a0 = b).
+    apply IHa.
+    exact H1.
+    rewrite H3.
+    reflexivity.
+  Defined.
+
 Open Scope Int_scope.
 
 Module Type ListType.
@@ -171,37 +205,23 @@ End ListType.
 Module ListToOT (O : ListType) <: OrderedType.
   Include O.
   Definition t := s.
-  Definition eq (a : t) (b : t): Prop := conjWith Z.eq (st a) (st b).
+  Definition eq (a : t) (b : t): Prop := eq (st a) (st b).
   Definition lt (a : t) (b : t): Prop := conjWith2 Z.lt Z.eq (st a) (st b).
+
   Theorem eq_refl : forall x : t, eq x x.
-    intros.
-    unfold eq.
-    induction st.
-    simpl.
-    exact I.
-    simpl.
-    split.
-    apply Z.eq_refl.
-    exact IHl.
+    intros; reflexivity.
   Defined.
   Theorem eq_sym : forall x y : t, eq x y -> eq y x.
     intros.
-    unfold eq in *.
-    apply conjWithSym.
-    intros.
-    apply Z.eq_sym. 
-    apply Z.eq_sym in H0.
-    rewrite H0.
+    unfold eq.
+    rewrite H.
     reflexivity.
-    exact H.
   Defined.
   Theorem eq_trans : forall x y z : t, eq x y -> eq y z -> eq x z.
     intros.
     unfold eq in *.
-    apply (conjWithTrans Z Z.eq (st y)).
-    apply (Z.eq_trans).
-    apply H.
-    apply H0.
+    rewrite <- H0.
+    exact H.
   Defined.
   Theorem lt_trans : forall x y z : t, lt x y -> lt y z -> lt x z.
     intros.
@@ -225,22 +245,24 @@ Module ListToOT (O : ListType) <: OrderedType.
      unfold lt.
      unfold eq.
      intros.
+     intuition.
+     apply eq_equiv in H0.
      apply (conjWith2LtNotEq Z Z.eq Z.lt (st x) (st y)).
      apply Z.lt_neq.
      apply H.
+     exact H0.
    Defined.
 
-
-  Theorem compareList : forall x y : list Z, {conjWith2 Z.lt Z.eq x y} + {conjWith Z.eq x y} +
+  Theorem compareList : forall x y : list Z, {conjWith2 Z.lt Z.eq x y} + {x = y} +
 {conjWith2 Z.lt Z.eq y x}.
     intros.
-    apply (doubleInduction (fun (x y : list Z) => {conjWith2 Z.lt Z.eq x y} + {conjWith Z.eq x y} + {conjWith2 Z.lt Z.eq y x})).
+    apply (doubleInduction (fun (x y : list Z) => {conjWith2 Z.lt Z.eq x y} + {x = y} + {conjWith2 Z.lt Z.eq y x})).
     intros.
     destruct y0.
     simpl.
     left.
     right.
-    exact I.
+    reflexivity.
     simpl.
     left.
     left.
@@ -249,7 +271,7 @@ Module ListToOT (O : ListType) <: OrderedType.
     simpl.
     left.
     right.
-    exact I.
+    reflexivity.
     simpl.
     right.
     exact I.
@@ -273,9 +295,9 @@ Module ListToOT (O : ListType) <: OrderedType.
     exact c.
     left.
     right.
-    split.
-    exact e.
-    exact c.
+    rewrite e.
+    rewrite e0.
+    reflexivity.
     right.
     right.
     split.
@@ -328,6 +350,12 @@ Module ListToOT (O : ListType) <: OrderedType.
     exact l.
     apply H.
   Defined.
+
+Add Parametric Relation : t (eq)
+         reflexivity proved by (eq_refl)
+         symmetry proved by (eq_sym)
+         transitivity proved by (eq_trans)
+         as eq_setoid.
 
 End ListToOT.
 

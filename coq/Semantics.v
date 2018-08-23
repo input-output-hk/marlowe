@@ -33,6 +33,8 @@ Inductive CCT := CC : IdentCCT -> Person -> Cash -> Timeout -> CCT.
 
 Inductive RCT := RC : IdentCCT -> Person -> Cash -> RCT.
 
+
+Require Import Coq.FSets.FSetProperties.
 (* CC Set def *)
 Module CC_LT <: ListType.
   Definition s := CCT.
@@ -44,6 +46,8 @@ End CC_LT.
 Module CC_OT := ListToOT(CC_LT).
 Module CC_SET := FSetAVL.Make (CC_OT).
 Definition emptyCCSet := CC_SET.empty.
+Module CC_P := WProperties_fun CC_OT CC_SET.
+Module CC_F := CC_P.FM.
 
 (* RC Set def *)
 Module RC_LT <: ListType.
@@ -56,7 +60,10 @@ End RC_LT.
 Module RC_OT := ListToOT(RC_LT).
 Module RC_SET := FSetAVL.Make (RC_OT).
 Definition emptyRCSet := RC_SET.empty.
+Module RC_P := WProperties_fun RC_OT RC_SET.
+Module RC_F := RC_P.FM.
 
+Require Import Coq.FSets.FMapFacts.
 (* Map (IdentPay, Person) Cash *)
 Module PC_LT <: ListType.
   Definition s := (IdentPayT * Person) : Type.
@@ -69,6 +76,9 @@ Module PC_OT := ListToOT(PC_LT).
 Module RP_MAP := FMapAVL.Make(PC_OT).
 Definition emptyRPMap := RP_MAP.empty Cash.
 Definition RP_MAP_TYPE := RP_MAP.t Cash.
+Module RP_P := WProperties_fun PC_OT RP_MAP.
+Module RP_F := RP_P.F.
+
 
 (* Map (IdentPay, Person) ConcreteChoice *)
 Module IC_LT <: ListType.
@@ -82,6 +92,8 @@ Module IC_OT := ListToOT(IC_LT).
 Module IC_MAP := FMapAVL.Make(IC_OT).
 Definition emptyICMap := IC_MAP.empty ConcreteChoice.
 Definition IC_MAP_TYPE := IC_MAP.t ConcreteChoice.
+Module IC_P := WProperties_fun IC_OT IC_MAP.
+Module IC_F := IC_P.F.
 
 Record InputT := Input {
                                cc : CC_SET.t;
@@ -720,12 +732,8 @@ destruct H2.
 destruct k.
 destruct k0.
 unfold SC_OT.eq in e.
-simpl in e.
-destruct e.
-clear H5.
-assert (z = z0).
-intuition.
-rewrite H5.
+inversion e.
+rewrite <- H5.
 rewrite (eqb_to_eq p p0).
 rewrite (eqb_to_eq c c0).
 rewrite (eqb_to_eq t t0).
@@ -741,10 +749,8 @@ inversion H.
 unfold SC_OT.eq in e.
 destruct k.
 destruct k0.
-simpl in e.
-assert (z = z0).
-intuition.
-rewrite H0.
+inversion e.
+rewrite <- H1.
 simpl in H.
 rewrite (eqb_to_eq p p0).
 reflexivity.
@@ -811,12 +817,6 @@ destruct k0.
 destruct i.
 assert ((p =? p0)%Z = true /\ (z =? z0)%Z = true).
 inversion e.
-assert (z = z0).
-intuition.
-subst.
-simpl in H1.
-assert (p = p0).
-intuition.
 subst.
 rewrite (Z.eqb_refl).
 rewrite (Z.eqb_refl).
@@ -1646,6 +1646,24 @@ Definition stepBlock (inp : InputT) (st : StateT) (con : Contract) (os : OST) : 
        let (res, ras) := stepAll inp {| sc := nsc; sch := nsch |} con os in
        let (rs, rcon) := res in
        (rs, rcon, chas ++ pas ++ ras).
+
+Definition foldableStepBlock (acc : StateT * Contract * OST * AS) (inp : InputT) : (StateT * Contract *  OST * AS) :=
+     let (p, a) := acc in
+     let (p0, o) := p in
+     let (s, c) := p0 in
+     let (p1, a0) := stepBlock inp s c o in
+       (p1, match o with {| blockNumber := bn |} => {| blockNumber := (bn + 1)%Z |} end, a0 ++ a).
+
+Definition emptyFSBAcc (c : Contract) : StateT * Contract * OST * AS.
+repeat apply pair.
+apply emptyState.
+apply c.
+apply emptyOS.
+apply nil.
+Defined.
+
+Definition executeConcreteTrace (c : Contract) (inp : list InputT) : (StateT * Contract * OST * AS) :=
+  fold_left foldableStepBlock inp (emptyFSBAcc c).
 
 Definition composeInput (cc : list CCT) (rc : list RCT) (rp : list ((IdentPayT * Person) * Cash)) (ic : list ((IdentChoiceT * Person) * ConcreteChoice)) : InputT :=
        {| cc := fold_left (fun (m : CC_SET.t) (e : CCT) => CC_SET.add e m) cc emptyCCSet;

@@ -1,12 +1,9 @@
 Require Import ZArith_base.
-Require Import Coq.ZArith.Int.
 Require Import FSets.FMapAVL.
 Require Import Coq.Structures.OrdersEx.
 Require Import Coq.Structures.OrdersAlt.
 Require Import Coq.Structures.OrderedType.
-Require Import Coq.FSets.FMapList.
-Require Import FSets.FSetAVL.
-Require Import Lists.List.
+
 
 Fixpoint conjWith {a : Type} (f : a -> a -> Prop) (x : list a) (y : list a) : Prop :=
   match x, y with

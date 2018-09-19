@@ -1,11 +1,8 @@
 Require Import ZArith_base.
 Require Import Coq.ZArith.Int.
-Require Import FSets.FMapAVL.
 Require Import Coq.Structures.OrderedType.
+Require Import FSets.FMapAVL.
 Require Import Coq.FSets.FMapList.
-Require Import FSets.FSetAVL.
-Require Import Lists.List.
-Require Import Strings.String.
 Require Import Coq.FSets.FMapFacts.
 
 Open Scope Int_scope.

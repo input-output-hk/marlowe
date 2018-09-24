@@ -1549,7 +1549,7 @@ rewrite (StateT_eqb_refl).
 reflexivity.
 Defined.
 
-Fixpoint stepAll (com : InputT) (st : StateT) (con : Contract) (os : OST) : (StateT * Contract * AS).
+Definition stepAll (com : InputT) (st : StateT) (con : Contract) (os : OST) : (StateT * Contract * AS).
 apply (Fix stepValOrder_wf).
 intros.
 clear st con.

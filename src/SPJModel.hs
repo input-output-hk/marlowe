@@ -110,7 +110,7 @@ rainInCyprus = Obs 12.5
 rainInCyprusContract = Cond (lift2 (>) rainInCyprus (constObs 10.0)) (One GBP) (One USD)
 
 rainInCyprusMarloweContract block me person = do
-    let obs = M.ValueGE (M.MoneyFromOracle "rainInCyprus" (M.ConstMoney 0)) (M.ConstMoney 10)
+    let obs = M.GE (M.ValueFromOracle "rainInCyprus" (M.Value 0)) (M.Value 10)
         pay cash = (M.Pay (M.IdentPay 1) person me (M.ConstMoney cash) block M.Null)
     M.CommitCash (M.IdentCC 1) person (M.ConstMoney 20) block maxTimeout 
         (M.When obs maxTimeout (pay 10) (pay 20)) (M.RedeemCC (M.IdentCC 1) M.Null)
@@ -133,7 +133,7 @@ americanMarlowe :: M.Timeout -> M.Timeout -> M.Contract -> M.Contract
 americanMarlowe t1 t2 u = M.When M.FalseObs t1 M.Null (M.When M.TrueObs t2 u M.Null)
 
 
-{- 3.5 Limit ontrats -}
+{- 3.5 Limit contrats -}
 
 interestRate :: Obs Integer
 interestRate = Obs 4
@@ -143,7 +143,7 @@ limitContract t1 t2 c = Until (lift2 (>) interestRate (constObs 6)) (american t1
 
 limitContractMarlowe :: M.Timeout -> M.Timeout -> M.Contract -> M.Contract
 limitContractMarlowe t1 t2 c = do
-    let interestRateObs = M.ValueGE (M.MoneyFromOracle "interestRate" (M.ConstMoney 0)) (M.ConstMoney 6) 
+    let interestRateObs = M.GE (M.ValueFromOracle "interestRate" (M.Value 0)) (M.Value 6)
         obs = M.NotObs interestRateObs
     M.When obs maxTimeout (americanMarlowe t1 t2 c) M.Null
 

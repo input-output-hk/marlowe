@@ -194,6 +194,15 @@ data Money = AvailableMoney IdentCC |
              MoneyFromOracle String Money
                     deriving (Eq,Ord,Show,Read)
 
+data Value = Committed IdentCC |
+             Value Integer |
+             AddValue Value Value |
+             MulValue Value Value |
+             ValueFromChoice IdentChoice Person Value |
+             ValueFromOracle String Value
+                    deriving (Eq,Ord,Show,Read)                    
+
+
 -- Semantics of money
 
 -- Function that evaluates a Money construct given
@@ -211,6 +220,17 @@ evalMoney s os (MoneyFromChoice ident per def)
 evalMoney s os (MoneyFromOracle name def)
   = Maybe.fromMaybe (evalMoney s os def) (Map.lookup name (oracles os))
 
+evalValue :: State -> OS -> Value -> Integer
+evalValue state os value = case value of
+    Committed ident -> 
+        case Map.lookup ident (sc state) of
+          Just (_, NotRedeemed c _) -> c
+          _ -> 0
+    Value v -> v
+    AddValue lhs rhs -> evalValue state os lhs + evalValue state os rhs
+    MulValue lhs rhs -> evalValue state os lhs * evalValue state os rhs
+    ValueFromChoice ident per def -> Maybe.fromMaybe (evalValue state os def) (Map.lookup (ident, per) (sch state))
+    ValueFromOracle name def -> Maybe.fromMaybe (evalValue state os def) (Map.lookup name (oracles os))
 
 -- Representation of observations over observables and the state.
 -- Rendered into predicates by interpretObs.
@@ -224,8 +244,8 @@ data Observation =  BelowTimeout Timeout | -- are we still on time for something
                     NotObs Observation |
                     PersonChoseThis IdentChoice Person ConcreteChoice |
                     PersonChoseSomething IdentChoice Person |
-                    AskOracle String Integer |
                     ValueGE Money Money | -- is first amount is greater or equal than the second?
+                    GE Value Value | -- is first amount is greater or equal than the second?
                     TrueObs | FalseObs
                     deriving (Eq,Ord,Show,Read)
 
@@ -248,6 +268,7 @@ interpretObs st (PersonChoseThis choice_id person reference_choice) _
 interpretObs st (PersonChoseSomething choice_id person) _
     = Map.member (choice_id, person) (sch st)
 interpretObs st (ValueGE a b) os = evalMoney st os a >= evalMoney st os b
+interpretObs st (GE a b) os = evalValue st os a >= evalValue st os b
 interpretObs _ TrueObs _
     = True
 interpretObs _ FalseObs _

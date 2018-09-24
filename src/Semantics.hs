@@ -1,7 +1,8 @@
 module Semantics where
 
 import qualified Data.Set as Set
-import qualified Data.Map as Map
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
 
@@ -57,11 +58,12 @@ data Observable = Random | BlockNumber
 -- Can think of these as the values available at a particular step.
 
 data OS =  OS { random       :: Random,
+                oracles      :: Map String Integer, -- data from oracles. No idea how those should world though
                 blockNumber  :: BlockNumber }
                     deriving (Eq,Ord,Show,Read)
 
 emptyOS :: OS
-emptyOS = OS { random = 0, blockNumber = 0 }
+emptyOS = OS { random = 0, blockNumber = 0, oracles = Map.empty }
 
 -- Inputs
 -- Types for cash commits, money redeems, and choices.
@@ -188,7 +190,8 @@ data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
 data Money = AvailableMoney IdentCC |
              AddMoney Money Money |
              ConstMoney Cash |
-             MoneyFromChoice IdentChoice Person Money
+             MoneyFromChoice IdentChoice Person Money |
+             MoneyFromOracle String Money
                     deriving (Eq,Ord,Show,Read)
 
 -- Semantics of money
@@ -196,15 +199,18 @@ data Money = AvailableMoney IdentCC |
 -- Function that evaluates a Money construct given
 -- the current state. 
 
-evalMoney :: State -> Money -> Cash
-evalMoney State {sc = scv} (AvailableMoney ident) =
+evalMoney :: State -> OS -> Money -> Cash
+evalMoney State {sc = scv} os (AvailableMoney ident) =
   case Map.lookup ident scv of
     Just (_, NotRedeemed c _) -> c
     _ -> 0
-evalMoney s (AddMoney a b) = evalMoney s a + evalMoney s b
-evalMoney _ (ConstMoney c) = c
-evalMoney s (MoneyFromChoice ident per def)
-  = Maybe.fromMaybe (evalMoney s def) (Map.lookup (ident, per) (sch s))
+evalMoney s os (AddMoney a b) = evalMoney s os a + evalMoney s os b
+evalMoney _ _ (ConstMoney c) = c
+evalMoney s os (MoneyFromChoice ident per def)
+  = Maybe.fromMaybe (evalMoney s os def) (Map.lookup (ident, per) (sch s))
+evalMoney s os (MoneyFromOracle name def)
+  = Maybe.fromMaybe (evalMoney s os def) (Map.lookup name (oracles os))
+
 
 -- Representation of observations over observables and the state.
 -- Rendered into predicates by interpretObs.
@@ -218,6 +224,7 @@ data Observation =  BelowTimeout Timeout | -- are we still on time for something
                     NotObs Observation |
                     PersonChoseThis IdentChoice Person ConcreteChoice |
                     PersonChoseSomething IdentChoice Person |
+                    AskOracle String Integer |
                     ValueGE Money Money | -- is first amount is greater or equal than the second?
                     TrueObs | FalseObs
                     deriving (Eq,Ord,Show,Read)
@@ -240,7 +247,7 @@ interpretObs st (PersonChoseThis choice_id person reference_choice) _
         Nothing -> False
 interpretObs st (PersonChoseSomething choice_id person) _
     = Map.member (choice_id, person) (sch st)
-interpretObs st (ValueGE a b) _ = evalMoney st a >= evalMoney st b
+interpretObs st (ValueGE a b) os = evalMoney st os a >= evalMoney st os b
 interpretObs _ TrueObs _
     = True
 interpretObs _ FalseObs _
@@ -277,7 +284,7 @@ step inp st c@(Pay idpay from to val expi con) os
       else (st, con, [FailedPay idpay from to cval])
   | otherwise = (st, c, [])
   where
-    cval = evalMoney st val
+    cval = evalMoney st os val
     newstate = stateUpdate st from to bn cval
     bn = blockNumber os
     right_claim =
@@ -321,7 +328,7 @@ step commits st c@(CommitCash ident person val start_timeout end_timeout con1 co
         cexe = expired (blockNumber os) end_timeout
         cns = (person, if cexe || cexs then ManuallyRedeemed else NotRedeemed cval end_timeout)
         ust = Map.insert ident cns ccs
-        cval = evalMoney st val
+        cval = evalMoney st os val
 
 -- Note: there is no possibility of payment failure here
 -- Also: look at partial redemption: currently it is all or nothing.
@@ -534,5 +541,5 @@ inputStream commits = result
   where
     result = zip commits_stream os_stream
     commits_stream = repeat commits
-    os_stream = map (OS 42) (concatMap (replicate 100) [1 ..])
+    os_stream = map (\blockNr -> OS { random = 42, blockNumber = blockNr, oracles = Map.empty} ) (concatMap (replicate 100) [1 ..])
 

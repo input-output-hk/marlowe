@@ -14,16 +14,27 @@ data Obs a = Obs a deriving (Eq, Show)
 data Currency = GBP | USD | ADA deriving (Eq, Show)
 
 data Contract
-    = Zero
-    | One Currency
-    | Give Contract
-    | And Contract Contract
-    | Or  Contract Contract
-    | Cond (Obs Bool) Contract Contract
-    | Scale (Obs Double) Contract
-    | When (Obs Bool) Contract
-    | Anytime (Obs Bool) Contract
-    | Until (Obs Bool) Contract
+    = Zero -- zero is a contrat that has no rights and no obligations.
+    | One Currency -- If you acquire (one k) you immediately receive one unit of the curreny k .
+    | Give Contract -- To aquire (give c) is to acquire all 's rights as obligations, and vice versa.
+                    -- Note that for a bilateral contrat q between parties A and B, A acquiring
+                    -- q implies that B acquires (give q ).
+    | And Contract Contract -- If you acquire (c1 `and ` c2), you immediately acquire both c1 and c2
+    | Or  Contract Contract -- If you aquire (c1 `or ` c2) you must immediately acquire your choie of either
+                            -- c1 or c2 (but not both).
+    | Cond (Obs Bool) Contract Contract -- If you acquire (cond b 1 2), you acquire c1 if the observable b is true at
+                                        -- the moment of acquisition, and c2 otherwise.
+    | Scale (Obs Double) Contract   -- If you acquire (scale o c), then you acquire c at the same moment, exept
+                                    -- that all the payments of c are multiplied by the value of the observable o
+                                    -- at the moment of acquisition.
+    | When (Obs Bool) Contract  -- If you acquire (when o c), you must acquire c as soon as observable o subsequently
+                                -- becomes True . It is therefore worthless in states where o will never again be True.
+    | Anytime (Obs Bool) Contract   -- Once you acquire (anytime o c), you may acquire c at any time the observable
+                                    -- o is True. The compound contrat is therefore worthless in states
+                                    -- where o will never again be True.
+    | Until (Obs Bool) Contract -- Once acquired, (until o c) is exatly like c exept that it must be abandoned
+                                -- when observable o beomes True. In states in which o is True, the
+                                -- compound contrat is therefore worthless, because it must be abandoned immediately.
     deriving (Eq, Show)
 
 constObs :: a -> Obs a

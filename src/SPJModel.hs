@@ -32,9 +32,9 @@ data Contract
     | Anytime (Obs Bool) Contract   -- Once you acquire (anytime o c), you may acquire c at any time the observable
                                     -- o is True. The compound contrat is therefore worthless in states
                                     -- where o will never again be True.
-    | Until (Obs Bool) Contract -- Once acquired, (until o c) is exatly like c exept that it must be abandoned
-                                -- when observable o beomes True. In states in which o is True, the
-                                -- compound contrat is therefore worthless, because it must be abandoned immediately.
+    | Until (Obs Bool) Contract -- Once acquired, (until o c) is exatly like c except that it must be abandoned
+                                -- when observable o becomes True. In states in which o is True, the
+                                -- compound contract is therefore worthless, because it must be abandoned immediately.
     deriving (Eq, Show)
 
 constObs :: a -> Obs a
@@ -63,7 +63,7 @@ translateSPJContractToMarlowe me counterparty c = case c of
         -- looks like it should be an input of some kind
         let obs = M.TrueObs -- TODO mock
         M.Choice obs (go c1) (go c2)
-    Cond obs c1 c2 -> M.When (translateObsToMarlowe obs) maxTimeout (go c1) (go c2)
+    Cond obs c1 c2 -> M.Choice (translateObsToMarlowe obs) (go c1) (go c2)
     Scale obs contract -> undefined -- TODO scaleContract obs contract. Introduce into Marlowe?
     When obs contract -> M.When (translateObsToMarlowe obs) maxTimeout (go contract) M.Null
     Anytime obs contract -> M.When (translateObsToMarlowe obs) maxTimeout (go contract) M.Null

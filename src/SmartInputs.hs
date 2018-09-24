@@ -15,15 +15,15 @@ combineInputs Input {cc = cci1, rc = rci1, rp = rpi1, ic = ici1}
 -- Obtains all the inputs that can be deduced from the remaining contract
 -- except choices and expired redeems
 getPotentialInputsFromContract :: OS -> Contract -> State -> Input
-getPotentialInputsFromContract _ (CommitCash idencc per cash _ tim2 _ _) st
+getPotentialInputsFromContract os (CommitCash idencc per cash _ tim2 _ _) st
   | Map.member idencc (sc st) = emptyInput
-  | otherwise = emptyInput {cc = Set.singleton (CC idencc per (evalMoney st cash) tim2)}
+  | otherwise = emptyInput {cc = Set.singleton (CC idencc per (evalMoney st os cash) tim2)}
 getPotentialInputsFromContract _ (RedeemCC idencc _) st =
   case Map.lookup idencc (sc st) of
     Just (person, NotRedeemed val _) -> emptyInput {rc = Set.singleton (RC idencc person val)}
     _ -> emptyInput
-getPotentialInputsFromContract _ (Pay idenpay _ pt cash _ _) st =
-  emptyInput {rp = Map.singleton (idenpay, pt) (evalMoney st cash)}
+getPotentialInputsFromContract os (Pay idenpay _ pt cash _ _) st =
+  emptyInput {rp = Map.singleton (idenpay, pt) (evalMoney st os cash)}
 getPotentialInputsFromContract os (Both c1 c2) st
   = combineInputs (getPotentialInputsFromContract os c1 st)
                   (getPotentialInputsFromContract os c2 st)

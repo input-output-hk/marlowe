@@ -16,7 +16,8 @@ executable marlowe
                         EscrowV2,
                         SmartInputs,
                         CrowdFunding,
-                        DepositIncentive
+                        DepositIncentive,
+                        Builder
                         -- GenSemantics -- doesn't compile
     hs-source-dirs:     src
     main-is:            SPJModel.hs

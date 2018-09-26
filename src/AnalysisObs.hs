@@ -37,20 +37,20 @@ choiceNotMade x p = Eq $ LE [Var $ ChoiceWasMade x p] [Const (-1)]
 choiceIs :: IdentChoice -> Person -> [EquationTerm AnalysisVariable] -> Logic AnalysisVariable
 choiceIs x p c = And [choiceMade x p, generateEq c [Var $ ChoiceAV x p]]
 
-moneyToLogic :: Integer -> Money -> (Integer, ([EquationTerm AnalysisVariable], Logic AnalysisVariable))
-moneyToLogic idx (AvailableMoney x) = (idx2, ([nv], And [zl]))
+moneyToLogic :: Integer -> Value -> (Integer, ([EquationTerm AnalysisVariable], Logic AnalysisVariable))
+moneyToLogic idx (Committed x) = (idx2, ([nv], And [zl]))
   where
    (idx2, nv) = generateAV idx
    (xv, xl) = ([Var $ CommitAmount x], commitExists x)
    (yv, yl) = ([Const $ 0], commitDoesNotExist x) 
    zl = Or [And [xl, generateEq xv [nv]], And [yl, generateEq yv [nv]]]
-moneyToLogic idx (AddMoney x y) = (idx3, (xv ++ yv, nl))
+moneyToLogic idx (AddValue x y) = (idx3, (xv ++ yv, nl))
   where
    (idx2, (xv, xl)) = moneyToLogic idx x
    (idx3, (yv, yl)) = moneyToLogic idx2 y
    nl = And [xl,yl]
-moneyToLogic idx (ConstMoney x) = (idx, ([Const x], And []))
-moneyToLogic idx (MoneyFromChoice identChoice person m) =(idx3, ([nv], nl))
+moneyToLogic idx (Value x) = (idx, ([Const x], And []))
+moneyToLogic idx (ValueFromChoice identChoice person m) =(idx3, ([nv], nl))
   where
     (idx2, (mv, ml)) = moneyToLogic idx m
     (idx3, nv) = generateAV idx2

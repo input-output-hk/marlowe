@@ -54,7 +54,7 @@ maxTimeout = 1234567890 -- FIXME
 translateSPJContractToMarlowe :: M.Person -> M.Person -> Contract -> M.Contract
 translateSPJContractToMarlowe me counterparty c = case c of
     Zero -> M.Null
-    One ADA  -> M.Pay (M.IdentPay 1) counterparty me (M.ConstMoney 1) maxTimeout M.Null -- TODO should we commit first?
+    One ADA  -> M.Pay (M.IdentPay 1) counterparty me (M.Value 1) maxTimeout M.Null -- TODO should we commit first?
     One curr  -> undefined -- TODO only ADA for now
     Give contract -> translateSPJContractToMarlowe counterparty me contract -- swap me/counterparty
     And c1 c2 -> M.Both (go c1) (go c2)
@@ -84,9 +84,9 @@ translateObsToMarlowe o = undefined
 translateToSPJContract :: M.Contract -> Contract
 translateToSPJContract m = case m of
     M.Null -> Zero
-    M.Pay ident from to (M.ConstMoney cash) timeout cont -> Scale (constObs (fromInteger cash)) (One ADA)
+    M.Pay ident from to (M.Value cash) timeout cont -> Scale (constObs (fromInteger cash)) (One ADA)
     M.Pay identPay from to money timeout contract -> do
-        let cash = M.evalMoney (M.emptyState) M.emptyOS money
+        let cash = M.evalValue (M.emptyState) M.emptyOS money
         Scale (constObs (fromInteger cash)) (One ADA)
         -- 
     M.CommitCash ident person money timeout1 timeout2 contract1 contract2 -> Zero
@@ -111,8 +111,8 @@ zcb block cash = When (at block) (Scale (constObs cash) (One USD))
 
 -- Marlowe implementation of zero-coupon bond example from SPJ paper
 zcbMarlowe block cash me person = do
-    M.CommitCash (M.IdentCC 1) person (M.ConstMoney cash) block maxTimeout -- prepare money for zero-coupon bond, before it could be used
-        (M.Pay (M.IdentPay 1) person me (M.AvailableMoney (M.IdentCC 1)) maxTimeout M.Null) 
+    M.CommitCash (M.IdentCC 1) person (M.Value cash) block maxTimeout -- prepare money for zero-coupon bond, before it could be used
+        (M.Pay (M.IdentPay 1) person me (M.Committed (M.IdentCC 1)) maxTimeout M.Null) 
         (M.RedeemCC (M.IdentCC 1) M.Null) -- actually, this should not happen.
 
         
@@ -123,9 +123,9 @@ rainInCyprus = Obs 12.5
 rainInCyprusContract = Cond (lift2 (>) rainInCyprus (constObs 10.0)) (One GBP) (One USD)
 
 rainInCyprusMarloweContract block me person = do
-    let obs = M.GE (M.ValueFromOracle "rainInCyprus" (M.Value 0)) (M.Value 10)
-        pay cash = (M.Pay (M.IdentPay 1) person me (M.ConstMoney cash) block M.Null)
-    M.CommitCash (M.IdentCC 1) person (M.ConstMoney 20) block maxTimeout 
+    let obs = M.ValueGE (M.ValueFromOracle "rainInCyprus" (M.Value 0)) (M.Value 10)
+        pay cash = (M.Pay (M.IdentPay 1) person me (M.Value cash) block M.Null)
+    M.CommitCash (M.IdentCC 1) person (M.Value 20) block maxTimeout 
         (M.When obs maxTimeout (pay 10) (pay 20)) (M.RedeemCC (M.IdentCC 1) M.Null)
 
 {- 3.4 Option contracts -}
@@ -156,7 +156,7 @@ limitContract t1 t2 c = Until (lift2 (>) interestRate (constObs 6)) (american t1
 
 limitContractMarlowe :: M.Timeout -> M.Timeout -> M.Contract -> M.Contract
 limitContractMarlowe t1 t2 c = do
-    let interestRateObs = M.GE (M.ValueFromOracle "interestRate" (M.Value 0)) (M.Value 6)
+    let interestRateObs = M.ValueGE (M.ValueFromOracle "interestRate" (M.Value 0)) (M.Value 6)
         obs = M.NotObs interestRateObs
     M.When obs maxTimeout (americanMarlowe t1 t2 c) M.Null
 

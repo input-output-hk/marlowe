@@ -3,18 +3,18 @@ module GenSemantics where
 import Semantics
 import Test.QuickCheck
 
-arbitraryMoneyAux :: Int -> Gen Money
-arbitraryMoneyAux s
- | s > 0 = oneof [(AvailableMoney . IdentCC) <$> arbitrary
-                 ,(AddMoney <$> arbitraryMoneyAux (s - 1)) <*> arbitraryMoneyAux (s - 1)
-                 ,ConstMoney <$> arbitrary
-                 ,(MoneyFromChoice . IdentChoice) <$> arbitrary <*> arbitrary <*> arbitraryMoneyAux (s - 1)]
- | s == 0 = oneof [(AvailableMoney . IdentCC) <$> arbitrary
-                  ,ConstMoney <$> arbitrary]
- | otherwise = error "Negative size in arbitraryMoney"
+arbitraryValueAux :: Int -> Gen Value
+arbitraryValueAux s
+ | s > 0 = oneof [(Committed . IdentCC) <$> arbitrary
+                 ,(AddValue <$> arbitraryValueAux (s - 1)) <*> arbitraryValueAux (s - 1)
+                 ,Value <$> arbitrary
+                 ,(ValueFromChoice . IdentChoice) <$> arbitrary <*> arbitrary <*> arbitraryValueAux (s - 1)]
+ | s == 0 = oneof [(Committed . IdentCC) <$> arbitrary
+                  ,Value <$> arbitrary]
+ | otherwise = error "Negative size in arbitraryValue"
  
-arbitraryMoney :: Gen Money
-arbitraryMoney = sized arbitraryMoneyAux
+arbitraryValue :: Gen Value
+arbitraryValue = sized arbitraryValueAux
 
 arbitraryObservationAux :: Int -> Gen Observation
 arbitraryObservationAux s
@@ -24,7 +24,7 @@ arbitraryObservationAux s
                  ,NotObs <$> arbitraryObservationAux (s - 1)  
                  ,(PersonChoseThis . IdentChoice) <$> arbitrary <*> arbitrary <*>  arbitrary
                  ,(PersonChoseSomething . IdentChoice) <$> arbitrary <*> arbitrary
-                 ,ValueGE <$> arbitraryMoneyAux (s - 1) <*> arbitraryMoneyAux (s - 1)
+                 ,ValueGE <$> arbitraryValueAux (s - 1) <*> arbitraryValueAux (s - 1)
                  ,pure TrueObs,pure FalseObs]
  | s == 0 = oneof [BelowTimeout <$> arbitrary
                   ,(PersonChoseThis . IdentChoice) <$> arbitrary <*> arbitrary <*>  arbitrary
@@ -39,9 +39,9 @@ arbitraryObservation = sized arbitraryObservationAux
 arbitraryContractAux :: Int -> Gen Contract
 arbitraryContractAux s
  | s > 0 = oneof [pure Null
-                 ,(CommitCash . IdentCC) <$> arbitrary <*> arbitrary <*> arbitraryMoneyAux (s - 1) <*> arbitrary <*> arbitrary <*> arbitraryContractAux (s - 1) <*> arbitraryContractAux (s - 1) 
+                 ,(CommitCash . IdentCC) <$> arbitrary <*> arbitrary <*> arbitraryValueAux (s - 1) <*> arbitrary <*> arbitrary <*> arbitraryContractAux (s - 1) <*> arbitraryContractAux (s - 1) 
                  ,(RedeemCC . IdentCC) <$> arbitrary <*> arbitraryContractAux (s - 1)
-                 ,(Pay . IdentPay) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitraryMoneyAux (s - 1) <*> arbitrary <*> arbitraryContractAux (s - 1)
+                 ,(Pay . IdentPay) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitraryValueAux (s - 1) <*> arbitrary <*> arbitraryContractAux (s - 1)
                  ,Both <$> arbitraryContractAux (s - 1) <*> arbitraryContractAux (s - 1)
                  ,Choice <$> arbitraryObservationAux (s - 1) <*> arbitraryContractAux (s - 1) <*> arbitraryContractAux (s - 1)
                  ,When <$> arbitraryObservationAux (s - 1) <*> arbitrary <*> arbitraryContractAux (s - 1) <*> arbitraryContractAux (s - 1)]

@@ -17,13 +17,13 @@ combineInputs Input {cc = cci1, rc = rci1, rp = rpi1, ic = ici1}
 getPotentialInputsFromContract :: OS -> Contract -> State -> Input
 getPotentialInputsFromContract os (CommitCash idencc per cash _ tim2 _ _) st
   | Map.member idencc (sc st) = emptyInput
-  | otherwise = emptyInput {cc = Set.singleton (CC idencc per (evalMoney st os cash) tim2)}
+  | otherwise = emptyInput {cc = Set.singleton (CC idencc per (evalValue st os cash) tim2)}
 getPotentialInputsFromContract _ (RedeemCC idencc _) st =
   case Map.lookup idencc (sc st) of
     Just (person, NotRedeemed val _) -> emptyInput {rc = Set.singleton (RC idencc person val)}
     _ -> emptyInput
 getPotentialInputsFromContract os (Pay idenpay _ pt cash _ _) st =
-  emptyInput {rp = Map.singleton (idenpay, pt) (evalMoney st os cash)}
+  emptyInput {rp = Map.singleton (idenpay, pt) (evalValue st os cash)}
 getPotentialInputsFromContract os (Both c1 c2) st
   = combineInputs (getPotentialInputsFromContract os c1 st)
                   (getPotentialInputsFromContract os c2 st)
@@ -42,23 +42,23 @@ getUsedChoiceNumbersObs st (AndObs obs1 obs2) =
 getUsedChoiceNumbersObs st (OrObs obs1 obs2) =
   foldl1 combineInputs $ map (getUsedChoiceNumbersObs st) [obs1, obs2]
 getUsedChoiceNumbersObs st (NotObs obs) = getUsedChoiceNumbersObs st obs
-getUsedChoiceNumbersObs st (ValueGE m1 m2) = foldl1 combineInputs $ map (getUsedChoiceNumbersMoney st) [m1, m2]
+getUsedChoiceNumbersObs st (ValueGE m1 m2) = foldl1 combineInputs $ map (getUsedChoiceNumbersValue st) [m1, m2]
 getUsedChoiceNumbersObs _ _ = emptyInput
 
 -- Obtains all the choices that are potentially checked by a money expression (taken as "0")
-getUsedChoiceNumbersMoney :: State -> Money -> Input
-getUsedChoiceNumbersMoney st (AddMoney m1 m2) = foldl1 combineInputs $ map (getUsedChoiceNumbersMoney st) [m1, m2]
-getUsedChoiceNumbersMoney st (MoneyFromChoice identch per m)
- = foldl1 combineInputs $ [emptyInput {ic = Map.singleton (identch, per) 0}, getUsedChoiceNumbersMoney st m]
-getUsedChoiceNumbersMoney st _ = emptyInput
+getUsedChoiceNumbersValue :: State -> Value -> Input
+getUsedChoiceNumbersValue st (AddValue m1 m2) = foldl1 combineInputs $ map (getUsedChoiceNumbersValue st) [m1, m2]
+getUsedChoiceNumbersValue st (ValueFromChoice identch per m)
+ = foldl1 combineInputs $ [emptyInput {ic = Map.singleton (identch, per) 0}, getUsedChoiceNumbersValue st m]
+getUsedChoiceNumbersValue st _ = emptyInput
 
 -- Obtains all the choices that are potentially checked by a contract (taken as "0")
 getUsedChoiceNumbers :: State -> Contract -> Input
 getUsedChoiceNumbers st (CommitCash _ _ m _ _ c1 c2)
- = foldl1 combineInputs $ ((getUsedChoiceNumbersMoney st m):(map (getUsedChoiceNumbers st) [c1, c2]))
+ = foldl1 combineInputs $ ((getUsedChoiceNumbersValue st m):(map (getUsedChoiceNumbers st) [c1, c2]))
 getUsedChoiceNumbers st (RedeemCC _ c) = getUsedChoiceNumbers st c
 getUsedChoiceNumbers st (Pay _ _ _ m _ c)
- = foldl1 combineInputs $ [getUsedChoiceNumbersMoney st m, getUsedChoiceNumbers st c]
+ = foldl1 combineInputs $ [getUsedChoiceNumbersValue st m, getUsedChoiceNumbers st c]
 getUsedChoiceNumbers st (Both c1 c2) =
   foldl1 combineInputs $ map (getUsedChoiceNumbers st) [c1, c2]
 getUsedChoiceNumbers _ Null = emptyInput

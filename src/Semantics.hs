@@ -183,17 +183,9 @@ type CCStatus = (Person,CCRedeemStatus)
 data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
                deriving (Eq,Ord,Show,Read)
 
--- Money is a set of contract primitives that represent constants,
+-- Value is a set of contract primitives that represent constants,
 -- functions, and variables that can be evaluated as an amount
 -- of money.
-
-data Money = AvailableMoney IdentCC |
-             AddMoney Money Money |
-             ConstMoney Cash |
-             MoneyFromChoice IdentChoice Person Money |
-             MoneyFromOracle String Money |
-             MoneyFromValue  Value
-                    deriving (Eq,Ord,Show,Read)
 
 data Value = Committed IdentCC |
              Value Integer |
@@ -203,24 +195,6 @@ data Value = Committed IdentCC |
              ValueFromOracle String Value
                     deriving (Eq,Ord,Show,Read)                    
 
-
--- Semantics of money
-
--- Function that evaluates a Money construct given
--- the current state. 
-
-evalMoney :: State -> OS -> Money -> Cash
-evalMoney State {sc = scv} os (AvailableMoney ident) =
-  case Map.lookup ident scv of
-    Just (_, NotRedeemed c _) -> c
-    _ -> 0
-evalMoney s os (AddMoney a b) = evalMoney s os a + evalMoney s os b
-evalMoney _ _ (ConstMoney c) = c
-evalMoney s os (MoneyFromChoice ident per def)
-  = Maybe.fromMaybe (evalMoney s os def) (Map.lookup (ident, per) (sch s))
-evalMoney s os (MoneyFromOracle name def)
-  = Maybe.fromMaybe (evalMoney s os def) (Map.lookup name (oracles os))
-evalMoney s os (MoneyFromValue v) = evalValue s os v
 
 evalValue :: State -> OS -> Value -> Integer
 evalValue state os value = case value of
@@ -246,8 +220,7 @@ data Observation =  BelowTimeout Timeout | -- are we still on time for something
                     NotObs Observation |
                     PersonChoseThis IdentChoice Person ConcreteChoice |
                     PersonChoseSomething IdentChoice Person |
-                    ValueGE Money Money | -- is first amount is greater or equal than the second?
-                    GE Value Value | -- is first amount is greater or equal than the second?
+                    ValueGE Value Value | -- is first amount is greater or equal than the second?
                     TrueObs | FalseObs
                     deriving (Eq,Ord,Show,Read)
 
@@ -269,8 +242,7 @@ interpretObs st (PersonChoseThis choice_id person reference_choice) _
         Nothing -> False
 interpretObs st (PersonChoseSomething choice_id person) _
     = Map.member (choice_id, person) (sch st)
-interpretObs st (ValueGE a b) os = evalMoney st os a >= evalMoney st os b
-interpretObs st (GE a b) os = evalValue st os a >= evalValue st os b
+interpretObs st (ValueGE a b) os = evalValue st os a >= evalValue st os b
 interpretObs _ TrueObs _
     = True
 interpretObs _ FalseObs _
@@ -280,13 +252,14 @@ interpretObs _ FalseObs _
 
 data Contract =
     Null |
-    CommitCash IdentCC Person Money Timeout Timeout Contract Contract |
+    CommitCash IdentCC Person Value Timeout Timeout Contract Contract |
     RedeemCC IdentCC Contract |
-    Pay IdentPay Person Person Money Timeout Contract |
+    Pay IdentPay Person Person Value Timeout Contract |
     Both Contract Contract |
     Choice Observation Contract Contract |
     When Observation Timeout Contract Contract |
-    While Observation Timeout Contract Contract
+    While Observation Timeout Contract Contract |
+    Scale Value Contract
                deriving (Eq,Ord,Show,Read)
 
 
@@ -308,7 +281,7 @@ step inp st c@(Pay idpay from to val expi con) os
       else (st, con, [FailedPay idpay from to cval])
   | otherwise = (st, c, [])
   where
-    cval = evalMoney st os val
+    cval = evalValue st os val
     newstate = stateUpdate st from to bn cval
     bn = blockNumber os
     right_claim =
@@ -346,6 +319,22 @@ step comms st (While obs expi con1 con2) os
   where
     (st1, res1, ac1) = step comms st con1 os
 
+step comms st (Scale val con) os = (st, scaled con, [])
+  where
+    value = evalValue st os val
+    scaled c = case c of
+      Null -> Null
+      CommitCash identCC person money timeout1 timeout2 contract1 contract2 -> 
+        CommitCash identCC person money timeout1 timeout2 (scaled contract1) (scaled contract2)
+      RedeemCC identCC contract -> RedeemCC identCC (scaled contract)
+      Pay identPay person1 person2 money timeout contract -> do
+        let m = MulValue (Value value) money
+        Pay identPay person1 person2 m timeout (scaled contract)
+      Both contract1 contract2 -> Both (scaled contract1) (scaled contract2)
+      Choice obs contract1 contract2 -> Choice obs (scaled contract1) (scaled contract2)
+      When obs timeout contract1 contract2 -> When obs timeout (scaled contract1) (scaled contract2)
+      While obs timeout contract1 contract2 -> While obs timeout (scaled contract1) (scaled contract2)
+      Scale v contract -> Scale v (scaled contract)
 -- Note that conformance of the commitment here is exact
 -- May want to relax this
 
@@ -359,7 +348,7 @@ step commits st c@(CommitCash ident person val start_timeout end_timeout con1 co
         cexe = expired (blockNumber os) end_timeout
         cns = (person, if cexe || cexs then ManuallyRedeemed else NotRedeemed cval end_timeout)
         ust = Map.insert ident cns ccs
-        cval = evalMoney st os val
+        cval = evalValue st os val
 
 -- Note: there is no possibility of payment failure here
 -- Also: look at partial redemption: currently it is all or nothing.

@@ -191,7 +191,8 @@ data Money = AvailableMoney IdentCC |
              AddMoney Money Money |
              ConstMoney Cash |
              MoneyFromChoice IdentChoice Person Money |
-             MoneyFromOracle String Money
+             MoneyFromOracle String Money |
+             MoneyFromValue  Value
                     deriving (Eq,Ord,Show,Read)
 
 data Value = Committed IdentCC |
@@ -219,6 +220,7 @@ evalMoney s os (MoneyFromChoice ident per def)
   = Maybe.fromMaybe (evalMoney s os def) (Map.lookup (ident, per) (sch s))
 evalMoney s os (MoneyFromOracle name def)
   = Maybe.fromMaybe (evalMoney s os def) (Map.lookup name (oracles os))
+evalMoney s os (MoneyFromValue v) = evalValue s os v
 
 evalValue :: State -> OS -> Value -> Integer
 evalValue state os value = case value of

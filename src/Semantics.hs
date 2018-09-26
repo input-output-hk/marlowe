@@ -285,7 +285,8 @@ data Contract =
     Pay IdentPay Person Person Money Timeout Contract |
     Both Contract Contract |
     Choice Observation Contract Contract |
-    When Observation Timeout Contract Contract
+    When Observation Timeout Contract Contract |
+    While Observation Timeout Contract Contract
                deriving (Eq,Ord,Show,Read)
 
 
@@ -337,6 +338,13 @@ step _ st (When obs expi con con2) os
   | expired (blockNumber os) expi = (st,con2,[])
   | interpretObs st obs os = (st,con,[])
   | otherwise = (st, When obs expi con con2, [])
+
+step comms st (While obs expi con1 con2) os
+  | expired (blockNumber os) expi = (st,con2,[])
+  | interpretObs st obs os = (st1, While obs expi res1 con2, ac1)
+  | otherwise = (st, con2, [])
+  where
+    (st1, res1, ac1) = step comms st con1 os
 
 -- Note that conformance of the commitment here is exact
 -- May want to relax this

@@ -69,7 +69,7 @@ translateSPJContractToMarlowe me counterparty c = case c of
     Anytime obs contract -> do
         let choseToAcquire = M.PersonChoseThis (M.IdentChoice 1) me 1 
         M.When (translateObsToMarlowe obs `M.AndObs` choseToAcquire) maxTimeout (go contract) M.Null
-    Until obs contract -> M.When (M.NotObs $ translateObsToMarlowe obs) maxTimeout (go contract) M.Null
+    Until obs contract -> M.While (M.NotObs $ translateObsToMarlowe obs) maxTimeout (go contract) M.Null
   where
     go = translateSPJContractToMarlowe me counterparty
 

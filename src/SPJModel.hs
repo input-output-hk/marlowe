@@ -59,19 +59,19 @@ translateSPJContractToMarlowe me counterparty c = case c of
     Give contract -> translateSPJContractToMarlowe counterparty me contract -- swap me/counterparty
     And c1 c2 -> M.Both (go c1) (go c2)
     Or  c1 c2 -> do
-        -- not sure, M.Choice should be here, but I didn't understand how it's supposed to be choosen in SPJ paper.
-        -- looks like it should be an input of some kind
-        let obs = M.TrueObs -- TODO mock
-        M.Choice obs (go c1) (go c2)
+        let choseWhichToAcquire = M.PersonChoseThis (M.IdentChoice 1) me 1
+        M.Choice choseWhichToAcquire (go c1) (go c2)
     Cond obs c1 c2 -> M.Choice (translateObsToMarlowe obs) (go c1) (go c2)
-    Scale obs contract -> undefined -- TODO scaleContract obs contract. Introduce into Marlowe?
+    Scale obs contract -> M.Scale (compute1 obs) (compute2 obs) (go contract)
     When obs contract -> M.When (translateObsToMarlowe obs) maxTimeout (go contract) M.Null
     Anytime obs contract -> do
-        let choseToAcquire = M.PersonChoseThis (M.IdentChoice 1) me 1 
+        let choseToAcquire = M.PersonChoseThis (M.IdentChoice 1) me 1
         M.When (translateObsToMarlowe obs `M.AndObs` choseToAcquire) maxTimeout (go contract) M.Null
     Until obs contract -> M.While (M.NotObs $ translateObsToMarlowe obs) maxTimeout (go contract) M.Null
   where
     go = translateSPJContractToMarlowe me counterparty
+    compute1 = translateObsToMarlowe
+    compute2 = translateObsToMarlowe
 
 
 translateObsToMarlowe o = undefined
@@ -88,7 +88,7 @@ translateToSPJContract m = case m of
     M.Pay identPay from to money timeout contract -> do
         let cash = M.evalValue (M.emptyState) M.emptyOS money
         Scale (constObs (fromInteger cash)) (One ADA)
-        -- 
+        --
     M.CommitCash ident person money timeout1 timeout2 contract1 contract2 -> Zero
     M.RedeemCC ident contract -> Zero
     M.Both c1 c2 -> And (translateToSPJContract c1) (translateToSPJContract c2)
@@ -112,10 +112,10 @@ zcb block cash = When (at block) (Scale (constObs cash) (One USD))
 -- Marlowe implementation of zero-coupon bond example from SPJ paper
 zcbMarlowe block cash me person = do
     M.CommitCash (M.IdentCC 1) person (M.Value cash) block maxTimeout -- prepare money for zero-coupon bond, before it could be used
-        (M.Pay (M.IdentPay 1) person me (M.Committed (M.IdentCC 1)) maxTimeout M.Null) 
+        (M.Pay (M.IdentPay 1) person me (M.Committed (M.IdentCC 1)) maxTimeout M.Null)
         (M.RedeemCC (M.IdentCC 1) M.Null) -- actually, this should not happen.
 
-        
+
 {- 3.3 Observables and scaling -}
 rainInCyprus :: Obs Double
 rainInCyprus = Obs 12.5
@@ -125,7 +125,7 @@ rainInCyprusContract = Cond (lift2 (>) rainInCyprus (constObs 10.0)) (One GBP) (
 rainInCyprusMarloweContract block me person = do
     let obs = M.ValueGE (M.ValueFromOracle "rainInCyprus" (M.Value 0)) (M.Value 10)
         pay cash = (M.Pay (M.IdentPay 1) person me (M.Value cash) block M.Null)
-    M.CommitCash (M.IdentCC 1) person (M.Value 20) block maxTimeout 
+    M.CommitCash (M.IdentCC 1) person (M.Value 20) block maxTimeout
         (M.When obs maxTimeout (pay 10) (pay 20)) (M.RedeemCC (M.IdentCC 1) M.Null)
 
 {- 3.4 Option contracts -}
@@ -158,7 +158,7 @@ limitContractMarlowe :: M.Timeout -> M.Timeout -> M.Contract -> M.Contract
 limitContractMarlowe t1 t2 c = do
     let interestRateObs = M.ValueGE (M.ValueFromOracle "interestRate" (M.Value 0)) (M.Value 6)
         obs = M.NotObs interestRateObs
-    M.When obs maxTimeout (americanMarlowe t1 t2 c) M.Null
+    M.While obs maxTimeout (americanMarlowe t1 t2 c) M.Null
 
 {-
     Questions:

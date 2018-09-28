@@ -26,7 +26,7 @@ import qualified Data.Maybe as Maybe
 
 {----------------------
  -- Basic data types --
- ----------------------} 
+ ----------------------}
 
  -- People are represented by their public keys,
  -- which in turn are given by integers.
@@ -35,7 +35,7 @@ type Key         = Integer   -- Public key
 type Person      = Key
 
 -- Block numbers and random numbers are both integers.
- 
+
 type Random      = Integer
 type BlockNumber = Integer
 
@@ -54,7 +54,7 @@ type BlockNumber = Integer
 data Observable = Random | BlockNumber
                     deriving (Eq,Ord,Show,Read)
 
--- … while the type OS gives a particular random value and block number. 
+-- … while the type OS gives a particular random value and block number.
 -- Can think of these as the values available at a particular step.
 
 data OS =  OS { random       :: Random,
@@ -81,7 +81,7 @@ type Timeout = BlockNumber
 
 -- Commitments, choices and payments are all identified by identifiers.
 -- Their types are given here. In a more sophisticated model these would
--- be generated automatically (and so uniquely); here we simply assume that 
+-- be generated automatically (and so uniquely); here we simply assume that
 -- they are unique.
 
 newtype IdentCC = IdentCC Integer
@@ -93,7 +93,7 @@ newtype IdentChoice = IdentChoice Integer
 newtype IdentPay = IdentPay Integer
                deriving (Eq,Ord,Show,Read)
 
--- A cash commitment is made by a person, for a particular amount and timeout.               
+-- A cash commitment is made by a person, for a particular amount and timeout.
 
 data CC = CC IdentCC Person Cash Timeout
                deriving (Eq,Ord,Show,Read)
@@ -167,7 +167,7 @@ type AS = [Action]
 -- so that computations can be re-run. Recording these should be seen as
 -- a side-effect of their evaluation.
 
--- In particular the state keeps track of the current state of existing 
+-- In particular the state keeps track of the current state of existing
 -- conmmitments (sc) and choices (sch) that have been made.
 
 data State = State {
@@ -191,20 +191,22 @@ data Value = Committed IdentCC |
              Value Integer |
              AddValue Value Value |
              MulValue Value Value |
+             DivValue Value Value |
              ValueFromChoice IdentChoice Person Value |
              ValueFromOracle String Value
-                    deriving (Eq,Ord,Show,Read)                    
+                    deriving (Eq,Ord,Show,Read)
 
 
 evalValue :: State -> OS -> Value -> Integer
 evalValue state os value = case value of
-    Committed ident -> 
+    Committed ident ->
         case Map.lookup ident (sc state) of
           Just (_, NotRedeemed c _) -> c
           _ -> 0
     Value v -> v
     AddValue lhs rhs -> evalValue state os lhs + evalValue state os rhs
     MulValue lhs rhs -> evalValue state os lhs * evalValue state os rhs
+    DivValue lhs rhs -> evalValue state os lhs `div` evalValue state os rhs
     ValueFromChoice ident per def -> Maybe.fromMaybe (evalValue state os def) (Map.lookup (ident, per) (sch state))
     ValueFromOracle name def -> Maybe.fromMaybe (evalValue state os def) (Map.lookup name (oracles os))
 
@@ -259,7 +261,7 @@ data Contract =
     Choice Observation Contract Contract |
     When Observation Timeout Contract Contract |
     While Observation Timeout Contract Contract |
-    Scale Value Contract
+    Scale Value Value Contract -- scale Contract by rationale p/q
                deriving (Eq,Ord,Show,Read)
 
 
@@ -319,22 +321,23 @@ step comms st (While obs expi con1 con2) os
   where
     (st1, res1, ac1) = step comms st con1 os
 
-step comms st (Scale val con) os = (st, scaled con, [])
+step comms st (Scale p q con) os = (st, scaled con, [])
   where
-    value = evalValue st os val
+    pvalue = evalValue st os p
+    qvalue = evalValue st os q
     scaled c = case c of
       Null -> Null
-      CommitCash identCC person money timeout1 timeout2 contract1 contract2 -> 
+      CommitCash identCC person money timeout1 timeout2 contract1 contract2 ->
         CommitCash identCC person money timeout1 timeout2 (scaled contract1) (scaled contract2)
       RedeemCC identCC contract -> RedeemCC identCC (scaled contract)
       Pay identPay person1 person2 money timeout contract -> do
-        let m = MulValue (Value value) money
+        let m = DivValue (MulValue (Value pvalue) money) (Value qvalue)
         Pay identPay person1 person2 m timeout (scaled contract)
       Both contract1 contract2 -> Both (scaled contract1) (scaled contract2)
       Choice obs contract1 contract2 -> Choice obs (scaled contract1) (scaled contract2)
       When obs timeout contract1 contract2 -> When obs timeout (scaled contract1) (scaled contract2)
       While obs timeout contract1 contract2 -> While obs timeout (scaled contract1) (scaled contract2)
-      Scale v contract -> Scale v (scaled contract)
+      Scale p q contract -> Scale p q (scaled contract)
 -- Note that conformance of the commitment here is exact
 -- May want to relax this
 
@@ -405,7 +408,7 @@ expiredAndClaimed inp et k v = isExpiredNotRedeemed et v && isClaimed inp k v
 
 
 -- Marks a cash commit as redeemed,
--- Idempotent: if it is already redeemed it does nothing 
+-- Idempotent: if it is already redeemed it does nothing
 
 markRedeemed :: CCStatus -> CCStatus
 
@@ -481,12 +484,12 @@ updateMap mx p e v = discountFromValid (isRedeemable p e) v mx
 
 isRedeemable :: Person -> Timeout -> CCStatus -> Bool
 isRedeemable p e (ep, NotRedeemed _ ee) = (ep == p) && not (expired e ee)
-isRedeemable _ _ _  = False 
+isRedeemable _ _ _  = False
 
 -- Is this particular map-record for a commitment not-redeemed but expired?
 isExpiredNotRedeemed :: Timeout -> CCStatus -> Bool
 isExpiredNotRedeemed e (_, NotRedeemed _ ee) = expired e ee
-isExpiredNotRedeemed _ (_, _) = False 
+isExpiredNotRedeemed _ (_, _) = False
 
 -- Defines if expiry time ee has come if current time is e
 expired :: Timeout -> Timeout -> Bool
@@ -526,7 +529,7 @@ lowerExpirationDateButNotExpired :: (IdentCC, CCStatus) -> (IdentCC, CCStatus) -
 
 lowerExpirationDateButNotExpired (IdentCC id1, (_, NotRedeemed _ e)) (IdentCC id2, (_, NotRedeemed _ e2)) =
   case compare e e2 of
-    EQ -> compare id1 id2 
+    EQ -> compare id1 id2
     o -> o
 lowerExpirationDateButNotExpired (_, (_, NotRedeemed _ _)) _ = LT
 lowerExpirationDateButNotExpired _ (_, (_, NotRedeemed _ _)) = GT

@@ -5,3 +5,5 @@
 *.gz
 *.out
 .stack-work/
+.vscode/
+.history/

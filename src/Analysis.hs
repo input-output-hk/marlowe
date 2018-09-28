@@ -86,11 +86,11 @@ data AnalysisVariable = CurrentBlock {- Global (last block considered) -}
                       | InputIssued InputIdentifier {- Positive (or zero): issued; negative: not issued -}
                       | InputIssueBlock InputIdentifier {- Block number when issued (always positive or zero) -}
            -- Commit specific
-                      | CommitAmount IdentCC {- Money committed -}
+                      | CommitAmount IdentCC {- Value committed -}
            -- Redeem specific
-                      | RedeemAmount IdentCC {- Money redeemed -}
+                      | RedeemAmount IdentCC {- Value redeemed -}
            -- Payment specific
-                      | PaymentAmount IdentPay Person {- Money claimed -}
+                      | PaymentAmount IdentPay Person {- Value claimed -}
            -- Choice specific
                       | ChoiceValue IdentChoice Person {- Concrete choice made -}
                deriving (Eq,Ord,Show,Read)
@@ -478,23 +478,23 @@ allowsWait (Both x y) = (allowsWait x) && (allowsWait y)
 allowsWait (Choice _ _ _) = False
 allowsWait (When _ _ _ _) = False
 
-analyseMoney :: Money -> SE VarExpr
-analyseMoney (AvailableMoney ide) =
+analyseValue :: Value -> SE VarExpr
+analyseValue (Committed ide) =
   do ssta <- getSymState
      case Map.lookup ide $ ssc ssta of
        Just (_, SNotRedeemed v e) -> symIfExpiredTV (constant e)
                                        [Const 0] -- If expired return 0
                                        v -- If not expired return the value
        _ -> return [Const 0] -- If not found return 0
-analyseMoney (AddMoney x y) =
-  do vx <- analyseMoney x
-     vy <- analyseMoney y
+analyseValue (AddValue x y) =
+  do vx <- analyseValue x
+     vy <- analyseValue y
      return (vx ++ vy)
-analyseMoney (ConstMoney x) =
+analyseValue (Value x) =
   return [Const x]
-analyseMoney (MoneyFromChoice ide per m) =
+analyseValue (ValueFromChoice ide per m) =
   do bn <- getBlockNum
-     vm <- analyseMoney m
+     vm <- analyseValue m
      ifThenElseSymTV (gide `wasIssuedBeforeOrAt` bn)
        [Var $ ChoiceValue ide per] -- If choice issued before or in currentBlock return choice
        vm -- Else return default
@@ -549,8 +549,8 @@ analyseObservation (PersonChoseSomething ide per) =
        [Const (-1)] -- Else return False
   where gide = ChoiceID ide per
 analyseObservation (ValueGE m1 m2) =
-  do vmon1 <- analyseMoney m1
-     vmon2 <- analyseMoney m2
+  do vmon1 <- analyseValue m1
+     vmon2 <- analyseValue m2
      -- If m1 >= m2
      ifThenElseSymTV (Eq $ LE vmon2 vmon1)
      -- Then
@@ -572,7 +572,7 @@ analyseContractStep (Pay idpay from to val expi con) =
         (do addExplanation ("Wait for payment \"" ++ show idpay ++ "\" to expire.")
             return con)
         -- Else
-        (do veMon <- analyseMoney val
+        (do veMon <- analyseValue val
             addClaim idpay to veMon
             remMon <- getSortedUnexpiredCommitsBy from
             -- If enough money
@@ -594,7 +594,7 @@ analyseContractStep (CommitCash ident person val start_timeout end_timeout con1 
            return con2)
        -- Else
        (do addExplanation ("Satisfy the commit \"" ++ show ident ++ "\".")
-           veMon <- analyseMoney val
+           veMon <- analyseValue val
            addCommit ident person veMon end_timeout
            addCommitToState ident (person, SNotRedeemed veMon end_timeout)
            return con1)

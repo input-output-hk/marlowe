@@ -30,8 +30,8 @@ depositIncentive =
 alice = 1
 bob   = 2
 
-ada100 = ConstMoney 100
-ada20  = ConstMoney 20
+ada100 = Value 100
+ada20  = Value 20
 
 pay1 = IdentPay 1
 

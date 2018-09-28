@@ -9,21 +9,21 @@ import Data.List (groupBy, intercalate, genericLength, genericReplicate)
 
 data ASTNode = ASTNodeC Contract
              | ASTNodeO Observation
-             | ASTNodeM Money
+             | ASTNodeM Value
              | ASTNodeCC IdentCC
              | ASTNodeIC IdentChoice
              | ASTNodeIP IdentPay
              | ASTNodeI Integer
 
 listCurryType :: ASTNode -> (String, [ASTNode])
-listCurryType (ASTNodeM (AvailableMoney identCC))
- = ("AvailableMoney", [ASTNodeCC identCC])
-listCurryType (ASTNodeM (AddMoney money1 money2))
- = ("AddMoney", [ASTNodeM money1, ASTNodeM money2])
-listCurryType (ASTNodeM (ConstMoney cash))
- = ("ConstMoney", [ASTNodeI cash])
-listCurryType (ASTNodeM (MoneyFromChoice identChoice person def))
- = ("MoneyFromChoice", [ASTNodeIC identChoice, ASTNodeI person, ASTNodeM def])
+listCurryType (ASTNodeM (Committed identCC))
+ = ("Committed", [ASTNodeCC identCC])
+listCurryType (ASTNodeM (AddValue money1 money2))
+ = ("AddValue", [ASTNodeM money1, ASTNodeM money2])
+listCurryType (ASTNodeM (Value cash))
+ = ("Value", [ASTNodeI cash])
+listCurryType (ASTNodeM (ValueFromChoice identChoice person def))
+ = ("ValueFromChoice", [ASTNodeIC identChoice, ASTNodeI person, ASTNodeM def])
 listCurryType (ASTNodeO (BelowTimeout timeout))
  = ("BelowTimeout", [ASTNodeI timeout])
 listCurryType (ASTNodeO (AndObs observation1 observation2))

@@ -17,3 +17,15 @@ Meadow is a browser-based demo prototype that supports graphical editing of smar
 Meadow is available at: https://input-output-hk.github.io/scdsl/
 
 The sources for Meadow are available in the `meadow` folder.
+
+## Build on MacOS
+
+Requirements: Homebrew, Haskell Stack 1.6 or later.
+
+Install Haskell Stack if you haven't already
+
+    $ brew install haskell-stack
+
+    $ brew install glpk
+    $ stack setup
+    $ stack build

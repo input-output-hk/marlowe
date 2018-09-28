@@ -20,11 +20,11 @@ import Semantics
 
 -- escrow :: Contract
 -- escrow = CommitCash 1
---                     (ConstMoney 450)
+--                     (Value 450)
 --                     (When (OrObs (two_chose 1 2 3 refund)
 --                                  (two_chose 1 2 3 pay))
 --                           (Choice (two_chose 1 2 3 pay)
---                                   (Pay 1 2 AvailableMoney)
+--                                   (Pay 1 2 Committed)
 --                                   redeem_original))   
 
 -- refund = 0
@@ -41,14 +41,14 @@ carol = 3
 
 escrow :: Contract
 escrow = CommitCash iCC1 alice
-                    (ConstMoney 450)
+                    (Value 450)
                     10 100
                     (When (OrObs (two_chose alice bob carol 0)
                                  (two_chose alice bob carol 1))
                           90
                           (Choice (two_chose alice bob carol 1)
                                   (Pay iP1 alice bob
-                                       (AvailableMoney iCC1)
+                                       (Committed iCC1)
                                        100
                                        redeem_original)
                                   redeem_original)

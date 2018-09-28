@@ -15,14 +15,14 @@ main = setCode (prettyPrintContract contract)
 
 contract :: Contract
 contract = CommitCash iCC1 1
-                      (ConstMoney 450)
+                      (Value 450)
                       10 100
                       (When (OrObs (two_chose 1 2 3 0)
                                    (two_chose 1 2 3 1))
                             90
                             (Choice (two_chose 1 2 3 1)
                                     (Pay iP1 1 2
-                                         (AvailableMoney iCC1)
+                                         (Committed iCC1)
                                          100
                                          redeem_original)
                                     redeem_original)

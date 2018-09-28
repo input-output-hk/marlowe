@@ -1,5 +1,8 @@
 module GenSemantics where
 
+import qualified Data.Set as S
+import qualified Data.Map.Strict as M
+
 import Semantics
 import Test.QuickCheck
 
@@ -12,16 +15,16 @@ arbitraryValueAux s
  | s == 0 = oneof [(Committed . IdentCC) <$> arbitrary
                   ,Value <$> arbitrary]
  | otherwise = error "Negative size in arbitraryValue"
- 
+
 arbitraryValue :: Gen Value
 arbitraryValue = sized arbitraryValueAux
 
 arbitraryObservationAux :: Int -> Gen Observation
 arbitraryObservationAux s
  | s > 0 = oneof [BelowTimeout <$> arbitrary
-                 ,AndObs <$> arbitraryObservationAux (s - 1) <*> arbitraryObservationAux (s - 1) 
+                 ,AndObs <$> arbitraryObservationAux (s - 1) <*> arbitraryObservationAux (s - 1)
                  ,OrObs <$> arbitraryObservationAux (s - 1) <*> arbitraryObservationAux (s - 1)
-                 ,NotObs <$> arbitraryObservationAux (s - 1)  
+                 ,NotObs <$> arbitraryObservationAux (s - 1)
                  ,(PersonChoseThis . IdentChoice) <$> arbitrary <*> arbitrary <*>  arbitrary
                  ,(PersonChoseSomething . IdentChoice) <$> arbitrary <*> arbitrary
                  ,ValueGE <$> arbitraryValueAux (s - 1) <*> arbitraryValueAux (s - 1)
@@ -39,7 +42,7 @@ arbitraryObservation = sized arbitraryObservationAux
 arbitraryContractAux :: Int -> Gen Contract
 arbitraryContractAux s
  | s > 0 = oneof [pure Null
-                 ,(CommitCash . IdentCC) <$> arbitrary <*> arbitrary <*> arbitraryValueAux (s - 1) <*> arbitrary <*> arbitrary <*> arbitraryContractAux (s - 1) <*> arbitraryContractAux (s - 1) 
+                 ,(CommitCash . IdentCC) <$> arbitrary <*> arbitrary <*> arbitraryValueAux (s - 1) <*> arbitrary <*> arbitrary <*> arbitraryContractAux (s - 1) <*> arbitraryContractAux (s - 1)
                  ,(RedeemCC . IdentCC) <$> arbitrary <*> arbitraryContractAux (s - 1)
                  ,(Pay . IdentPay) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitraryValueAux (s - 1) <*> arbitrary <*> arbitraryContractAux (s - 1)
                  ,Both <$> arbitraryContractAux (s - 1) <*> arbitraryContractAux (s - 1)

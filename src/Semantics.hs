@@ -171,13 +171,14 @@ type AS = [Action]
 -- conmmitments (sc) and choices (sch) that have been made.
 
 data State = State {
+               letEnv :: Map.Map IdentLet Contract,
                sc  :: Map.Map IdentCC CCStatus,
                sch :: Map.Map (IdentChoice, Person) ConcreteChoice
              }
                deriving (Eq,Ord,Show,Read)
 
 emptyState :: State
-emptyState = State {sc = Map.empty, sch = Map.empty}
+emptyState = State {letEnv = Map.empty, sc = Map.empty, sch = Map.empty}
 
 type CCStatus = (Person,CCRedeemStatus)
 data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
@@ -252,6 +253,8 @@ interpretObs _ FalseObs _
 
 -- The type of contracts
 
+newtype IdentLet = IdentLet Integer deriving (Eq,Ord,Show,Read)
+
 data Contract =
     Null |
     CommitCash IdentCC Person Value Timeout Timeout Contract Contract |
@@ -261,7 +264,9 @@ data Contract =
     Choice Observation Contract Contract |
     When Observation Timeout Contract Contract |
     While Observation Timeout Contract Contract |
-    Scale Value Value Contract -- scale Contract by rationale p/q
+    Scale Value Value Contract | -- scale Contract by rationale p/q
+    Let IdentLet Contract Contract | -- let ident = contract1 in contract2
+    Use IdentLet -- substitute contract using IdentLet defined by Let.
                deriving (Eq,Ord,Show,Read)
 
 
@@ -338,6 +343,8 @@ step comms st (Scale p q con) os = (st, scaled con, [])
       When obs timeout contract1 contract2 -> When obs timeout (scaled contract1) (scaled contract2)
       While obs timeout contract1 contract2 -> While obs timeout (scaled contract1) (scaled contract2)
       Scale p q contract -> Scale p q (scaled contract)
+      Let ident contract1 contract2 -> Let ident (scaled contract1) (scaled contract2)
+      Use ident -> c
 -- Note that conformance of the commitment here is exact
 -- May want to relax this
 
@@ -369,6 +376,15 @@ step commits st c@(RedeemCC ident con) _ =
     where
         ccs = sc st
 
+step commits st (Let ident contract1 contract2) os =
+    let oldEnv = letEnv st
+        newstate = st {letEnv = Map.insert ident contract1 oldEnv}
+        (st1, res1, ac1) = step commits newstate contract2 os
+    in (st1 {letEnv = oldEnv}, res1, ac1)
+
+step commits st (Use ident) os =
+    let contract = Maybe.fromMaybe Null $ Map.lookup ident (letEnv st)
+    in step commits st contract os
 -------------------------
 -- stepAll & stepBlock --
 -------------------------

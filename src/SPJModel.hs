@@ -5,6 +5,7 @@
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe
 import Control.Monad.State
 
 import qualified Semantics                     as M
@@ -62,21 +63,32 @@ translateSPJContractToMarlowe me counterparty c = case c of
 
 
 translateToSPJContract :: M.Person -> M.Person -> M.Contract -> Contract
-translateToSPJContract me counterparty m = case m of
-    M.Null -> Zero
-    M.Pay identPay from to money timeout contract -> do
-        let pay = Scale money (Value 1) One
-            c   = if from == counterparty then pay else Give pay
-        And c (go contract)
-    M.CommitCash ident person money timeout1 timeout2 contract1 contract2 ->
-        -- here a user has to decide, whether there is enough money to pay, and consider timeouts
-        Or (go contract1) (go contract2)
-    M.RedeemCC ident contract -> go contract
-    M.Both c1 c2 -> And (go c1) (go c2)
-    M.Choice observation c1 c2 -> Cond observation (go c1) (go c2)
-    M.When observation timeout c1 contract -> When observation (go c1)
+translateToSPJContract me counterparty m = let
+    (letEnv, contract) = translateToSPJContractInner Map.empty me counterparty m
+    in contract
   where
-    go = translateToSPJContract me counterparty
+    translateToSPJContractInner :: Map M.IdentLet M.Contract -> M.Person -> M.Person -> M.Contract -> (Map M.IdentLet M.Contract, Contract)
+    translateToSPJContractInner letEnv me counterparty m = case m of
+        M.Null -> (letEnv, Zero)
+        M.Pay identPay from to money timeout contract -> do
+            let pay = Scale money (Value 1) One
+                c   = if from == counterparty then pay else Give pay
+            (letEnv, And c (go letEnv contract))
+        M.CommitCash ident person money timeout1 timeout2 contract1 contract2 ->
+            -- here a user has to decide, whether there is enough money to pay, and consider timeouts
+            (letEnv, Or (go letEnv contract1) (go letEnv contract2))
+        M.RedeemCC ident contract -> (letEnv, go letEnv contract)
+        M.Both c1 c2 -> (letEnv, And (go letEnv c1) (go letEnv c2))
+        M.Choice observation c1 c2 -> (letEnv, Cond observation (go letEnv c1) (go letEnv c2))
+        M.When observation timeout c1 contract -> (letEnv, When observation (go letEnv c1))
+        M.Let ident c1 c2 ->
+            let newLetEnv = Map.insert ident c1 letEnv
+            in (letEnv, go newLetEnv c2)
+        M.Use ident ->
+            let c = Maybe.fromMaybe M.Null $ Map.lookup ident letEnv -- TODO Null or error?
+            in (letEnv, go letEnv c)
+
+    go letEnv c = snd $ translateToSPJContractInner letEnv me counterparty c
 
 {- model SPJ date observable via block numbers -}
 

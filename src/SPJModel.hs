@@ -10,6 +10,7 @@ import Control.Monad.State
 
 import qualified Semantics                     as M
 import Semantics (Value(..))
+import CrowdFunding
 
 data Obs a = Obs a deriving (Eq, Show)
 
@@ -168,3 +169,8 @@ main = do
     let c = One
     print $ translateSPJContractToMarlowe 1 8 (One)
     print $ translateSPJContractToMarlowe 1 8 (Give $ One)
+    print $ M.evaluateMaximumValue Map.empty (
+        M.CommitCash (M.IdentCC 1) 1 (M.Value 123) 10 20
+            (M.Pay (M.IdentPay 1) 1 2 (M.Value 120) 5 M.Null)
+            (M.Pay (M.IdentPay 1) 1 2 (M.Value 122) 5 M.Null))
+    print $ M.evaluateMaximumValue Map.empty crowdFunding

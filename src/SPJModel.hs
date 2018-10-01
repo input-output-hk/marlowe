@@ -61,23 +61,22 @@ translateSPJContractToMarlowe me counterparty c = case c of
     go = translateSPJContractToMarlowe me counterparty
 
 
-{-
-    Not that straightforward... We need State and Input here.
-    Basically we need this to me inside M.step function.
-    Just a template for now
--}
-translateToSPJContract :: M.Contract -> Contract
-translateToSPJContract m = case m of
+translateToSPJContract :: M.Person -> M.Person -> M.Contract -> Contract
+translateToSPJContract me counterparty m = case m of
     M.Null -> Zero
-    M.Pay ident from to (M.Value cash) timeout cont -> Scale (Value cash) (Value 1) (One)
     M.Pay identPay from to money timeout contract -> do
-        Scale money (Value 1) One
-        --
-    M.CommitCash ident person money timeout1 timeout2 contract1 contract2 -> Zero
-    M.RedeemCC ident contract -> Zero
-    M.Both c1 c2 -> And (translateToSPJContract c1) (translateToSPJContract c2)
-    M.Choice observation c1 c2 -> Cond observation (translateToSPJContract c1) (translateToSPJContract c2)
-    M.When observation timeout c1 contract -> Zero
+        let pay = Scale money (Value 1) One
+            c   = if from == counterparty then pay else Give pay
+        And c (go contract)
+    M.CommitCash ident person money timeout1 timeout2 contract1 contract2 ->
+        -- here a user has to decide, whether there is enough money to pay, and consider timeouts
+        Or (go contract1) (go contract2)
+    M.RedeemCC ident contract -> go contract
+    M.Both c1 c2 -> And (go c1) (go c2)
+    M.Choice observation c1 c2 -> Cond observation (go c1) (go c2)
+    M.When observation timeout c1 contract -> When observation (go c1)
+  where
+    go = translateToSPJContract me counterparty
 
 {- model SPJ date observable via block numbers -}
 

@@ -156,6 +156,7 @@ data Action =   SuccessfulPay IdentPay Person Person Cash |
                 CommitRedeemed IdentCC Person Cash |
                 ExpiredCommitRedeemed IdentCC Person Cash |
                 DuplicateRedeem IdentCC Person |
+                IllegalUse IdentLet |
                 ChoiceMade IdentChoice Person ConcreteChoice
                     deriving (Eq,Ord,Show,Read)
 
@@ -379,14 +380,13 @@ step commits st c@(RedeemCC ident con) _ =
         ccs = sc st
 
 step commits st (Let ident contract1 contract2) os =
-    let oldEnv = letEnv st
-        newstate = st {letEnv = Map.insert ident contract1 oldEnv}
-        (st1, res1, ac1) = step commits newstate contract2 os
-    in (st1 {letEnv = oldEnv}, res1, ac1)
+    let newstate = st {letEnv = Map.insert ident contract1 (letEnv st)}
+    in (newstate, contract2, [])
 
 step commits st (Use ident) os =
-    let contract = Maybe.fromMaybe Null $ Map.lookup ident (letEnv st)
-    in step commits st contract os
+    case Map.lookup ident (letEnv st) of
+        Just contract -> (st, contract, [])
+        Nothing -> (st, Null, [IllegalUse ident])
 -------------------------
 -- stepAll & stepBlock --
 -------------------------

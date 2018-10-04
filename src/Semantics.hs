@@ -1,8 +1,10 @@
 module Semantics where
 
+import Data.Semigroup (Semigroup(..))
 import qualified Data.Set as Set
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.Map.Merge.Strict as Map
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
 import Control.Monad.State (get, put, modify)
@@ -584,16 +586,35 @@ inputStream commits = result
     commits_stream = repeat commits
     os_stream = map (\blockNr -> OS { random = 42, blockNumber = blockNr, oracles = Map.empty} ) (concatMap (replicate 100) [1 ..])
 
+data Balance = Balance {
+    balanceReceive :: Integer,
+    balancePay :: Integer
+} deriving (Eq, Ord, Show)
+
+instance Semigroup Balance where
+    (<>) lhs rhs = Balance {
+        balanceReceive = balanceReceive lhs + balanceReceive rhs,
+        balancePay = balancePay lhs + balancePay rhs }
+
+type Balances = Map Person Balance
 
 data EvalState = EvalState {
-  esLetEnv :: Map IdentLet Integer,
-  esCommitted :: Map.Map IdentCC Integer
+  esLetEnv :: Map IdentLet Balances,
+  esCommitted :: Map IdentCC Integer
 }
 
 type Bounds = Map (Either String IdentChoice) Integer
 
-evalBoundedValue :: Bounds -> EvalState -> Value -> Integer
-evalBoundedValue bounds state value = case value of
+data ApproxType = Max | Min
+
+negateApproxType Max = Min
+negateApproxType Min = Max
+
+approxFunc Max = max
+approxFunc Min = min
+
+evalBoundedValue :: Bounds -> EvalState -> ApproxType-> Value -> Integer
+evalBoundedValue bounds state approxType value = case value of
     Committed ident ->
         case Map.lookup ident (esCommitted state) of
             Just v -> v
@@ -601,81 +622,98 @@ evalBoundedValue bounds state value = case value of
     Value v -> v
     AddValue lhs rhs -> go lhs + go rhs
     MulValue lhs rhs -> go lhs * go rhs
-    DivValue lhs rhs -> go lhs `div` go rhs
+    DivValue lhs rhs -> do
+        let divisor = case approxType of
+                Max -> let d = goWithType Min rhs in if d == 0 then 1 else d
+                Min -> let d = goWithType Max rhs in if d == 0 then 1 else d -- TODO is 1 good?
+        go lhs `div` divisor
     ValueFromChoice ident per def -> let
         defValue = go def
         choiceValue = Maybe.fromMaybe defValue $ Map.lookup (Right ident) bounds
-        in max defValue choiceValue
+        in (approxFunc approxType) defValue choiceValue
     ValueFromOracle name def -> let
         defValue = go def
         oracleValue = Maybe.fromMaybe defValue $ Map.lookup (Left name) bounds
-        in max defValue oracleValue
+        in (approxFunc approxType) defValue oracleValue
   where
-    go = evalBoundedValue bounds state
+    goWithType t = evalBoundedValue bounds state t
+    go = goWithType approxType
 
 
-evaluateMaximumValue :: Bounds -> Contract -> Integer
+evaluateMaximumValue :: Bounds -> Contract -> Balances
 evaluateMaximumValue bounds contract = result
   where
     result = ST.evalState (evaluate contract) (EvalState {esLetEnv = Map.empty, esCommitted = Map.empty})
 
-    evaluate :: Contract -> ST.State EvalState Integer
+    -- [(p1, 10), (p2, 20), (p3, 30)] `mergeBalances` [(p2, 50)] == [(p1, 10), (p2, f 20 50), (p3, 30)]
+    mergeBalances f a b = Map.merge Map.preserveMissing Map.preserveMissing (Map.zipWithMatched (\k a b -> f a b)) a b
+    maxBalances a b = mergeBalances max a b
+    sumBalances a b = mergeBalances (<>) a b
+
+
+    evaluate :: Contract -> ST.State EvalState Balances
     evaluate contract = case contract of
-        Null -> return 0
+        Null -> return Map.empty
         CommitCash identCC person money timeout1 timeout2 contract1 contract2 -> do
             state <- get
-            let m = evalBoundedValue bounds state money
+            let m = evalBoundedValue bounds state Max money
             modify (\s -> s {esCommitted = Map.insert identCC m (esCommitted state)})
             v1 <- evaluate contract1
             put state
             v2 <- evaluate contract2
-            return $ max v1 v2
-        RedeemCC identCC contract -> do
-            modify (\s -> s {esCommitted = Map.delete identCC (esCommitted s)})
-            evaluate contract
+            return $ maxBalances v1 v2
+        RedeemCC identCC contract -> evaluate contract
         Pay identPay person1 person2 money timeout contract -> do
             state <- get
-            let v1 = evalBoundedValue bounds state money
+            let v1 = evalBoundedValue bounds state Max money
+            let balances = Map.fromList $ [ (person1, Balance { balancePay = v1, balanceReceive = 0 })
+                                          , (person2, Balance { balancePay = 0,  balanceReceive = v1}) ]
             v2 <- evaluate contract
-            return $ v1 + v2
+            return $ sumBalances balances v2
         Both contract1 contract2 -> do
             v1 <- evaluate contract1
             v2 <- evaluate contract2
-            return $ v1 + v2
+            return $ sumBalances v1 v2
         Choice obs contract1 contract2 -> do
             v1 <- evaluate contract1
             v2 <- evaluate contract2
-            return $ max v1 v2
+            return $ maxBalances v1 v2
         When obs timeout contract1 contract2 -> do
             v1 <- evaluate contract1
             v2 <- evaluate contract2
-            return $ max v1 v2
+            return $ maxBalances v1 v2  -- either obs eventually evaluates to True, or it timeouts, choose max
         While obs timeout contract1 contract2 -> do
-            v1 <- evaluate contract1 -- TODO ???
-            v2 <- evaluate contract2
-            return $ max v1 v2
-        Scale p q contract -> evaluate contract -- TODO implement
+            v1 <- evaluate contract1    -- assume the obs is always True, so whole contrac1 is evaluated
+            v2 <- evaluate contract2    -- assume the contract timeouts at the end of execution of contrac1
+            return $ sumBalances v1 v2  -- so we add both estimated values
+        Scale p q contract -> do
+            state <- get
+            let p1 = evalBoundedValue bounds state Max p
+            let q1 = evalBoundedValue bounds state Min q
+            let scaled = undefined
+            evaluate (scaled p1 q1 contract)
         Let ident contract1 contract2 -> do
             v1 <- evaluate contract1
             modify (\s -> s {esLetEnv = Map.insert ident v1 (esLetEnv s)})
             evaluate contract2
         Use ident -> do
             state <- get
-            let v = Maybe.fromMaybe 0 $ Map.lookup ident (esLetEnv state)
+            let v = Maybe.fromMaybe Map.empty $ Map.lookup ident (esLetEnv state)
             return v
 
-{-     scaled c = case c of
-      Null -> Null
-      CommitCash identCC person money timeout1 timeout2 contract1 contract2 ->
-        CommitCash identCC person money timeout1 timeout2 (scaled contract1) (scaled contract2)
-      RedeemCC identCC contract -> RedeemCC identCC (scaled contract)
-      Pay identPay person1 person2 money timeout contract -> do
-        let m = DivValue (MulValue (Value pvalue) money) (Value qvalue)
-        Pay identPay person1 person2 m timeout (scaled contract)
-      Both contract1 contract2 -> Both (scaled contract1) (scaled contract2)
-      Choice obs contract1 contract2 -> Choice obs (scaled contract1) (scaled contract2)
-      When obs timeout contract1 contract2 -> When obs timeout (scaled contract1) (scaled contract2)
-      While obs timeout contract1 contract2 -> While obs timeout (scaled contract1) (scaled contract2)
-      Scale p q contract -> Scale p q (scaled contract)
-      Let ident contract1 contract2 -> Let ident (scaled contract1) (scaled contract2)
-      Use ident -> c -}
+    scaled pvalue qvalue c = case c of
+        Null -> Null
+        CommitCash identCC person money timeout1 timeout2 contract1 contract2 ->
+            CommitCash identCC person money timeout1 timeout2 (go contract1) (go contract2)
+        RedeemCC identCC contract -> RedeemCC identCC (go contract)
+        Pay identPay person1 person2 money timeout contract -> do
+            let m = DivValue (MulValue pvalue money) qvalue
+            Pay identPay person1 person2 m timeout (go contract)
+        Both contract1 contract2 -> Both (go contract1) (go contract2)
+        Choice obs contract1 contract2 -> Choice obs (go contract1) (go contract2)
+        When obs timeout contract1 contract2 -> When obs timeout (go contract1) (go contract2)
+        While obs timeout contract1 contract2 -> While obs timeout (go contract1) (go contract2)
+        Scale p q contract -> Scale p q (go contract)
+        Let ident contract1 contract2 -> Let ident (go contract1) (go contract2)
+        Use ident -> c
+      where go = scaled pvalue qvalue

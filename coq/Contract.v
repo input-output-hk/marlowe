@@ -181,7 +181,7 @@ Fixpoint collect_IdAccT_from_AS (ac : AS) : IdAccT :=
          | nil => emptyIdAccT
          | SuccessfulPay i _ p _ :: ac0 | ExpiredPay i _ p _ :: ac0 | FailedPay i _ p _ :: ac0 =>
             let acn := collect_IdAccT_from_AS ac0 in addPaymentID i p acn
-         | SuccessfulCommit i _ _ :: ac0 => let acn := collect_IdAccT_from_AS ac0 in addCommitID i acn
+         | SuccessfulCommit i _ _ _ :: ac0 => let acn := collect_IdAccT_from_AS ac0 in addCommitID i acn
          | CommitRedeemed _ _ _ :: ac0 | ExpiredCommitRedeemed _ _ _ :: ac0 | DuplicateRedeem _ _ :: ac0 |
            ChoiceMade _ _ _ :: ac0 => collect_IdAccT_from_AS ac0
        end.
@@ -1160,7 +1160,7 @@ assert (forall ac, collect_IdAccT_from_AS ac = match ac with
          | nil => emptyIdAccT
          | SuccessfulPay i _ p _ :: ac0 | ExpiredPay i _ p _ :: ac0 | FailedPay i _ p _ :: ac0 =>
              addPaymentID i p (collect_IdAccT_from_AS ac0)
-         | SuccessfulCommit i _ _ :: ac0 => addCommitID i (collect_IdAccT_from_AS ac0)
+         | SuccessfulCommit i _ _ _ :: ac0 => addCommitID i (collect_IdAccT_from_AS ac0)
          | CommitRedeemed _ _ _ :: ac0 | ExpiredCommitRedeemed _ _ _ :: ac0 | DuplicateRedeem _ _ :: ac0 |
            ChoiceMade _ _ _ :: ac0 => collect_IdAccT_from_AS ac0
        end).

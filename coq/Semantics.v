@@ -101,7 +101,7 @@ Definition emptyInput := Input emptyCCSet emptyRCSet emptyRPMap emptyICMap.
 Inductive Action := SuccessfulPay : IdentPayT -> Person -> Person -> Cash -> Action
                               | ExpiredPay : IdentPayT -> Person -> Person -> Cash -> Action
                               | FailedPay : IdentPayT -> Person -> Person -> Cash -> Action
-                              | SuccessfulCommit : IdentCCT -> Person -> Cash -> Action
+                              | SuccessfulCommit : IdentCCT -> Person -> Cash -> Timeout -> Action
                               | CommitRedeemed : IdentCCT -> Person -> Cash -> Action
                               | ExpiredCommitRedeemed : IdentCCT -> Person -> Cash -> Action
                               | DuplicateRedeem : IdentCCT -> Person -> Action
@@ -365,7 +365,7 @@ Fixpoint step (inp : InputT) (st : StateT) (c : Contract) (os : OST) : StateT * 
               if cexe || cexs
               then (nst, con2, nil)
               else if CC_SET.mem (CC ident person cval end_timeout) (cc inp)
-                     then (nst, con1, SuccessfulCommit ident person (evalMoney st val) :: nil)
+                     then (nst, con1, SuccessfulCommit ident person (evalMoney st val) end_timeout :: nil)
                      else (st, CommitCash ident person val start_timeout end_timeout con1 con2, nil)
          | RedeemCC ident con =>
              match SC_MAP.find ident (sc st) with

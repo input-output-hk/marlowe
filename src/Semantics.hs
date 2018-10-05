@@ -159,6 +159,7 @@ data Action =   SuccessfulPay IdentPay Person Person Cash |
                 ExpiredCommitRedeemed IdentCC Person Cash |
                 DuplicateRedeem IdentCC Person |
                 IllegalUse IdentLet |
+                IllegalLetIdent IdentLet |
                 ChoiceMade IdentChoice Person ConcreteChoice
                     deriving (Eq,Ord,Show,Read)
 
@@ -382,8 +383,31 @@ step commits st c@(RedeemCC ident con) _ =
         ccs = sc st
 
 step commits st (Let ident contract1 contract2) os =
-    let newstate = st {letEnv = Map.insert ident contract1 (letEnv st)}
-    in (newstate, contract2, [])
+    case (checkValidUseOfIdent contract1, checkIdentIsUnique ident) of
+        (True,  True)   ->
+            let newstate = st {letEnv = Map.insert ident contract1 (letEnv st)}
+            in (newstate, contract2, [])
+        -- forbid non-unique let identifiers
+        (True,  False)  -> (st, Null, [IllegalLetIdent ident])
+        -- forbid ident being used inside contract1, which makes it non-terminating.
+        (False,  True)  -> (st, Null, [IllegalUse ident])
+        (False, False)  -> (st, Null, [IllegalLetIdent ident, IllegalUse ident])
+  where
+    checkValidUseOfIdent c = case c of
+        Null -> True
+        CommitCash identCC person money timeout1 timeout2 contract1 contract2 ->
+            checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        RedeemCC identCC contract -> checkValidUseOfIdent contract
+        Pay identPay person1 person2 money timeout contract -> checkValidUseOfIdent contract
+        Both contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        Choice obs contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        When obs timeout contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        While obs timeout contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        Scale p q contract -> checkValidUseOfIdent contract
+        Let ident contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        Use useIdent -> useIdent /= ident
+
+    checkIdentIsUnique ident = not $ Map.member ident (letEnv st)
 
 step commits st (Use ident) os =
     case Map.lookup ident (letEnv st) of

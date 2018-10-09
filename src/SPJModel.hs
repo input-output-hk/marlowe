@@ -1,3 +1,4 @@
+module SPJModel where
 {-
     Smart Contract model based on "How to write a financial contract" by S.L. Peyton Jones and J-M. Eber
     http://citeseerx.ist.psu.edu/viewdoc/download;jsessionid=9DD48728801B6687D982C96FF7406564?doi=10.1.1.14.7885&rep=rep1&type=pdf
@@ -10,7 +11,6 @@ import Control.Monad.State
 
 import qualified Semantics                     as M
 import Semantics (Value(..))
-import CrowdFunding
 
 data Obs a = Obs a deriving (Eq, Show)
 
@@ -152,25 +152,3 @@ limitContractMarlowe t1 t2 c = do
     let interestRateObs = M.ValueGE (M.ValueFromOracle "interestRate" (M.Value 0)) (M.Value 6)
         obs = M.NotObs interestRateObs
     M.While obs maxTimeout (americanMarlowe t1 t2 c) M.Null
-
-{-
-    Questions:
-    1. CommitCash/RedeemCC before SPJ Contract based on max evaluation?
-    2. Builder API for IdentCC etc
-    3. Extend Observation with math, API for extenal values
-    4. How to encode SPJ 'or' (choosing which contract to continue)?
-    5. Translate SPJ observables into timeouts.
--}
-
-main :: IO ()
-main = do
-    print $ zcbMarlowe 100 12345 1 2
-    -- putStrLn (show (translateToSPJContract M.Null))
-    let c = One
-    print $ translateSPJContractToMarlowe 1 8 (One)
-    print $ translateSPJContractToMarlowe 1 8 (Give $ One)
-    print $ M.evaluateMaximumValue Map.empty (
-        M.CommitCash (M.IdentCC 1) 1 (M.Value 123) 10 20
-            (M.Pay (M.IdentPay 1) 1 2 (M.Value 120) 5 M.Null)
-            (M.Pay (M.IdentPay 1) 1 2 (M.Value 122) 5 M.Null))
-    print $ M.evaluateMaximumValue Map.empty crowdFunding

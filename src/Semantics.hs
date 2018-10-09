@@ -683,7 +683,6 @@ evaluateMaximumValue bounds contract = result
             let m = evalBoundedValue bounds state Max money
             modify (\s -> s {esCommitted = Map.insert identCC m (esCommitted state)})
             v1 <- evaluate contract1
-            put state
             v2 <- evaluate contract2
             return $ maxBalances v1 v2
         RedeemCC identCC contract -> evaluate contract

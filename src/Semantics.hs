@@ -263,16 +263,16 @@ newtype IdentLet = IdentLet Integer deriving (Eq,Ord,Show,Read)
 
 data Contract =
     Null |
-    CommitCash IdentCC Person Value Timeout Timeout Contract Contract |
-    RedeemCC IdentCC Contract |
-    Pay IdentPay Person Person Value Timeout Contract |
-    Both Contract Contract |
-    Choice Observation Contract Contract |
-    When Observation Timeout Contract Contract |
-    While Observation Timeout Contract Contract |
-    Scale Value Value Contract | -- scale Contract by rationale p/q
-    Let IdentLet Contract Contract | -- let ident = contract1 in contract2
-    Use IdentLet -- substitute contract using IdentLet defined by Let.
+    CommitCash !IdentCC !Person !Value !Timeout !Timeout !Contract !Contract |
+    RedeemCC !IdentCC !Contract |
+    Pay !IdentPay !Person !Person !Value !Timeout !Contract |
+    Both !Contract !Contract |
+    Choice !Observation !Contract !Contract |
+    When !Observation !Timeout !Contract !Contract |
+    While !Observation !Timeout !Contract !Contract |
+    Scale !Value !Value !Contract | -- scale Contract by rationale p/q
+    Let !IdentLet !Contract !Contract | -- let ident = contract1 in contract2
+    Use !IdentLet -- substitute contract using IdentLet defined by Let.
                deriving (Eq,Ord,Show,Read)
 
 

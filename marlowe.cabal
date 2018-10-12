@@ -15,7 +15,11 @@ executable marlowe
                         containers,
                         sbv,
                         glpk-hs,
-                        QuickCheck
+                        QuickCheck,
+                        tasty,
+                        tasty-hunit,
+                        tasty-smallcheck,
+                        tasty-quickcheck
     other-modules:
                         Analysis,
                         AnalysisObs,

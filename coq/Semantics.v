@@ -126,6 +126,8 @@ Module SC_OT := ListToOT(SC_LT).
 Module SC_MAP := FMapAVL.Make(SC_OT).
 Definition emptySCMap := SC_MAP.empty CCStatus.
 Definition SC_MAP_TYPE := SC_MAP.t CCStatus.
+Module SC_MAP_P := WProperties_fun SC_OT SC_MAP.
+Module SC_MAP_F := SC_MAP_P.F.
 
 (* Map (IdentChoice, Person) ConcreteChoice *)
 Module SCH_LT <: ListType.
@@ -139,6 +141,8 @@ Module SCH_OT := ListToOT(SCH_LT).
 Module SCH_MAP := FMapAVL.Make(SCH_OT).
 Definition emptySCHMap := SCH_MAP.empty ConcreteChoice.
 Definition SCH_MAP_TYPE := SCH_MAP.t ConcreteChoice.
+Module SCH_MAP_P := WProperties_fun SCH_OT SCH_MAP.
+Module SCH_MAP_F := SCH_MAP_P.F.
 
 Record StateT := State {
                                    sc : SC_MAP_TYPE;
@@ -1250,7 +1254,7 @@ rewrite H.
 reflexivity.
 Defined.
 
-Theorem step_order : forall (c nc : Contract) (inp : InputT) (st nst : StateT) (os : OST) (ac nac : AS), step inp st c os = (nst, nc, nac) -> ({StepValOrder (nst, nc, nac ++ ac) (st, c, ac)} + {(StateT_eqb st nst && Contract_eqb c nc && (match nac with | nil => true | _ :: _ => false end)) = true}).
+Theorem step_order : forall (c nc : Contract) (inp : InputT) (st nst : StateT) (os : OST) (ac nac : AS), (nst, nc, nac) = step inp st c os -> ({StepValOrder (nst, nc, nac ++ ac) (st, c, ac)} + {(StateT_eqb st nst && Contract_eqb c nc && (match nac with | nil => true | _ :: _ => false end)) = true}).
 intro c.
 induction c; intros.
 unfold step in H.
@@ -1286,7 +1290,7 @@ destruct c0.
 destruct c0.
 destruct (RC_SET.mem (RC i p c0) (rc inp)).
 inversion H.
-rewrite H1.
+rewrite <- H1.
 rewrite <- H2.
 left.
 unfold StepValOrder.
@@ -1351,7 +1355,7 @@ rewrite Contract_eqb_refl.
 reflexivity.
 simpl in H.
 assert (forall (nst : StateT) (nc : Contract) (ac nac : AS),
-       step inp st c1 os = (nst, nc, nac) ->
+       (nst, nc, nac) = step inp st c1 os ->
        {StepValOrder (nst, nc, nac ++ ac) (st, c1, ac)} +
        {StateT_eqb st nst && Contract_eqb c1 nc &&
         match nac with
@@ -1375,7 +1379,7 @@ apply X.
 reflexivity.
 clear X.
 assert (forall (nc : Contract) (nst : StateT) (ac nac : AS),
-       step inp s c2 os = (nst, nc, nac) ->
+       (nst, nc, nac) = step inp s c2 os ->
        {StepValOrder (nst, nc, nac ++ ac) (s, c2, ac)} +
        {StateT_eqb s nst && Contract_eqb c2 nc &&
         match nac with
@@ -1549,23 +1553,30 @@ rewrite (StateT_eqb_refl).
 reflexivity.
 Defined.
 
-Definition stepAll (com : InputT) (st : StateT) (con : Contract) (os : OST) : (StateT * Contract * AS).
-apply (Fix stepValOrder_wf).
-intros.
-clear st con.
-destruct x as [p ac].
-destruct p as [st con].
-remember (step com st con os).
-destruct p as [np nac].
-destruct np as [nst ncon].
-symmetry in Heqp.
-destruct (step_order con ncon com st nst os ac nac).
-exact Heqp.
-apply (X (nst, ncon, nac ++ ac)).
-exact s.
-apply (st, con, ac).
-apply (st, con, nil).
-Defined.
+Definition stepAllaux4 (com : InputT) (os : OST) (st : StateT) (con : Contract) (ac : AS)
+      (f : forall y : StateT * Contract * AS, StepValOrder y (st, con, ac) -> StateT * Contract * AS)
+      (nst : StateT) (ncon : Contract) (nac : AS) (Heqp : (nst, ncon, nac) = step com st con os) : StateT * Contract * AS :=
+   match step_order con ncon com st nst os ac nac Heqp with
+     | left s => f (nst, ncon, nac ++ ac) s
+     | right _ => (st, con, ac)
+   end.
+
+Definition stepAllaux3 (com : InputT) (os : OST) (st : StateT) (con : Contract) (ac : AS)
+      (f : forall y : StateT * Contract * AS, StepValOrder y (st, con, ac) -> StateT * Contract * AS) : StateT * Contract * AS :=
+    match (step com st con os) with
+           (nst, ncon, nac) => stepAllaux4 com os st con ac f nst ncon nac
+    end eq_refl.
+
+Definition stepAllaux2 (com : InputT) (os : OST) (x : StateT * Contract * AS) (f : forall y : StateT * Contract * AS, StepValOrder y x -> StateT * Contract * AS) : StateT * Contract * AS :=
+  match x with
+             (st, con, ac) as p => stepAllaux3 com os st con ac
+  end f.
+
+Definition stepAllaux (com : InputT) (st : StateT) (con : Contract) (os : OST) (ac : AS) : (StateT * Contract * AS) :=
+  Fix stepValOrder_wf (fun _ => (StateT * Contract * AS)%type) (stepAllaux2 com os) (st, con, ac).
+
+Definition stepAll (com : InputT) (st : StateT) (con : Contract) (os : OST) : (StateT * Contract * AS) :=
+  stepAllaux com st con os nil.
 
 Definition addNewChoices (acc : SCH_MAP_TYPE * AS) (cp : (IdentChoiceT * Person)) (choice_int : ConcreteChoice) : (SCH_MAP_TYPE * AS) := 
        let (recorded_choices, action_list) := acc in

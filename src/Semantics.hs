@@ -213,7 +213,10 @@ evalValue state os value = case value of
     Value v -> v
     AddValue lhs rhs -> evalValue state os lhs + evalValue state os rhs
     MulValue lhs rhs -> evalValue state os lhs * evalValue state os rhs
-    DivValue lhs rhs -> evalValue state os lhs `div` evalValue state os rhs
+    DivValue lhs rhs -> do
+        let divident = evalValue state os lhs
+        let divisor  = evalValue state os rhs
+        if divisor == 0 then 0 else div divident divisor
     ValueFromChoice ident per def -> Maybe.fromMaybe (evalValue state os def) (Map.lookup (ident, per) (sch state))
     ValueFromOracle name def -> Maybe.fromMaybe (evalValue state os def) (Map.lookup name (oracles os))
 
@@ -627,7 +630,14 @@ data EvalState = EvalState {
   esCommitted :: Map IdentCC Integer
 }
 
-type Bounds = Map (Either String IdentChoice) Integer
+{-
+-}
+data Bounds = Bounds {
+    oracleBounds :: Map String Integer,
+    choiceBounds :: Map IdentChoice Integer
+}
+
+emptyBounds = Bounds Map.empty Map.empty
 
 data ApproxType = Max | Min
 
@@ -653,12 +663,12 @@ evalBoundedValue bounds state approxType value = case value of
         go lhs `div` divisor
     ValueFromChoice ident per def -> let
         defValue = go def
-        choiceValue = Maybe.fromMaybe defValue $ Map.lookup (Right ident) bounds
-        in (approxFunc approxType) defValue choiceValue
+        choiceValue = Maybe.fromMaybe defValue $ Map.lookup ident (choiceBounds bounds)
+        in approxFunc approxType defValue choiceValue
     ValueFromOracle name def -> let
         defValue = go def
-        oracleValue = Maybe.fromMaybe defValue $ Map.lookup (Left name) bounds
-        in (approxFunc approxType) defValue oracleValue
+        oracleValue = Maybe.fromMaybe defValue $ Map.lookup name (oracleBounds bounds)
+        in approxFunc approxType defValue oracleValue
   where
     goWithType t = evalBoundedValue bounds state t
     go = goWithType approxType

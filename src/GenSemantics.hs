@@ -1,19 +1,49 @@
 module GenSemantics where
 
+import Data.Set (Set)
 import qualified Data.Set as S
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 
 import Semantics
 import Test.QuickCheck
 
+boundedValue :: Set Person -> Set IdentCC -> Bounds -> Gen Value
+boundedValue participants commits bounds = sized $ boundedValueAux participants commits bounds
+
+boundedValueAux :: Set Person -> Set IdentCC -> Bounds -> Int -> Gen Value
+boundedValueAux participants commits bounds s = do
+    let committed = S.toList commits
+    let parties   = S.toList participants
+    let choices   = M.keys $ choiceBounds bounds
+    let oracles   = M.keys $ oracleBounds bounds
+    let go        = boundedValueAux participants commits bounds
+    case compare s 0 of
+        GT -> oneof [ Committed <$> elements committed
+                    , (AddValue <$> go 0) <*> go (s - 1)
+                    , (MulValue <$> go 0) <*> go (s - 1)
+                    , (DivValue <$> go 0) <*> go (s - 1)
+                    , Value <$> positiveAmount
+                    , ValueFromChoice <$> elements choices <*> elements parties <*> go (s - 1)
+                    , ValueFromOracle <$> elements oracles <*> go (s - 1) ]
+        EQ -> oneof [ Committed <$> elements committed
+                    , Value <$> positiveAmount ]
+        LT -> error "Negative size in arbitraryValue"
+
+
+positiveAmount :: Gen Integer
+positiveAmount = fmap abs arbitrary
+
 arbitraryValueAux :: Int -> Gen Value
 arbitraryValueAux s
- | s > 0 = oneof [(Committed . IdentCC) <$> arbitrary
-                 ,(AddValue <$> arbitraryValueAux (s - 1)) <*> arbitraryValueAux (s - 1)
-                 ,Value <$> arbitrary
-                 ,(ValueFromChoice . IdentChoice) <$> arbitrary <*> arbitrary <*> arbitraryValueAux (s - 1)]
- | s == 0 = oneof [(Committed . IdentCC) <$> arbitrary
-                  ,Value <$> arbitrary]
+ | s > 0 = oneof [ Committed . IdentCC <$> arbitrary
+                 , (AddValue <$> arbitraryValueAux (s - 1)) <*> arbitraryValueAux (s - 1)
+                 , (MulValue <$> arbitraryValueAux (s - 1)) <*> arbitraryValueAux (s - 1)
+                --  , (DivValue <$> arbitraryValueAux (s - 1)) <*> arbitraryValueAux (s - 1)
+                 , Value <$> positiveAmount
+                 , ValueFromChoice . IdentChoice <$> arbitrary <*> arbitrary <*> arbitraryValueAux (s - 1) ]
+ | s == 0 = oneof [ Committed . IdentCC <$> arbitrary
+                  , Value <$> positiveAmount ]
  | otherwise = error "Negative size in arbitraryValue"
 
 arbitraryValue :: Gen Value
@@ -72,6 +102,3 @@ arbitraryInputAux s = (\w x y z -> Input (S.fromList w) (S.fromList x) (M.fromLi
 
 arbitraryInput :: Gen Input
 arbitraryInput = sized arbitraryInputAux
-
-
-

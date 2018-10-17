@@ -1254,7 +1254,7 @@ rewrite H.
 reflexivity.
 Defined.
 
-Theorem step_order : forall (c nc : Contract) (inp : InputT) (st nst : StateT) (os : OST) (ac nac : AS), (nst, nc, nac) = step inp st c os -> ({StepValOrder (nst, nc, nac ++ ac) (st, c, ac)} + {(StateT_eqb st nst && Contract_eqb c nc && (match nac with | nil => true | _ :: _ => false end)) = true}).
+Theorem step_order : forall (c nc : Contract) (inp : InputT) (st nst : StateT) (os : OST) (ac nac : AS), (nst, nc, nac) = step inp st c os -> ({StepValOrder (nst, nc, ac ++ nac) (st, c, ac)} + {(StateT_eqb st nst && Contract_eqb c nc && (match nac with | nil => true | _ :: _ => false end)) = true}).
 intro c.
 induction c; intros.
 unfold step in H.
@@ -1356,7 +1356,7 @@ reflexivity.
 simpl in H.
 assert (forall (nst : StateT) (nc : Contract) (ac nac : AS),
        (nst, nc, nac) = step inp st c1 os ->
-       {StepValOrder (nst, nc, nac ++ ac) (st, c1, ac)} +
+       {StepValOrder (nst, nc, ac ++ nac) (st, c1, ac)} +
        {StateT_eqb st nst && Contract_eqb c1 nc &&
         match nac with
         | nil => true
@@ -1368,7 +1368,7 @@ exact H0.
 destruct (step inp st c1 os).
 destruct p.
 assert (forall (ac : AS),
-    {StepValOrder (s, c, a ++ ac) (st, c1, ac)} +
+    {StepValOrder (s, c, ac ++ a) (st, c1, ac)} +
     {StateT_eqb st s && Contract_eqb c1 c &&
      match a with
      | nil => true
@@ -1380,7 +1380,7 @@ reflexivity.
 clear X.
 assert (forall (nc : Contract) (nst : StateT) (ac nac : AS),
        (nst, nc, nac) = step inp s c2 os ->
-       {StepValOrder (nst, nc, nac ++ ac) (s, c2, ac)} +
+       {StepValOrder (nst, nc, ac ++ nac) (s, c2, ac)} +
        {StateT_eqb s nst && Contract_eqb c2 nc &&
         match nac with
         | nil => true
@@ -1392,7 +1392,7 @@ exact H1.
 destruct (step inp s c2 os).
 destruct (p).
 assert (forall (ac : AS),
-       {StepValOrder (s0, c0, a0 ++ ac) (st, c2, ac)} +
+       {StepValOrder (s0, c0, ac ++ a0) (st, c2, ac)} +
        {StateT_eqb s s0 && Contract_eqb c2 c0 &&
         match a0 with
         | nil => true
@@ -1557,7 +1557,7 @@ Definition stepAllaux4 (com : InputT) (os : OST) (st : StateT) (con : Contract) 
       (f : forall y : StateT * Contract * AS, StepValOrder y (st, con, ac) -> StateT * Contract * AS)
       (nst : StateT) (ncon : Contract) (nac : AS) (Heqp : (nst, ncon, nac) = step com st con os) : StateT * Contract * AS :=
    match step_order con ncon com st nst os ac nac Heqp with
-     | left s => f (nst, ncon, nac ++ ac) s
+     | left s => f (nst, ncon, ac ++ nac) s
      | right _ => (st, con, ac)
    end.
 
@@ -1657,7 +1657,7 @@ Definition foldableStepBlock (acc : StateT * Contract * OST * AS) (inp : InputT)
      let (p0, o) := p in
      let (s, c) := p0 in
      let (p1, a0) := stepBlock inp s c o in
-       (p1, match o with {| blockNumber := bn |} => {| blockNumber := (bn + 1)%Z |} end, a0 ++ a).
+       (p1, match o with {| blockNumber := bn |} => {| blockNumber := (bn + 1)%Z |} end, a ++ a0).
 
 Definition emptyFSBAcc (c : Contract) : StateT * Contract * OST * AS.
 repeat apply pair.

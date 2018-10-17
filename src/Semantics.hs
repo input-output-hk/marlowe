@@ -91,7 +91,7 @@ type Timeout = BlockNumber
 newtype IdentCC = IdentCC Integer
                deriving (Eq,Ord,Show,Read)
 
-newtype IdentChoice = IdentChoice Integer
+newtype IdentChoice = IdentChoice { unIdentChoice :: Integer }
                deriving (Eq,Ord,Show,Read)
 
 newtype IdentPay = IdentPay Integer
@@ -626,8 +626,8 @@ instance Semigroup Balance where
 type Balances = Map Person Balance
 
 data EvalState = EvalState {
-  esLetEnv :: Map IdentLet Balances,
-  esCommitted :: Map IdentCC Integer
+    esLetEnv :: Map IdentLet Balances,
+    esCommitted :: Map IdentCC Integer
 }
 
 {-
@@ -750,3 +750,10 @@ evaluateMaximumValue bounds contract = result
         Let ident contract1 contract2 -> Let ident (go contract1) (go contract2)
         Use ident -> c
       where go = scaled pvalue qvalue
+
+data InvalidContract = UnusedIdentLet IdentLet Contract
+                     | ReusedIdentLet IdentLet Contract
+                     | RecursiveIdentLet IdentLet Contract
+
+validateContract :: Contract -> Maybe InvalidContract
+validateContract = undefined

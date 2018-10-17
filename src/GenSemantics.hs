@@ -30,6 +30,86 @@ boundedValueAux participants commits bounds s = do
                     , Value <$> positiveAmount ]
         LT -> error "Negative size in arbitraryValue"
 
+boundedObservationAux :: Set Person -> Set IdentCC -> Bounds -> Int -> Gen Observation
+boundedObservationAux participants commits bounds s = do
+    let parties   = S.toList participants
+    let choices   = M.keys $ choiceBounds bounds
+    let concreteChoices = map unIdentChoice choices
+    let go        = boundedObservationAux participants commits bounds
+    case compare s 0 of
+        GT -> oneof
+            [ BelowTimeout <$> arbitrary
+            , AndObs <$> go (s - 1) <*> go (s - 1)
+            , OrObs <$> go (s - 1) <*> go (s - 1)
+            , NotObs <$> go (s - 1)
+            , PersonChoseThis <$> elements choices <*> elements parties <*> elements concreteChoices
+            , PersonChoseSomething <$> elements choices <*> elements parties
+            , ValueGE <$> boundedValueAux participants commits bounds (s - 1) <*> boundedValueAux participants commits bounds (s - 1)
+            , pure TrueObs
+            , pure FalseObs
+            ]
+        EQ -> oneof
+            [ BelowTimeout <$> arbitrary
+            , PersonChoseThis <$> elements choices <*> elements parties <*> elements concreteChoices
+            , PersonChoseSomething <$> elements choices <*> elements parties
+            , pure TrueObs
+            , pure FalseObs
+            ]
+        LT -> error "Negative size in arbitraryObservation"
+
+
+boundedObservation :: Set Person -> Set IdentCC -> Bounds -> Gen Observation
+boundedObservation participants commits bounds = sized $ boundedObservationAux participants commits bounds
+
+boundedContractAux :: Set Person -> Set IdentCC -> Bounds -> Int -> Gen Contract
+boundedContractAux participants commits bounds s = do
+    let committed       = S.toList commits
+    let parties         = S.toList participants
+    let choices         = M.keys $ choiceBounds bounds
+    let concreteChoices = map unIdentChoice choices
+
+    case compare s 0 of
+        GT -> do
+            let commitCash = do
+                    ident <- arbitrary
+                    let  identCC = IdentCC ident
+                    person <- elements parties
+                    value <- boundedValueAux participants (S.insert identCC commits) bounds (s - 1)
+                    timeout1 <- positiveAmount
+                    timeout2 <- positiveAmount
+                    contract1 <- boundedContractAux participants commits bounds (s - 1)
+                    contract2 <- boundedContractAux participants commits bounds (s - 1)
+                    return $ CommitCash identCC person value timeout1 timeout2 contract1 contract2
+
+            oneof   [ pure Null
+                    , commitCash
+                    , RedeemCC <$> elements committed <*> boundedContractAux participants commits bounds (s - 1)
+                    , (Pay . IdentPay)
+                        <$> arbitrary
+                        <*> elements parties
+                        <*> elements parties
+                        <*> boundedValueAux participants commits bounds (s - 1)
+                        <*> positiveAmount
+                        <*> boundedContractAux participants commits bounds (s - 1)
+                    , Both
+                        <$> boundedContractAux participants commits bounds (s - 1)
+                        <*> boundedContractAux participants commits bounds (s - 1)
+                    , Choice
+                        <$> arbitraryObservationAux (s - 1)
+                        <*> boundedContractAux participants commits bounds (s - 1)
+                        <*> boundedContractAux participants commits bounds (s - 1)
+                    , When
+                        <$> arbitraryObservationAux (s - 1)
+                        <*> positiveAmount
+                        <*> boundedContractAux participants commits bounds (s - 1)
+                        <*> boundedContractAux participants commits bounds (s - 1)
+                    ]
+        EQ -> oneof [pure Null]
+        LT -> error "Negative size in arbitraryObservation"
+
+boundedContract :: Set Person -> Set IdentCC -> Bounds -> Gen Contract
+boundedContract participants commits bounds = sized $ boundedContractAux participants commits bounds
+
 
 positiveAmount :: Gen Integer
 positiveAmount = fmap abs arbitrary

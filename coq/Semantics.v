@@ -1561,11 +1561,22 @@ Definition stepAllaux4 (com : InputT) (os : OST) (st : StateT) (con : Contract) 
      | right _ => (st, con, ac)
    end.
 
-Definition stepAllaux3 (com : InputT) (os : OST) (st : StateT) (con : Contract) (ac : AS)
+(* Definition stepAllaux3 (com : InputT) (os : OST) (st : StateT) (con : Contract) (ac : AS)
       (f : forall y : StateT * Contract * AS, StepValOrder y (st, con, ac) -> StateT * Contract * AS) : StateT * Contract * AS :=
     match (step com st con os) with
            (nst, ncon, nac) => stepAllaux4 com os st con ac f nst ncon nac
-    end eq_refl.
+    end eq_refl. *)
+
+Lemma alt_refl : forall com st con os, (fst (fst (step com st con os)), snd (fst (step com st con os)), snd (step com st con os)) = step com st con os.
+intros.
+destruct (step).
+destruct p.
+reflexivity.
+Defined.
+
+Definition stepAllaux3 (com : InputT) (os : OST) (st : StateT) (con : Contract) (ac : AS)
+      (f : forall y : StateT * Contract * AS, StepValOrder y (st, con, ac) -> StateT * Contract * AS) : StateT * Contract * AS :=
+  stepAllaux4 com os st con ac f (fst (fst ((step com st con os)))) (snd (fst ((step com st con os)))) (snd ((step com st con os))) (alt_refl com st con os).
 
 Definition stepAllaux2 (com : InputT) (os : OST) (x : StateT * Contract * AS) (f : forall y : StateT * Contract * AS, StepValOrder y x -> StateT * Contract * AS) : StateT * Contract * AS :=
   match x with

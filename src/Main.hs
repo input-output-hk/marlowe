@@ -56,11 +56,25 @@ checkValueWithinBounds = do
             , oracleBounds = Map.singleton "oil" 333
             }
     let state  = EvalState Map.empty (Map.singleton (IdentCC 1) 1000)
+
     let values = boundedValue (Set.fromList [1, 2]) (Set.fromList [IdentCC 1]) bounds
     testProperty "Check Value is within bounds" $ forAll values $ \value -> do
         let maximum = evalBoundedValue bounds state Max value
-        let state   = emptyState
-        let actual  = evalValue state emptyOS value
+        let asdf = DivValue (MulValue (Committed (IdentCC 1)) (Value 30)) {- 30,000 / (min(333, 555, 1000) || min(444, 1000)) -}
+                            (ValueFromOracle "oil" (ValueFromChoice (IdentChoice {unIdentChoice = 2}) 1 (Committed (IdentCC 1))))
+                            (ValueFromChoice (IdentChoice {unIdentChoice = 1}) 1 (Committed (IdentCC 1)))
+        let state = State
+                { letEnv = Map.empty
+                , sc     = Map.singleton (IdentCC 1) (1, NotRedeemed 1000 12345)
+                , sch    = Map.fromList
+                    [ ((IdentChoice 1, 1), 444)
+                    , ((IdentChoice 1, 2), 444)
+                    , ((IdentChoice 2, 1), 555)
+                    , ((IdentChoice 2, 2), 555)
+                    ]
+                }
+        let observables = OS { random = 0, blockNumber = 0, oracles = Map.singleton "oil" 256 }
+        let actual = evalValue state observables value
         actual <= maximum
 
 tests :: [TestTree]

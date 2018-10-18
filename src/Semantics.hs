@@ -198,7 +198,7 @@ data Value = Committed IdentCC |
              Value Integer |
              AddValue Value Value |
              MulValue Value Value |
-             DivValue Value Value |
+             DivValue Value Value Value | -- divident, divisor, default value (when divisor evaluates to 0)
              ValueFromChoice IdentChoice Person Value |
              ValueFromOracle String Value
                     deriving (Eq,Ord,Show,Read)
@@ -213,10 +213,11 @@ evalValue state os value = case value of
     Value v -> v
     AddValue lhs rhs -> evalValue state os lhs + evalValue state os rhs
     MulValue lhs rhs -> evalValue state os lhs * evalValue state os rhs
-    DivValue lhs rhs -> do
+    DivValue lhs rhs def -> do
         let divident = evalValue state os lhs
         let divisor  = evalValue state os rhs
-        if divisor == 0 then 0 else div divident divisor
+        let defVal   = evalValue state os def
+        if divisor == 0 then defVal else div divident divisor
     ValueFromChoice ident per def -> Maybe.fromMaybe (evalValue state os def) (Map.lookup (ident, per) (sch state))
     ValueFromOracle name def -> Maybe.fromMaybe (evalValue state os def) (Map.lookup name (oracles os))
 
@@ -345,7 +346,7 @@ step comms st (Scale p q con) os = (st, scaled con, [])
         CommitCash identCC person money timeout1 timeout2 (scaled contract1) (scaled contract2)
       RedeemCC identCC contract -> RedeemCC identCC (scaled contract)
       Pay identPay person1 person2 money timeout contract -> do
-        let m = DivValue (MulValue (Value pvalue) money) (Value qvalue)
+        let m = DivValue (MulValue (Value pvalue) money) (Value qvalue) money -- don't change value if divisor is zero?
         Pay identPay person1 person2 m timeout (scaled contract)
       Both contract1 contract2 -> Both (scaled contract1) (scaled contract2)
       Choice obs contract1 contract2 -> Choice obs (scaled contract1) (scaled contract2)
@@ -656,11 +657,9 @@ evalBoundedValue bounds state approxType value = case value of
     Value v -> v
     AddValue lhs rhs -> go lhs + go rhs
     MulValue lhs rhs -> go lhs * go rhs
-    DivValue lhs rhs -> do
-        let divisor = case approxType of
-                Max -> let d = goWithType Min rhs in if d == 0 then 1 else d
-                Min -> let d = goWithType Max rhs in if d == 0 then 1 else d -- TODO is 1 good?
-        go lhs `div` divisor
+    DivValue lhs rhs def -> do
+        let divisor = goWithType (negateApproxType approxType) rhs
+        if divisor == 0 then go def else go lhs `div` divisor
     ValueFromChoice ident per def -> let
         defValue = go def
         choiceValue = Maybe.fromMaybe defValue $ Map.lookup ident (choiceBounds bounds)
@@ -740,7 +739,7 @@ evaluateMaximumValue bounds contract = result
             CommitCash identCC person money timeout1 timeout2 (go contract1) (go contract2)
         RedeemCC identCC contract -> RedeemCC identCC (go contract)
         Pay identPay person1 person2 money timeout contract -> do
-            let m = DivValue (MulValue pvalue money) qvalue
+            let m = DivValue (MulValue pvalue money) qvalue money -- don't change value if divisor is zero?
             Pay identPay person1 person2 m timeout (go contract)
         Both contract1 contract2 -> Both (go contract1) (go contract2)
         Choice obs contract1 contract2 -> Choice obs (go contract1) (go contract2)

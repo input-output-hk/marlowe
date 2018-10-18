@@ -22,7 +22,7 @@ boundedValueAux participants commits bounds s = do
         GT -> oneof [ Committed <$> elements committed
                     , (AddValue <$> go 0) <*> go (s - 1)
                     , (MulValue <$> go 0) <*> go (s - 1)
-                    , (DivValue <$> go 0) <*> go (s - 1)
+                    , (DivValue <$> go 1) <*> go (s - 1) <*> go 1
                     , Value <$> positiveAmount
                     , ValueFromChoice <$> elements choices <*> elements parties <*> go (s - 1)
                     , ValueFromOracle <$> elements oracles <*> go (s - 1) ]

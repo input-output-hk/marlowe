@@ -274,7 +274,7 @@ data Contract =
     Choice !Observation !Contract !Contract |
     When !Observation !Timeout !Contract !Contract |
     While !Observation !Timeout !Contract !Contract |
-    Scale !Value !Value !Contract | -- scale Contract by rationale p/q
+    Scale !Value !Value !Value !Contract | -- Scale p q def contract. scale Contract by p/q if q <> 0, or def if q == 0)
     Let !IdentLet !Contract !Contract | -- let ident = contract1 in contract2
     Use !IdentLet -- substitute contract using IdentLet defined by Let.
                deriving (Eq,Ord,Show,Read)
@@ -336,25 +336,28 @@ step comms st (While obs expi con1 con2) os
   where
     (st1, res1, ac1) = step comms st con1 os
 
-step comms st (Scale p q con) os = (st, scaled con, [])
+step comms st (Scale p q def con) os = (st, scaled con, [])
   where
     pvalue = evalValue st os p
     qvalue = evalValue st os q
+    defValue = evalValue st os def
     scaled c = case c of
-      Null -> Null
-      CommitCash identCC person money timeout1 timeout2 contract1 contract2 ->
-        CommitCash identCC person money timeout1 timeout2 (scaled contract1) (scaled contract2)
-      RedeemCC identCC contract -> RedeemCC identCC (scaled contract)
-      Pay identPay person1 person2 money timeout contract -> do
-        let m = DivValue (MulValue (Value pvalue) money) (Value qvalue) money -- don't change value if divisor is zero?
-        Pay identPay person1 person2 m timeout (scaled contract)
-      Both contract1 contract2 -> Both (scaled contract1) (scaled contract2)
-      Choice obs contract1 contract2 -> Choice obs (scaled contract1) (scaled contract2)
-      When obs timeout contract1 contract2 -> When obs timeout (scaled contract1) (scaled contract2)
-      While obs timeout contract1 contract2 -> While obs timeout (scaled contract1) (scaled contract2)
-      Scale p q contract -> Scale p q (scaled contract)
-      Let ident contract1 contract2 -> Let ident (scaled contract1) (scaled contract2)
-      Use ident -> c
+        Null -> Null
+        CommitCash identCC person money timeout1 timeout2 contract1 contract2 ->
+            CommitCash identCC person money timeout1 timeout2 (scaled contract1) (scaled contract2)
+        RedeemCC identCC contract -> RedeemCC identCC (scaled contract)
+        Pay identPay person1 person2 money timeout contract -> do
+            let m = if qvalue == 0
+                    then MulValue money (Value defValue)
+                    else DivValue (MulValue (Value pvalue) money) (Value qvalue) (Value 0)
+            Pay identPay person1 person2 m timeout (scaled contract)
+        Both contract1 contract2 -> Both (scaled contract1) (scaled contract2)
+        Choice obs contract1 contract2 -> Choice obs (scaled contract1) (scaled contract2)
+        When obs timeout contract1 contract2 -> When obs timeout (scaled contract1) (scaled contract2)
+        While obs timeout contract1 contract2 -> While obs timeout (scaled contract1) (scaled contract2)
+        Scale p q def contract -> Scale p q def (scaled contract)
+        Let ident contract1 contract2 -> Let ident (scaled contract1) (scaled contract2)
+        Use ident -> c
 -- Note that conformance of the commitment here is exact
 -- May want to relax this
 
@@ -407,7 +410,7 @@ step commits st (Let ident contract1 contract2) os =
         Choice obs contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
         When obs timeout contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
         While obs timeout contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
-        Scale p q contract -> checkValidUseOfIdent contract
+        Scale p q def contract -> checkValidUseOfIdent contract
         Let ident contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
         Use useIdent -> useIdent /= ident
 
@@ -718,12 +721,9 @@ evaluateMaximumValue bounds contract = result
             v1 <- evaluate contract1    -- assume the obs is always True, so whole contrac1 is evaluated
             v2 <- evaluate contract2    -- assume the contract timeouts at the end of execution of contrac1
             return $ sumBalances v1 v2  -- so we add both estimated values
-        Scale p q contract -> do
+        Scale p q def contract -> do
             state <- get
-            let p1 = evalBoundedValue bounds state Max p
-            let q1 = evalBoundedValue bounds state Min q
-            let scaled = undefined
-            evaluate (scaled p1 q1 contract)
+            evaluate (scaled p q def contract)
         Let ident contract1 contract2 -> do
             v1 <- evaluate contract1
             modify (\s -> s {esLetEnv = Map.insert ident v1 (esLetEnv s)})
@@ -733,22 +733,22 @@ evaluateMaximumValue bounds contract = result
             let v = Maybe.fromMaybe Map.empty $ Map.lookup ident (esLetEnv state)
             return v
 
-    scaled pvalue qvalue c = case c of
+    scaled pvalue qvalue def c = case c of
         Null -> Null
         CommitCash identCC person money timeout1 timeout2 contract1 contract2 ->
             CommitCash identCC person money timeout1 timeout2 (go contract1) (go contract2)
         RedeemCC identCC contract -> RedeemCC identCC (go contract)
         Pay identPay person1 person2 money timeout contract -> do
-            let m = DivValue (MulValue pvalue money) qvalue money -- don't change value if divisor is zero?
+            let m = DivValue (MulValue pvalue money) qvalue (MulValue money def)
             Pay identPay person1 person2 m timeout (go contract)
         Both contract1 contract2 -> Both (go contract1) (go contract2)
         Choice obs contract1 contract2 -> Choice obs (go contract1) (go contract2)
         When obs timeout contract1 contract2 -> When obs timeout (go contract1) (go contract2)
         While obs timeout contract1 contract2 -> While obs timeout (go contract1) (go contract2)
-        Scale p q contract -> Scale p q (go contract)
+        Scale p q def contract -> Scale p q def (go contract)
         Let ident contract1 contract2 -> Let ident (go contract1) (go contract2)
         Use ident -> c
-      where go = scaled pvalue qvalue
+      where go = scaled pvalue qvalue def
 
 data InvalidContract = UnusedIdentLet IdentLet Contract
                      | ReusedIdentLet IdentLet Contract

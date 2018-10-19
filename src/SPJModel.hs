@@ -53,7 +53,7 @@ translateSPJContractToMarlowe me counterparty c = case c of
         let choseWhichToAcquire = M.PersonChoseThis (M.IdentChoice 1) me 1
         M.Choice choseWhichToAcquire (go c1) (go c2)
     Cond obs c1 c2 -> M.Choice obs (go c1) (go c2)
-    Scale p q contract -> M.Scale p q (go contract)
+    Scale p q contract -> M.Scale p q (Value 0) (go contract)
     When obs contract -> M.When obs maxTimeout (go contract) M.Null
     Anytime obs contract -> do
         let choseToAcquire = M.PersonChoseThis (M.IdentChoice 1) me 1

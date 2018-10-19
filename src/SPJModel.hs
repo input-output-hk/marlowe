@@ -17,27 +17,27 @@ data Obs a = Obs a deriving (Eq, Show)
 data Currency = GBP | USD | ADA deriving (Eq, Show)
 
 data Contract
-    = Zero -- zero is a contrat that has no rights and no obligations.
-    | One  -- If you acquire (one k) you immediately receive one unit of the curreny k .
-    | Give Contract -- To aquire (give c) is to acquire all 's rights as obligations, and vice versa.
-                    -- Note that for a bilateral contrat q between parties A and B, A acquiring
-                    -- q implies that B acquires (give q ).
+    = Zero -- zero is a contract that has no rights and no obligations.
+    | One  -- If you acquire (one k) you immediately receive one unit of the currency k .
+    | Give Contract -- To acquire (give c) is to acquire all the contract's rights as obligations, and vice versa.
+                    -- Note that for a bilateral contract q between parties A and B, A acquiring
+                    -- q implies that B acquires (give q).
     | And Contract Contract -- If you acquire (c1 `and ` c2), you immediately acquire both c1 and c2
-    | Or  Contract Contract -- If you aquire (c1 `or ` c2) you must immediately acquire your choie of either
+    | Or  Contract Contract -- If you acquire (c1 `or ` c2) you must immediately acquire your choice of either
                             -- c1 or c2 (but not both).
     | Cond M.Observation Contract Contract -- If you acquire (cond b 1 2), you acquire c1 if the observable b is true at
-                                        -- the moment of acquisition, and c2 otherwise.
-    | Scale M.Value M.Value Contract   -- If you acquire (scale o c), then you acquire c at the same moment, exept
-                                    -- that all the payments of c are multiplied by the value of the observable o
-                                    -- at the moment of acquisition.
+                                           -- the moment of acquisition, and c2 otherwise.
+    | Scale M.Value M.Value Contract   -- If you acquire (scale o c), then you acquire c at the same moment, except
+                                       -- that all the payments of c are multiplied by the value of the observable o
+                                       -- at the moment of acquisition.
     | When M.Observation Contract  -- If you acquire (when o c), you must acquire c as soon as observable o subsequently
-                                -- becomes True . It is therefore worthless in states where o will never again be True.
+                                   -- becomes True. It is therefore worthless in states where o will never again be True.
     | Anytime M.Observation Contract   -- Once you acquire (anytime o c), you may acquire c at any time the observable
-                                    -- o is True. The compound contrat is therefore worthless in states
-                                    -- where o will never again be True.
-    | Until M.Observation Contract -- Once acquired, (until o c) is exatly like c except that it must be abandoned
-                                -- when observable o becomes True. In states in which o is True, the
-                                -- compound contract is therefore worthless, because it must be abandoned immediately.
+                                       -- o is True. The compound contract is therefore worthless in states
+                                       -- where o will never again be True.
+    | Until M.Observation Contract -- Once acquired, (until o c) is exactly like c except that it must be abandoned
+                                   -- when observable o becomes True. In states in which o is True, the
+                                   -- compound contract is therefore worthless, because it must be abandoned immediately.
     deriving (Eq, Show)
 
 maxTimeout :: M.Timeout
@@ -47,7 +47,7 @@ translateSPJContractToMarlowe :: M.Person -> M.Person -> Contract -> M.Contract
 translateSPJContractToMarlowe me counterparty c = case c of
     Zero -> M.Null
     One -> M.Pay (M.IdentPay 1) counterparty me (M.Value 1) maxTimeout M.Null -- TODO should we commit first?
-    Give contract -> translateSPJContractToMarlowe counterparty me contract -- swap me/counterparty
+    Give contract -> translateSPJContractToMarlowe counterparty me contract   -- swap me/counterparty
     And c1 c2 -> M.Both (go c1) (go c2)
     Or  c1 c2 -> do
         let choseWhichToAcquire = M.PersonChoseThis (M.IdentChoice 1) me 1

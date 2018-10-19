@@ -19,9 +19,9 @@ data Currency = GBP | USD | ADA deriving (Eq, Show)
 data Contract
     = Zero -- zero is a contract that has no rights and no obligations.
     | One  -- If you acquire (one k) you immediately receive one unit of the currency k .
-    | Give Contract -- To acquire (give c) is to acquire all the contract's rights as obligations, and vice versa.
-                    -- Note that for a bilateral contract q between parties A and B, A acquiring
-                    -- q implies that B acquires (give q).
+    | Give Contract -- To acquire (give c) is to acquire all the coounterparty's rights as obligations, and vice versa.
+                    -- Note that for a bilateral contract q between parties A and B, A acquiring q
+                    -- implies that B acquires (give q).
     | And Contract Contract -- If you acquire (c1 `and ` c2), you immediately acquire both c1 and c2
     | Or  Contract Contract -- If you acquire (c1 `or ` c2) you must immediately acquire your choice of either
                             -- c1 or c2 (but not both).

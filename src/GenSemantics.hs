@@ -20,15 +20,15 @@ boundedValueAux participants commits bounds s = do
     let go        = boundedValueAux participants commits bounds
     case compare s 0 of
         GT -> oneof [ Committed <$> elements committed
-                    , (AddValue <$> go 0) <*> go (s - 1)
-                    , (MulValue <$> go 0) <*> go (s - 1)
-                    , (DivValue <$> go 1) <*> go (s - 1) <*> go 1
+                    , (AddValue <$> go (s `div` 2)) <*> go (s `div` 2)
+                    , (MulValue <$> go (s `div` 2)) <*> go (s `div` 2)
+                    , (DivValue <$> go (s `div` 2)) <*> go (s `div` 2) <*> go (s `div` 2)
                     , Value <$> positiveAmount
                     , ValueFromChoice <$> elements choices <*> elements parties <*> go (s - 1)
                     , ValueFromOracle <$> elements oracles <*> go (s - 1) ]
         EQ -> oneof [ Committed <$> elements committed
                     , Value <$> positiveAmount ]
-        LT -> error "Negative size in arbitraryValue"
+        LT -> error "Negative size in boundedValue"
 
 boundedObservationAux :: Set Person -> Set IdentCC -> Bounds -> Int -> Gen Observation
 boundedObservationAux participants commits bounds s = do
@@ -39,12 +39,12 @@ boundedObservationAux participants commits bounds s = do
     case compare s 0 of
         GT -> oneof
             [ BelowTimeout <$> arbitrary
-            , AndObs <$> go (s - 1) <*> go (s - 1)
-            , OrObs <$> go (s - 1) <*> go (s - 1)
-            , NotObs <$> go (s - 1)
+            , AndObs <$> go (s `div` 2) <*> go (s `div` 2)
+            , OrObs <$> go (s `div` 2) <*> go (s `div` 2)
+            , NotObs <$> go (s `div` 2)
             , PersonChoseThis <$> elements choices <*> elements parties <*> elements concreteChoices
             , PersonChoseSomething <$> elements choices <*> elements parties
-            , ValueGE <$> boundedValueAux participants commits bounds (s - 1) <*> boundedValueAux participants commits bounds (s - 1)
+            , ValueGE <$> boundedValueAux participants commits bounds (s `div` 2) <*> boundedValueAux participants commits bounds (s `div` 2)
             , pure TrueObs
             , pure FalseObs
             ]
@@ -55,7 +55,7 @@ boundedObservationAux participants commits bounds s = do
             , pure TrueObs
             , pure FalseObs
             ]
-        LT -> error "Negative size in arbitraryObservation"
+        LT -> error "Negative size in boundedContract"
 
 
 boundedObservation :: Set Person -> Set IdentCC -> Bounds -> Gen Observation
@@ -105,7 +105,7 @@ boundedContractAux participants commits bounds s = do
                         <*> boundedContractAux participants commits bounds (s - 1)
                     ]
         EQ -> oneof [pure Null]
-        LT -> error "Negative size in arbitraryObservation"
+        LT -> error "Negative size in boundedContract"
 
 boundedContract :: Set Person -> Set IdentCC -> Bounds -> Gen Contract
 boundedContract participants commits bounds = sized $ boundedContractAux participants commits bounds

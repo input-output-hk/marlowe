@@ -76,7 +76,7 @@ translateToSPJContract me counterparty m = let
                 c   = if from == counterparty then pay else Give pay
             (letEnv, And c (go letEnv contract))
         M.CommitCash ident person money timeout1 timeout2 contract1 contract2 ->
-            -- here a user has to decide, whether there is enough money to pay, and consider timeouts
+            -- here a user has to decide whether there is enough money to pay, and to consider timeouts
             (letEnv, Or (go letEnv contract1) (go letEnv contract2))
         M.RedeemCC ident contract -> (letEnv, go letEnv contract)
         M.Both c1 c2 -> (letEnv, And (go letEnv c1) (go letEnv c2))
@@ -139,7 +139,7 @@ americanMarlowe :: M.Timeout -> M.Timeout -> M.Contract -> M.Contract
 americanMarlowe t1 t2 u = M.When M.FalseObs t1 M.Null (M.When M.TrueObs t2 u M.Null)
 
 
-{- 3.5 Limit contrats -}
+{- 3.5 Limit contracts -}
 
 interestRate :: Value
 interestRate = Value 4

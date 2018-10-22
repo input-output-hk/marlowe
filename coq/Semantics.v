@@ -110,6 +110,7 @@ Inductive Action := SuccessfulPay : IdentPayT -> Person -> Person -> Cash -> Act
 Definition AS := list Action.
 
 Inductive CCRedeemStatus := NotRedeemed : Cash -> Timeout -> CCRedeemStatus
+                                              | ExpiredAndRedeemed : CCRedeemStatus
                                               | ManuallyRedeemed : CCRedeemStatus.
 
 Definition CCStatus := (Person * CCRedeemStatus) : Type.
@@ -233,11 +234,19 @@ Fixpoint leb (a1 : IdentCCT * CCStatus) (b2 : IdentCCT * CCStatus) :=
                          then true
                          else if (ea1 >? eb2)%Z then false else (iza1 <=? izb2)%Z
                      | ManuallyRedeemed => true
+                     | ExpiredAndRedeemed => true
                      end
                  | ManuallyRedeemed =>
                      match cb2 with
                      | NotRedeemed _ _ => false
                      | ManuallyRedeemed => true
+                     | ExpiredAndRedeemed => true
+                     end
+                 | ExpiredAndRedeemed =>
+                     match cb2 with
+                     | NotRedeemed _ _ => false
+                     | ManuallyRedeemed => false
+                     | ExpiredAndRedeemed => true
                      end
                  end
              end
@@ -251,8 +260,8 @@ destruct ia1 as [iza1].
 destruct ib2 as [izb2].
 destruct ba1 as [pa1 ca1].
 destruct bb2 as [pb2 cb2].
-destruct ca1 as [ca1 ea1 | ].
-destruct cb2 as [cb2 eb2 | ].
+destruct ca1 as [ca1 ea1 | | ].
+destruct cb2 as [cb2 eb2 | | ].
 assert ({ea1 <? eb2 = true} + {ea1 <? eb2 = false})%Z as firstCompareLT.
 destruct (ea1 <? eb2)%Z.
 left.
@@ -294,7 +303,10 @@ apply Z.leb_nle in e0.
 intuition.
 left.
 reflexivity.
+left.
+reflexivity.
 destruct cb2; right; reflexivity.
+destruct cb2; [right | left | left]; reflexivity.
 Defined.
 End CommitLE.
 
@@ -312,6 +324,7 @@ Fixpoint discountFromPairList (v : Cash) (l : list (IdentCCT * CCStatus)) : opti
                      | None => None
                     end
          | (ident, (p, ManuallyRedeemed)) :: t => Some t
+         | (ident, (p, ExpiredAndRedeemed)) :: t => Some t
          | nil => if Z.eq_dec v 0 then Some nil else None
         end.
 
@@ -333,6 +346,7 @@ Definition isRedeemable (p : Person) (e : Timeout) (ccs : CCStatus) : bool :=
        match css with
          | NotRedeemed _ ee => (ep =? p)%Z && negb (expired e ee)
          | ManuallyRedeemed => false
+         | ExpiredAndRedeemed => false
        end.
 
 Definition updateMap (mx : SC_MAP_TYPE) (p : Person) (e : Timeout) (v : Cash) : option SC_MAP_TYPE :=
@@ -373,12 +387,14 @@ Fixpoint step (inp : InputT) (st : StateT) (c : Contract) (os : OST) : StateT * 
                      else (st, CommitCash ident person val start_timeout end_timeout con1 con2, nil)
          | RedeemCC ident con =>
              match SC_MAP.find ident (sc st) with
-               | Some (person, NotRedeemed val _) =>
-                   if RC_SET.mem (RC ident person val) (rc inp)
-                   then ({| sc := SC_MAP.add ident (person, ManuallyRedeemed) (sc st);
-                                sch := sch st |}, con, CommitRedeemed ident person val :: nil)
-                   else (st, RedeemCC ident con, nil)
+               | Some (person, NotRedeemed val ee) =>
+                   if (expired bn ee) then (st, con, nil)
+                   else (if RC_SET.mem (RC ident person val) (rc inp)
+                           then ({| sc := SC_MAP.add ident (person, ManuallyRedeemed) (sc st);
+                                       sch := sch st |}, con, CommitRedeemed ident person val :: nil)
+                           else (st, RedeemCC ident con, nil))
                | Some (person, ManuallyRedeemed) => (st, con, DuplicateRedeem ident person :: nil)
+               | Some (person, ExpiredAndRedeemed) => (st, con, nil)
                | None => (st, RedeemCC ident con, nil)
             end
          | Pay idpay from to val expi con =>
@@ -431,11 +447,19 @@ Definition sc_kv_eqb (a: (SC_MAP.key * CCStatus)) (b: (SC_MAP.key * CCStatus)) :
             | NotRedeemed c4 t0 =>
                 (p =? p0)%Z && (c3 =? c4)%Z && (t =? t0)%Z
             | ManuallyRedeemed => false
+            | ExpiredAndRedeemed => false
             end
         | ManuallyRedeemed =>
             match c0 with
             | NotRedeemed _ _ => false
             | ManuallyRedeemed => (p =? p0)%Z
+            | ExpiredAndRedeemed => false
+            end
+        | ExpiredAndRedeemed =>
+            match c0 with
+            | NotRedeemed _ _ => false
+            | ManuallyRedeemed => false
+            | ExpiredAndRedeemed => (p =? p0)%Z
             end
         end).
 
@@ -687,6 +711,13 @@ reflexivity.
 absurd (SC_OT.eq k k).
 exact n.
 apply (SC_OT.eq_refl).
+rewrite (Z.eqb_refl).
+destruct SC_OT.eq_dec.
+simpl.
+reflexivity.
+absurd (SC_OT.eq k k).
+exact n.
+apply (SC_OT.eq_refl).
 Defined.
 
 Lemma eqb_to_eq : forall a b : Z, Z.eqb a b = true -> a = b.
@@ -740,7 +771,8 @@ simpl in H.
 exact H3.
 exact H2.
 exact H0.
-inversion H.
+discriminate H.
+discriminate H.
 destruct c0.
 destruct c.
 inversion H.
@@ -750,10 +782,23 @@ destruct k0.
 inversion e.
 rewrite <- H1.
 simpl in H.
-rewrite (eqb_to_eq p p0).
+rewrite (eqb_to_eq p p0 H).
 reflexivity.
-apply H.
+discriminate H.
+destruct c0.
+destruct c.
+discriminate H.
+discriminate H.
 inversion H.
+apply Z.eqb_eq in H.
+rewrite H.
+unfold SC_OT.eq in e.
+destruct k.
+destruct k0.
+inversion e.
+reflexivity.
+simpl in H.
+discriminate H.
 Defined.
 
 Lemma sc_kv_eqb_to_eq : forall a b : SC_MAP.key * CCStatus, sc_kv_eqb a b = true -> a = b.
@@ -1289,9 +1334,24 @@ destruct (SC_MAP.find (elt:=CCStatus) i (sc st)).
 destruct c0.
 destruct c0.
 destruct (RC_SET.mem (RC i p c0) (rc inp)).
+destruct (expired (blockNumber os) t).
 inversion H.
 rewrite <- H1.
 rewrite <- H2.
+left.
+unfold StepValOrder.
+unfold ContractOrder.
+simpl.
+intuition.
+inversion H.
+rewrite <- H1.
+rewrite <- H2.
+left.
+unfold StepValOrder.
+simpl.
+intuition.
+destruct (expired (blockNumber os) t).
+inversion H.
 left.
 unfold StepValOrder.
 unfold ContractOrder.
@@ -1302,6 +1362,12 @@ right.
 rewrite StateT_eqb_refl.
 rewrite Contract_eqb_refl.
 reflexivity.
+inversion H.
+left.
+unfold StepValOrder.
+unfold ContractOrder.
+simpl.
+intuition.
 inversion H.
 left.
 unfold StepValOrder.
@@ -1610,6 +1676,7 @@ Definition isExpiredNotRedeemed (e : Timeout) (ccs : CCStatus) : bool :=
        match c with
        | NotRedeemed _ ee => expired e ee
        | ManuallyRedeemed => false
+       | ExpiredAndRedeemed => false
        end.
 
 Definition isClaimed (inp : InputT) (ident : IdentCCT) (status : CCStatus) : bool := 
@@ -1617,6 +1684,7 @@ Definition isClaimed (inp : InputT) (ident : IdentCCT) (status : CCStatus) : boo
        match c with
        | NotRedeemed val _ => RC_SET.mem (RC ident p val) (rc inp)
        | ManuallyRedeemed => false
+       | ExpiredAndRedeemed => false
        end.
 
 Definition expiredAndClaimed (inp : InputT) (et : Timeout) (k : IdentCCT) (v : CCStatus) : bool :=
@@ -1637,7 +1705,7 @@ Definition markRedeemed (status : CCStatus) : CCStatus :=
   let (p, c) := status in
        match c with
          | NotRedeemed _ _
-         | _ => (p, ManuallyRedeemed)
+         | _ => (p, ExpiredAndRedeemed)
        end.
 
 Definition expireCommits (inp : InputT) (scf : SC_MAP_TYPE) (os : OST) : (SC_MAP_TYPE * AS) :=
@@ -1654,6 +1722,7 @@ Definition expireCommits (inp : InputT) (scf : SC_MAP_TYPE) (os : OST) : (SC_MAP
                          match crstatus with
                            | NotRedeemed val _ => ExpiredCommitRedeemed ident p val :: acc
                            | ManuallyRedeemed => acc
+                           | ExpiredAndRedeemed => acc
                          end) expi nil).
 
 Definition stepBlock (inp : InputT) (st : StateT) (con : Contract) (os : OST) : (StateT * Contract * AS) :=

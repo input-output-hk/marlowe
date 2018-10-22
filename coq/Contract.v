@@ -704,7 +704,6 @@ rewrite H2.
 apply PID_PROP.subset_refl.
 Defined.
 
-
 Instance proper_idAccTSubset : Proper (IdAccT_Equal ==> IdAccT_Equal ==> flip impl) idAccTSubset.
 unfold Proper.
 unfold respectful.
@@ -982,6 +981,11 @@ case_an (SC_MAP.find i (sc s)) match_arg1.
 destruct c.
 case_an c match_arg2.
 case_an (RC_SET.mem (RC i p c1) (rc inp)) if_arg1.
+case_an (expired (blockNumber os) t) if_arg2.
+solve H0 e x.
+solve H0 e x.
+case_an (expired (blockNumber os) t) if_arg2.
+solve H0 e x.
 solve H0 e x.
 solve H0 e x.
 solve H0 e x.
@@ -1748,7 +1752,7 @@ simpl in H.
 exists oid.
 rewrite <- H0'.
 Ltac unchanged sh ah := let a := fresh "a" in let b := fresh "b" in let c := fresh "c" in simpl; [inversion sh as [ (a, b, c) ]; simpl; split; [reflexivity | rewrite ah; rewrite <- c; simpl; split; [ apply subsetOfItselfAndUnionWithNil | apply disjointWithEmpty]] .. ].
-destruct SC_MAP.find; [destruct c0; destruct c0; [destruct RC_SET.mem | ] | ] ; unchanged H H1.
+destruct SC_MAP.find; [destruct c0; destruct c0; try (destruct (expired (blockNumber os) t); [ | destruct (RC_SET.mem)]) | ]; unchanged H H1.
 (* Pay *)
 clear IHc.
 dup H0 H0'.

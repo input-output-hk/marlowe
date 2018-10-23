@@ -27,10 +27,10 @@ evaluateMaximumValueTests = [evalCrowdFunding, evalDepositIncentive, evalEscrow]
         let bounds = Bounds
                 { oracleBounds = Map.empty
                 , choiceBounds = Map.fromList
-                    [ (IdentChoice 1, 1000)
-                    , (IdentChoice 2, 1000)
-                    , (IdentChoice 3, 1000)
-                    , (IdentChoice 4, 1000)
+                    [ (IdentChoice 1, (0, 1000))
+                    , (IdentChoice 2, (0, 1000))
+                    , (IdentChoice 3, (0, 1000))
+                    , (IdentChoice 4, (0, 1000))
                     ]
                 }
         let balances = evaluateMaximumValue bounds crowdFunding
@@ -52,14 +52,14 @@ evaluateMaximumValueTests = [evalCrowdFunding, evalDepositIncentive, evalEscrow]
 
 checkValueWithinBounds = do
     let bounds = Bounds
-            { choiceBounds = Map.fromList [(IdentChoice 1, 444), (IdentChoice 2, 555)]
-            , oracleBounds = Map.singleton "oil" 333
+            { choiceBounds = Map.fromList [(IdentChoice 1, (400, 444)), (IdentChoice 2, (500, 555))]
+            , oracleBounds = Map.singleton "oil" (200, 333)
             }
     let state  = EvalState Map.empty (Map.singleton (IdentCC 1) 1000)
 
     let values = boundedValue (Set.fromList [1, 2]) (Set.fromList [IdentCC 1]) bounds
     testProperty "Check Value is within bounds" $ forAll values $ \value -> do
-        let maximum = evalBoundedValue bounds state Max value
+        let maximum = evalMaxBoundedValue bounds state value
         let state = State
                 { letEnv = Map.empty
                 , sc     = Map.singleton (IdentCC 1) (1, NotRedeemed 1000 12345)

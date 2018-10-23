@@ -635,46 +635,62 @@ data EvalState = EvalState {
 }
 
 {-
+    Bounds for Oracle values and user choices.
+    Needed to approximate amount of money needed for a contract to work.
 -}
 data Bounds = Bounds {
-    oracleBounds :: Map String Integer,
-    choiceBounds :: Map IdentChoice Integer
+    oracleBounds :: Map String (Integer, Integer),
+    choiceBounds :: Map IdentChoice (Integer, Integer)
 }
 
+emptyBounds :: Bounds
 emptyBounds = Bounds Map.empty Map.empty
 
-data ApproxType = Max | Min
-
-negateApproxType Max = Min
-negateApproxType Min = Max
-
-approxFunc Max = max
-approxFunc Min = min
-
-evalBoundedValue :: Bounds -> EvalState -> ApproxType-> Value -> Integer
-evalBoundedValue bounds state approxType value = case value of
+{-
+    Given Bounds and EvalState, calculate a range of values a Value could evaluate to.
+    For example, if a price of gold expected to be between 100 and 200, value
+        DivValue (Value 1000) (ValueFromOracle "gold" (Value 0)) (Value 1)
+    would be in range (1, 1000 / 100)
+-}
+evalBoundedValueAux :: Bounds -> EvalState -> Value -> (Integer, Integer)
+evalBoundedValueAux bounds state value = case value of
     Committed ident ->
         case Map.lookup ident (esCommitted state) of
-            Just v -> v
-            _ -> 0
-    Value v -> v
-    AddValue lhs rhs -> go lhs + go rhs
-    MulValue lhs rhs -> go lhs * go rhs
+            Just v -> (v, v)
+            _ -> (0, 0)
+    Value v -> (v, v)
+    AddValue lhs rhs -> let ((a,b), (a',b')) = (go lhs, go rhs) in (a+a', b+b')
+    MulValue lhs rhs -> let
+        ((a,b), (a',b')) = (go lhs, go rhs)
+        t = [a*a', a*b', b*a', b*b']
+        in (minimum t, maximum t)
     DivValue lhs rhs def -> do
-        let divisor = goWithType (negateApproxType approxType) rhs
-        if divisor == 0 then go def else go lhs `div` divisor
-    ValueFromChoice ident per def -> let
-        defValue = go def
-        choiceValue = Maybe.fromMaybe defValue $ Map.lookup ident (choiceBounds bounds)
-        in approxFunc approxType defValue choiceValue
-    ValueFromOracle name def -> let
-        defValue = go def
-        oracleValue = Maybe.fromMaybe defValue $ Map.lookup name (oracleBounds bounds)
-        in approxFunc approxType defValue oracleValue
-  where
-    goWithType t = evalBoundedValue bounds state t
-    go = goWithType approxType
+        let (defMin, defMax) = go def
+        let (lmn, lmx) = go lhs
+        let (mn, mx) = go rhs
+        let minimaxdiv approxFunc lmx lmn mx mn def = let
+                values = case (compare mn 0, compare mx 0) of
+                    (EQ, EQ) -> [def]
+                    (LT, EQ) -> [def, lmn `div` mn, lmx `div` mn, lmn `div` (-1), lmx `div` (-1)]
+                    (EQ, GT) -> [def, lmn `div` mx, lmx `div` mx, lmn, lmx]
+                    (LT, GT) -> [def, lmn `div` mn, lmn `div` mx, lmx `div` mn, lmx `div` mx, lmn, lmx, lmn `div` (-1), lmx `div` (-1)]
+                    (_ , _ ) -> [def, lmn `div` mn, lmn `div` mx, lmx `div` mn, lmx `div` mx]
+                in approxFunc values
+        (minimaxdiv minimum lmx lmn mx mn defMin, minimaxdiv maximum lmx lmn mx mn defMax)
 
+    ValueFromChoice ident per def -> let
+        defValue @ (defMin, defMax) = go def
+        (valMin, valMax) = Maybe.fromMaybe defValue $ Map.lookup ident (choiceBounds bounds)
+        in (min defMin valMin, max defMax valMax)
+    ValueFromOracle name def -> let
+        defValue @ (defMin, defMax) = go def
+        (valMin, valMax) = Maybe.fromMaybe defValue $ Map.lookup name (oracleBounds bounds)
+        in (min defMin valMin, max defMax valMax)
+  where
+    go = evalBoundedValueAux bounds state
+
+evalMaxBoundedValue :: Bounds -> EvalState -> Value -> Integer
+evalMaxBoundedValue bounds state value = snd $ evalBoundedValueAux bounds state value
 
 evaluateMaximumValue :: Bounds -> Contract -> Balances
 evaluateMaximumValue bounds contract = result
@@ -692,7 +708,7 @@ evaluateMaximumValue bounds contract = result
         Null -> return Map.empty
         CommitCash identCC person money timeout1 timeout2 contract1 contract2 -> do
             state <- get
-            let m = evalBoundedValue bounds state Max money
+            let m = evalMaxBoundedValue bounds state money
             modify (\s -> s {esCommitted = Map.insert identCC m (esCommitted state)})
             v1 <- evaluate contract1
             v2 <- evaluate contract2
@@ -700,7 +716,7 @@ evaluateMaximumValue bounds contract = result
         RedeemCC identCC contract -> evaluate contract
         Pay identPay person1 person2 money timeout contract -> do
             state <- get
-            let v1 = evalBoundedValue bounds state Max money
+            let v1 = evalMaxBoundedValue bounds state money
             let balances = Map.fromList $ [ (person1, Balance { balancePay = v1, balanceReceive = 0 })
                                           , (person2, Balance { balancePay = 0,  balanceReceive = v1}) ]
             v2 <- evaluate contract

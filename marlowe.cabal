@@ -15,7 +15,11 @@ executable marlowe
                         containers,
                         sbv,
                         glpk-hs,
-                        QuickCheck
+                        QuickCheck,
+                        tasty,
+                        tasty-hunit,
+                        tasty-smallcheck,
+                        tasty-quickcheck
     other-modules:
                         Analysis,
                         AnalysisObs,
@@ -34,6 +38,7 @@ executable marlowe
                         SBVSolve,
                         Semantics,
                         SimplexSolve,
-                        SmartInputs
+                        SmartInputs,
+                        SPJModel
     hs-source-dirs:     src
-    main-is:            SPJModel.hs
+    main-is:            Main.hs

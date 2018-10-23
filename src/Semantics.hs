@@ -1,10 +1,14 @@
 module Semantics where
 
+import Data.Semigroup (Semigroup(..))
 import qualified Data.Set as Set
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.Map.Merge.Strict as Map
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
+import Control.Monad.State (get, put, modify)
+import qualified Control.Monad.State as ST
 
  -------------------------------------------------------------------------------------------------
  --                                                                                             --
@@ -87,7 +91,7 @@ type Timeout = BlockNumber
 newtype IdentCC = IdentCC Integer
                deriving (Eq,Ord,Show,Read)
 
-newtype IdentChoice = IdentChoice Integer
+newtype IdentChoice = IdentChoice { unIdentChoice :: Integer }
                deriving (Eq,Ord,Show,Read)
 
 newtype IdentPay = IdentPay Integer
@@ -154,6 +158,8 @@ data Action =   SuccessfulPay IdentPay Person Person Cash |
                 CommitRedeemed IdentCC Person Cash |
                 ExpiredCommitRedeemed IdentCC Person Cash |
                 DuplicateRedeem IdentCC Person |
+                IllegalUse IdentLet |
+                IllegalLetIdent IdentLet |
                 ChoiceMade IdentChoice Person ConcreteChoice
                     deriving (Eq,Ord,Show,Read)
 
@@ -171,13 +177,14 @@ type AS = [Action]
 -- conmmitments (sc) and choices (sch) that have been made.
 
 data State = State {
+               letEnv :: Map.Map IdentLet Contract,
                sc  :: Map.Map IdentCC CCStatus,
                sch :: Map.Map (IdentChoice, Person) ConcreteChoice
              }
                deriving (Eq,Ord,Show,Read)
 
 emptyState :: State
-emptyState = State {sc = Map.empty, sch = Map.empty}
+emptyState = State {letEnv = Map.empty, sc = Map.empty, sch = Map.empty}
 
 type CCStatus = (Person,CCRedeemStatus)
 data CCRedeemStatus = NotRedeemed Cash Timeout | ManuallyRedeemed
@@ -191,7 +198,7 @@ data Value = Committed IdentCC |
              Value Integer |
              AddValue Value Value |
              MulValue Value Value |
-             DivValue Value Value |
+             DivValue Value Value Value | -- divident, divisor, default value (when divisor evaluates to 0)
              ValueFromChoice IdentChoice Person Value |
              ValueFromOracle String Value
                     deriving (Eq,Ord,Show,Read)
@@ -206,7 +213,11 @@ evalValue state os value = case value of
     Value v -> v
     AddValue lhs rhs -> evalValue state os lhs + evalValue state os rhs
     MulValue lhs rhs -> evalValue state os lhs * evalValue state os rhs
-    DivValue lhs rhs -> evalValue state os lhs `div` evalValue state os rhs
+    DivValue lhs rhs def -> do
+        let divident = evalValue state os lhs
+        let divisor  = evalValue state os rhs
+        let defVal   = evalValue state os def
+        if divisor == 0 then defVal else div divident divisor
     ValueFromChoice ident per def -> Maybe.fromMaybe (evalValue state os def) (Map.lookup (ident, per) (sch state))
     ValueFromOracle name def -> Maybe.fromMaybe (evalValue state os def) (Map.lookup name (oracles os))
 
@@ -252,16 +263,20 @@ interpretObs _ FalseObs _
 
 -- The type of contracts
 
+newtype IdentLet = IdentLet Integer deriving (Eq,Ord,Show,Read)
+
 data Contract =
     Null |
-    CommitCash IdentCC Person Value Timeout Timeout Contract Contract |
-    RedeemCC IdentCC Contract |
-    Pay IdentPay Person Person Value Timeout Contract |
-    Both Contract Contract |
-    Choice Observation Contract Contract |
-    When Observation Timeout Contract Contract |
-    While Observation Timeout Contract Contract |
-    Scale Value Value Contract -- scale Contract by rationale p/q
+    CommitCash !IdentCC !Person !Value !Timeout !Timeout !Contract !Contract |
+    RedeemCC !IdentCC !Contract |
+    Pay !IdentPay !Person !Person !Value !Timeout !Contract |
+    Both !Contract !Contract |
+    Choice !Observation !Contract !Contract |
+    When !Observation !Timeout !Contract !Contract |
+    While !Observation !Timeout !Contract !Contract |
+    Scale !Value !Value !Value !Contract | -- Scale p q def contract. scale Contract by p/q if q <> 0, or def if q == 0)
+    Let !IdentLet !Contract !Contract | -- let ident = contract1 in contract2
+    Use !IdentLet -- substitute contract using IdentLet defined by Let.
                deriving (Eq,Ord,Show,Read)
 
 
@@ -321,23 +336,28 @@ step comms st (While obs expi con1 con2) os
   where
     (st1, res1, ac1) = step comms st con1 os
 
-step comms st (Scale p q con) os = (st, scaled con, [])
+step comms st (Scale p q def con) os = (st, scaled con, [])
   where
     pvalue = evalValue st os p
     qvalue = evalValue st os q
+    defValue = evalValue st os def
     scaled c = case c of
-      Null -> Null
-      CommitCash identCC person money timeout1 timeout2 contract1 contract2 ->
-        CommitCash identCC person money timeout1 timeout2 (scaled contract1) (scaled contract2)
-      RedeemCC identCC contract -> RedeemCC identCC (scaled contract)
-      Pay identPay person1 person2 money timeout contract -> do
-        let m = DivValue (MulValue (Value pvalue) money) (Value qvalue)
-        Pay identPay person1 person2 m timeout (scaled contract)
-      Both contract1 contract2 -> Both (scaled contract1) (scaled contract2)
-      Choice obs contract1 contract2 -> Choice obs (scaled contract1) (scaled contract2)
-      When obs timeout contract1 contract2 -> When obs timeout (scaled contract1) (scaled contract2)
-      While obs timeout contract1 contract2 -> While obs timeout (scaled contract1) (scaled contract2)
-      Scale p q contract -> Scale p q (scaled contract)
+        Null -> Null
+        CommitCash identCC person money timeout1 timeout2 contract1 contract2 ->
+            CommitCash identCC person money timeout1 timeout2 (scaled contract1) (scaled contract2)
+        RedeemCC identCC contract -> RedeemCC identCC (scaled contract)
+        Pay identPay person1 person2 money timeout contract -> do
+            let m = if qvalue == 0
+                    then MulValue money (Value defValue)
+                    else DivValue (MulValue (Value pvalue) money) (Value qvalue) (Value 0)
+            Pay identPay person1 person2 m timeout (scaled contract)
+        Both contract1 contract2 -> Both (scaled contract1) (scaled contract2)
+        Choice obs contract1 contract2 -> Choice obs (scaled contract1) (scaled contract2)
+        When obs timeout contract1 contract2 -> When obs timeout (scaled contract1) (scaled contract2)
+        While obs timeout contract1 contract2 -> While obs timeout (scaled contract1) (scaled contract2)
+        Scale p q def contract -> Scale p q def (scaled contract)
+        Let ident contract1 contract2 -> Let ident (scaled contract1) (scaled contract2)
+        Use ident -> c
 -- Note that conformance of the commitment here is exact
 -- May want to relax this
 
@@ -369,6 +389,37 @@ step commits st c@(RedeemCC ident con) _ =
     where
         ccs = sc st
 
+step commits st (Let ident contract1 contract2) os =
+    case (checkValidUseOfIdent contract1, checkIdentIsUnique ident) of
+        (True,  True)   ->
+            let newstate = st {letEnv = Map.insert ident contract1 (letEnv st)}
+            in (newstate, contract2, [])
+        -- forbid non-unique let identifiers
+        (True,  False)  -> (st, Null, [IllegalLetIdent ident])
+        -- forbid ident being used inside contract1, which makes it non-terminating.
+        (False,  True)  -> (st, Null, [IllegalUse ident])
+        (False, False)  -> (st, Null, [IllegalLetIdent ident, IllegalUse ident])
+  where
+    checkValidUseOfIdent c = case c of
+        Null -> True
+        CommitCash identCC person money timeout1 timeout2 contract1 contract2 ->
+            checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        RedeemCC identCC contract -> checkValidUseOfIdent contract
+        Pay identPay person1 person2 money timeout contract -> checkValidUseOfIdent contract
+        Both contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        Choice obs contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        When obs timeout contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        While obs timeout contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        Scale p q def contract -> checkValidUseOfIdent contract
+        Let ident contract1 contract2 -> checkValidUseOfIdent contract1 && checkValidUseOfIdent contract2
+        Use useIdent -> useIdent /= ident
+
+    checkIdentIsUnique ident = not $ Map.member ident (letEnv st)
+
+step commits st (Use ident) os =
+    case Map.lookup ident (letEnv st) of
+        Just contract -> (st, contract, [])
+        Nothing -> (st, Null, [IllegalUse ident])
 -------------------------
 -- stepAll & stepBlock --
 -------------------------
@@ -566,3 +617,158 @@ inputStream commits = result
     commits_stream = repeat commits
     os_stream = map (\blockNr -> OS { random = 42, blockNumber = blockNr, oracles = Map.empty} ) (concatMap (replicate 100) [1 ..])
 
+data Balance = Balance {
+    balanceReceive :: Integer,
+    balancePay :: Integer
+} deriving (Eq, Ord, Show)
+
+instance Semigroup Balance where
+    (<>) lhs rhs = Balance {
+        balanceReceive = balanceReceive lhs + balanceReceive rhs,
+        balancePay = balancePay lhs + balancePay rhs }
+
+type Balances = Map Person Balance
+
+data EvalState = EvalState {
+    esLetEnv :: Map IdentLet Balances,
+    esCommitted :: Map IdentCC Integer
+}
+
+{-
+    Bounds for Oracle values and user choices.
+    Needed to approximate amount of money needed for a contract to work.
+-}
+data Bounds = Bounds {
+    oracleBounds :: Map String (Integer, Integer),
+    choiceBounds :: Map IdentChoice (Integer, Integer)
+}
+
+emptyBounds :: Bounds
+emptyBounds = Bounds Map.empty Map.empty
+
+{-
+    Given Bounds and EvalState, calculate a range of values a Value could evaluate to.
+    For example, if a price of gold expected to be between 100 and 200, value
+        DivValue (Value 1000) (ValueFromOracle "gold" (Value 0)) (Value 1)
+    would be in range (1, 1000 / 100)
+-}
+evalBoundedValueAux :: Bounds -> EvalState -> Value -> (Integer, Integer)
+evalBoundedValueAux bounds state value = case value of
+    Committed ident ->
+        case Map.lookup ident (esCommitted state) of
+            Just v -> (v, v)
+            _ -> (0, 0)
+    Value v -> (v, v)
+    AddValue lhs rhs -> let ((a,b), (a',b')) = (go lhs, go rhs) in (a+a', b+b')
+    MulValue lhs rhs -> let
+        ((a,b), (a',b')) = (go lhs, go rhs)
+        t = [a*a', a*b', b*a', b*b']
+        in (minimum t, maximum t)
+    DivValue lhs rhs def -> do
+        let (defMin, defMax) = go def
+        let (lmn, lmx) = go lhs
+        let (mn, mx) = go rhs
+        let minimaxdiv approxFunc lmx lmn mx mn def = let
+                values = case (compare mn 0, compare mx 0) of
+                    (EQ, EQ) -> [def]
+                    (LT, EQ) -> [def, lmn `div` mn, lmx `div` mn, lmn `div` (-1), lmx `div` (-1)]
+                    (EQ, GT) -> [def, lmn `div` mx, lmx `div` mx, lmn, lmx]
+                    (LT, GT) -> [def, lmn `div` mn, lmn `div` mx, lmx `div` mn, lmx `div` mx, lmn, lmx, lmn `div` (-1), lmx `div` (-1)]
+                    (_ , _ ) -> [def, lmn `div` mn, lmn `div` mx, lmx `div` mn, lmx `div` mx]
+                in approxFunc values
+        (minimaxdiv minimum lmx lmn mx mn defMin, minimaxdiv maximum lmx lmn mx mn defMax)
+
+    ValueFromChoice ident per def -> let
+        defValue @ (defMin, defMax) = go def
+        (valMin, valMax) = Maybe.fromMaybe defValue $ Map.lookup ident (choiceBounds bounds)
+        in (min defMin valMin, max defMax valMax)
+    ValueFromOracle name def -> let
+        defValue @ (defMin, defMax) = go def
+        (valMin, valMax) = Maybe.fromMaybe defValue $ Map.lookup name (oracleBounds bounds)
+        in (min defMin valMin, max defMax valMax)
+  where
+    go = evalBoundedValueAux bounds state
+
+evalMaxBoundedValue :: Bounds -> EvalState -> Value -> Integer
+evalMaxBoundedValue bounds state value = snd $ evalBoundedValueAux bounds state value
+
+evaluateMaximumValue :: Bounds -> Contract -> Balances
+evaluateMaximumValue bounds contract = result
+  where
+    result = ST.evalState (evaluate contract) (EvalState {esLetEnv = Map.empty, esCommitted = Map.empty})
+
+    -- [(p1, 10), (p2, 20), (p3, 30)] `mergeBalances` [(p2, 50)] == [(p1, 10), (p2, f 20 50), (p3, 30)]
+    mergeBalances f a b = Map.merge Map.preserveMissing Map.preserveMissing (Map.zipWithMatched (\k a b -> f a b)) a b
+    maxBalances a b = mergeBalances max a b
+    sumBalances a b = mergeBalances (<>) a b
+
+
+    evaluate :: Contract -> ST.State EvalState Balances
+    evaluate contract = case contract of
+        Null -> return Map.empty
+        CommitCash identCC person money timeout1 timeout2 contract1 contract2 -> do
+            state <- get
+            let m = evalMaxBoundedValue bounds state money
+            modify (\s -> s {esCommitted = Map.insert identCC m (esCommitted state)})
+            v1 <- evaluate contract1
+            v2 <- evaluate contract2
+            return $ maxBalances v1 v2
+        RedeemCC identCC contract -> evaluate contract
+        Pay identPay person1 person2 money timeout contract -> do
+            state <- get
+            let v1 = evalMaxBoundedValue bounds state money
+            let balances = Map.fromList $ [ (person1, Balance { balancePay = v1, balanceReceive = 0 })
+                                          , (person2, Balance { balancePay = 0,  balanceReceive = v1}) ]
+            v2 <- evaluate contract
+            return $ sumBalances balances v2
+        Both contract1 contract2 -> do
+            v1 <- evaluate contract1
+            v2 <- evaluate contract2
+            return $ sumBalances v1 v2
+        Choice obs contract1 contract2 -> do
+            v1 <- evaluate contract1
+            v2 <- evaluate contract2
+            return $ maxBalances v1 v2
+        When obs timeout contract1 contract2 -> do
+            v1 <- evaluate contract1
+            v2 <- evaluate contract2
+            return $ maxBalances v1 v2  -- either obs eventually evaluates to True, or it timeouts, choose max
+        While obs timeout contract1 contract2 -> do
+            v1 <- evaluate contract1    -- assume the obs is always True, so whole contrac1 is evaluated
+            v2 <- evaluate contract2    -- assume the contract timeouts at the end of execution of contrac1
+            return $ sumBalances v1 v2  -- so we add both estimated values
+        Scale p q def contract -> do
+            state <- get
+            evaluate (scaled p q def contract)
+        Let ident contract1 contract2 -> do
+            v1 <- evaluate contract1
+            modify (\s -> s {esLetEnv = Map.insert ident v1 (esLetEnv s)})
+            evaluate contract2
+        Use ident -> do
+            state <- get
+            let v = Maybe.fromMaybe Map.empty $ Map.lookup ident (esLetEnv state)
+            return v
+
+    scaled pvalue qvalue def c = case c of
+        Null -> Null
+        CommitCash identCC person money timeout1 timeout2 contract1 contract2 ->
+            CommitCash identCC person money timeout1 timeout2 (go contract1) (go contract2)
+        RedeemCC identCC contract -> RedeemCC identCC (go contract)
+        Pay identPay person1 person2 money timeout contract -> do
+            let m = DivValue (MulValue pvalue money) qvalue (MulValue money def)
+            Pay identPay person1 person2 m timeout (go contract)
+        Both contract1 contract2 -> Both (go contract1) (go contract2)
+        Choice obs contract1 contract2 -> Choice obs (go contract1) (go contract2)
+        When obs timeout contract1 contract2 -> When obs timeout (go contract1) (go contract2)
+        While obs timeout contract1 contract2 -> While obs timeout (go contract1) (go contract2)
+        Scale p q def contract -> Scale p q def (go contract)
+        Let ident contract1 contract2 -> Let ident (go contract1) (go contract2)
+        Use ident -> c
+      where go = scaled pvalue qvalue def
+
+data InvalidContract = UnusedIdentLet IdentLet Contract
+                     | ReusedIdentLet IdentLet Contract
+                     | RecursiveIdentLet IdentLet Contract
+
+validateContract :: Contract -> Maybe InvalidContract
+validateContract = undefined

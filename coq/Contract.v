@@ -1,10 +1,10 @@
 Require Import Coq.Bool.Bool.
 Require Import ZArith_base.
 Require Import Coq.ZArith.Int.
-Require Import OTFromList.
-Require Import Semantics.
+Require Import Marlowe.OTFromList.
+Require Import Marlowe.Semantics.
 Require Import Coq.FSets.FSetProperties.
-Require Import Inputs.
+Require Import Marlowe.Inputs.
 
 Open Scope Int_scope.
 

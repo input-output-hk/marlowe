@@ -1,10 +1,10 @@
 Require Import ZArith_base.
 Require Import Coq.ZArith.Int.
-Require Import Semantics.
-Require Import OTFromList.
+Require Import Marlowe.Semantics.
+Require Import Marlowe.OTFromList.
 Require Import Coq.FSets.FMapFacts.
 Require Import Coq.Structures.Orders.
-Require Import LogicDefs.
+Require Import Marlowe.LogicDefs.
 Require Import Coq.Sorting.Mergesort.
 Require Import Coq.Sorting.Permutation.
 

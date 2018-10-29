@@ -146,20 +146,20 @@ set_field_value b n v =
 -- money to Blockly
 money_to_blockly :: Value -> IO Block
 money_to_blockly (Committed (IdentCC id)) =
-  do tb <- create_block "value_available_money"
-     set_field_value tb "commit_id" id
-     return tb
+   do tb <- create_block "value_available_money"
+      set_field_value tb "commit_id" id
+      return tb
 money_to_blockly (AddValue v1 v2) =
-  do vb1 <- money_to_blockly v1
-     vb2 <- money_to_blockly v2
-     tb <- create_block "value_add_money"
-     connect_value_as_input "value1" tb vb1
-     connect_value_as_input "value2" tb vb2
-     return tb
+   do vb1 <- money_to_blockly v1
+      vb2 <- money_to_blockly v2
+      tb <- create_block "value_add_money"
+      connect_value_as_input "value1" tb vb1
+      connect_value_as_input "value2" tb vb2
+      return tb
 money_to_blockly (Value cv) =
-  do tb <- create_block "value_const_money"
-     set_field_value tb "money" cv
-     return tb
+   do tb <- create_block "value_const_money"
+      set_field_value tb "money" cv
+      return tb
 money_to_blockly (ValueFromChoice (IdentChoice ic) per mon) =
   do monb <- money_to_blockly mon
      tb <- create_block "money_from_choice"

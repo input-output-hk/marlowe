@@ -504,6 +504,18 @@ stepBlock inp st con os = (rs, rcon, nas)
         nas = chas ++ pas ++ ras
         (rs, rcon, ras) = stepAll inp nst con os
 
+-- Wrapper functions to fold stepBlock over a trace
+
+foldableStepBlock :: (State, Contract, OS, AS) -> Input -> (State, Contract, OS, AS)
+foldableStepBlock (s, c, o, a) inp = (s2, c2, o { blockNumber = blockNumber o + 1 }, a ++ a2)
+  where (s2, c2, a2) = stepBlock inp s c o
+
+emptyFSBAcc :: Contract -> (State, Contract, OS, AS)
+emptyFSBAcc c = (emptyState, c, emptyOS, [])
+
+executeConcreteTrace :: Contract -> [Input] -> (State, Contract, OS, AS)
+executeConcreteTrace c inp = List.foldl' foldableStepBlock (emptyFSBAcc c) inp
+
 -------------------------
 -- Auxiliary functions --
 -------------------------

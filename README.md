@@ -1,6 +1,6 @@
 # Marlowe
 
-This repository contains a preliminary design of Marlowe, a DSL for describing smart-contracts that can be enforced by scripts deployed on a cryptocurrency's blockchain, and some tools for analysing and simulating the execution of contracts written in the DSL.
+This repository contains the design of Marlowe, a DSL for describing smart-contracts that can be enforced by scripts deployed on a cryptocurrency's blockchain, and some tools for analysing and simulating the execution of contracts written in the DSL. The following are some of the main files included in this repository:
 
 - `src/Semantics.hs` —  contains the small-step semantics of DSL (`stepBlock` function), together with a simple driver (`driver` function).
 - `src/ContractFormatter.hs` — contains the implementation of a formatter for scdsl code.
@@ -29,3 +29,7 @@ Install Haskell Stack if you haven't already
     $ brew install glpk
     $ stack setup
     $ stack build
+
+## Stable branch
+
+The main branch contains the latest developments of Marlowe, because of this, the Haskell semantics, the Coq formalisation, and the Meadow imlementation may be out of sync with each other in this branch. The stable branch marks a previous version of Marlowe where the different components are in sync.

@@ -1,3 +1,4 @@
+{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE ViewPatterns      #-}
@@ -10,6 +11,7 @@ module Fay.Compiler.Import
   ( startCompile
   , startCompileText
   , compileWith
+  , compileWithPre
   ) where
 
 import           Fay.Compiler.Prelude
@@ -26,35 +28,70 @@ import           Control.Monad.RWS               (ask, get, gets, lift, listen, 
 import           Language.Haskell.Exts hiding (name)
 import           System.Directory
 import           System.FilePath
+import           Language.Haskell.Names.Types
+import System.IO.Unsafe (unsafePerformIO)
+import GHCJS.Types (JSVal)
+import Data.JSString (JSString, pack, unpack)
+import GHCJS.Foreign (fromJSBool, toJSBool)
+import GHCJS.Foreign.Callback (Callback, asyncCallback)
+
+
+foreign import javascript safe
+   "textarea.setValue(textarea.getValue() + '\\n' + $1);"
+   logAux :: JSString -> IO ()
+logThis a b = unsafePerformIO $ do
+                logAux (pack a)
+                return b
+
 
 -- | Start the compilation process using `compileModule` to compile a file.
-startCompile :: (FilePath -> String -> Compile a) -> FilePath -> Compile a
+startCompile :: Show a => (FilePath -> String -> Compile a) -> FilePath -> Compile a
 startCompile compileModule filein = do
   modify $ \s -> s { stateImported = [] }
   fmap fst . listen $ compileModuleFromFile compileModule filein
 
-startCompileText :: (FilePath -> String -> Compile a) -> FilePath -> String -> Compile a
+startCompileText :: Show a => (FilePath -> String -> Compile a) -> FilePath -> String -> Compile a
 startCompileText compileModule filein string = do
   modify $ \s -> s { stateImported = [] }
   compileModule filein string
 
 -- | Compile a module
+compileWithPre
+  :: FilePath
+  -> (() -> F.Module -> Compile ())
+  -> (FilePath -> String -> Compile ())
+  -> (F.X -> F.Module -> IO (Either CompileError F.Module))
+  -> String
+  -> Compile ((), CompileState, CompileWriter)
+compileWithPre filepath with compileModule before from = 
+  logThis ("Preprocessing \"" ++ filepath ++ "\" ...") (compileWith2 filepath with compileModule before from)
+
+
 compileWith
-  :: Monoid a
+  :: Monoid a => Show a
   => FilePath
   -> (a -> F.Module -> Compile a)
   -> (FilePath -> String -> Compile a)
   -> (F.X -> F.Module -> IO (Either CompileError F.Module))
   -> String
   -> Compile (a, CompileState, CompileWriter)
-compileWith filepath with compileModule before from = do
+compileWith filepath with compileModule before from =
+  logThis ("Compiling \"" ++ filepath ++ "\" ...") (compileWith2 filepath with compileModule before from)
+ 
+compileWith2
+  :: Monoid a => Show a
+  => FilePath
+  -> (a -> F.Module -> Compile a)
+  -> (FilePath -> String -> Compile a)
+  -> (F.X -> F.Module -> IO (Either CompileError F.Module))
+  -> String
+  -> Compile (a, CompileState, CompileWriter)
+compileWith2 filepath with compileModule before from = do
   rd <- ask
   st <- get
   res <- Compile . lift . lift $
-    runCompileModule
-      rd
-      st
-      (parseResult (throwError . uncurry ParseError)
+             runCompileModule rd st
+                  (parseResult (throwError . uncurry ParseError)
                    (\mod' -> do
                      mod@(Module _ _ _ imports _) <-
                        either throwError return =<< io (before F.noI mod')
@@ -67,14 +104,14 @@ compileWith filepath with compileModule before from = do
 
 -- | Compile a module given its file path
 compileModuleFromFile
-  :: (FilePath -> String -> Compile a)
+  :: Show a => (FilePath -> String -> Compile a)
   -> FilePath
   -> Compile a
 compileModuleFromFile compileModule fp = io (readFile fp) >>= compileModule fp
 
 -- | Lookup a module from include directories and compile.
 compileModuleFromName
-  :: Monoid a
+  :: Show a => Monoid a
   => (FilePath -> String -> Compile a)
   -> F.ModuleName
   -> Compile a
@@ -99,7 +136,7 @@ compileModuleFromName compileModule nm =
 
 -- | Compile an import.
 compileImport
-  :: Monoid a
+  :: Show a => Monoid a
   => (FilePath -> String -> Compile a)
   -> F.ImportDecl
   -> Compile a

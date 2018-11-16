@@ -36,7 +36,7 @@ initialPassText fp text = startCompileText preprocessFileWithSource fp text
 -- | Preprocess a module given its filepath and content.
 preprocessFileWithSource :: FilePath -> String -> Compile ()
 preprocessFileWithSource filepath contents = do
-  (_,st,_) <- compileWith filepath preprocessAST preprocessFileWithSource desugar contents
+  (_,st,_) <- compileWithPre filepath preprocessAST preprocessFileWithSource desugar contents
   -- This is the state we want to keep
   modify $ \s -> s { stateRecords     = stateRecords     st
                    , stateRecordTypes = stateRecordTypes st

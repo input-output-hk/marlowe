@@ -32,4 +32,4 @@ Install Haskell Stack if you haven't already
 
 ## Stable branch
 
-The `main` branch contains the latest developments of Marlowe, because of this, the Haskell semantics, the Coq formalisation, and the Meadow imlementation may be out of sync with each other in this branch. The `stable` branch marks a previous version of Marlowe where the different components are in sync.
+The `master` branch contains the latest developments of Marlowe, because of this, the Haskell semantics, the Coq formalisation, and the Meadow imlementation may be out of sync with each other in this branch. The `stable` branch marks a previous version of Marlowe where the different components are in sync.

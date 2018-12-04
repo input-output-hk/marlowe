@@ -29,7 +29,7 @@ Do not run this local server in a computer exposed to an untrusted network! The 
 
 Compilation of this project requires one of the latest versions of stack. If compilation does not work, please, try to install the latest version.
 
-Additionally, when testing this in mac we found a run time issue between stack and libgmp that had already been reported here:
+Additionally, when testing this in MacOS, we found a run time issue between stack and libgmp that had already been reported here:
 
 https://ghc.haskell.org/trac/ghc/ticket/15105
 

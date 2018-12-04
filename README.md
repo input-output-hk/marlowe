@@ -10,7 +10,7 @@ This repository contains the design of Marlowe, a DSL for describing smart-contr
 - `src/CrowdFunding.hs` —  contains an example contract for crowd-funding limited to 4 participants.
 - `src/Escrow.hs` —  contains an example contract for an escrow payment.
 
-A full description of the 'stable' version was presented at ISoLA 2018, and the paper is available [here](https://iohk.io/research/papers/#2WHKDRA8).   
+A full description of the 'v1.3' version was presented at ISoLA 2018, and the paper is available [here](https://iohk.io/research/papers/#2WHKDRA8).   
 
 ## Meadow
 

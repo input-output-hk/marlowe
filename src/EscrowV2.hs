@@ -17,36 +17,24 @@ import Semantics
 -- or if payment did not go through after block 100,
 -- the money will be refunded to person 1.
 
-
--- escrow :: Contract
--- escrow = CommitCash 1
---                     (Value 450)
---                     (When (OrObs (two_chose 1 2 3 refund)
---                                  (two_chose 1 2 3 pay))
---                           (Choice (two_chose 1 2 3 pay)
---                                   (Pay 1 2 Committed)
---                                   redeem_original))   
-
--- refund = 0
--- pay    = 1
-
-alice :: Person
+alice, bob, carol :: Person
 alice = 1
-
-bob :: Person
 bob = 2
-
-carol :: Person
 carol = 3
+
+refund, pay :: ConcreteChoice
+
+refund = 0
+pay = 1
 
 escrow :: Contract
 escrow = CommitCash iCC1 alice
                     (Value 450)
                     10 100
-                    (When (OrObs (two_chose alice bob carol 0)
-                                 (two_chose alice bob carol 1))
+                    (When (OrObs (majority_chose refund)
+                                 (majority_chose pay))
                           90
-                          (Choice (two_chose alice bob carol 1)
+                          (Choice (majority_chose pay)
                                   (Pay iP1 alice bob
                                        (Committed iCC1)
                                        100
@@ -54,6 +42,7 @@ escrow = CommitCash iCC1 alice
                                   redeem_original)
                           redeem_original)
                     Null
+  where majority_chose = two_chose alice bob carol
 
 chose :: Integer -> ConcreteChoice -> Observation
 
@@ -82,3 +71,4 @@ iCC1 = IdentCC 1
 iP1 :: IdentPay
 
 iP1 = IdentPay 1
+

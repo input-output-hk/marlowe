@@ -1334,7 +1334,7 @@ var h$ret7;
 var h$ret8;
 var h$ret9;
 var h$ret10;
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -1363,9 +1363,12 @@ var h$ret10;
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 /* platform-specific setup */
 // top-level debug initialization needs this. declare it in case we aren't in the same file as out.js
@@ -1439,7 +1442,7 @@ function h$getGlobal(that) {
     if(typeof global !== 'undefined') return global;
     return that;
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -1468,9 +1471,12 @@ function h$getGlobal(that) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 /*
   set up the google closure library. this is a rather hacky setup
@@ -1522,7 +1528,7 @@ goog.isString = function(v) {
 }
 goog.math = {};
 goog.crypt = {};
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -1551,9 +1557,12 @@ goog.crypt = {};
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 /*
  Copyright (c) 2010, Linden Research, Inc.
@@ -2453,7 +2462,7 @@ goog.crypt = {};
     global.DataView = global.DataView || DataView;
   }());
 }(h$getGlobal(this)));
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -2482,9 +2491,12 @@ goog.crypt = {};
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 (function (global, undefined) {
     "use strict";
@@ -2642,7 +2654,7 @@ goog.crypt = {};
     attachTo.setImmediate = setImmediate;
     attachTo.clearImmediate = clearImmediate;
 }(h$getGlobal(this)));
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -2671,9 +2683,12 @@ goog.crypt = {};
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // Copyright 2009 The Closure Library Authors. All Rights Reserved.
 //
@@ -3344,7 +3359,7 @@ goog.math.Long.prototype.shiftRightUnsigned = function(numBits) {
     }
   }
 };
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -3373,9 +3388,12 @@ goog.math.Long.prototype.shiftRightUnsigned = function(numBits) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 /*
   simple set with reasonably fast iteration though an array, which may contain nulls
@@ -3416,7 +3434,7 @@ h$Set.prototype.remove = function(o) {
             v[x] = l;
             k[l._key] = x;
         }
-        v[ls] = null;
+        v[ls] = undefined;
         if(v.length > 10 && 2 * v.length > 3 * ls) this._vals = v.slice(0, ls);
     }
 }
@@ -3454,7 +3472,7 @@ h$SetIter.prototype.next = function() {
 }
 h$SetIter.prototype.peek = function() {
     if(this._n < this._s._size) {
-        return this._s.vals[this._n];
+        return this._s._vals[this._n];
     } else {
         return null;
     }
@@ -3501,13 +3519,13 @@ h$Map.prototype.remove = function(k) {
         delete ks[kk];
         var ss = --this._size;
         if(ss !== x) {
-            pks = pk[ss];
+            var pks = pk[ss];
             pk[x] = pks;
             pv[x] = pv[ss];
             ks[pks._key] = x;
         }
-        pv[ss] = null;
-        pk[ss] = null;
+        pv[ss] = undefined;
+        pk[ss] = undefined;
         if(pk.length > 10 && 2 * pk.length > 3 * this._size) {
             this._pairsKeys = pk.slice(0,ss);
             this._pairsValues = pv.slice(0,ss);
@@ -3652,7 +3670,7 @@ h$HeapSet.prototype.add = function(op,o) {
             if(op < oop) {
                 this._upHeap(x);
             } else {
-                this._downHeap(x);
+                this._downHeap(x, this._size);
             }
         }
     } else { // new node
@@ -3757,7 +3775,7 @@ h$HeapSet.prototype._upHeap = function(i) {
         }
     }
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -3786,9 +3804,12 @@ h$HeapSet.prototype._upHeap = function(i) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -3889,18 +3910,6 @@ function h$scheduleInit(entries, objs, lbls, infos, statics) {
         h$initInfoTables(d, entries, objs, lbls, infos, statics);
     });
 }
-function h$runInitStatic() {
-    if(h$initStatic.length > 0) {
-        for(var i=h$initStatic.length - 1;i>=0;i--) {
-            h$initStatic[i]();
-        }
-        h$initStatic = [];
-    }
-    // free the references to the temporary tables used for
-    // initialising all our static data
-    h$entriesStack = null;
-    h$staticsStack = null;
-}
 // initialize packed info tables
 // see Gen2.Compactor for how the data is encoded
 function h$initInfoTables ( depth // depth in the base chain
@@ -3980,7 +3989,7 @@ function h$initInfoTables ( depth // depth in the base chain
     function nextIndexed(msg, stack, o) {
         var n = (o === undefined) ? next() : o;
         var i = depth;
-        while(n > stack[i].length) {
+        while(n >= stack[i].length) {
             n -= stack[i].length;
             i--;
             if(i < 0) throw (msg + ": cannot find item " + n + ", stack length: " + stack.length + " depth: " + depth);
@@ -4300,7 +4309,10 @@ function h$callDynamic(f) {
 }
 // slice an array of heap objects
 function h$sliceArray(a, start, n) {
-  return a.slice(start, start+n);
+  var r = a.slice(start, start+n);
+  r.__ghcjsArray = true;
+  r.m = 0;
+  return r;
 }
 function h$memcpy() {
   if(arguments.length === 3) { // ByteArray# -> ByteArray# copy
@@ -4763,6 +4775,11 @@ function h$arrayBufferId(a) {
   return a.__ghcjsArrayBufferId;
 }
 function h$comparePointer(a1,o1,a2,o2) {
+  if (a1 === null) {
+    return a2 === null ? 0 : -1;
+  } else if (a2 === null) {
+    return 1;
+  }
   var i1 = h$arrayBufferId(a1.buf);
   var i2 = h$arrayBufferId(a2.buf);
   if (i1 === i2) {
@@ -4773,7 +4790,7 @@ function h$comparePointer(a1,o1,a2,o2) {
   else
     return i1 < i2 ? -1 : 1;
 }
-/* 
+/*
    A StableName is represented as either a h$StableName object (for most heap objects)
    or a number (for heap objects with unboxed representation)
 
@@ -4817,13 +4834,6 @@ function h$stableNameInt(s) {
 function h$eqStableName(s1o,s2o) {
   if(s1o!=s1o && s2o!=s2o) return 1; // NaN
   return s1o === s2o ? 1 : 0;
-}
-function h$makeStablePtr(v) {
-  var buf = h$newByteArray(4);
-  buf.arr = [v];
-  { h$ret1 = (0); return (buf); };
-}
-function h$hs_free_stable_ptr(stable) {
 }
 function h$malloc(n) {
   { h$ret1 = (0); return (h$newByteArray(n)); };
@@ -4961,7 +4971,7 @@ function h$munmap(addr_d, addr_o, size) {
   }
   return 0;
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -4990,9 +5000,120 @@ function h$munmap(addr_d, addr_o, size) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
+/* We do not support C11 <threads.h>.  */
+// values defined in Gen2.ClosureInfo
+// thread status
+/*
+ * low-level heap object manipulation macros
+ */
+// GHCJS.Prim.JSVal
+// GHCJS.Prim.JSException
+// Exception dictionary for JSException
+// SomeException
+// GHC.Ptr.Ptr
+// GHC.Integer.GMP.Internals
+// Data.Maybe.Maybe
+// #define HS_NOTHING h$nothing
+// Data.List
+// Data.Text
+// Data.Text.Lazy
+// black holes
+// can we skip the indirection for black holes?
+// resumable thunks
+// general deconstruction
+// retrieve  a numeric value that's possibly stored as an indirection
+// generic lazy values
+// generic data constructors and selectors
+// unboxed tuple returns
+// #define RETURN_UBX_TUP1(x) return x;
+function h$compactNew(size) {
+  ;
+  throw new Error("not implemented");
+}
+function h$compactResize(compact, size) {
+  ;
+}
+function h$compactContains(compact, obj) {
+  ;
+  return 0;
+}
+function h$compactContainsAny(obj) {
+  ;
+  return 0;
+}
+function h$compactGetFirstBlock(compact) {
+  ;
+  { h$ret1 = (0); return (null); };
+}
+function h$compactGetNextBlock(compact, blocka, blokco) {
+  ;
+  { h$ret1 = (0); return (null); };
+}
+function h$compactAllocateBlock(size, suggesta, suggesto) {
+  ;
+  throw new Error("not implemented");
+  // returns new root address
+  { h$ret1 = (0); return (null); };
+}
+function h$compactFixupPointers(blocka, blocko, roota, rooto) {
+  ;
+  throw new Error("not implemented");
+  // returns new root address
+  { h$ret1 = (0); return (null); };
+}
+function h$compactAdd(compact, obj) {
+  ;
+  throw new Error("not implemented");
+}
+function h$compactAddWithSharing(compact, obj) {
+  ;
+  throw new Error("not implemented");
+}
+function h$compactCompactSize(compact) {
+  ;
+  return 0;
+}
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
+
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
+
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <http://www.gnu.org/licenses/>.  */
+/* This header is separate from features.h so that the compiler can
+   include it implicitly at the start of every compilation.  It must
+   not itself include <features.h> or any other header that includes
+   <features.h> because the implicit include comes before any feature
+   test macros that may be defined in a source file before it first
+   explicitly includes a system header.  GCC knows the name of this
+   header in order to preinclude it.  */
+/* glibc's intent is to support the IEC 559 math functionality, real
+   and complex.  If the GCC (4.9 and later) predefined macros
+   specifying compiler intent are available, use them to determine
+   whether the overall intent is to support these features; otherwise,
+   presume an older compiler has intent to support these features and
+   define these macros by default.  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 /*
   Do garbage collection where the JavaScript GC doesn't suffice or needs some help:
@@ -5179,6 +5300,10 @@ function h$gc(t) {
     ;
     iter = h$extraRoots.iter();
     while((nt = iter.next()) !== null) h$follow(nt.root);
+    ;
+    for(i=0;i<h$stablePtrData.length;i++) {
+      if(h$stablePtrData[i]) h$follow(h$stablePtrData[i]);
+    }
     // clean up threads waiting on unreachable synchronization primitives
     h$resolveDeadlocks();
     // clean up unreachable weak refs
@@ -5555,7 +5680,7 @@ function h$finalizeCAFs() {
     }
     ;
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -5584,9 +5709,12 @@ function h$finalizeCAFs() {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -5718,7 +5846,6 @@ function h$finalizeCAFs() {
 /* The value of O_BINARY. */
 /* The value of SIGINT. */
 /* Define to 1 if you have the `clock_gettime' function. */
-/* #undef HAVE_CLOCK_GETTIME */
 /* Define to 1 if you have the <ctype.h> header file. */
 /* Define if you have epoll support. */
 /* #undef HAVE_EPOLL */
@@ -5728,6 +5855,7 @@ function h$finalizeCAFs() {
 /* Define to 1 if you have the `eventfd' function. */
 /* #undef HAVE_EVENTFD */
 /* Define to 1 if you have the <fcntl.h> header file. */
+/* Define if you have flock support. */
 /* Define to 1 if you have the `ftruncate' function. */
 /* Define to 1 if you have the `getclock' function. */
 /* #undef HAVE_GETCLOCK */
@@ -5745,6 +5873,8 @@ function h$finalizeCAFs() {
 /* Define to 1 if the system has the type `long long'. */
 /* Define to 1 if you have the `lstat' function. */
 /* Define to 1 if you have the <memory.h> header file. */
+/* Define if you have open file descriptor lock support. */
+/* #undef HAVE_OFD_LOCKING */
 /* Define if you have poll support. */
 /* Define to 1 if you have the <poll.h> header file. */
 /* Define to 1 if you have the <signal.h> header file. */
@@ -5757,6 +5887,7 @@ function h$finalizeCAFs() {
 /* Define to 1 if you have the <sys/eventfd.h> header file. */
 /* #undef HAVE_SYS_EVENTFD_H */
 /* Define to 1 if you have the <sys/event.h> header file. */
+/* Define to 1 if you have the <sys/file.h> header file. */
 /* Define to 1 if you have the <sys/resource.h> header file. */
 /* Define to 1 if you have the <sys/select.h> header file. */
 /* Define to 1 if you have the <sys/stat.h> header file. */
@@ -5773,6 +5904,7 @@ function h$finalizeCAFs() {
 /* Define to 1 if you have the `times' function. */
 /* Define to 1 if you have the <time.h> header file. */
 /* Define to 1 if you have the <unistd.h> header file. */
+/* Define to 1 if you have the `unsetenv' function. */
 /* Define to 1 if you have the <utime.h> header file. */
 /* Define to 1 if you have the <wctype.h> header file. */
 /* Define to 1 if you have the <windows.h> header file. */
@@ -5781,13 +5913,19 @@ function h$finalizeCAFs() {
 /* #undef HAVE_WINSOCK_H */
 /* Define to 1 if you have the `_chsize' function. */
 /* #undef HAVE__CHSIZE */
+/* Define to Haskell type for blkcnt_t */
+/* Define to Haskell type for blksize_t */
+/* Define to Haskell type for bool */
 /* Define to Haskell type for cc_t */
 /* Define to Haskell type for char */
 /* Define to Haskell type for clock_t */
 /* Define to Haskell type for dev_t */
 /* Define to Haskell type for double */
 /* Define to Haskell type for float */
+/* Define to Haskell type for fsblkcnt_t */
+/* Define to Haskell type for fsfilcnt_t */
 /* Define to Haskell type for gid_t */
+/* Define to Haskell type for id_t */
 /* Define to Haskell type for ino_t */
 /* Define to Haskell type for int */
 /* Define to Haskell type for intmax_t */
@@ -5808,6 +5946,7 @@ function h$finalizeCAFs() {
 /* Define to Haskell type for ssize_t */
 /* Define to Haskell type for suseconds_t */
 /* Define to Haskell type for tcflag_t */
+/* Define to Haskell type for timer_t */
 /* Define to Haskell type for time_t */
 /* Define to Haskell type for uid_t */
 /* Define to Haskell type for uintmax_t */
@@ -5829,10 +5968,25 @@ function h$finalizeCAFs() {
 /* The size of `kev.flags', as computed by sizeof. */
 /* The size of `struct MD5Context', as computed by sizeof. */
 /* Define to 1 if you have the ANSI C header files. */
+/* Define if stdlib.h declares unsetenv to return void. */
+/* #undef UNSETENV_RETURNS_VOID */
+/* Enable extensions on AIX 3, Interix.  */
+/* Enable GNU extensions on systems that have them.  */
+/* Enable threading extensions on Solaris.  */
+/* Enable extensions on HP NonStop.  */
+/* Enable general extensions on Solaris.  */
+/* Enable large inode numbers on Mac OS X 10.5.  */
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */
 /* Define for large files, on AIX-style hosts. */
 /* #undef _LARGE_FILES */
+/* Define to 1 if on MINIX. */
+/* #undef _MINIX */
+/* Define to 2 if the system does not provide POSIX.1 features except with
+   this defined. */
+/* #undef _POSIX_1_SOURCE */
+/* Define to 1 if you need to in order for `stat' and other things to work. */
+/* #undef _POSIX_SOURCE */
 var h$errno = 0;
 function h$__hscore_get_errno() {
   ;
@@ -5903,7 +6057,7 @@ function h$handleErrnoC(err, r_err, r_success, c) {
         c(r_success);
     }
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -5932,9 +6086,12 @@ function h$handleErrnoC(err, r_err, r_success, c) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 function h$MD5Init(ctx, ctx_off) {
   if(!ctx.arr) { ctx.arr = []; }
@@ -5953,7 +6110,7 @@ function h$MD5Final(dst, dst_off, ctx, ctx_off) {
   }
 }
 var h$__hsbase_MD5Final = h$MD5Final;
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -5982,9 +6139,12 @@ var h$__hsbase_MD5Final = h$MD5Final;
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -6267,7 +6427,7 @@ function h$uncheckedShiftRL64(a1,a2,n) {
   } else if(n < 32) {
     { h$ret1 = ((a2 >>> n) | (a1 << (32 - n))); return ((a1 >>> n)); };
   } else {
-    { h$ret1 = (a2 >>> (n - 32)); return (0); };
+    { h$ret1 = ((a2 >>> (n - 32))|0); return (0); };
   }
 }
 function h$isDoubleNegativeZero(d) {
@@ -6492,7 +6652,22 @@ function h$ctz8(x) {
 function h$ctz64(x1,x2) {
     return (x2 === 0) ? 32 + h$ctz32(x1) : h$ctz32(x2);
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+var h$fround = null;
+var h$truncateFloat_buf = null;
+if(typeof Math.fround === 'function') {
+  h$fround = function(f) {
+    ;
+    return Math.fround(f);
+  }
+} else {
+  h$fround = function(f) {
+    ;
+    if(!h$truncateFloat_buf) h$truncateFloat_buf = new Float32Array(1);
+    h$truncateFloat_buf[0] = f;
+    return h$truncateFloat_buf[0];
+  }
+}
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -6521,9 +6696,12 @@ function h$ctz64(x1,x2) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // Unicode tables generated by ghcjs/utils/genUnicode.hs
 var h$printRanges = "f|!-f=|/q'/+1$J|(mo'1q&')| 63Y--EO'|$9| ('| ?'|!9?| ?-| %'AZ'| JI| +|#U2'''O0$)+'5'''+3*','O-).+''O0&&&'$-+''))0+$1C9)4(N0&,'7(('@+';A)2'''O0&,'5''')3'+','G7'.))*)'$&)')));+-))*'.>M-+2(PB)3(*1'&/+'733(2(P6,'5(*1'1$+'7&?)2(u'3(,32+'C)1''F)S4$'1)*/$2/7');| =+^n'$''$'.+0( #''<('-$.'7'+d| Yk+rk@<n|$G$-&|(E*'1$*'v*'f*'1$*'A| :*'| O'd)W/| t9|.r)|! 1=09Q5K;=(&;|!+'7/7/?'7/| z3z-| U7b:+;+(x'-9|  +W/9)| E'| K]'9/7/?'A| K| b+| #)|!W3| A)A)| /| I33r&/|%M/|&;'/'p'/'3 $a'| 3@>'/H')48-S1| +C''Y<)`GfA|#)/|-h-rU9M|H;'d'h);2| %| '| &|#<-| #$-&| 91'?S510000000|!4| CW| {;|$hW;+| I| u'|!=-v)|!+y-l;| '|$y} ^y7}%0j| /|9t)| 75|'fK|!+| {3|#3_''| S| 3+7/| 93| S5;/[+| r9`)| f8+f| 65?'7'|!=S[7/'/'/510| (+'|!#| %'7/}!e;;Q+| +}!'n|(/'|!Cp1;--W,$&&|!gE|(-C| I'| 5t?'W/?'jH*+-|#!+|$7)/'/'/'))10='';VH&@'?h|!f-)+| #)| v);+| &| %|!t^)| +A[+l;Y-z-`m+?x|#Q'7| vt3| 19|#4|&v5O73|#E/'$|  &)&Q| X35| j[)Y-| H| 9/'| I+&-3(X+)+5351| Idr+;5| 5)^'Y-W1+;1| j| [|+tb|(U| f+`A| E*?U17/| 3>;r5| [+&9/K9Gy|!S| ?-71)2'''O0&,'5''')5,1'1)-|%x| Y37|#b| 5'G| 5| S97p| 937|*K| p;|)y| ;|<Y|4M|!=|!M,|b`|7l}#8j|,^1b6+'|!/`'/7| U770L-I|3U| S9| 'CE}$&7'|e7|!E-=)517'+} 47|%M7r'| ^3|!5h| U|$/| x5G|#1| t| V&'&''+:$0| J*'30Z*,$)1|'T'|&O'| -}  %|$E'C|=C+X&$'$7* #/* $)&$' &'$'+0**$6D-),D| 1'|&#|  +|!7;A'A@m7=)b| @+z| `^=z-51'|#r| #)| f'| h-l3|%`| _-xu|#P'|#+C=)+;|!W;| tz;+| 937/t3`|I^}*Q/v} !59|$x}$#I|,'|G1|%A";
@@ -6535,7 +6713,7 @@ var h$toLowerMapping = "| K Wb|!9 Qb!1bf  9#  !|$F  ## &'  (# &'  8#  !|!_# # #)
 var h$toUpperMapping = "|!1 Wa| = |A$x Qa!1a !|!`  9!  !|%.  #! $'  (! $'  7! $'  #!  !!|&]|(_'  !! $' $) $- $' |$>)  !!|#Y) |%i'  #! $' $+ $' $)  !! $' $)  !! |!N-  !!$ ! ! !$  !!$ ) ! !| e  )! $'  !!$ ! !)  4! $)  )! $3 $' '}!]? ! !+  %!  !!}![Y !}![S}![W !|$]|$T!'|$R ! |$L ! |$N}4qo)  !|$R}*H? ! |$V ! }*GS !}*H1  !|$Z|$_ ! }!Zd}4q6'  !|$_  !}!Zp|$c' |)N1 }%:g' |)_' |)_)  !}*GW|$m|#&'|$k|#.- |)c9 }4o.|#b |#ez  !! $) $) )|!r| % | _)k!Ea| B5a|!m'| D ! | B|!P)  !| $| 2 !0  ,!  !!| s !| g/ !|!T |$8' $' $| 1 daC| g 2 !5  ;! $'  '!  !!> Q !| + p| &} N7 }1H>) } pP|!v  l! $- |!X-  P! $313 /17 313 313 /19  $1 B3 313 '| [+| t'|!5'|!n'|!M'|!j' 313 313 313 '1 ! 37 }#R4+ F; '1? '1) >= F|'b | 6f C@+ $|2f WT|IE | '| &' $)  !}![q}![k $ !/ $' $7  R! $3  !! $+ $; p} hF ! } hF- }#Tm}'Zj  7! $I  .! $|##  '! $)  ?! $7  !! $'  %! $+ $+  !! $)  *! $}%P= Wa|;? tq} :; da}p>; ";
 var h$toTitleMapping = "|!1 Wa| = |A$x Qa!1a !|!`  9!  !|%.  #! $'  (! $'  7! $'  #!  !!|&]|(_'  !! $' $) $- $' |$>)  !!|#Y) |%i'  #! $' $+ $' $)  !! $' $)  !! |!N+  !#  !!# ! ! !#  )!  !!| e * ! ! # # !)  4! $)  )! $3 $' '}!]? ! !+  %!  !!}![Y !}![S}![W !|$]|$T!'|$R ! |$L ! |$N}4qo)  !|$R}*H? ! |$V ! }*GS !}*H1  !|$Z|$_ ! }!Zd}4q6'  !|$_  !}!Zp|$c' |)N1 }%:g' |)_' |)_)  !}*GW|$m|#&'|$k|#.- |)c9 }4o.|#b |#ez  !! $) $) )|!r| % | _)k!Ea| B5a|!m'| D ! | B|!P)  !| $| 2 !0  ,!  !!| s !| g/ !|!T |$8' $' $| 1 daC| g 2 !5  ;! $'  '!  !!> Q !| + p| &} N7 }1H>) } pP|!v  l! $- |!X-  P! $313 /17 313 313 /19  $1 B3 313 '| [+| t'|!5'|!n'|!M'|!j' 313 313 313 '1 ! 37 }#R4+ F; '1? '1) >= F|'b | 6f C@+ $|2f WT|IE | '| &' $)  !}![q}![k $ !/ $' $7  R! $3  !! $+ $; p} hF ! } hF- }#Tm}'Zj  7! $I  .! $|##  '! $)  ?! $7  !! $'  %! $+ $+  !! $)  *! $}%P= Wa|;? tq} :; da}p>; ";
 var h$catMapping = "d;P)3J)3 !/0 !34 !3.'37*'3)4'3W! !/3 !06 !-6W# !/4 !04f; !83+5 !73 !67 !&1 !4< !76 !74', !6#'3 !6, !&2),FQ!H1!S#H3# <!#$'# (!#$'# 8!#'! ##!)#'! !#!&'!&)!'#+!&'!&)!)#'!&'! ##!&'! !#!'# !!#'!&)! !#!&'!'# !&!)#+& !!$ !#! !$# !!$ )#!'# )!#$'# !!$ !#!&)! >#!1#'!&'!'# !!#+! %#!| S#,Y#G%+6;%?6-%16 !%6*E6|!O' #!# !%6 !!#' *)# !3!+ '6 !!3)! ! !!'!&E!!5!j#$'#)!)# ,!#$-# !!# !4!&'!'#| /!| )# 2!#N-'') <!#'! '#!'# Q!#!p!' */3!r# ! 3<' '7 !5 | #' !.'F''F'' !3'3 Y&- )&'39 /<)4'3J'3'79' !3<!'3d&*7&M'7*+3'&.|!5& !3&1' !<7/''%''N+''&7*)&'7,?3 ! < !&'`&Y'' |! &9',? 7*f&5''%N)3*- O&+'*5'*)'*-'' A3!U&)'' F| K I&| + b'0| 5& !'( !'&)(3'+(.'(,1'7&'''37* !3%A&.'(!3&' '&' O&!1& ! &) +&'  !'&)(+'' '(' '( !'&3 0+ '&!)&''' 7*'&'5/, !75- '' !( /&+ '&' O&!1&!'&!'&!'&'  !' )(''+ ''' )') .1 +& ! &1 7*'')&.9 '' !( 5&!)&!O&!1&!'&!-&'  !'&)(-'!'' !( '(.' ,A '&''' 7* !35A .'(!3&' '&' O&!1&!'&!-&'  !'& !('0+'' '(' '(.3  !'(+ '&!)&''' 7* !7&/,7  !'&!/&) )&!+&) '& ! &!'&) '&) )&) ;&+ '(.'() )(!)(.' ,/ 0? 7*),/7 !57- .)(!3&!)&!Q&!C&) ,)'+(!)'!+'1 ''!'&/ '&''' 7*3 1, !7 .'(!3&!)&!Q&!7&!-&'  !'& !('-( ! ''(!'(''1 '(1  !& '&''' 7*!'&? .'(!3&!)&!v&' ,)(+'!)(!)( !'&3 03 '&''' 7*/,) N/&' '(!G&) S&!5& ! &' 1&) .+ )()' ! '!3(/ 7*' '(F; | )&.'&1'+ J/&*3'F7*'3n '& ! &' '& ! &' ,/ +&!1&!)& # &' '&!+&.'&/'!'',' -& ! %!/'' 7*' +&d ,)7A3 !73)7''/77*7, $7' #/0'(3&!l&+ ?'0-'F''-&9'!l'!37./7!'7-3+7'3n z&'(+'0/'0'''('',7*/3/&'(''+&)',)('&1()&+'=&.'(''/( !'&07*)(.'7p! ! !- $' z& !3%|'E&!+&' 1& ! &!+&' v&!+&' f&!+&' 1& ! &!+&' A&!| ;&!+&' | O&' )'53K,) C&77/ | t&9 <|-j&'3E&PW& !/0) | `&)3)+3&1 =&!+&)'9 G&)''35 G&''; =&!)&!''; | 1&''01'3(.'(9')3*)3 !5&.' 7*/ 7,/ /3<+3)' !< 7*/ j&*| 1&3 v& !'&- | U&7 b&!)'+('')(+ '(./()'+ N) '37*`&' -&9 |  &+ E(1&'(/ 7*8) h7Q&'''(.' '3| 3& !('01' ! ' !(''(3'/(7'' .7*/ 7*/ 13*/3' ?'2| K +'0| '& !'(-' !('-(.'(1&+ 7*13775'57) ''0`&0+''(''0)''&7*|  & !'('')( !'()''(3 +3l&3(3''('') -37*) )&7*`&/%'3| I 333 )'F='01'+&.+&'(.'&!''/ |  #| G%=#*h#n%| 5'/ +' l!#$5# Q!#$5#3!/#' /!' 3#3!3#3!/#' /!' 3# % !3#3!?#' 3#3$3#3$3#3$-#!'#+! !$6&)6)#!'#+!()6+#' '#+!!)63#-!)6' )#!'#+!('6!98-</.'3 !12>'1 !2/B33 !9:-<P53 !12+3'-)3 !4/@93 !43:73P-<!7< !,%' /,)4 !/0*7,)4 !/0!=%) `5G ='+).));'A '7$+7$'7&)!'#)! !#7$'7H-!/7 $!7+! !7#+!&+&&'7'#'!-4$+# !74'7 !#7C,j+ !!#++8/ -4-7'4+7H'7H'7H17Hb7'4'7 !47Hb7|%z437 #/0K7'417 !/0| l7H`7U4t7/4U7- r7U 97M | A,| f7O,|$)7H57H| 5734|!M7H|%Q7 (/0`,|  7-4 !/0b4 &/0C4|%b7|!v4 ,/0| G4 #/0d4 !/0|%f4| )7M4'7/4r7' d7' h7) ;7!37| % | '!!| '# ! !&)!'# $!#+! !#!'#$/#'%)! R#!'#/7 #!#)' !!#- +38'3p# ! #- &' | 9&1  !%3? .Q&5 1&!1&!1&!1&!1&!1&!1&!1&!d''3 #12)3 !12 !31D53<'3 !.3 !12'3 !12 %/0-3*73'.+3 !.3>| C W7!|! 7; |$h7W ;7+ P)3 !7% !&+ &/0'7 %/0 !./'0N5++''(<-%'7)+ !%&F'7!| v&' '''6'% !&.|!#&F)%,- v&) |!+&!'7+,77Y&- l7; C&b7!7,`73,NA,d77,r7A,| G7!|%b7} X;&7 | I7}%/C&| / M&*|9G&) | 775 t&/%'3|%z&*)3C&7*'&K  8!# !&'))F7' !3% /!#'% ! '| U&7+''/33 Q65%'6 '!#$)# @!#*3# #!#'! %#! !#%'6 #!# ! ! !#!)# +!#+!' '!| S ,'%&1&.)&.+&.Q&'(''0+7+ /,'7 !57/ | 1&+33 '(| -&C(.5 '37*/ G'/&)3,+ 7*[&3''3Q&9''(9 F^&) )'0| '&.'(+''(.+(=3 ! %7*+ '3-& !'%5&7*-&!v&/''('''(''5 )&.3& !'(' 7*' +3C&*/&)7 !&( !'(| -& !'&)''&''-&'' !&',S '&*'39&0'''('3,'% !('7 /&' /&' /&5 1&!1&!z#L+%+ '#|!# j&'(.'(.'( !3(.' 7*/ }!e;&; Q&+ | +&+ |MQ=} T7 |(/&' |!C&p 1#; -#-  !&'7&H=&!-& ! &!'&!'&!|!G&C6E |()& !0/C | I&' | 5&t ;& !57' C'13 !/0F/ ?'' F'.'- )/0'3 !/0+3)-)3!+3 !./ #0/@)3 !4.)4 ! 3J'3+ -&!|##&'  !< )3J)3 !/0 !34 !3.'37*'3)4'3W! !/3 !06 !-6W# !/4 !04 !/0 !3/@'37&*| #&'%b&) /&' /&' /&' )&) '5 !46N'5 ! 7+4'77 )<'7' ;&!W&!I&!'&!A&' ?&h |!f&- )3+ | #,) 57| 3++,E7',N) ;7+ N| ' | #7.|!t ^&) | +&A .Y,+ d&+,; E&63&6- p&-'- `& ! 3l&+ 3&F-+x t!t#| f&' 7*| v t&3 | 1&9 F|#5 |&v&5 O&7 3&|#E /&'  !& |  &!'&) ,' Q& ! 33,Q&'71,b&3 5,| j O&/,) FW&- F| I | 9&/ '&| I ,)'!''- +'+&!)&!Y&+ )'+ .3,3 531 ^&',F^&),d 3&N[&''+ -,135 | 5&) 13O&' 3,I&- 3,G&1 +3; 1,| j | [&|+t b,|(U  !('0| 3&A'13+ K,7*A )'0| #&)(+''('''3X+3? U&1 7*/ )'l&-'03'!7*+3; j&.'3,5 ''0| )&)(5''(+&+3+ F' 7*,/ K,9 G&!U&)()''( !'(''/3|!S | '&.)(3'- 7*1 .'(!3&' '&' O&!1&!'&!-&'  !'&'(.+(' '(' )(5 0- -&'(' 1') -'|%x | )&)(/' !('+(''0'''& !3&3 7*|#b | '&)(+'' +(''0''53| 5 | )&)(3''( !'('')3,9 7*p z& !'(.'(/' !('3 7*|*K d!d#7*5,; ,|)z | ;&|<Y |4M&|!= |!M+!-3|b` |7l&}#8j |,^&1 b&!7*+ '3|!/ `&' -'F7 | )&1'-3+7+% !377 7*!1,!M&- I&|3U | S&9 ,| %(C +'=%}$&7 '&|e7 |!E&- =&) 5&1 7&' N''F+<} 4/ |%M77 r7' | A7'()')7/(3<3''71'`7+'| )7h | M7)'N|$/ | x75 G,|#1 W!W#W!1#!G#W!W# !! '!' $' '!' +!!3!+# ! #!1#!9#W!W#'!!+!' 3!!1!!W#'!!+!!-! ! !) 1!!W#W!W#W!W#W!W#W!W#W!W#W![#' U!HU#H/#U!HU#H/#U!HU#H/#U!HU#H/#U!HU#H/# !!#' | -*}  % |$E&' 5,1'|=C +&!Y&!'& ! &'  !& 7&!+& # &/ ,+  $& )&!'& ! &'  && '& ! &' +&!1&!+&!+& ! &!7&!E&- )&!-&!E&| 1 '4|&# |  7+ |!77; A7' A7!A7!n77 =,) b7!| A7+ z7| ` ^7= z7- 571 '7|#r | #7) | f7' | h7- l73 |%`7!| `7- x7!v7!|#Q7' |#+7C =7) +7; |!W7; | t7z ;7+ | 973 77/ t73 `7|I^ }*Q/&v } !5&9 |$x&}$#I |,'&|AO X` |!/<|!p |%A'}PF' ";
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -6564,9 +6742,12 @@ var h$catMapping = "d;P)3J)3 !/0 !34 !3.'37*'3)4'3W! !/3 !06 !-6W# !/4 !04f; !83
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -6598,7 +6779,32 @@ function h$str(s) {
   var enc = null;
   return function() {
     if(enc === null) {
-      enc = h$encodeUtf8(s);
+      enc = h$encodeModifiedUtf8(s);
+    }
+    return enc;
+  }
+}
+// encode a packed string
+// since \0 is used to separate strings (and a common occurrence)
+// we add the following mapping:
+//   - \0  -> \cz\0
+//   - \cz -> \cz\cz
+//
+// decoding to bytes, the following is produced:
+//   - \cz\0  -> C0 80
+//   - \cz\cz -> 1A
+//
+// additionally, for dealing with raw binary data we have an escape sequence
+// to pack base64 encoded runs:
+//
+//   - \cz\xNN -> followed by NN-0x1f (31 decimal) bytes of base64 encoded
+//                data. supported range: 0x20 .. 0x9f (1-128 bytes data)
+//
+function h$pstr(s) {
+  var enc = null;
+  return function() {
+    if(enc === null) {
+      enc = h$encodePackedUtf8(s);
     }
     return enc;
   }
@@ -6789,8 +6995,30 @@ function h$rawStringData(str) {
 }
 // encode a javascript string to a zero terminated utf8 byte array
 function h$encodeUtf8(str) {
-  var i, low;
+  return h$encodeUtf8Internal(str, false, false);
+}
+function h$encodeModifiedUtf8(str) {
+  return h$encodeUtf8Internal(str, true, false);
+}
+function h$encodePackedUtf8(str) {
+  return h$encodeUtf8Internal(str, false, true);
+}
+// modified: encode \0     -> 192 128
+// packed:   encode \cz\cz -> 26
+//                  \cz\0  -> 192 128
+function h$encodeUtf8Internal(str, modified, packed) {
+  var i, j, c, low, b64bytes, b64chars;
+  function base64val(cc) {
+    if(cc >= 65 && cc <= 90) return cc - 65; // A-Z
+    if(cc >= 97 && cc <= 122) return cc - 71; // a-z
+    if(cc >= 48 && cc <= 57) return cc + 4; // 0-9
+    if(cc === 43) return 62; // +
+    if(cc === 47) return 63; // /
+    if(cc === 61) return 0; // = (treat padding as zero)
+    throw new Error("invalid base64 value: " + cc);
+  }
   var n = 0;
+  var czescape = false;
   for(i=0;i<str.length;i++) {
     // non-BMP encoded as surrogate pair in JavaScript string, get actual codepoint
     var c = str.charCodeAt(i);
@@ -6799,25 +7027,45 @@ function h$encodeUtf8(str) {
       c = ((c - 0xD800) * 0x400) + (low - 0xDC00) + 0x10000;
       i++;
     }
-    if(c <= 0x7F) {
-      n++;
-    } else if(c <= 0x7FF) {
-      n+=2;
-    } else if(c <= 0xFFFF) {
-      n+=3;
-    } else if(c <= 0x1FFFFF) {
-      n+=4;
-    } else if(c <= 0x3FFFFFF) {
-      n+=5;
+    if(czescape) {
+      if(c === 26) { // \cz\cz -> 26
+        n+=1;
+      } else if(c === 0) { // \cz\0 -> 192 128
+        n+=2
+      } else if(c >= 0x20 && c <= 0x9f) {
+        b64bytes = c - 0x1f; // number of bytes in base64 encoded run
+        b64chars = ((b64bytes + 2) / 3) << 2;
+        n += b64bytes;
+        i += b64chars;
+      } else {
+        throw new Error("invalid cz escaped character: " + c);
+      }
+      czescape = false;
     } else {
-      n+=6;
+      if(c === 26 && packed) {
+        czescape = true;
+      } else if(c === 0 && modified) {
+        n+=2;
+      } else if(c <= 0x7F) {
+        n++;
+      } else if(c <= 0x7FF) {
+        n+=2;
+      } else if(c <= 0xFFFF) {
+        n+=3;
+      } else if(c <= 0x1FFFFF) {
+        n+=4;
+      } else if(c <= 0x3FFFFFF) {
+        n+=5;
+      } else {
+        n+=6;
+      }
     }
   }
   var v = h$newByteArray(n+1);
   var u8 = v.u8;
   n = 0;
   for(i=0;i<str.length;i++) {
-    var c = str.charCodeAt(i);
+    c = str.charCodeAt(i);
     // non-BMP encoded as surrogate pair in JavaScript string, get actual codepoint
     if (0xD800 <= c && c <= 0xDBFF) {
       low = str.charCodeAt(i+1);
@@ -6825,7 +7073,40 @@ function h$encodeUtf8(str) {
       i++;
     }
 //    h$log("### encoding char " + c + " to UTF-8: " + String.fromCodePoint(c));
-    if(c <= 0x7F) {
+    if(packed && !czescape && c === 26) {
+      czescape = true;
+    } else if(c === 0 && (modified || czescape)) {
+      u8[n] = 192;
+      u8[n+1] = 128;
+      n+=2;
+      czescape = false;
+    } else if(czescape) {
+      if(c >= 0x20 && c <= 0x9f) {
+        b64bytes = c - 0x1f;
+        while(b64bytes > 0) {
+          var c1 = base64val(str.charCodeAt(i+1)),
+              c2 = base64val(str.charCodeAt(i+2)),
+              c3 = base64val(str.charCodeAt(i+3)),
+              c4 = base64val(str.charCodeAt(i+4));
+          i+=4;
+          u8[n] = (c1<<2)|(c2>>4);
+          n++;
+          if(b64bytes >= 2) {
+            u8[n] = ((c2&0xf)<<4)|(c3 >> 2);
+            n++;
+          }
+          if(b64bytes >= 3) {
+            u8[n] = ((c3&0x3)<<6)|c4;
+            n++;
+          }
+          b64bytes -= 3;
+        }
+      } else {
+        u8[n] = c;
+        n++;
+      }
+      czescape = false;
+    } else if(c <= 0x7F) {
       u8[n] = c;
       n++;
     } else if(c <= 0x7FF) {
@@ -7068,14 +7349,14 @@ function h$writePtrPtrU32(ptr, ptr_off, v, x, y) {
   x = x || 0;
   y = y || 0;
   var arr = ptr.arr[ptr_off + 4 * x];
-  arr[0].dv.setInt32(arr[1] + y, v);
+  arr[0].dv.putInt32(arr[1] + y, v);
 }
 // unsigned char** ptr[x][y] = v
 function h$writePtrPtrU8(ptr, ptr_off, v, x, y) {
   x = x || 0;
   y = y || 0;
   var arr = ptr.arr[ptr_off+ 4 * x];
-  arr[0].dv.setUint8(arr[1] + y, v);
+  arr[0].dv.putUint8(arr[1] + y, v);
 }
 // convert JavaScript String to a Haskell String
 function h$toHsString(str) {
@@ -7181,7 +7462,7 @@ function h$throwJSException(e) {
   var someE = (h$c2(h$baseZCGHCziExceptionziSomeException_con_e,(h$ghcjszmprimZCGHCJSziPrimzizdfExceptionJSException),((h$c2(h$ghcjszmprimZCGHCJSziPrimziJSException_con_e,((h$c1(h$ghcjszmprimZCGHCJSziPrimziJSVal_con_e, (e)))),(h$toHsString(e.toString())))))));
   return h$throw(someE, true);
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -7210,9 +7491,12 @@ function h$throwJSException(e) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -7314,6 +7598,20 @@ function h$setProgArgv(n, ptr_d, ptr_o) {
 function h$getpid() {
   if(h$isNode) return process.id;
   return 0;
+}
+function h$cpuTimePrecision() {
+  return 1000;
+}
+var h$fakeCpuTime = 1.0;
+function h$getCPUTime() {
+if(h$isNode) {
+  var t = process.cpuUsage();
+  return t.user + t.system;
+}
+  // XXX this allows more testsuites to run
+  //     but I don't really like returning a fake value here
+  return ++h$fakeCpuTime;
+  return -1;
 }
 function h$__hscore_environ() {
     ;
@@ -7440,7 +7738,69 @@ function h$localtime_r(timep_v, timep_o, result_v, result_o) {
   { h$ret1 = (result_o); return (result_v); };
 }
 var h$__hscore_localtime_r = h$localtime_r;
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+function h$checkForeignRefs(refs) {
+  function argSize(t) {
+    if(t === "ghc-prim:GHC.Prim.Word64#") return 2;
+    if(t === "ghc-prim:GHC.Prim.State#") return 0;
+    if(t === "ghc-prim:GHC.Prim.Void#") return 0;
+    if(t === "ghc-prim:GHC.Prim.Int#") return 1;
+    if(t === "ghc-prim:GHC.Prim.Int64#") return 2;
+    if(t === "ghc-prim:GHC.Prim.Weak#") return 1;
+    if(t === "ghc-prim:GHC.Prim.Addr#") return 2;
+    if(t === "ghc-prim:GHC.Prim.Word#") return 1;
+    if(t === "ghc-prim:GHC.Prim.Float#") return 1;
+    if(t === "ghc-prim:GHC.Prim.Double#") return 1;
+    if(t === "ghc-prim:GHC.Prim.ByteArray#") return 2;
+    if(t === "ghc-prim:GHC.Prim.ThreadId#") return 1;
+    console.warn("unknown argument type: " + t);
+    return 1;
+  }
+  function callStr(r) {
+    return r.pattern + '(' + r.arguments.join(', ') + ') -> ' + r.result + ' ' + r.span;
+  }
+  function checkRef(r) {
+    if(r.cconv === "ccall") {
+      var f = null;
+      try {
+        f = eval(r.pattern);
+      } catch(e) { }
+      if(!f) {
+        console.warn("referenced pattern does not exist: " + callStr(r));
+        return;
+      }
+      if(typeof f !== 'function') {
+        console.warn("referenced pattern is not a function: " + callStr(r));
+        return;
+      }
+      var s = 0, ba = 0;
+      for(var i = 0; i < r.arguments.length; i++) {
+        var a = r.arguments[i];
+        s += argSize(a);
+        ba += a === "ghc-prim:GHC.Prim.ByteArray#" ? 1 : 0;
+      }
+      if(f.length != s) {
+        console.warn("number of arguments does not seem to match: " + callStr(r));
+      }
+      if(ba !== 0 && f.length === (s - ba)) {
+        console.warn("number of arguments matches old ByteArray calling convention: " + callStr(r));
+      }
+    }
+    // todo: check other calling conventions
+  }
+  for(var i=0;i<refs.length;i++) {
+    checkRef(refs[i]);
+  }
+}
+var h$GHCConcSignalSignalHandlerStore_d = null;
+var h$GHCConcSignalSignalHandlerStore_o = 0;
+function h$getOrSetGHCConcSignalSignalHandlerStore(d,o) {
+  if(d) {
+    h$GHCConcSignalSignalHandlerStore_d = d;
+    h$GHCConcSignalSignalHandlerStore_o = o;
+  }
+  { h$ret1 = (h$GHCConcSignalSignalHandlerStore_o); return (h$GHCConcSignalSignalHandlerStore_d); };
+}
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -7469,9 +7829,12 @@ var h$__hscore_localtime_r = h$localtime_r;
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // some Enum conversion things
 // an array of generic enums
@@ -7500,7 +7863,7 @@ function h$tagToEnum(tag) {
 function h$dataTag(e) {
   return (e===true)?1:((typeof e !== 'object')?0:(e.f.a-1));
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -7529,9 +7892,12 @@ function h$dataTag(e) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // weak reference support
 // values defined in Gen2.ClosureInfo
@@ -7644,7 +8010,7 @@ function h$FastWeakBagTicket(bag, val) {
   bag.tickets.push(this);
   this.m = 0;
 };
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -7673,9 +8039,12 @@ function h$FastWeakBagTicket(bag, val) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -7803,6 +8172,7 @@ function h$delayThread(time) {
   ;
   h$delayed.add(now+ms, h$currentThread);
   h$currentThread.delayed = true;
+  h$currentThread.interruptible = true;
   return h$blockThread(h$currentThread, h$delayed,[h$resumeDelayThread]);
 }
 function h$resumeDelayThread() {
@@ -8807,6 +9177,8 @@ h$enabled_capabilities.i3[0] = 1;
 function h$rtsSupportsBoundThreads() {
   return 0;
 }
+function h$rts_setMainThread(t) {
+}
 // async foreign calls
 function h$mkForeignCallback(x) {
     return function() {
@@ -8833,7 +9205,7 @@ function h$makeMVarListener(mv, stopProp, stopImmProp, preventDefault) {
 function h$rs() {
   return h$stack[h$sp];
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -8862,9 +9234,12 @@ function h$rs() {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // software transactional memory
 var h$stmTransactionActive = 0;
@@ -9141,7 +9516,7 @@ function h$stmCommitInvariant(localInv) {
         h$stmAddTVarInvariant(dep, inv);
     }
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -9170,9 +9545,12 @@ function h$stmCommitInvariant(localInv) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -9203,17 +9581,17 @@ function h$stmCommitInvariant(localInv) {
 var h$static_pointer_table = null;
 var h$static_pointer_table_keys = null;
 function h$hs_spt_insert(key1,key2,key3,key4,ref) {
-    // h$log("hs_spt_insert: " + key1 + " " + key2 + " " + key3 + " " + key4 + " -> " + h$collectProps(ref));
+    //  h$log("hs_spt_insert: " + key1 + " " + key2 + " " + key3 + " " + key4 + " -> " + h$collectProps(ref));
     if(!h$static_pointer_table) {
  h$static_pointer_table = [];
  h$static_pointer_table_keys = [];
     }
     if(!h$hs_spt_lookup_key(key1,key2,key3,key4)) {
         var ba = h$newByteArray(16);
-        ba.i3[0] = key1;
-        ba.i3[1] = key2;
-        ba.i3[2] = key3;
-        ba.i3[3] = key4;
+        ba.i3[0] = key2;
+        ba.i3[1] = key1;
+        ba.i3[2] = key4;
+        ba.i3[3] = key3;
  h$static_pointer_table_keys.push([ba,0]);
         h$retain({ root: ref, _key: -1 });
     }
@@ -9235,15 +9613,17 @@ function h$hs_spt_keys(tgt_d, tgt_o, n) {
 }
 function h$hs_spt_lookup(key_d, key_o) {
     var i3 = key_d.i3, o = key_o >> 2;
-    { h$ret1 = (0); return (h$hs_spt_lookup_key(i3[o],i3[o+1],i3[o+2],i3[o+3])); };
+    // h$log("hs_spt_lookup");
+    { h$ret1 = (0); return (h$hs_spt_lookup_key(i3[o+1],i3[o],i3[o+3],i3[o+2])); };
 }
 function h$hs_spt_lookup_key(key1,key2,key3,key4) {
+    // h$log("hs_spt_lookup_key: " + key1 + " " + key2 + " " + key3 + " " + key4);
     var s = h$static_pointer_table;
     if(s && s[key1] && s[key1][key2] && s[key1][key2][key3] &&
        s[key1][key2][key3][key4]) return s[key1][key2][key3][key4];
     return null;
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -9272,9 +9652,88 @@ function h$hs_spt_lookup_key(key1,key2,key3,key4) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
+/* We do not support C11 <threads.h>.  */
+/*
+  Stable pointers are all allocated in the h$StablePtrData buffer and
+  can therefore be distinguished by offset
+
+  StablePtr# is treated as Word32# when it comes to writing and reading them
+ */
+var h$stablePtrData = [null];
+var h$stablePtrBuf = h$newByteArray(8);
+var h$stablePtrN = 1;
+var h$stablePtrFree = [];
+function h$makeStablePtr(v) {
+  ;
+  if(!v) return 0;
+  var slot = h$stablePtrFree.pop();
+  if(slot === undefined) {
+    slot = h$stablePtrN++;
+  }
+  ;
+  h$stablePtrData[slot] = v;
+  return slot << 2;
+}
+function h$deRefStablePtr(stable_o) {
+  var slot = stable_o >> 2;
+  return h$stablePtrData[slot];
+}
+function h$hs_free_stable_ptr(stable_d, stable_o) {
+  var slot = stable_o >> 2;
+  ;
+  if(h$stablePtrData[slot] !== null) {
+    h$stablePtrData[slot] = null;
+    h$stablePtrFree.push(slot);
+  }
+}
+// not strictly stableptr, but we make it work only for stable pointers
+function h$addrToAny(addr_v, addr_o) {
+  ;
+  ;
+  var slot = addr_o >> 2;
+  return h$stablePtrData[slot];
+}
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
+
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
+
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <http://www.gnu.org/licenses/>.  */
+/* This header is separate from features.h so that the compiler can
+   include it implicitly at the start of every compilation.  It must
+   not itself include <features.h> or any other header that includes
+   <features.h> because the implicit include comes before any feature
+   test macros that may be defined in a source file before it first
+   explicitly includes a system header.  GCC knows the name of this
+   header in order to preinclude it.  */
+/* glibc's intent is to support the IEC 559 math functionality, real
+   and complex.  If the GCC (4.9 and later) predefined macros
+   specifying compiler intent are available, use them to determine
+   whether the overall intent is to support these features; otherwise,
+   presume an older compiler has intent to support these features and
+   define these macros by default.  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -9376,6 +9835,201 @@ function h$tcsetattr(a,b,c,d) {
 function h$__hscore_sig_setmask() {
     ;
     return 0;
+}
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
+
+   The GNU C Library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 2.1 of the License, or (at your option) any later version.
+
+   The GNU C Library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the GNU C Library; if not, see
+   <http://www.gnu.org/licenses/>.  */
+/* This header is separate from features.h so that the compiler can
+   include it implicitly at the start of every compilation.  It must
+   not itself include <features.h> or any other header that includes
+   <features.h> because the implicit include comes before any feature
+   test macros that may be defined in a source file before it first
+   explicitly includes a system header.  GCC knows the name of this
+   header in order to preinclude it.  */
+/* glibc's intent is to support the IEC 559 math functionality, real
+   and complex.  If the GCC (4.9 and later) predefined macros
+   specifying compiler intent are available, use them to determine
+   whether the overall intent is to support these features; otherwise,
+   presume an older compiler has intent to support these features and
+   define these macros by default.  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
+/* We do not support C11 <threads.h>.  */
+/*
+   Runtime inspection of Haskell data.
+
+   The code generator can emit calls to these functions
+ */
+/*
+function h$verify_rep_int64(x, y) {
+
+}
+
+function h$verify_rep_word64(x, y) {
+
+}
+*/
+/*
+  an int rep is an integer in range [-2^31..2^31-1]
+    (for Word# values, the value is treated as unsigned by the RTS. From
+     JavaScript it still looks signed.
+    )
+ */
+function h$verify_rep_int(x) {
+  if(typeof x === 'number' &&
+     (x|0) === x
+    ) return;
+  throw new Error("invalid int rep " + h$show_val(x));
+}
+/*
+function h$verify_rep_word(x, y) {
+
+}
+*/
+/*
+   a long rep is two integers in rage [-2^31..2^31-1]
+ */
+function h$verify_rep_long(x, y) {
+  if(typeof x === 'number' &&
+     typeof y === 'number' &&
+     (x|0) === x &&
+     (y|0) === y
+    ) return;
+  throw new Error("invalid long rep " + h$show_val(x) + " " + h$show_val(y));
+}
+/*
+function h$verify_rep_float(x) {
+
+}
+*/
+function h$verify_rep_double(x) {
+  if(typeof x === 'number') return;
+  throw new Error("invalid double rep " + h$show_val(x));
+}
+/*
+  an array rep is a JavaScript array. The elements are other
+  array reps or heap objects.
+ */
+function h$verify_rep_arr(x) {
+  if(h$verify_rep_is_arr(x)) return;
+  throw new Error("invalid array rep " + h$show_val(x));
+}
+function h$verify_rep_is_arr(x) {
+  // XXX check the elements?
+  return (typeof x === 'object'
+          && x
+          && Array.isArray(x)
+          // XXX enable this check
+          // && x.__ghcjsArray === true
+        );
+}
+function h$verify_rep_rtsobj(x) {
+  // unspecified unlifted value
+}
+/*
+  an rts object rep is one of the known RTS object types
+ */
+function h$verify_rep_is_rtsobj(o) {
+ return (o instanceof h$MVar ||
+         o instanceof h$MutVar ||
+         o instanceof h$TVar ||
+         o instanceof h$Transaction ||
+         o instanceof h$Thread ||
+         o instanceof h$Weak ||
+         o instanceof h$StableName ||
+         h$verify_rep_is_bytearray(o) ||
+         h$verify_rep_is_arr(o));
+}
+function h$verify_rep_is_bytearray(o) {
+  return (typeof o === 'object' &&
+          o &&
+          typeof o.buf === 'object' &&
+          o.buf &&
+          o.buf instanceof ArrayBuffer &&
+          typeof o.len === 'number');
+}
+/*
+  a heap object rep is either an object or an unboxed heap object
+
+  unboxed heap objects store evaluated values of type 'number' or 'boolean'
+  without wrapping them in a normal heap object. this is only done for
+  data types with a single constructor and a single field of an appropriate type
+ */
+function h$verify_rep_heapobj(o) {
+  // possibly an unlifted rts object
+  // XXX: we should do a different check for these
+  if(h$verify_rep_is_rtsobj(o)) return;
+  // unboxed rep
+  if(typeof o === 'number' || typeof o === 'boolean') return;
+  // boxed rep
+  if(typeof o === 'object' &&
+     o &&
+     typeof o.f === 'function' &&
+     typeof o.f.a === 'number' &&
+     (typeof o.m === 'number' || (typeof o.m === 'object' && o.m))
+   ) return;
+  throw new Error("invalid heapobj rep " + h$show_val(o));
+}
+/*
+   an addr rep is a data object and an integer offset
+ */
+function h$verify_rep_addr(v, o) {
+  if(typeof o === 'number' &&
+     (o|0) === o &&
+     // o        >=  0        && // XXX we could treat it as unsigned, should we?
+     typeof v === 'object'
+    ) return;
+  throw new Error("invalid addr rep " + h$show_val(v) + " " + o);
+}
+/*
+   v must be a value of type tc that can be matched
+ */
+function h$verify_match_alg(tc, v) {
+  if(typeof v === 'boolean') {
+    if(tc === "ghc-prim:GHC.Types.Bool") return;
+    throw new Error("invalid pattern match boolean rep " + tc);
+  } else if(typeof v === 'number') {
+    // h$log("h$verify_match_alg number: " + tc);
+    return;
+  } else if(typeof v === 'object') {
+    // h$log("verify_match_alg_obj: " + tc);
+    if(!(typeof v.f === 'function' &&
+         typeof v.f.a === 'number' &&
+         typeof v.f.t === 'number' &&
+         v.f.t === 2 /// con
+       )) {
+         throw new Error("not a data constructor " + tc + ": " + h$show_val(v));
+    }
+    // XXX add check for the type
+    return;
+  }
+  throw new Error("invalid pattern match rep " + tc + ": " + h$show_val(v));
+}
+/*
+   debug show object
+ */
+function h$show_val(o) {
+  if(typeof o === 'undefined') return '<undefined>'
+  if(o === null) return '<null>'
+  if(typeof o !== 'object') return '[' + (typeof o) + ': ' + o + ']'
+  return '' + o + ' [' + o.constructor.name + '] ' + h$collectProps(o);
 }
 function h$c(f)
 {
@@ -13064,7 +13718,7 @@ function h$printReg(h$RTS_90)
           var h$RTS_91 = "";
           if(((h$RTS_90.f.n === "integer-gmp:GHC.Integer.Type.Jp#") || (h$RTS_90.f.n === "integer-gmp:GHC.Integer.Type.Jn#")))
           {
-            h$RTS_91 = ((((" [" + h$RTS_90.d1.join(",")) + "](") + h$ghcjsbn_tmp_toJSBN(h$RTS_90.d1).toString()) + ")");
+            h$RTS_91 = ((((" [" + h$RTS_90.d1.join(",")) + "](") + h$ghcjsbn_showBase(h$RTS_90.d1, 10)) + ")");
           }
           else
           {
@@ -19465,116 +20119,110 @@ function h$flushStdout_e()
 h$o(h$flushStdout_e, 0, 0, 0, 0, null);
 var h$flushStdout = h$static_thunk(h$flushStdout_e);
 var h$RTS_596 = new Date();
-function h$dumpRes(h$RTS_597)
+function h$ascii(h$RTS_597)
 {
-  h$printcl(h$RTS_597);
-  var h$RTS_598 = new Date();
-  h$log((("elapsed time: " + (h$RTS_598.getTime() - h$RTS_596.getTime())) + "ms"));
-};
-function h$ascii(h$RTS_599)
-{
-  var h$RTS_600 = [];
-  for(var h$RTS_601 = 0;(h$RTS_601 < h$RTS_599.length);(h$RTS_601++)) {
-    h$RTS_600.push(h$RTS_599.charCodeAt(h$RTS_601));
+  var h$RTS_598 = [];
+  for(var h$RTS_599 = 0;(h$RTS_599 < h$RTS_597.length);(h$RTS_599++)) {
+    h$RTS_598.push(h$RTS_597.charCodeAt(h$RTS_599));
   };
-  h$RTS_600.push(0);
-  return h$RTS_600;
+  h$RTS_598.push(0);
+  return h$RTS_598;
 };
-function h$dumpStackTop(h$RTS_602, h$RTS_603, h$RTS_604)
+function h$dumpStackTop(h$RTS_600, h$RTS_601, h$RTS_602)
 {
-  h$RTS_603 = Math.max(h$RTS_603, 0);
-  for(var h$RTS_605 = h$RTS_603;(h$RTS_605 <= h$RTS_604);(h$RTS_605++)) {
-    var h$RTS_606 = h$RTS_602[h$RTS_605];
-    if((h$RTS_606 && h$RTS_606.n))
+  h$RTS_601 = Math.max(h$RTS_601, 0);
+  for(var h$RTS_603 = h$RTS_601;(h$RTS_603 <= h$RTS_602);(h$RTS_603++)) {
+    var h$RTS_604 = h$RTS_600[h$RTS_603];
+    if((h$RTS_604 && h$RTS_604.n))
     {
-      h$log(((("stack[" + h$RTS_605) + "] = ") + h$RTS_606.n));
+      h$log(((("stack[" + h$RTS_603) + "] = ") + h$RTS_604.n));
     }
     else
     {
-      if((h$RTS_606 === null))
+      if((h$RTS_604 === null))
       {
-        h$log((("stack[" + h$RTS_605) + "] = null WARNING DANGER"));
+        h$log((("stack[" + h$RTS_603) + "] = null WARNING DANGER"));
       }
       else
       {
-        if((((((typeof h$RTS_606 === "object") && (h$RTS_606 !== null)) && h$RTS_606.hasOwnProperty("f")) && h$RTS_606.
-        hasOwnProperty("d1")) && h$RTS_606.hasOwnProperty("d2")))
+        if((((((typeof h$RTS_604 === "object") && (h$RTS_604 !== null)) && h$RTS_604.hasOwnProperty("f")) && h$RTS_604.
+        hasOwnProperty("d1")) && h$RTS_604.hasOwnProperty("d2")))
         {
-          if((typeof h$RTS_606.f !== "function"))
+          if((typeof h$RTS_604.f !== "function"))
           {
-            h$log((("stack[" + h$RTS_605) + "] = WARNING: dodgy object"));
+            h$log((("stack[" + h$RTS_603) + "] = WARNING: dodgy object"));
           }
           else
           {
-            if((h$RTS_606.d1 === undefined))
+            if((h$RTS_604.d1 === undefined))
             {
-              h$log((("WARNING: stack[" + h$RTS_605) + "] d1 undefined"));
+              h$log((("WARNING: stack[" + h$RTS_603) + "] d1 undefined"));
             };
-            if((h$RTS_606.d2 === undefined))
+            if((h$RTS_604.d2 === undefined))
             {
-              h$log((("WARNING: stack[" + h$RTS_605) + "] d2 undefined"));
+              h$log((("WARNING: stack[" + h$RTS_603) + "] d2 undefined"));
             };
-            if(((((h$RTS_606.f.t === 5) && h$RTS_606.d1) && h$RTS_606.d1.x1) && h$RTS_606.d1.x1.n))
+            if(((((h$RTS_604.f.t === 5) && h$RTS_604.d1) && h$RTS_604.d1.x1) && h$RTS_604.d1.x1.n))
             {
-              h$log(((("stack[" + h$RTS_605) + "] = blackhole -> ") + h$RTS_606.d1.x1.n));
+              h$log(((("stack[" + h$RTS_603) + "] = blackhole -> ") + h$RTS_604.d1.x1.n));
             }
             else
             {
-              var h$RTS_607 = "";
-              if(((h$RTS_606.f.n === "integer-gmp:GHC.Integer.Type.Jp#") || (h$RTS_606.f.n === "integer-gmp:GHC.Integer.Type.Jn#")))
+              var h$RTS_605 = "";
+              if(((h$RTS_604.f.n === "integer-gmp:GHC.Integer.Type.Jp#") || (h$RTS_604.f.n === "integer-gmp:GHC.Integer.Type.Jn#")))
               {
-                h$RTS_607 = ((((" [" + h$RTS_606.d1.join(",")) + "](") + h$ghcjsbn_tmp_toJSBN(h$RTS_606.d1).toString()) + ")");
+                h$RTS_605 = ((((" [" + h$RTS_604.d1.join(",")) + "](") + h$ghcjsbn_showBase(h$RTS_604.d1, 10)) + ")");
               }
               else
               {
-                if((h$RTS_606.f.n === "integer-gmp:GHC.Integer.Type.S#"))
+                if((h$RTS_604.f.n === "integer-gmp:GHC.Integer.Type.S#"))
                 {
-                  h$RTS_607 = ((" (S: " + h$RTS_606.d1) + ")");
+                  h$RTS_605 = ((" (S: " + h$RTS_604.d1) + ")");
                 };
               };
-              h$log((((((((((("stack[" + h$RTS_605) + "] = -> ") + (h$RTS_606.alloc ? (h$RTS_606.alloc + ": ") : "")) + h$RTS_606.f.
-              n) + " (") + h$closureTypeName(h$RTS_606.f.t)) + ", a: ") + h$RTS_606.f.a) + ")") + h$RTS_607));
+              h$log((((((((((("stack[" + h$RTS_603) + "] = -> ") + (h$RTS_604.alloc ? (h$RTS_604.alloc + ": ") : "")) + h$RTS_604.f.
+              n) + " (") + h$closureTypeName(h$RTS_604.f.t)) + ", a: ") + h$RTS_604.f.a) + ")") + h$RTS_605));
             };
           };
         }
         else
         {
-          if(h$isInstanceOf(h$RTS_606, h$MVar))
+          if(h$isInstanceOf(h$RTS_604, h$MVar))
           {
-            var h$RTS_608 = ((h$RTS_606.val === null) ? " empty" : (" value -> " + ((typeof h$RTS_606.
-            val === "object") ? (((((h$RTS_606.val.f.n + " (") + h$closureTypeName(h$RTS_606.val.f.t)) + ", a: ") + h$RTS_606.val.f.
-            a) + ")") : h$RTS_606.val)));
-            h$log(((("stack[" + h$RTS_605) + "] = MVar ") + h$RTS_608));
+            var h$RTS_606 = ((h$RTS_604.val === null) ? " empty" : (" value -> " + ((typeof h$RTS_604.
+            val === "object") ? (((((h$RTS_604.val.f.n + " (") + h$closureTypeName(h$RTS_604.val.f.t)) + ", a: ") + h$RTS_604.val.f.
+            a) + ")") : h$RTS_604.val)));
+            h$log(((("stack[" + h$RTS_603) + "] = MVar ") + h$RTS_606));
           }
           else
           {
-            if(h$isInstanceOf(h$RTS_606, h$MutVar))
+            if(h$isInstanceOf(h$RTS_604, h$MutVar))
             {
-              h$log(((("stack[" + h$RTS_605) + "] = IORef -> ") + ((typeof h$RTS_606.val === "object") ? (((((h$RTS_606.val.f.
-              n + " (") + h$closureTypeName(h$RTS_606.val.f.t)) + ", a: ") + h$RTS_606.val.f.a) + ")") : h$RTS_606.val)));
+              h$log(((("stack[" + h$RTS_603) + "] = IORef -> ") + ((typeof h$RTS_604.val === "object") ? (((((h$RTS_604.val.f.
+              n + " (") + h$closureTypeName(h$RTS_604.val.f.t)) + ", a: ") + h$RTS_604.val.f.a) + ")") : h$RTS_604.val)));
             }
             else
             {
-              if(Array.isArray(h$RTS_606))
+              if(Array.isArray(h$RTS_604))
               {
-                h$log(((("stack[" + h$RTS_605) + "] = ") + (("[" + h$RTS_606.join(",")) + "]").substring(0, 50)));
+                h$log(((("stack[" + h$RTS_603) + "] = ") + (("[" + h$RTS_604.join(",")) + "]").substring(0, 50)));
               }
               else
               {
-                if((typeof h$RTS_606 === "object"))
+                if((typeof h$RTS_604 === "object"))
                 {
-                  h$log(((("stack[" + h$RTS_605) + "] = ") + h$collectProps(h$RTS_606).substring(0, 50)));
+                  h$log(((("stack[" + h$RTS_603) + "] = ") + h$collectProps(h$RTS_604).substring(0, 50)));
                 }
                 else
                 {
-                  if((typeof h$RTS_606 === "function"))
+                  if((typeof h$RTS_604 === "function"))
                   {
-                    var h$RTS_609 = new RegExp("([^\\n]+)\\n(.|\\n)*");
-                    h$log(((("stack[" + h$RTS_605) + "] = ") + ("" + h$RTS_606).substring(0, 50).replace(h$RTS_609, "$1")));
+                    var h$RTS_607 = new RegExp("([^\\n]+)\\n(.|\\n)*");
+                    h$log(((("stack[" + h$RTS_603) + "] = ") + ("" + h$RTS_604).substring(0, 50).replace(h$RTS_607, "$1")));
                   }
                   else
                   {
-                    h$log(((("stack[" + h$RTS_605) + "] = ") + ("" + h$RTS_606).substring(0, 50)));
+                    h$log(((("stack[" + h$RTS_603) + "] = ") + ("" + h$RTS_604).substring(0, 50)));
                   };
                 };
               };
@@ -19585,132 +20233,132 @@ function h$dumpStackTop(h$RTS_602, h$RTS_603, h$RTS_604)
     };
   };
 };
-function h$checkObj(h$RTS_610)
+function h$checkObj(h$RTS_608)
 {
-  if(((typeof h$RTS_610 === "boolean") || (typeof h$RTS_610 === "number")))
+  if(((typeof h$RTS_608 === "boolean") || (typeof h$RTS_608 === "number")))
   {
     return undefined;
   };
-  if(((((!h$RTS_610.hasOwnProperty("f") || (h$RTS_610.f === null)) || (h$RTS_610.f === undefined)) || (h$RTS_610.f.
-  a === undefined)) || (typeof h$RTS_610.f !== "function")))
+  if(((((!h$RTS_608.hasOwnProperty("f") || (h$RTS_608.f === null)) || (h$RTS_608.f === undefined)) || (h$RTS_608.f.
+  a === undefined)) || (typeof h$RTS_608.f !== "function")))
   {
     h$log("h$checkObj: WARNING, something wrong with f:");
-    h$log(("" + h$RTS_610).substring(0, 200));
-    h$log(h$collectProps(h$RTS_610));
-    h$log(typeof h$RTS_610.f);
+    h$log(("" + h$RTS_608).substring(0, 200));
+    h$log(h$collectProps(h$RTS_608));
+    h$log(typeof h$RTS_608.f);
   };
-  if((!h$RTS_610.hasOwnProperty("d1") || (h$RTS_610.d1 === undefined)))
+  if((!h$RTS_608.hasOwnProperty("d1") || (h$RTS_608.d1 === undefined)))
   {
     h$log("h$checkObj: WARNING, something wrong with d1:");
-    h$log(("" + h$RTS_610).substring(0, 200));
+    h$log(("" + h$RTS_608).substring(0, 200));
   }
   else
   {
-    if((!h$RTS_610.hasOwnProperty("d2") || (h$RTS_610.d2 === undefined)))
+    if((!h$RTS_608.hasOwnProperty("d2") || (h$RTS_608.d2 === undefined)))
     {
       h$log("h$checkObj: WARNING, something wrong with d2:");
-      h$log(("" + h$RTS_610).substring(0, 200));
+      h$log(("" + h$RTS_608).substring(0, 200));
     }
     else
     {
-      if((((h$RTS_610.d2 !== null) && (typeof h$RTS_610.d2 === "object")) && (h$RTS_610.f.size !== 2)))
+      if((((h$RTS_608.d2 !== null) && (typeof h$RTS_608.d2 === "object")) && (h$RTS_608.f.size !== 2)))
       {
-        var h$RTS_611 = h$RTS_610.d2;
-        var h$RTS_612;
-        for(h$RTS_612 in h$RTS_611)
+        var h$RTS_609 = h$RTS_608.d2;
+        var h$RTS_610;
+        for(h$RTS_610 in h$RTS_609)
         {
-          if(h$RTS_611.hasOwnProperty(h$RTS_612))
+          if(h$RTS_609.hasOwnProperty(h$RTS_610))
           {
-            if((h$RTS_612.substring(0, 1) != "d"))
+            if((h$RTS_610.substring(0, 1) != "d"))
             {
-              h$log(("h$checkObj: WARNING, unexpected field name: " + h$RTS_612));
-              h$log(("" + h$RTS_610).substring(0, 200));
+              h$log(("h$checkObj: WARNING, unexpected field name: " + h$RTS_610));
+              h$log(("" + h$RTS_608).substring(0, 200));
             };
-            if((h$RTS_611[h$RTS_612] === undefined))
+            if((h$RTS_609[h$RTS_610] === undefined))
             {
-              h$log(("h$checkObj: WARNING, undefined field detected: " + h$RTS_612));
-              h$log(("" + h$RTS_610).substring(0, 200));
+              h$log(("h$checkObj: WARNING, undefined field detected: " + h$RTS_610));
+              h$log(("" + h$RTS_608).substring(0, 200));
             };
           };
         };
-        switch (h$RTS_610.f.size)
+        switch (h$RTS_608.f.size)
         {
           case (6):
-            if((h$RTS_611.d5 === undefined))
+            if((h$RTS_609.d5 === undefined))
             {
               h$log("h$checkObj: WARNING, undefined field detected: d5");
             };
           case (5):
-            if((h$RTS_611.d4 === undefined))
+            if((h$RTS_609.d4 === undefined))
             {
               h$log("h$checkObj: WARNING, undefined field detected: d4");
             };
           case (4):
-            if((h$RTS_611.d3 === undefined))
+            if((h$RTS_609.d3 === undefined))
             {
               h$log("h$checkObj: WARNING, undefined field detected: d3");
             };
           case (3):
-            if((h$RTS_611.d2 === undefined))
+            if((h$RTS_609.d2 === undefined))
             {
               h$log("h$checkObj: WARNING, undefined field detected: d2");
             };
-            if((h$RTS_611.d1 === undefined))
+            if((h$RTS_609.d1 === undefined))
             {
               h$log("h$checkObj: WARNING, undefined field detected: d1");
             };
           default:
-            h$RTS_611 = h$RTS_610.d2;
+            h$RTS_609 = h$RTS_608.d2;
         };
       };
     };
   };
 };
-function h$traceForeign(h$RTS_613, h$RTS_614)
+function h$traceForeign(h$RTS_611, h$RTS_612)
 {
   if(true)
   {
     return undefined;
   };
-  var h$RTS_615 = [];
-  for(var h$RTS_616 = 0;(h$RTS_616 < h$RTS_614.length);(h$RTS_616++)) {
-    var h$RTS_617 = h$RTS_614[h$RTS_616];
-    if((h$RTS_617 === null))
+  var h$RTS_613 = [];
+  for(var h$RTS_614 = 0;(h$RTS_614 < h$RTS_612.length);(h$RTS_614++)) {
+    var h$RTS_615 = h$RTS_612[h$RTS_614];
+    if((h$RTS_615 === null))
     {
-      h$RTS_615.push("null");
+      h$RTS_613.push("null");
     }
     else
     {
-      if((typeof h$RTS_617 === "object"))
+      if((typeof h$RTS_615 === "object"))
       {
-        var h$RTS_618 = h$RTS_617.toString();
-        if((h$RTS_618.length > 40))
+        var h$RTS_616 = h$RTS_615.toString();
+        if((h$RTS_616.length > 40))
         {
-          h$RTS_615.push((h$RTS_618.substring(0, 40) + "..."));
+          h$RTS_613.push((h$RTS_616.substring(0, 40) + "..."));
         }
         else
         {
-          h$RTS_615.push(h$RTS_618);
+          h$RTS_613.push(h$RTS_616);
         };
       }
       else
       {
-        h$RTS_615.push(("" + h$RTS_617));
+        h$RTS_613.push(("" + h$RTS_615));
       };
     };
   };
-  h$log((((("ffi: " + h$RTS_613) + "(") + h$RTS_615.join(",")) + ")"));
+  h$log((((("ffi: " + h$RTS_611) + "(") + h$RTS_613.join(",")) + ")"));
 };
 function h$restoreThread()
 {
-  var h$RTS_619 = h$stack[(h$sp - 2)];
-  var h$RTS_620 = h$stack[(h$sp - 1)];
-  var h$RTS_621 = (h$RTS_620 - 3);
-  for(var h$RTS_622 = 1;(h$RTS_622 <= h$RTS_621);(h$RTS_622++)) {
-    h$setReg(h$RTS_622, h$stack[((h$sp - 2) - h$RTS_622)]);
+  var h$RTS_617 = h$stack[(h$sp - 2)];
+  var h$RTS_618 = h$stack[(h$sp - 1)];
+  var h$RTS_619 = (h$RTS_618 - 3);
+  for(var h$RTS_620 = 1;(h$RTS_620 <= h$RTS_619);(h$RTS_620++)) {
+    h$setReg(h$RTS_620, h$stack[((h$sp - 2) - h$RTS_620)]);
   };
-  h$sp -= h$RTS_620;
-  return h$RTS_619;
+  h$sp -= h$RTS_618;
+  return h$RTS_617;
 };
 h$o(h$restoreThread, (-1), 0, (-1), 0, null);
 function h$return()
@@ -19722,9 +20370,9 @@ function h$return()
 h$o(h$return, (-1), 0, 1, 0, null);
 function h$returnf()
 {
-  var h$RTS_623 = h$stack[(h$sp - 1)];
+  var h$RTS_621 = h$stack[(h$sp - 1)];
   h$sp -= 2;
-  return h$RTS_623;
+  return h$RTS_621;
 };
 h$o(h$returnf, (-1), 0, 1, 256, null);
 function h$reschedule()
@@ -19732,49 +20380,49 @@ function h$reschedule()
   return h$reschedule;
 };
 h$o(h$reschedule, 0, 0, 0, 0, null);
-function h$suspendCurrentThread(h$RTS_624)
+function h$suspendCurrentThread(h$RTS_622)
 {
-  if((h$RTS_624 === h$reschedule))
+  if((h$RTS_622 === h$reschedule))
   {
     throw("suspend called with h$reschedule");
   };
-  if((h$RTS_624.t === (-1)))
+  if((h$RTS_622.t === (-1)))
   {
-    h$stack[h$sp] = h$RTS_624;
+    h$stack[h$sp] = h$RTS_622;
   };
-  if(((h$stack[h$sp] === h$restoreThread) || (h$RTS_624 === h$return)))
+  if(((h$stack[h$sp] === h$restoreThread) || (h$RTS_622 === h$return)))
   {
     h$currentThread.sp = h$sp;
     return undefined;
   };
-  var h$RTS_625;
-  var h$RTS_626 = 0;
-  var h$RTS_627 = h$RTS_624.t;
-  if((h$RTS_627 === 3))
+  var h$RTS_623;
+  var h$RTS_624 = 0;
+  var h$RTS_625 = h$RTS_622.t;
+  if((h$RTS_625 === 3))
   {
-    h$RTS_625 = ((h$r1.d2.d1 >> 8) + 1);
+    h$RTS_623 = ((h$r1.d2.d1 >> 8) + 1);
   }
   else
   {
-    if(((h$RTS_627 === 1) || (h$RTS_627 === (-1))))
+    if(((h$RTS_625 === 1) || (h$RTS_625 === (-1))))
     {
-      h$RTS_625 = (h$RTS_624.r >> 8);
-      h$RTS_626 = (h$RTS_624.r & 255);
+      h$RTS_623 = (h$RTS_622.r >> 8);
+      h$RTS_624 = (h$RTS_622.r & 255);
     }
     else
     {
-      h$RTS_625 = 1;
+      h$RTS_623 = 1;
     };
   };
-  h$sp = (((h$sp + h$RTS_625) + h$RTS_626) + 3);
-  for(var h$RTS_628 = 1;(h$RTS_628 <= h$RTS_626);(h$RTS_628++)) {
-    h$stack[((h$sp - 2) - h$RTS_628)] = null;
+  h$sp = (((h$sp + h$RTS_623) + h$RTS_624) + 3);
+  for(var h$RTS_626 = 1;(h$RTS_626 <= h$RTS_624);(h$RTS_626++)) {
+    h$stack[((h$sp - 2) - h$RTS_626)] = null;
   };
-  for(h$RTS_628 = (h$RTS_626 + 1);(h$RTS_628 <= (h$RTS_625 + h$RTS_626));(h$RTS_628++)) {
-    h$stack[((h$sp - 2) - h$RTS_628)] = h$getReg(h$RTS_628);
+  for(h$RTS_626 = (h$RTS_624 + 1);(h$RTS_626 <= (h$RTS_623 + h$RTS_624));(h$RTS_626++)) {
+    h$stack[((h$sp - 2) - h$RTS_626)] = h$getReg(h$RTS_626);
   };
-  h$stack[(h$sp - 2)] = h$RTS_624;
-  h$stack[(h$sp - 1)] = ((h$RTS_625 + h$RTS_626) + 3);
+  h$stack[(h$sp - 2)] = h$RTS_622;
+  h$stack[(h$sp - 1)] = ((h$RTS_623 + h$RTS_624) + 3);
   h$stack[h$sp] = h$restoreThread;
   h$currentThread.sp = h$sp;
 };
@@ -19797,8 +20445,8 @@ function h$dumpRes()
   };
   if(h$r1.f)
   {
-    var h$RTS_629 = new RegExp("([^\\n]+)\\n(.|\\n)*");
-    h$log(("function: " + ("" + h$r1.f).substring(0, 50).replace(h$RTS_629, "$1")));
+    var h$RTS_627 = new RegExp("([^\\n]+)\\n(.|\\n)*");
+    h$log(("function: " + ("" + h$r1.f).substring(0, 50).replace(h$RTS_627, "$1")));
   };
   h$sp -= 2;
   return h$stack[h$sp];
@@ -19806,12 +20454,12 @@ function h$dumpRes()
 h$o(h$dumpRes, 0, 0, 1, 256, null);
 function h$resume_e()
 {
-  var h$RTS_630 = h$r1.d1;
+  var h$RTS_628 = h$r1.d1;
   h$bh();
-  for(var h$RTS_631 = 0;(h$RTS_631 < h$RTS_630.length);(h$RTS_631++)) {
-    h$stack[((h$sp + 1) + h$RTS_631)] = h$RTS_630[h$RTS_631];
+  for(var h$RTS_629 = 0;(h$RTS_629 < h$RTS_628.length);(h$RTS_629++)) {
+    h$stack[((h$sp + 1) + h$RTS_629)] = h$RTS_628[h$RTS_629];
   };
-  h$sp += h$RTS_630.length;
+  h$sp += h$RTS_628.length;
   h$r1 = null;
   return h$stack[h$sp];
 };
@@ -19847,9 +20495,9 @@ function h$maskUnintFrame()
 h$o(h$maskUnintFrame, (-1), 0, 0, 256, null);
 function h$unboxFFIResult()
 {
-  var h$RTS_632 = h$r1.d1;
-  for(var h$RTS_633 = 0;(h$RTS_633 < h$RTS_632.length);(h$RTS_633++)) {
-    h$setReg((h$RTS_633 + 1), h$RTS_632[h$RTS_633]);
+  var h$RTS_630 = h$r1.d1;
+  for(var h$RTS_631 = 0;(h$RTS_631 < h$RTS_630.length);(h$RTS_631++)) {
+    h$setReg((h$RTS_631 + 1), h$RTS_630[h$RTS_631]);
   };
   --h$sp;
   return h$stack[h$sp];
@@ -19863,9 +20511,9 @@ function h$unbox_e()
 h$o(h$unbox_e, 0, 0, 1, 256, null);
 function h$retryInterrupted()
 {
-  var h$RTS_634 = h$stack[(h$sp - 1)];
+  var h$RTS_632 = h$stack[(h$sp - 1)];
   h$sp -= 2;
-  return h$RTS_634[0].apply(this, h$RTS_634.slice(1));
+  return h$RTS_632[0].apply(this, h$RTS_632.slice(1));
 };
 h$o(h$retryInterrupted, (-1), 0, 1, 256, null);
 function h$atomically_e()
@@ -19892,23 +20540,23 @@ function h$checkInvariants_e()
 h$o(h$checkInvariants_e, (-1), 0, 0, 256, null);
 function h$stmCheckInvariantStart_e()
 {
-  var h$RTS_635 = h$stack[(h$sp - 2)];
-  var h$RTS_636 = h$stack[(h$sp - 1)];
-  var h$RTS_637 = h$currentThread.mask;
+  var h$RTS_633 = h$stack[(h$sp - 2)];
+  var h$RTS_634 = h$stack[(h$sp - 1)];
+  var h$RTS_635 = h$currentThread.mask;
   h$sp -= 3;
-  var h$RTS_638 = new h$Transaction(h$RTS_636.action, h$RTS_635);
-  h$RTS_638.checkRead = new h$Set();
-  h$currentThread.transaction = h$RTS_638;
-  h$p4(h$RTS_638, h$RTS_637, h$stmInvariantViolatedHandler, h$catchStm_e);
-  h$r1 = h$RTS_636.action;
+  var h$RTS_636 = new h$Transaction(h$RTS_634.action, h$RTS_633);
+  h$RTS_636.checkRead = new h$Set();
+  h$currentThread.transaction = h$RTS_636;
+  h$p4(h$RTS_636, h$RTS_635, h$stmInvariantViolatedHandler, h$catchStm_e);
+  h$r1 = h$RTS_634.action;
   return h$ap_1_0_fast();
 };
 h$o(h$stmCheckInvariantStart_e, (-1), 0, 2, 0, null);
 function h$stmCheckInvariantResult_e()
 {
-  var h$RTS_639 = h$stack[(h$sp - 1)];
+  var h$RTS_637 = h$stack[(h$sp - 1)];
   h$sp -= 2;
-  h$stmUpdateInvariantDependencies(h$RTS_639);
+  h$stmUpdateInvariantDependencies(h$RTS_637);
   h$stmAbortTransaction();
   return h$stack[h$sp];
 };
@@ -19919,9 +20567,9 @@ function h$stmInvariantViolatedHandler_e()
   {
     throw("h$stmInvariantViolatedHandler_e: unexpected value on stack");
   };
-  var h$RTS_640 = h$stack[(h$sp - 1)];
+  var h$RTS_638 = h$stack[(h$sp - 1)];
   h$sp -= 2;
-  h$stmUpdateInvariantDependencies(h$RTS_640);
+  h$stmUpdateInvariantDependencies(h$RTS_638);
   h$stmAbortTransaction();
   return h$throw(h$r2, false);
 };
@@ -19946,19 +20594,19 @@ function h$stmResumeRetry_e()
   {
     throw("h$stmResumeRetry_e: unexpected value on stack");
   };
-  var h$RTS_641 = h$stack[(h$sp - 1)];
+  var h$RTS_639 = h$stack[(h$sp - 1)];
   h$sp -= 2;
   ++h$sp;
   h$stack[h$sp] = h$checkInvariants_e;
-  h$stmRemoveBlockedThread(h$RTS_641, h$currentThread);
+  h$stmRemoveBlockedThread(h$RTS_639, h$currentThread);
   return h$stmStartTransaction(h$stack[(h$sp - 2)]);
 };
 h$o(h$stmResumeRetry_e, (-1), 0, 0, 256, null);
 function h$lazy_e()
 {
-  var h$RTS_642 = h$r1.d1();
+  var h$RTS_640 = h$r1.d1();
   h$bh();
-  h$r1 = h$RTS_642;
+  h$r1 = h$RTS_640;
   return h$stack[h$sp];
 };
 h$o(h$lazy_e, 0, 0, 0, 256, null);

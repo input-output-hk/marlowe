@@ -1,4 +1,4 @@
-module Marlowe(Value(..), Observation(..), Contract(..), Person, Random, BlockNumber, Cash, ConcreteChoice, Timeout, IdentCC(..), IdentChoice(..), IdentPay(..), prettyPrintContract) where
+module Marlowe(Money(..), Observation(..), Contract(..), Person, Random, BlockNumber, Cash, ConcreteChoice, Timeout, IdentCC(..), IdentChoice(..), IdentPay(..), prettyPrintContract) where
 
 -- Standard library functions
 
@@ -64,21 +64,21 @@ newtype IdentChoice = IdentChoice Int
 newtype IdentPay = IdentPay Int
                deriving (Eq)
 
--- Value is a set of contract primitives that represent constants,
+-- Money is a set of contract primitives that represent constants,
 -- functions, and variables that can be evaluated as an ammount
 -- of money.
 
-data Value = Committed IdentCC |
-             AddValue Value Value |
-             Value Cash |
-             ValueFromChoice IdentChoice Person Value
+data Money = AvailableMoney IdentCC |
+             AddMoney Money Money |
+             ConstMoney Cash |
+             MoneyFromChoice IdentChoice Person Money
                     deriving (Eq)
 
-showValue :: Value -> String
-showValue (Committed (IdentCC icc)) = "(Committed (IdentCC " ++ show icc ++ "))"
-showValue (AddValue m1 m2) = "(AddValue " ++ showValue m1 ++ " " ++ showValue m2 ++ ")"
-showValue (Value cash) = "(Value " ++ show cash ++ ")"
-showValue (ValueFromChoice (IdentChoice ic) p m) = "(ValueFromChoice (IdentChoice " ++ show ic ++ ") " ++ show p ++ " " ++ showValue m ++ ")"
+showMoney :: Money -> String
+showMoney (AvailableMoney (IdentCC icc)) = "(AvailableMoney (IdentCC " ++ show icc ++ "))"
+showMoney (AddMoney m1 m2) = "(AddMoney " ++ showMoney m1 ++ " " ++ showMoney m2 ++ ")"
+showMoney (ConstMoney cash) = "(ConstMoney " ++ show cash ++ ")"
+showMoney (MoneyFromChoice (IdentChoice ic) p m) = "(MoneyFromChoice (IdentChoice " ++ show ic ++ ") " ++ show p ++ " " ++ showMoney m ++ ")"
 
 -- Representation of observations over observables and the state.
 -- Rendered into predicates by interpretObs.
@@ -89,7 +89,7 @@ data Observation =  BelowTimeout Timeout | -- are we still on time for something
                     NotObs Observation |
                     PersonChoseThis IdentChoice Person ConcreteChoice |
                     PersonChoseSomething IdentChoice Person |
-                    ValueGE Value Value | -- is first ammount is greater or equal than the second?
+                    ValueGE Money Money | -- is first ammount is greater or equal than the second?
                     TrueObs | FalseObs
                     deriving (Eq)
 
@@ -100,7 +100,7 @@ showObservation (OrObs obs1 obs2) = "(OrObs " ++ (showObservation obs1) ++ " " +
 showObservation (NotObs obs) = "(NotObs " ++ (showObservation obs) ++ ")"
 showObservation (PersonChoseThis (IdentChoice ic) per cho) = "(PersonChoseThis (IdentChoice " ++ (show ic) ++ ") " ++ (show per) ++ " " ++ (show cho) ++ ")"
 showObservation (PersonChoseSomething (IdentChoice ic) per) = "(PersonChoseSomething (IdentChoice " ++ (show ic) ++ ") " ++ (show per) ++ ")"
-showObservation (ValueGE m1 m2) = "(ValueGE " ++ (showValue m1) ++ " " ++ (showValue m2) ++ ")"
+showObservation (ValueGE m1 m2) = "(ValueGE " ++ (showMoney m1) ++ " " ++ (showMoney m2) ++ ")"
 showObservation TrueObs = "TrueObs"
 showObservation FalseObs = "FalseObs"
  
@@ -108,18 +108,18 @@ showObservation FalseObs = "FalseObs"
 
 data Contract =
     Null |
-    CommitCash IdentCC Person Value Timeout Timeout Contract Contract |
+    CommitCash IdentCC Person Money Timeout Timeout Contract Contract |
     RedeemCC IdentCC Contract |
-    Pay IdentPay Person Person Value Timeout Contract |
+    Pay IdentPay Person Person Money Timeout Contract |
     Both Contract Contract |
     Choice Observation Contract Contract |
     When Observation Timeout Contract Contract
                deriving (Eq)
 
 showContract Null = "Null"
-showContract (CommitCash (IdentCC idc) per mon tim1 tim2 con1 con2) = "(CommitCash (IdentCC " ++ (show idc) ++ ") " ++ (show per) ++ " " ++ (showValue mon) ++ " " ++ (show tim1) ++ " " ++ (show tim2) ++ " " ++ (showContract con1) ++ " " ++ (showContract con2) ++ ")"
+showContract (CommitCash (IdentCC idc) per mon tim1 tim2 con1 con2) = "(CommitCash (IdentCC " ++ (show idc) ++ ") " ++ (show per) ++ " " ++ (showMoney mon) ++ " " ++ (show tim1) ++ " " ++ (show tim2) ++ " " ++ (showContract con1) ++ " " ++ (showContract con2) ++ ")"
 showContract (RedeemCC (IdentCC idc) con) = "(RedeemCC (IdentCC " ++ (show idc) ++ ") " ++ (showContract con) ++ ")"
-showContract (Pay (IdentPay idp) per1 per2 mon tim con) = "(Pay (IdentPay " ++ (show idp) ++ ") " ++ (show per1) ++ " " ++ (show per2) ++ " " ++ (showValue mon) ++ " " ++ (show tim) ++ " " ++ (showContract con) ++ ")"
+showContract (Pay (IdentPay idp) per1 per2 mon tim con) = "(Pay (IdentPay " ++ (show idp) ++ ") " ++ (show per1) ++ " " ++ (show per2) ++ " " ++ (showMoney mon) ++ " " ++ (show tim) ++ " " ++ (showContract con) ++ ")"
 showContract (Both con1 con2) = "(Both " ++ (showContract con1) ++ " " ++ (showContract con2) ++ ")"
 showContract (Choice obs con1 con2) = "(Choice " ++ (showObservation obs) ++ " " ++ (showContract con1) ++ " " ++ (showContract con2) ++ ")"
 showContract (When obs tim con1 con2) = "(When " ++ (showObservation obs) ++ " " ++ (show tim) ++ " " ++ (showContract con1) ++ " " ++ (showContract con2) ++ ")"
@@ -131,21 +131,21 @@ showContract (When obs tim con1 con2) = "(When " ++ (showObservation obs) ++ " "
 
 data ASTNode = ASTNodeC Contract
              | ASTNodeO Observation
-             | ASTNodeM Value
+             | ASTNodeM Money
              | ASTNodeCC IdentCC
              | ASTNodeIC IdentChoice
              | ASTNodeIP IdentPay
              | ASTNodeI Int
 
 listCurryType :: ASTNode -> (String, [ASTNode])
-listCurryType (ASTNodeM (Committed identCC))
- = ("Committed", [ASTNodeCC identCC])
-listCurryType (ASTNodeM (AddValue money1 money2))
- = ("AddValue", [ASTNodeM money1, ASTNodeM money2])
-listCurryType (ASTNodeM (Value cash))
- = ("Value", [ASTNodeI cash])
-listCurryType (ASTNodeM (ValueFromChoice identChoice person def))
- = ("ValueFromChoice", [ASTNodeIC identChoice, ASTNodeI person, ASTNodeM def])
+listCurryType (ASTNodeM (AvailableMoney identCC))
+ = ("AvailableMoney", [ASTNodeCC identCC])
+listCurryType (ASTNodeM (AddMoney money1 money2))
+ = ("AddMoney", [ASTNodeM money1, ASTNodeM money2])
+listCurryType (ASTNodeM (ConstMoney cash))
+ = ("ConstMoney", [ASTNodeI cash])
+listCurryType (ASTNodeM (MoneyFromChoice identChoice person def))
+ = ("MoneyFromChoice", [ASTNodeIC identChoice, ASTNodeI person, ASTNodeM def])
 listCurryType (ASTNodeO (BelowTimeout timeout))
  = ("BelowTimeout", [ASTNodeI timeout])
 listCurryType (ASTNodeO (AndObs observation1 observation2))

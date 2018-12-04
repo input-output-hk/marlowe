@@ -1,6 +1,6 @@
 module Marlowe(Money(..), Observation(..), Contract(..), Person, Random, BlockNumber, Cash, ConcreteChoice, Timeout, IdentCC(..), IdentChoice(..), IdentPay(..), prettyPrintContract) where
 
-import Data.List (intercalate)
+import Data.List (intercalate, genericReplicate, genericLength)
 
 -- Standard library functions
 
@@ -12,13 +12,13 @@ groupBy eq (x:xs)       =  (x:ys) : groupBy eq zs
  -- People are represented by their public keys,
  -- which in turn are given by integers.
 
-type Key         = Int   -- Public key
+type Key         = Integer   -- Public key
 type Person      = Key
 
 -- Block numbers and random numbers are both integers.
  
-type Random      = Int
-type BlockNumber = Int
+type Random      = Integer
+type BlockNumber = Integer
 
 -- Observables are things which are recorded on the blockchain.
 --  e.g. "a random choice", the value of GBP/BTC exchange rate, …
@@ -44,8 +44,8 @@ showObservable BlockNumber = "BlockNumber"
 -- A cash commitment is an integer (should be positive integer?)
 -- Concrete values are sometimes chosen too: these are integers for the sake of this model.
 
-type Cash     = Int
-type ConcreteChoice = Int
+type Cash     = Integer
+type ConcreteChoice = Integer
 
 -- We need to put timeouts on various operations. These could be some abstract time
 -- domain, but it only really makes sense for these to be block numbers.
@@ -57,13 +57,13 @@ type Timeout = BlockNumber
 -- be generated automatically (and so uniquely); here we simply assume that 
 -- they are unique.
 
-newtype IdentCC = IdentCC Int
+newtype IdentCC = IdentCC Integer
                deriving (Eq)
 
-newtype IdentChoice = IdentChoice Int
+newtype IdentChoice = IdentChoice Integer
                deriving (Eq)
 
-newtype IdentPay = IdentPay Int
+newtype IdentPay = IdentPay Integer
                deriving (Eq)
 
 -- Money is a set of contract primitives that represent constants,
@@ -137,7 +137,7 @@ data ASTNode = ASTNodeC Contract
              | ASTNodeCC IdentCC
              | ASTNodeIC IdentChoice
              | ASTNodeIP IdentPay
-             | ASTNodeI Int
+             | ASTNodeI Integer
 
 listCurryType :: ASTNode -> (String, [ASTNode])
 listCurryType (ASTNodeM (AvailableMoney identCC))
@@ -198,8 +198,8 @@ data NodeType = Trivial (String, [ASTNode])
               | Simple (String, [ASTNode])
               | Complex (String, [ASTNode])
 
-tabulateLine :: Int -> String
-tabulateLine n = replicate n ' '
+tabulateLine :: Integer -> String
+tabulateLine n = genericReplicate n ' '
 
 classify :: ASTNode -> NodeType
 classify x
@@ -218,17 +218,17 @@ noneComplex _ (Complex _)= False
 noneComplex _ _ = True
 
 -- We assume that Simple nodes have Simple or Trivial children
-smartPrettyPrint :: Int -> NodeType -> String
+smartPrettyPrint :: Integer -> NodeType -> String
 smartPrettyPrint _ (Trivial a) = prettyPrint 0 a
 smartPrettyPrint _ (Simple a) = "(" ++ prettyPrint 0 a ++ ")"
 smartPrettyPrint spaces (Complex a) = "(" ++ prettyPrint (spaces + 1) a ++ ")"
 
-prettyPrint :: Int -> (String, [ASTNode]) -> String
+prettyPrint :: Integer -> (String, [ASTNode]) -> String
 prettyPrint _ (name, []) = name
 prettyPrint spaces (name, args) = intercalate "\n" (trivialNames : map (tabulateLine newSpaces ++) others)
   where
     classified = map classify args
-    newSpaces = spaces + length name + 1
+    newSpaces = spaces + genericLength name + 1
     groupedClassified = groupBy noneComplex classified
     trivialNames = unwords (name : map (smartPrettyPrint newSpaces) (head groupedClassified))
     others = map (unwords . map (smartPrettyPrint newSpaces)) (tail groupedClassified)

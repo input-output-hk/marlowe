@@ -144,23 +144,23 @@ set_field_value b n v =
 
 
 -- money to Blockly
-money_to_blockly :: Value -> IO Block
-money_to_blockly (Committed (IdentCC id)) =
-   do tb <- create_block "value_available_money"
-      set_field_value tb "commit_id" id
-      return tb
-money_to_blockly (AddValue v1 v2) =
-   do vb1 <- money_to_blockly v1
-      vb2 <- money_to_blockly v2
-      tb <- create_block "value_add_money"
-      connect_value_as_input "value1" tb vb1
-      connect_value_as_input "value2" tb vb2
-      return tb
-money_to_blockly (Value cv) =
-   do tb <- create_block "value_const_money"
-      set_field_value tb "money" cv
-      return tb
-money_to_blockly (ValueFromChoice (IdentChoice ic) per mon) =
+money_to_blockly :: Money -> IO Block
+money_to_blockly (AvailableMoney (IdentCC id)) =
+  do tb <- create_block "value_available_money"
+     set_field_value tb "commit_id" id
+     return tb
+money_to_blockly (AddMoney v1 v2) =
+  do vb1 <- money_to_blockly v1
+     vb2 <- money_to_blockly v2
+     tb <- create_block "value_add_money"
+     connect_value_as_input "value1" tb vb1
+     connect_value_as_input "value2" tb vb2
+     return tb
+money_to_blockly (ConstMoney cv) =
+  do tb <- create_block "value_const_money"
+     set_field_value tb "money" cv
+     return tb
+money_to_blockly (MoneyFromChoice (IdentChoice ic) per mon) =
   do monb <- money_to_blockly mon
      tb <- create_block "money_from_choice"
      set_field_value tb "choice_id" ic
@@ -456,13 +456,16 @@ execute =
      st <- get_state
      contr <- workspace_to_contract
      blk <- get_blocknum
-     let (nst, ncontr, outp) = stepBlock inp st contr (OS {random = 42, blockNumber = blk}) in do {set_output outp;
+     let (nst, ncontr, outp) = stepBlock inp st contr (OS {random = 42, blockNumber = blk}) in
+       if (areIdentifiersUnique contr) then
+                    (do {set_output outp;
                          code_to_contract ncontr;
                          set_state nst;
                          set_input_text "([], [], [], [])";
                          set_blocknum (blk + 1);
                          c2b;
-                         refreshActions}
+                         refreshActions})
+       else (alert "Badly formed contract: Identifiers are not unique!")
 
 deleteChildNodes :: String -> IO ()
 deleteChildNodes = F.ffi (J.pack "(function (x) { var node = document.getElementById(x); while (node.hasChildNodes()) { node.removeChild(node.lastChild); } })")

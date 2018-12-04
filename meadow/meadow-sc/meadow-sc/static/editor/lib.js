@@ -1,4 +1,4 @@
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -27,9 +27,12 @@
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 /*
    GHCJS bignum library for integer-gmp package
@@ -1150,50 +1153,12 @@ function h$ghcjsbn_showBase_rec(b, base, logBase, pad) {
 }
 // BigNat -> String (decimal)
 function h$ghcjsbn_show(b) {
-  return h$ghcjsbn_showBase(b, 10);
+  throw new Error("show not implemented");
+  // digits =
 }
 // BigNat -> String
 function h$ghcjsbn_showHex(b) {
-  return h$ghcjsbn_showBase(b, 16);
-}
-function h$ghcjsbn_readBigNat(str) {
-  var m = /^\s*(\d+)\s*/.exec(str);
-  if(!m) return [0];
-  return h$ghcjsbn_readBigNatDigits(m[1]);
-}
-// the string may only contain digits
-function h$ghcjsbn_readBigNatDigits(digits) {
-  if(digits.length > 9) {
-    var h = (digits.length / 2)|0,
-        l = digits.substring(0, h),
-        r = digits.substring(h),
-        m = h$ghcjsbn_pow_ww(10, r.length),
-        bl = h$ghcjsbn_readBigNatDigits(l),
-        br = h$ghcjsbn_readBigNatDigits(r);
-    return h$ghcjsbn_add_bb(h$ghcjsbn_mul_bb(bl, m), br);
-  } else {
-    return h$ghcjsbn_mkBigNat_w(parseInt(digits));
-  }
-}
-function h$ghcjsbn_readInteger(str) {
-  var m = /^\s*-?([0-9]+)\s*/.exec(str);
-  if(!m) return null;
-  var digits = m[1];
-  var isNegative = str.indexOf('-') !== -1;
-  if(digits.length <= 9) {
-    if(isNegative) {
-      return (h$c1(h$integerzmgmpZCGHCziIntegerziTypeziSzh_con_e, (-parseInt(digits, 10))));;
-    } else {
-      return (h$c1(h$integerzmgmpZCGHCziIntegerziTypeziSzh_con_e, (parseInt(digits, 10))));;
-    }
-  } else {
-    var bn = h$ghcjsbn_readBigNat(digits);
-    if(isNegative) {
-      return (h$c1(h$integerzmgmpZCGHCziIntegerziTypeziJnzh_con_e, (bn)));;
-    } else {
-      return (h$c1(h$integerzmgmpZCGHCziIntegerziTypeziJpzh_con_e, (bn)));;
-    }
-  }
+  throw new Error("showHex not implemented");
 }
 // s = b[l - 1];
 // normalize a number to length l by stripping unused leading digits
@@ -1730,10 +1695,6 @@ function h$ghcjsbn_index_b(b, w) {
   } */
   h$ghcjsbn_assertValid_w(r, "index_b result");
 }
-// Bool -> BigNat -> Double
-function h$ghcjsbn_toDouble_b(nonNeg, b) {
-  throw new Error("toDouble_b");
-}
 function h$ghcjsbn_byteArrayToBigNat(ba, len) {
   throw new Error("h$ghcjsbn_byteArrayToBigNat not yet implemented");
 }
@@ -1895,7 +1856,7 @@ function h$ghcjsbn_encodeDouble_s(m, e) {
   h$ghcjsbn_assertValid_d(r, "encodeDouble_s result");
   return r;
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -1924,9 +1885,12 @@ function h$ghcjsbn_encodeDouble_s(m, e) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -2007,7 +1971,7 @@ function h$closeWebSocket(status, reason, ws) {
   }
   ws.close(status, reason);
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -2036,9 +2000,12 @@ function h$closeWebSocket(status, reason, ws) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -2100,7 +2067,7 @@ function h$listToArray(xs) {
 function h$listToArrayWrap(xs) {
     return (h$c1(h$ghcjszmprimZCGHCJSziPrimziJSVal_con_e, (h$listToArray(xs))));
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -2129,9 +2096,12 @@ function h$listToArrayWrap(xs) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 function h$animationFrameCancel(h) {
     if(h.handle) window.cancelAnimationFrame(h.handle);
@@ -2150,7 +2120,7 @@ function h$animationFrameRequest(h) {
         }
     });
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -2179,9 +2149,12 @@ function h$animationFrameRequest(h) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 function h$exportValue(fp1a,fp1b,fp2a,fp2b,o) {
   var e = { fp1a: fp1a
@@ -2207,7 +2180,7 @@ function h$releaseExport(e) {
   e.released = true;
   e.root = null;
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -2236,9 +2209,12 @@ function h$releaseExport(e) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -2279,8 +2255,7 @@ function h$releaseExport(e) {
 var h$jsstringEmpty = (h$c1(h$ghcjszmprimZCGHCJSziPrimziJSVal_con_e, ('')));
 var h$jsstringHead, h$jsstringTail, h$jsstringCons,
     h$jsstringSingleton, h$jsstringSnoc, h$jsstringUncons,
-    h$jsstringIndex, h$jsstringUncheckedIndex,
-    h$jsstringTake, h$jsstringDrop, h$jsstringTakeEnd, h$jsstringDropEnd;
+    h$jsstringIndex, h$jsstringUncheckedIndex;
 var h$fromCodePoint;
 if(String.prototype.fromCodePoint) {
     h$fromCodePoint = String.fromCodePoint;
@@ -2391,7 +2366,7 @@ if(String.prototype.codePointAt) {
  if(l===0) return -1;
  var ch = str.charCodeAt(0);
  if(((ch|1023)===0xDBFF)) {
-     return (l>1) ? ((((ch)-0xD800)<<10)+(str.charCodeAt(1))-9216) : -1;
+     return (l>1) ? ((((ch)-0xD800)<<10)+(str.charCodeAt(1))-0xDC00+0x10000) : -1;
  } else {
      return ch;
  }
@@ -2425,7 +2400,7 @@ if(String.prototype.codePointAt) {
  var ch = str.charCodeAt(0);
  if(((ch|1023)===0xDBFF)) {
    if(l > 1) {
-        { h$ret1 = (str.substr(2)); return (((((ch)-0xD800)<<10)+(str.charCodeAt(1))-9216)); };
+        { h$ret1 = (str.substr(2)); return (((((ch)-0xD800)<<10)+(str.charCodeAt(1))-0xDC00+0x10000)); };
    } else {
        { h$ret1 = (null); return (-1); };
    }
@@ -2438,13 +2413,30 @@ if(String.prototype.codePointAt) {
         // TRACE_JSSTRING("(no codePointAt) index: " + i + " '" + str + "'");
  var ch = str.charCodeAt(i);
  if(ch != ch) return -1; // NaN test
- return (((ch|1023)===0xDBFF)) ? ((((ch)-0xD800)<<10)+(str.charCodeAt(i+1))-9216) : ch;
+ return (((ch|1023)===0xDBFF)) ? ((((ch)-0xD800)<<10)+(str.charCodeAt(i+1))-0xDC00+0x10000) : ch;
     }
     h$jsstringUncheckedIndex = function(i, str) {
         ;
  var ch = str.charCodeAt(i);
- return (((ch|1023)===0xDBFF)) ? ((((ch)-0xD800)<<10)+(str.charCodeAt(i+1))-9216) : ch;
+ return (((ch|1023)===0xDBFF)) ? ((((ch)-0xD800)<<10)+(str.charCodeAt(i+1))-0xDC00+0x10000) : ch;
     }
+}
+function h$jsstringUnsnoc(str) {
+  ;
+  var l = str.length;
+  if(l===0) {
+    { h$ret1 = (null); return (-1); };
+  }
+  var ch = str.charCodeAt(l-1);
+  if(((ch|1023)===0xDFFF)) {
+    if(l !== 1) {
+      { h$ret1 = (str.substr(0,l-2)); return (((((str.charCodeAt(l-2))-0xD800)<<10)+(ch)-0xDC00+0x10000)); };
+    } else {
+      { h$ret1 = (null); return (-1); };
+    }
+  } else {
+    { h$ret1 = (str.substr(0,l-1)); return (ch); };
+  }
 }
 function h$jsstringPack(xs) {
     var r = '', i = 0, a = [], c;
@@ -2508,7 +2500,7 @@ function h$jsstringLast(str) {
     if(l===0) return -1;
     var ch = str.charCodeAt(l-1);
     if(((ch|1023)===0xDFFF)) {
- return (l>1) ? ((((str.charCodeAt(l-2))-0xD800)<<10)+(ch)-9216) : -1;
+ return (l>1) ? ((((str.charCodeAt(l-2))-0xD800)<<10)+(ch)-0xDC00+0x10000) : -1;
     } else return ch;
 }
 // index is the last part of the character
@@ -2516,7 +2508,7 @@ function h$jsstringIndexR(i, str) {
     ;
     if(i < 0 || i > str.length) return -1;
     var ch = str.charCodeAt(i);
-    return (((ch|1023)===0xDFFF)) ? ((((str.charCodeAt(i-1))-0xD800)<<10)+(ch)-9216) : ch;
+    return (((ch|1023)===0xDFFF)) ? ((((str.charCodeAt(i-1))-0xD800)<<10)+(ch)-0xDC00+0x10000) : ch;
 }
 function h$jsstringNextIndex(i, str) {
     ;
@@ -2542,7 +2534,7 @@ function h$jsstringDrop(n, str) {
     while(n--) {
  ch = str.charCodeAt(i++);
  if(((ch|1023)===0xDBFF)) i++;
- if(i >= l) return str;
+ if(i >= l) return '';
     }
     return str.substr(i);
 }
@@ -2599,12 +2591,8 @@ function h$jsstringIntersperse(ch, ys) {
     ;
     var i = 0, l = ys.length, j = 0, a = [], ych;
     if(((ch)>=0x10000)) {
- var ch1 = ((((ch)-0x10000)>>>10)+0xDC00), ch2 = (((ch)&0x3FF)+0xD800);
  while(j < l) {
-     if(i) {
-  a[i++] = ch1;
-  a[i++] = ch2;
-     }
+     if(i) a[i++] = ch;
      ych = ys.charCodeAt(j++);
      a[i++] = ych;
      if(((ych|1023)===0xDBFF)) a[i++] = ys.charCodeAt(j++);
@@ -2876,12 +2864,12 @@ function h$jsstringGroup(x) {
     if(xl === 0) return h$ghczmprimZCGHCziTypesziZMZN;
     var i = xl-1, si, ch, s=xl, r=h$ghczmprimZCGHCziTypesziZMZN;
     var tch = x.charCodeAt(i--);
-    if(((tch|1023)===0xDFFF)) tch = ((((x.charCodeAt(i--))-0xD800)<<10)+(tch)-9216);
+    if(((tch|1023)===0xDFFF)) tch = ((((x.charCodeAt(i--))-0xD800)<<10)+(tch)-0xDC00+0x10000);
     while(i >= 0) {
  si = i;
  ch = x.charCodeAt(i--);
  if(((ch|1023)===0xDFFF)) {
-     ch = ((((x.charCodeAt(i--))-0xD800)<<10)+(ch)-9216);
+     ch = ((((x.charCodeAt(i--))-0xD800)<<10)+(ch)-0xDC00+0x10000);
  }
  if(ch != tch) {
      tch = ch;
@@ -2895,9 +2883,10 @@ function h$jsstringChunksOf1(n, s, x) {
     ;
     var m = s, c = 0, l = x.length, ch;
     if(n <= 0 || l === 0 || s >= l) return -1
-    while(++m < l && ++c < n) {
- ch = x.charCodeAt(m);
- if(((ch|1023)===0xDBFF)) ++m;
+    while(++m < l) {
+        ch = x.charCodeAt(m - 1);
+        if(((ch|1023)===0xDBFF)) ++m;
+        if(++c >= n) break;
     }
     var r1 = (m >= l && s === c) ? x : x.substr(s,m-s);
     { h$ret1 = (r1); return (m); };
@@ -2975,7 +2964,7 @@ function h$jsstringUnpack(str) {
     var r = h$ghczmprimZCGHCziTypesziZMZN, i = str.length-1, c;
     while(i >= 0) {
  c = str.charCodeAt(i--);
- if(((c|1023)===0xDFFF)) c = ((((str.charCodeAt(i--))-0xD800)<<10)+(c)-9216)
+ if(((c|1023)===0xDFFF)) c = ((((str.charCodeAt(i--))-0xD800)<<10)+(c)-0xDC00+0x10000)
  r = (h$c2(h$ghczmprimZCGHCziTypesziZC_con_e, (c), (r)));
     }
     return r;
@@ -3300,7 +3289,7 @@ function h$jsstringSplitRE(limit, re, str) {
     while(--i>=0) r = (h$c2(h$ghczmprimZCGHCziTypesziZC_con_e, ((h$c1(h$ghcjszmprimZCGHCJSziPrimziJSVal_con_e, (a[i])))), (r)));
     return r;
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -3329,9 +3318,12 @@ function h$jsstringSplitRE(limit, re, str) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -3375,7 +3367,7 @@ function h$jsstringRawSplitAt(k, x) {
     if(k >= x.length) return (h$c2(h$ghczmprimZCGHCziTupleziZLz2cUZR_con_e,((h$c1(h$ghcjszmprimZCGHCJSziPrimziJSVal_con_e, (x)))),(h$jsstringEmpty)));
     return (h$c2(h$ghczmprimZCGHCziTupleziZLz2cUZR_con_e,((h$c1(h$ghcjszmprimZCGHCJSziPrimziJSVal_con_e, (x.substr(0,k))))),((h$c1(h$ghcjszmprimZCGHCJSziPrimziJSVal_con_e, (x.substr(k)))))));
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -3404,9 +3396,12 @@ function h$jsstringRawSplitAt(k, x) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 function h$foreignListProps(o) {
     var r = HS_NIL;
@@ -3416,7 +3411,7 @@ function h$foreignListProps(o) {
 
     } */
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -3445,9 +3440,12 @@ function h$foreignListProps(o) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // conversion between JavaScript string and Data.Text
 // values defined in Gen2.ClosureInfo
@@ -3521,7 +3519,7 @@ function h$safeTextFromString(x) {
     }
     return h$textFromString(x);
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -3550,9 +3548,12 @@ function h$safeTextFromString(x) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -3584,7 +3585,7 @@ function h$allProps(o) {
     for(var p in o) a[i++] = p;
     return a;
 }
-function h$listAllProps(o) {
+function h$listProps(o) {
     var r = h$ghczmprimZCGHCziTypesziZMZN;
     for(var p in o) { r = (h$c2(h$ghczmprimZCGHCziTypesziZC_con_e, ((h$c1(h$ghcjszmprimZCGHCJSziPrimziJSVal_con_e, (p)))), (r))); }
     return r;
@@ -3658,7 +3659,7 @@ function h$jsonTypeOf(o) {
         }
     }
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -3687,9 +3688,12 @@ function h$jsonTypeOf(o) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 function h$sendXHR(xhr, d, cont) {
     xhr.addEventListener('error', function () {
@@ -3707,7 +3711,7 @@ function h$sendXHR(xhr, d, cont) {
  xhr.send();
     }
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -3736,9 +3740,12 @@ function h$sendXHR(xhr, d, cont) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // Copyright 2011 The Closure Library Authors. All Rights Reserved.
 //
@@ -3798,7 +3805,7 @@ goog.crypt.Hash.prototype.update = goog.abstractMethod;
  *     from the internal accumulator.
  */
 goog.crypt.Hash.prototype.digest = goog.abstractMethod;
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -3827,9 +3834,12 @@ goog.crypt.Hash.prototype.digest = goog.abstractMethod;
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // Copyright 2011 The Closure Library Authors. All Rights Reserved.
 //
@@ -4230,7 +4240,7 @@ goog.crypt.Md5.prototype.digest = function() {
   }
   return digest;
 };
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -4259,9 +4269,12 @@ goog.crypt.Md5.prototype.digest = function() {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 /* include/HsBaseConfig.h.  Generated from HsBaseConfig.h.in by configure.  */
 /* include/HsBaseConfig.h.in.  Generated from configure.ac by autoheader.  */
@@ -4368,7 +4381,6 @@ goog.crypt.Md5.prototype.digest = function() {
 /* The value of O_BINARY. */
 /* The value of SIGINT. */
 /* Define to 1 if you have the `clock_gettime' function. */
-/* #undef HAVE_CLOCK_GETTIME */
 /* Define to 1 if you have the <ctype.h> header file. */
 /* Define if you have epoll support. */
 /* #undef HAVE_EPOLL */
@@ -4378,6 +4390,7 @@ goog.crypt.Md5.prototype.digest = function() {
 /* Define to 1 if you have the `eventfd' function. */
 /* #undef HAVE_EVENTFD */
 /* Define to 1 if you have the <fcntl.h> header file. */
+/* Define if you have flock support. */
 /* Define to 1 if you have the `ftruncate' function. */
 /* Define to 1 if you have the `getclock' function. */
 /* #undef HAVE_GETCLOCK */
@@ -4395,6 +4408,8 @@ goog.crypt.Md5.prototype.digest = function() {
 /* Define to 1 if the system has the type `long long'. */
 /* Define to 1 if you have the `lstat' function. */
 /* Define to 1 if you have the <memory.h> header file. */
+/* Define if you have open file descriptor lock support. */
+/* #undef HAVE_OFD_LOCKING */
 /* Define if you have poll support. */
 /* Define to 1 if you have the <poll.h> header file. */
 /* Define to 1 if you have the <signal.h> header file. */
@@ -4407,6 +4422,7 @@ goog.crypt.Md5.prototype.digest = function() {
 /* Define to 1 if you have the <sys/eventfd.h> header file. */
 /* #undef HAVE_SYS_EVENTFD_H */
 /* Define to 1 if you have the <sys/event.h> header file. */
+/* Define to 1 if you have the <sys/file.h> header file. */
 /* Define to 1 if you have the <sys/resource.h> header file. */
 /* Define to 1 if you have the <sys/select.h> header file. */
 /* Define to 1 if you have the <sys/stat.h> header file. */
@@ -4423,6 +4439,7 @@ goog.crypt.Md5.prototype.digest = function() {
 /* Define to 1 if you have the `times' function. */
 /* Define to 1 if you have the <time.h> header file. */
 /* Define to 1 if you have the <unistd.h> header file. */
+/* Define to 1 if you have the `unsetenv' function. */
 /* Define to 1 if you have the <utime.h> header file. */
 /* Define to 1 if you have the <wctype.h> header file. */
 /* Define to 1 if you have the <windows.h> header file. */
@@ -4431,13 +4448,19 @@ goog.crypt.Md5.prototype.digest = function() {
 /* #undef HAVE_WINSOCK_H */
 /* Define to 1 if you have the `_chsize' function. */
 /* #undef HAVE__CHSIZE */
+/* Define to Haskell type for blkcnt_t */
+/* Define to Haskell type for blksize_t */
+/* Define to Haskell type for bool */
 /* Define to Haskell type for cc_t */
 /* Define to Haskell type for char */
 /* Define to Haskell type for clock_t */
 /* Define to Haskell type for dev_t */
 /* Define to Haskell type for double */
 /* Define to Haskell type for float */
+/* Define to Haskell type for fsblkcnt_t */
+/* Define to Haskell type for fsfilcnt_t */
 /* Define to Haskell type for gid_t */
+/* Define to Haskell type for id_t */
 /* Define to Haskell type for ino_t */
 /* Define to Haskell type for int */
 /* Define to Haskell type for intmax_t */
@@ -4458,6 +4481,7 @@ goog.crypt.Md5.prototype.digest = function() {
 /* Define to Haskell type for ssize_t */
 /* Define to Haskell type for suseconds_t */
 /* Define to Haskell type for tcflag_t */
+/* Define to Haskell type for timer_t */
 /* Define to Haskell type for time_t */
 /* Define to Haskell type for uid_t */
 /* Define to Haskell type for uintmax_t */
@@ -4479,10 +4503,25 @@ goog.crypt.Md5.prototype.digest = function() {
 /* The size of `kev.flags', as computed by sizeof. */
 /* The size of `struct MD5Context', as computed by sizeof. */
 /* Define to 1 if you have the ANSI C header files. */
+/* Define if stdlib.h declares unsetenv to return void. */
+/* #undef UNSETENV_RETURNS_VOID */
+/* Enable extensions on AIX 3, Interix.  */
+/* Enable GNU extensions on systems that have them.  */
+/* Enable threading extensions on Solaris.  */
+/* Enable extensions on HP NonStop.  */
+/* Enable general extensions on Solaris.  */
+/* Enable large inode numbers on Mac OS X 10.5.  */
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */
 /* Define for large files, on AIX-style hosts. */
 /* #undef _LARGE_FILES */
+/* Define to 1 if on MINIX. */
+/* #undef _MINIX */
+/* Define to 2 if the system does not provide POSIX.1 features except with
+   this defined. */
+/* #undef _POSIX_1_SOURCE */
+/* Define to 1 if you need to in order for `stat' and other things to work. */
+/* #undef _POSIX_SOURCE */
 // values defined in Gen2.ClosureInfo
 // thread status
 /*
@@ -4674,8 +4713,9 @@ function h$base_read(fd, buf, buf_off, n, c) {
     if(fdo && fdo.read) {
         fdo.read(fd, fdo, buf, buf_off, n, c);
     } else {
-        h$errno = 22;
-        c(-1);
+        h$fs.read(fd, buf.u8, buf_off, n, null, function(err, bytesRead, buf0) {
+            h$handleErrnoC(err, -1, bytesRead, c);
+        });
     }
 }
 function h$base_stat(file, file_off, stat, stat_off, c) {
@@ -4703,8 +4743,9 @@ function h$base_write(fd, buf, buf_off, n, c) {
     if(fdo && fdo.write) {
         fdo.write(fd, fdo, buf, buf_off, n, c);
     } else {
-        h$errno = 22;
-        c(-1);
+        h$fs.write(fd, buf.u8, buf_off, n, function(err, bytesWritten, buf0) {
+            h$handleErrnoC(err, -1, bytesWritten, c);
+        });
     }
 }
 function h$base_ftruncate(fd, pos_1, pos_2, c) {
@@ -5055,7 +5096,15 @@ function h$shutdownHaskellAndExit(code, fast) {
 function h$rand() {
   return (32768 * Math.random()) & 32767;
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+// SIGUSR1, SIGTERM, SIGINT, SIGPIPE, SIGHUP, SIGTERM, SIGINT
+// SIGBREAK, SIGWINCH, SIGKILL, SIGSTOP, SIGBUS, SIGFPE
+// SIGSEGV, SIGILL
+// returns old action code
+function h$stg_sig_install(sigNo, actionCode, sigSet_d, sigSet_o) {
+  // XXX dummy implementation
+  return 0;
+}
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -5084,9 +5133,12 @@ function h$rand() {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 function h$hsprimitive_memcpy(dst_d, dst_o, doff, src_d, src_o, soff, len) {
   return h$primitive_memmove(dst_d, dst_o, doff, src_d, src_o, len);
@@ -5135,7 +5187,7 @@ function h$hsprimitive_memset_Ptr(p_d, p_o, off, n, x_1, x_2) {
     }
   }
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -5164,9 +5216,12 @@ function h$hsprimitive_memset_Ptr(p_d, p_o, off, n, x_1, x_2) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -5286,7 +5341,7 @@ function h$buildObjectFromTupList(xs) {
     }
     return r;
 }
-/* Copyright (C) 1991-2017 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -5315,9 +5370,12 @@ function h$buildObjectFromTupList(xs) {
    whether the overall intent is to support these features; otherwise,
    presume an older compiler has intent to support these features and
    define these macros by default.  */
-/* wchar_t uses Unicode 8.0.0.  Version 8.0 of the Unicode Standard is
-   synchronized with ISO/IEC 10646:2014, plus Amendment 1 (published
-   2015-05-15).  */
+/* wchar_t uses Unicode 10.0.0.  Version 10.0 of the Unicode Standard is
+   synchronized with ISO/IEC 10646:2017, fifth edition, plus
+   the following additions from Amendment 1 to the fifth edition:
+   - 56 emoji characters
+   - 285 hentaigana
+   - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
 // values defined in Gen2.ClosureInfo
 // thread status
@@ -5490,12 +5548,13 @@ function h$_hs_bytestring_uint_dec(x, buf_d, buf_o) {
 function h$_hs_bytestring_long_long_uint_dec(x_a, x_b, buf_d, buf_o) {
     var c, ptr = buf_o, next_free;
     var bu8 = buf_d.u8;
-    var x = h$ghcjsbn_mkBigNat_ww(x_a, x_b), q = [], r = [];
+    var x = h$ghcjsbn_mkBigNat_ww(x_a, x_b), q = [], r;
     // encode positive number as little-endian decimal
     do {
-        h$ghcjsbn_quotRem_bw(q, r, x, 10);
+        r = h$ghcjsbn_quotRem_bw(q, x, 10);
         x = q;
-        bu8[ptr++] = h$_hs_bytestring_digits[h$ghcjsbn_toInt_b(r)];
+        q = [];
+        bu8[ptr++] = h$_hs_bytestring_digits[r];
     } while(!h$ghcjsbn_isZero_b(x));
     // reverse written digits;
     next_free = ptr--;
@@ -5564,15 +5623,22 @@ function h$_hs_bytestring_uint_hex(x, buf_d, buf_o) {
     }
     { h$ret1 = (next_free); return (buf_d); };
 }
+// 279_172_874_240
+//
 // unsigned long ints (64 bit words)
 function h$_hs_bytestring_long_long_uint_hex(x_a, x_b, buf_d, buf_o) {
     // write hex representation in reverse order
-    var c, ptr = buf_o, next_free;
+    var c, i, ptr = buf_o, next_free;
     var bu8 = buf_d.u8;
     if(x_a === 0 && x_b === 0) {
         bu8[ptr++] = 48; // '0'
+    } else if(x_a === 0) {
+      while(x_b !== 0) {
+          bu8[ptr++] = h$_hs_bytestring_digits[x_b & 0xf];
+          x_b >>>= 4;
+      }
     } else {
-        while(x_b !== 0) {
+        for(i=0;i<8;i++) {
             bu8[ptr++] = h$_hs_bytestring_digits[x_b & 0xf];
             x_b >>>= 4;
         }

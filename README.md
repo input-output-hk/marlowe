@@ -16,7 +16,7 @@ A full description of the `v1.3` version was presented at ISoLA 2018, and the pa
 
 Meadow is a browser-based demo prototype that supports graphical editing of smart-contracts (thanks to the Blockly library) and block by block simulation of their execution (translated from the semantics thanks to the Haste compiler).
 
-Meadow is available at: https://input-output-hk.github.io/marlowe/
+Meadow is available at: https://input-output-hk.github.io/marlowe/ and a video showing Meadow in Action is here: https://youtu.be/_loz70XkHM8 
 
 The sources for Meadow are available in the `meadow` folder.
 

@@ -170,6 +170,7 @@ library
     , utf8-string >= 0.1 && < 1.1
     , vector < 0.13
     , shakespeare
+    , ghcjs-base
 
   if impl(ghc < 7.8)
     build-depends: tagged

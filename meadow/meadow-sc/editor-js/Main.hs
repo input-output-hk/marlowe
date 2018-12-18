@@ -98,6 +98,10 @@ foreign import javascript safe
   destroyIFrame :: IO ()
 
 foreign import javascript safe
+  "parent.document.getElementById('clear').click();"
+  clearWorkspace :: IO ()
+
+foreign import javascript safe
   "parent.document.getElementById('c2b').click();"
   codeToBlockly :: IO ()
 
@@ -205,6 +209,7 @@ reset = do x <- getValueParent "codeArea"
 
 submit :: IO ()
 submit = do x <- getCodeMirrorValue2
+            clearWorkspace
             setValueParent "codeArea" x
             codeToBlockly
 

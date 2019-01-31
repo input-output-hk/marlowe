@@ -498,7 +498,7 @@ fetchPrimitive :: IdAction -> BlockNumber -> State -> Contract
                -> FetchResult (DetachedPrimitive, Contract)
 --                                 Remaining contract --^
 fetchPrimitive idAction blockNum state (Commit idActionC idCommit person value _ timeout continuation _) =
-  if (idAction == idActionC && notCurrentCommit && notExpiredCommit && actualValue >= 0)
+  if (idAction == idActionC && notCurrentCommit && notExpiredCommit)
   then Picked ((DCommit idCommit person actualValue timeout),
                continuation)
   else NoMatch
@@ -506,7 +506,7 @@ fetchPrimitive idAction blockNum state (Commit idActionC idCommit person value _
         notExpiredCommit = isExpiredCommit idCommit state
         actualValue = evalValue blockNum state value
 fetchPrimitive idAction blockNum state (Pay idActionC idCommit person value _ continuation _) =
-  if (idAction == idActionC && actualValue >= 0)
+  if (idAction == idActionC)
   then Picked ((DPay idCommit person actualValue), continuation)
   else NoMatch
   where actualValue = evalValue blockNum state value
@@ -577,8 +577,14 @@ areInputPermissionsValid :: Input -> S.Set Person -> Bool
 areInputPermissionsValid (IChoice (_, person) _) sigs = person `S.member` sigs
 areInputPermissionsValid (IOracle _ _ _) _ = True -- Implementation ToDo: need to check signature 
 
+-- Check whether a commit or payment has negative value
+isTransactionNegative :: DetachedPrimitive -> Bool
+isTransactionNegative (DCommit _ _ val _) = val < 0
+isTransactionNegative (DPay _ _ val) = val < 0
+
 data ErrorResult = InvalidInput
                  | NoValidSignature
+                 | NegativeTransaction
                  | AmbiguousId
                  | InternalError -- This should not happen
 
@@ -604,11 +610,14 @@ applyAnyInput anyInput sigs neededInputs blockNum state contract =
             Picked (primitive, newContract) ->
               case eval primitive updatedState of
                 Result (transactionOutcomes, newState) dynamicProblem ->
-                  if areActionPermissionsValid primitive sigs
-                  then SuccessfullyApplied (transactionOutcomes,
-                                            newState,
-                                            newContract) dynamicProblem
-                  else CouldNotApply NoValidSignature 
+                  if isTransactionNegative primitive
+                  then CouldNotApply NegativeTransaction
+                  else if areActionPermissionsValid primitive sigs
+                       then SuccessfullyApplied (transactionOutcomes,
+                                                 newState,
+                                                 newContract) dynamicProblem
+                       else CouldNotApply NoValidSignature 
+
                 InconsistentState -> CouldNotApply InternalError 
             NoMatch -> CouldNotApply InvalidInput
             MultipleMatches -> CouldNotApply AmbiguousId

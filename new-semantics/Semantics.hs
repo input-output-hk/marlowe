@@ -384,44 +384,6 @@ evalObservation _ _ FalseObs = False
 isNormalised :: Integer -> Integer -> Bool
 isNormalised divid divis = divid == divis && divid /= 0
 
--- Pushes Scale primitives down the contract: Inside a Commit or Pay or around
--- a contract that has not been activated yet (assuming it has been reduced)
-scaleContract :: BlockNumber -> State -> Integer -> Integer -> Integer -> Contract -> Contract
-scaleContract _ _ _ _ _ Null = Null
-scaleContract _ _ divid divis def c@(Commit idAct idComm perso value timeout1 timeout2 cont1 cont2)
-  | isNormalised divid divis = c
-  | otherwise = Commit idAct idComm perso newValue timeout1 timeout2 (wrap cont1) (wrap cont2)
-  where wrap contract = Scale (Constant divid) (Constant divis) (Constant def) contract
-        newValue = if divis == 0
-                   then Constant def
-                   else DivValue (MulValue value (Constant divid)) (Constant divis) (Constant def)
-scaleContract _ _ divid divis def c@(Pay idAct idComm perso value timeout1 cont1 cont2)
-  | isNormalised divid divis = c
-  | otherwise = Pay idAct idComm perso newValue timeout1 (wrap cont1) (wrap cont2)
-  where wrap contract = Scale (Constant divid) (Constant divis) (Constant def) contract
-        newValue = if divis == 0
-                   then Constant def
-                   else DivValue (MulValue value (Constant divid)) (Constant divis) (Constant def)
-scaleContract blockNum state divid divis def (Both cont1 cont2) =
-  Both (go cont1) (go cont2)
-  where go = scaleContract blockNum state divid divis def
-scaleContract blockNum state divid divis def (While obs timeout cont1 cont2) =
-  While obs timeout (go cont1) (if isNormalised divid divis then wrap cont2 else cont2)
-  where go = scaleContract blockNum state divid divis def
-        wrap contract = Scale (Constant divid) (Constant divis) (Constant def) contract
-scaleContract blockNum state divid divis def (Scale sDivid sDivis sDef cont) =
-  if divis == 0
-  then scaleContract blockNum state divid divis def cont
-  else scaleContract blockNum state (divid * vsDivid) (divis * vsDivis) vsDef cont 
-  where vsDivid = evalValue blockNum state sDivid
-        vsDivis = evalValue blockNum state sDivis
-        vsDef = evalValue blockNum state sDef
-scaleContract blockNum state divid divis def (Let letLabel cont1 cont2) =
-  Let letLabel cont1 (scaleContract blockNum state divid divis def cont2)
-scaleContract _ _ divid divis def contract              -- Anything else either hasn't been
-  | isNormalised divid divis = contract                 -- activated or should not be here
-  | otherwise = Scale (Constant divid) (Constant divis) (Constant def) contract
-
 type Environment = M.Map Integer Contract
 emptyEnvironment :: Environment
 emptyEnvironment = M.empty
@@ -457,9 +419,12 @@ reduceRec blockNum state env c@(When obs timeout cont1 cont2) =
        then go cont1
        else c
   where go = reduceRec blockNum state env 
-reduceRec blockNum state env (Scale numer denom def contract) =
-  Scale numer denom def (go contract) -- Second pass takes care of this
+reduceRec blockNum state env (Scale divid divis def contract) =
+  Scale (Constant vsDivid) (Constant vsDivis) (Constant vsDef) (go contract)
   where go = reduceRec blockNum state env 
+        vsDivid = evalValue blockNum state divid
+        vsDivis = evalValue blockNum state divis
+        vsDef = evalValue blockNum state def
 reduceRec blockNum state env (While obs timeout contractWhile contractAfter) =
   if isExpired timeout blockNum
   then go contractAfter
@@ -479,7 +444,7 @@ reduceRec _ _ env (Use label) =
 
 reduce :: BlockNumber -> State -> Contract -> Contract
 reduce blockNum state contract =
-   scaleContract blockNum state 1 1 0 $ reduceRec blockNum state emptyEnvironment contract
+   reduceRec blockNum state emptyEnvironment contract
 
 -- ToDo: reduce useless primitives to Null
 simplify :: Contract -> Contract
@@ -515,6 +480,16 @@ data FetchResult a = Picked a
 
 data DetachedPrimitive = DCommit IdCommit Person Integer Timeout
                        | DPay IdCommit Person Integer
+
+-- Semantics of Scale
+scaleValue :: Integer -> Integer -> Integer -> Integer -> Integer 
+scaleValue divid divis def val = if (divis == 0) then def else ((val * divid) `div` divis)
+
+scaleResult :: Integer -> Integer -> Integer -> DetachedPrimitive -> DetachedPrimitive
+scaleResult divid divis def (DCommit idCommit person val tim) =
+  DCommit idCommit person (scaleValue divid divis def val) tim
+scaleResult divid divis def (DPay idCommit person val) =
+  DPay idCommit person (scaleValue divid divis def val)
 
 -- Find out whether the Action is allowed given the current state
 -- and contract, and, if so, pick the corresponding primitive in the contract.
@@ -552,6 +527,15 @@ fetchPrimitive idAction blockNum state (Let label boundContract subContract) =
      Picked (result, cont) -> Picked (result, Let label boundContract cont)
      NoMatch -> NoMatch
      MultipleMatches -> MultipleMatches
+fetchPrimitive idAction blockNum state (Scale divid divis def subContract) =
+  case fetchPrimitive idAction blockNum state subContract of
+     Picked (result, cont) -> Picked (scaleResult sDivid sDivis sDef result,
+                                      Scale divid divis def cont)
+     NoMatch -> NoMatch
+     MultipleMatches -> MultipleMatches
+  where sDivid = evalValue blockNum state divid
+        sDivis = evalValue blockNum state divis
+        sDef = evalValue blockNum state def
 fetchPrimitive _ _ _ _ = NoMatch
 
 data DynamicProblem = NoProblem
@@ -601,10 +585,10 @@ data ErrorResult = InvalidInput
 data ApplicationResult a = SuccessfullyApplied a DynamicProblem
                          | CouldNotApply ErrorResult
 
--- High level wrapper that calls the appropriate update function on contract and state
+-- High level wrapper that calls the appropriate update function on contract and state.
+-- Does not take care of reducing, that must be done before and after applyAnyInput.
 applyAnyInput :: AnyInput -> S.Set Person -> S.Set IdInput -> BlockNumber -> State -> Contract -> ApplicationResult (TransactionOutcomes, State, Contract)
 applyAnyInput anyInput sigs neededInputs blockNum state contract = 
-  let reducedContract = reduce blockNum state contract in
   case addAnyInput blockNum anyInput neededInputs state of
     Just updatedState ->
       case anyInput of
@@ -612,11 +596,11 @@ applyAnyInput anyInput sigs neededInputs blockNum state contract =
           if areInputPermissionsValid input sigs
           then SuccessfullyApplied ( emptyOutcome
                                    , updatedState
-                                   , reduce blockNum updatedState reducedContract )
+                                   , contract )
                                    NoProblem
           else CouldNotApply NoValidSignature 
         Action idAction ->
-          case fetchPrimitive idAction blockNum updatedState reducedContract of
+          case fetchPrimitive idAction blockNum updatedState contract of
             Picked (primitive, newContract) ->
               case eval primitive updatedState of
                 Result (transactionOutcomes, newState) dynamicProblem ->
@@ -647,21 +631,20 @@ data MApplicationResult a = MSuccessfullyApplied a [DynamicProblem]
 
 -- Fold applyAnyInput through a list of AnyInputs.
 -- Check that balance is positive at every step
--- In the last step: redeem, reduce and simplify
+-- In the last step: simplify 
 applyAnyInputs :: [AnyInput] -> S.Set Person -> S.Set IdInput -> BlockNumber -> State -> Contract
                   -> Integer -- Available funds in the contract
                   -> TransactionOutcomes
                   -> [DynamicProblem]
                   -> MApplicationResult (Integer, TransactionOutcomes, State, Contract)
-applyAnyInputs [] sigs _ blockNum state contract value trOut dynProbList =
+applyAnyInputs [] sigs _ _ state contract value trOut dynProbList =
   case redeemMoney sigs state of
     Just (currTrOut, newState) ->
       let newValue = value + outcomeEffect currTrOut in
       if newValue < 0
       then MCouldNotApply InternalError
       else let newTrOut = combineOutcomes currTrOut trOut in
-           let reducedContract = reduce blockNum newState contract in
-           let simplifiedContract = simplify reducedContract in
+           let simplifiedContract = simplify contract in
            MSuccessfullyApplied (newValue, newTrOut, newState, simplifiedContract) dynProbList
     Nothing -> MCouldNotApply InternalError
 applyAnyInputs (h:t) sigs neededInputs blockNum state contract value trOut dynProbList =
@@ -671,7 +654,8 @@ applyAnyInputs (h:t) sigs neededInputs blockNum state contract value trOut dynPr
       if newValue < 0
       then MCouldNotApply InternalError
       else let newTrOut = combineOutcomes currTrOut trOut in
-           applyAnyInputs t sigs neededInputs blockNum newState newContract newValue newTrOut
+           let reducedNewContract = reduce blockNum newState newContract in
+           applyAnyInputs t sigs neededInputs blockNum newState reducedNewContract newValue newTrOut
                           (dynProbList ++ [newDynProb])
     CouldNotApply currError -> MCouldNotApply currError
 
@@ -681,14 +665,16 @@ applyTransaction :: [AnyInput] -> S.Set Person -> BlockNumber -> State -> Contra
                     -> MApplicationResult (Integer, TransactionOutcomes, State, Contract)
 applyTransaction inputs sigs blockNum state contract value =
   case appResult of
-    MSuccessfullyApplied (_, tranOut, _, newContract) _ ->
-        if (inputs == []) && (newContract == contract) && (isEmptyOutcome tranOut)
+    MSuccessfullyApplied (_, tranOut, _, _) _ ->
+        if (inputs == []) && (reducedContract == contract) && (isEmptyOutcome tranOut)
         then MCouldNotApply InvalidInput
         else appResult
     _ -> appResult
   where neededInputs = collectNeededInputsFromContract contract
         expiredState = expireCommits blockNum state
-        appResult = applyAnyInputs inputs sigs neededInputs blockNum expiredState contract value emptyOutcome []
+        reducedContract = reduce blockNum expiredState contract
+        appResult = applyAnyInputs inputs sigs neededInputs blockNum expiredState
+                                   reducedContract value emptyOutcome []
 
 
 -- NOTE: in implementation it must be checked that oracle values are signed by the oracle

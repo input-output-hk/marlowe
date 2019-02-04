@@ -88,7 +88,7 @@ data State = State { commits :: CommitInfo
                    , usedIds :: S.Set IdAction}
                deriving (Eq,Ord,Show,Read)
 
--- Adds a commit identifier to a list of pairs sorted by timeout (ascending)
+-- Adds a commit identifier to the timeout data map 
 addToCommByTim :: Timeout -> IdCommit -> TimeoutData -> TimeoutData 
 addToCommByTim timeout idCommit timData =
   case M.lookup timeout timData of

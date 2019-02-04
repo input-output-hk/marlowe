@@ -152,7 +152,7 @@ getRedeemedForPersonCI person ci =
 getRedeemedForPerson :: Person -> State -> Integer
 getRedeemedForPerson person state = getRedeemedForPersonCI person $ commits state
 
--- Set the amount in expiredNotCollected to zero
+-- Set the amount in redeemedPerPerson to zero
 resetRedeemedForPerson :: Person -> State -> State
 resetRedeemedForPerson person
    state@(State { commits = commitInfo@(CommitInfo { redeemedPerPerson = redeemedPerPersonMap}) }) =

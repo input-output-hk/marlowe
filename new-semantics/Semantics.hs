@@ -94,7 +94,8 @@ addToCommByTim timeout idCommit timData =
   case M.lookup timeout timData of
     Just commSet -> M.insert timeout (S.insert idCommit commSet) timData
     Nothing -> M.insert timeout (S.singleton idCommit) timData
-   
+
+-- Remove a commit identifier from the timeout data map 
 removeFromCommByTim :: Timeout -> IdCommit -> TimeoutData -> TimeoutData
 removeFromCommByTim timeout idCommit timData =
   case M.lookup timeout timData of

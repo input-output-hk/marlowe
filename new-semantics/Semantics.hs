@@ -25,7 +25,7 @@ data Value = CurrentBlock |
              MulValue Value Value |
              DivValue Value Value Value |
  --          dividend-^ divisor-^ ^-default value (in case divisor is zero)
-             RemValue Value Value Value |
+             ModValue Value Value Value |
  --          dividend-^ divisor-^ ^-default value (in case divisor is zero)
              ValueFromChoice IdChoice Value |
  --    default value if not available --^
@@ -194,7 +194,7 @@ collectNeededInputsFromValue (DivValue value1 value2 value3) =
   S.unions [ collectNeededInputsFromValue value1
            , collectNeededInputsFromValue value2
            , collectNeededInputsFromValue value3 ]
-collectNeededInputsFromValue (RemValue value1 value2 value3) =
+collectNeededInputsFromValue (ModValue value1 value2 value3) =
   S.unions [ collectNeededInputsFromValue value1
            , collectNeededInputsFromValue value2
            , collectNeededInputsFromValue value3 ]
@@ -343,8 +343,8 @@ evalValue blockNumber state (DivValue dividend divisor defaultVal) =
   if actualDivisor == 0 then go defaultVal else div (go dividend) actualDivisor
   where go = evalValue blockNumber state
         actualDivisor = go divisor
-evalValue blockNumber state (RemValue dividend divisor defaultVal) =
-  if actualDivisor == 0 then go defaultVal else rem (go dividend) actualDivisor
+evalValue blockNumber state (ModValue dividend divisor defaultVal) =
+  if actualDivisor == 0 then go defaultVal else mod (go dividend) actualDivisor
   where go = evalValue blockNumber state
         actualDivisor = go divisor
 evalValue blockNumber state (ValueFromChoice idChoice val) =

@@ -464,9 +464,8 @@ reduceRec blockNum state env (Both cont1 cont2) = Both (go cont1) (go cont2)
   where go = reduceRec blockNum state env 
 reduceRec blockNum state env (Choice obs cont1 cont2) =
   reduceRec blockNum state env (if (evalObservation blockNum state obs)
-                                then go cont1
-                                else go cont2)
-  where go = reduceRec blockNum state env 
+                                then cont1
+                                else cont2)
 reduceRec blockNum state env c@(When obs timeout cont1 cont2) =
   if isExpired timeout blockNum
   then go cont2

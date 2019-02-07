@@ -395,6 +395,60 @@ addToEnvironment = M.insert
 lookupEnvironment :: LetLabel -> Environment -> Maybe Contract
 lookupEnvironment = M.lookup
 
+getFreshKey :: Environment -> LetLabel
+getFreshKey env =
+  case M.lookupMax env of
+    Nothing -> 1
+    Just (k, _) -> k + 1
+
+nullifyInvalidUses :: Environment -> Contract -> Contract
+nullifyInvalidUses _ Null = Null
+nullifyInvalidUses env (Commit idAction idCommit person value timeout1 timeout2 contract1 contract2) =
+  Commit idAction idCommit person value timeout1 timeout2 (nullifyInvalidUses env contract1) (nullifyInvalidUses env contract2)
+nullifyInvalidUses env (Pay idAction idCommit person value timeout contract1 contract2) =
+  Pay idAction idCommit person value timeout (nullifyInvalidUses env contract1) (nullifyInvalidUses env contract2)
+nullifyInvalidUses env (Both contract1 contract2) =
+  Both (nullifyInvalidUses env contract1) (nullifyInvalidUses env contract2)
+nullifyInvalidUses env (Choice observation contract1 contract2) =
+  Choice observation (nullifyInvalidUses env contract1) (nullifyInvalidUses env contract2)
+nullifyInvalidUses env (When observation timeout contract1 contract2) =
+  When observation timeout (nullifyInvalidUses env contract1) (nullifyInvalidUses env contract2)
+nullifyInvalidUses env (While observation timeout contract1 contract2) =
+  While observation timeout (nullifyInvalidUses env contract1) (nullifyInvalidUses env contract2)
+nullifyInvalidUses env (Scale value1 value2 value3 contract) =
+  Scale value1 value2 value3 (nullifyInvalidUses env contract)
+nullifyInvalidUses env (Let letLabel contract1 contract2) =
+  Let letLabel (nullifyInvalidUses env contract1) (nullifyInvalidUses newEnv contract2)
+  where newEnv = addToEnvironment letLabel Null env -- We just need to mark it as available for this function 
+nullifyInvalidUses env (Use letLabel) =
+  case lookupEnvironment letLabel env of
+    Nothing -> Null
+    Just _ -> Use letLabel
+
+relabel :: LetLabel -> LetLabel -> Contract -> Contract
+relabel _ _ Null = Null
+relabel startLabel endLabel (Commit idAction idCommit person value timeout1 timeout2 contract1 contract2) =
+  Commit idAction idCommit person value timeout1 timeout2 (relabel startLabel endLabel contract1) (relabel startLabel endLabel contract2)
+relabel startLabel endLabel (Pay idAction idCommit person value timeout contract1 contract2) =
+  Pay idAction idCommit person value timeout (relabel startLabel endLabel contract1) (relabel startLabel endLabel contract2)
+relabel startLabel endLabel (Both contract1 contract2) =
+  Both (relabel startLabel endLabel contract1) (relabel startLabel endLabel contract2)
+relabel startLabel endLabel (Choice observation contract1 contract2) =
+  Choice observation (relabel startLabel endLabel contract1) (relabel startLabel endLabel contract2)
+relabel startLabel endLabel (When observation timeout contract1 contract2) =
+  When observation timeout (relabel startLabel endLabel contract1) (relabel startLabel endLabel contract2)
+relabel startLabel endLabel (While observation timeout contract1 contract2) =
+  While observation timeout (relabel startLabel endLabel contract1) (relabel startLabel endLabel contract2)
+relabel startLabel endLabel (Scale value1 value2 value3 contract) =
+  Scale value1 value2 value3 (relabel startLabel endLabel contract)
+relabel startLabel endLabel (Let letLabel contract1 contract2) =
+  Let letLabel (relabel startLabel endLabel contract1)
+      (if (letLabel == startLabel)
+       then contract2
+       else relabel startLabel endLabel contract2)
+relabel startLabel endLabel (Use letLabel) =
+  if (letLabel == startLabel) then Use endLabel else Use letLabel
+
 -- Reduce non actionable primitives and remove expired
 reduceRec :: BlockNumber -> State -> Environment -> Contract -> Contract
 reduceRec _ _ _ Null = Null
@@ -434,9 +488,16 @@ reduceRec blockNum state env (While obs timeout contractWhile contractAfter) =
        else go contractAfter
   where go = reduceRec blockNum state env 
 reduceRec blockNum state env (Let label boundContract contract) =
-  Let label boundContract (reduceRec blockNum state newEnv contract)
-  where newEnv = addToEnvironment label reducedBoundContract env
-        reducedBoundContract = reduceRec blockNum state env boundContract
+  case lookupEnvironment label env of
+    Nothing -> let newEnv = addToEnvironment label reducedBoundContract env in
+               Let label checkedBoundContract $ reduceRec blockNum state newEnv contract
+    Just _ -> let freshKey = getFreshKey env in
+              let newEnv = addToEnvironment freshKey reducedBoundContract env in
+              let fixedContract = relabel label freshKey contract in
+              Let freshKey checkedBoundContract $ reduceRec blockNum state newEnv fixedContract
+  where checkedBoundContract = nullifyInvalidUses env boundContract
+        reducedBoundContract = reduceRec blockNum state env checkedBoundContract
+        
         -- ^-- do we want this to be lazy? It is a closure anyway
 reduceRec _ _ env (Use label) =
   case lookupEnvironment label env of

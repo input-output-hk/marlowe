@@ -488,19 +488,16 @@ reduceRec blockNum state env (While obs timeout contractWhile contractAfter) =
   where go = reduceRec blockNum state env 
 reduceRec blockNum state env (Let label boundContract contract) =
   case lookupEnvironment label env of
-    Nothing -> let newEnv = addToEnvironment label reducedBoundContract env in
+    Nothing -> let newEnv = addToEnvironment label checkedBoundContract env in
                Let label checkedBoundContract $ reduceRec blockNum state newEnv contract
     Just _ -> let freshKey = getFreshKey env in
-              let newEnv = addToEnvironment freshKey reducedBoundContract env in
+              let newEnv = addToEnvironment freshKey checkedBoundContract env in
               let fixedContract = relabel label freshKey contract in
               Let freshKey checkedBoundContract $ reduceRec blockNum state newEnv fixedContract
   where checkedBoundContract = nullifyInvalidUses env boundContract
-        reducedBoundContract = reduceRec blockNum state env checkedBoundContract
-        
-        -- ^-- do we want this to be lazy? It is a closure anyway
-reduceRec _ _ env (Use label) =
+reduceRec blockNum state env (Use label) =
   case lookupEnvironment label env of
-    Just contract -> contract
+    Just contract -> reduceRec blockNum state env contract
     Nothing -> Null
 
 reduce :: BlockNumber -> State -> Contract -> Contract

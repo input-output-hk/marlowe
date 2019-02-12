@@ -395,11 +395,32 @@ addToEnvironment = M.insert
 lookupEnvironment :: LetLabel -> Environment -> Maybe Contract
 lookupEnvironment = M.lookup
 
-getFreshKey :: Environment -> LetLabel
-getFreshKey env =
-  case M.lookupMax env of
-    Nothing -> 1
-    Just (k, _) -> k + 1
+maxIdFromContract :: Contract -> LetLabel 
+maxIdFromContract Null = 0
+maxIdFromContract (Commit _ _ _ _ _ _ contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (Pay _ _ _ _ _ contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (Both contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (Choice _ contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (When _ _ contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (While _ _ contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (Scale _ _ _ contract) =
+  (maxIdFromContract contract)
+maxIdFromContract (Let letLabel contract1 contract2) =
+  max letLabel (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (Use letLabel) =
+  letLabel
+
+getFreshKey :: Environment -> Contract -> LetLabel
+getFreshKey env c =
+  1 + max (case M.lookupMax env of
+             Nothing -> 1
+             Just (k, _) -> k + 1) (maxIdFromContract c)
 
 nullifyInvalidUses :: Environment -> Contract -> Contract
 nullifyInvalidUses _ Null = Null
@@ -490,7 +511,7 @@ reduceRec blockNum state env (Let label boundContract contract) =
   case lookupEnvironment label env of
     Nothing -> let newEnv = addToEnvironment label checkedBoundContract env in
                Let label checkedBoundContract $ reduceRec blockNum state newEnv contract
-    Just _ -> let freshKey = getFreshKey env in
+    Just _ -> let freshKey = getFreshKey env contract in
               let newEnv = addToEnvironment freshKey checkedBoundContract env in
               let fixedContract = relabel label freshKey contract in
               Let freshKey checkedBoundContract $ reduceRec blockNum state newEnv fixedContract

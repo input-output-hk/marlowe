@@ -419,8 +419,8 @@ maxIdFromContract (Use letLabel) =
 getFreshKey :: Environment -> Contract -> LetLabel
 getFreshKey env c =
   1 + max (case M.lookupMax env of
-             Nothing -> 1
-             Just (k, _) -> k + 1) (maxIdFromContract c)
+             Nothing -> 0
+             Just (k, _) -> max k 0) (maxIdFromContract c)
 
 nullifyInvalidUses :: Environment -> Contract -> Contract
 nullifyInvalidUses _ Null = Null

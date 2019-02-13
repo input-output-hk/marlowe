@@ -395,12 +395,43 @@ addToEnvironment = M.insert
 lookupEnvironment :: LetLabel -> Environment -> Maybe Contract
 lookupEnvironment = M.lookup
 
-getFreshLabel :: Environment -> LetLabel
-getFreshLabel env =
-  case M.lookupMax env of
-    Nothing -> 1
-    Just (k, _) -> k + 1
+-- Find the highest label in the given Contract (assuming there is an order to LetLabels)
+maxIdFromContract :: Contract -> LetLabel
+maxIdFromContract Null = 0
+maxIdFromContract (Commit _ _ _ _ _ _ contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (Pay _ _ _ _ _ contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (Both contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (Choice _ contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (When _ _ contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (While _ _ contract1 contract2) =
+  (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (Scale _ _ _ contract) =
+  (maxIdFromContract contract)
+maxIdFromContract (Let letLabel contract1 contract2) =
+  max letLabel (max (maxIdFromContract contract1) (maxIdFromContract contract2))
+maxIdFromContract (Use letLabel) =
+  letLabel
 
+-- Looks for an unused label in the Environment and Contract provided
+-- (assuming that labels are numbers)
+getFreshLabel :: Environment -> Contract -> LetLabel
+getFreshLabel env c =
+  max (case M.lookupMax env of
+         Nothing -> 1
+         Just (k, _) -> k + 1)
+      (maxIdFromContract c)
+  -- We check subcontract in case it uses undefined labels
+  -- (to prevent potential infinite loop)
+  -- Optimisation: We do not need to check existing bindings because all
+  -- contracts are nullified before being added to Environment;
+
+-- Ensures all Use are defined in Environment, if they are not
+-- they are replaced with Null
 nullifyInvalidUses :: Environment -> Contract -> Contract
 nullifyInvalidUses _ Null = Null
 nullifyInvalidUses env (Commit idAction idCommit person value timeout1 timeout2 contract1 contract2) =
@@ -425,6 +456,7 @@ nullifyInvalidUses env (Use letLabel) =
     Nothing -> Null
     Just _ -> Use letLabel
 
+-- Replaces a label with another one (unless it is shadowed)
 relabel :: LetLabel -> LetLabel -> Contract -> Contract
 relabel _ _ Null = Null
 relabel startLabel endLabel (Commit idAction idCommit person value timeout1 timeout2 contract1 contract2) =
@@ -490,7 +522,7 @@ reduceRec blockNum state env (Let label boundContract contract) =
   case lookupEnvironment label env of
     Nothing -> let newEnv = addToEnvironment label checkedBoundContract env in
                Let label checkedBoundContract $ reduceRec blockNum state newEnv contract
-    Just _ -> let freshLabel = getFreshLabel env in
+    Just _ -> let freshLabel = getFreshLabel env contract in
               let newEnv = addToEnvironment freshLabel checkedBoundContract env in
               let fixedContract = relabel label freshLabel contract in
               Let freshLabel checkedBoundContract $ reduceRec blockNum state newEnv fixedContract
@@ -498,7 +530,9 @@ reduceRec blockNum state env (Let label boundContract contract) =
 reduceRec blockNum state env (Use label) =
   case lookupEnvironment label env of
     Just contract -> reduceRec blockNum state env contract
-    Nothing -> Null
+    Nothing -> Null  -- Optimisation: We do not need to restore environment of the binding because:
+                     --  * We ensure entries are not overwritten in Environment
+                     --  * We check that all entries of Environment had their Use defined when added
 
 reduce :: BlockNumber -> State -> Contract -> Contract
 reduce blockNum state contract =

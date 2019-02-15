@@ -717,14 +717,14 @@ applyAnyInput anyInput sigs neededInputs blockNum state contract =
 
 -- Give redeemed money to owners
 redeemMoneyLoop :: [Person] -> TransactionOutcomes -> State
-                -> Maybe (TransactionOutcomes, State)
-redeemMoneyLoop [] trOut state = Just (trOut, state)
+                -> (TransactionOutcomes, State)
+redeemMoneyLoop [] trOut state = (trOut, state)
 redeemMoneyLoop (h:t) trOut state =
   redeemMoneyLoop t (addOutcome h redeemed trOut) newState
    where redeemed = getRedeemedForPerson h state
          newState = resetRedeemedForPerson h state
 
-redeemMoney :: S.Set Person -> State -> Maybe (TransactionOutcomes, State)
+redeemMoney :: S.Set Person -> State -> (TransactionOutcomes, State)
 redeemMoney sigs state = redeemMoneyLoop (S.toList sigs) emptyOutcome state
 
 data MApplicationResult a = MSuccessfullyApplied a [DynamicProblem]
@@ -739,15 +739,13 @@ applyAnyInputs :: [AnyInput] -> S.Set Person -> S.Set IdInput -> BlockNumber -> 
                   -> [DynamicProblem]
                   -> MApplicationResult (Integer, TransactionOutcomes, State, Contract)
 applyAnyInputs [] sigs _ _ state contract value trOut dynProbList =
-  case redeemMoney sigs state of
-    Just (currTrOut, newState) ->
-      let newValue = value + outcomeEffect currTrOut in
-      if newValue < 0
-      then MCouldNotApply InternalError
-      else let newTrOut = combineOutcomes currTrOut trOut in
-           let simplifiedContract = simplify contract in
-           MSuccessfullyApplied (newValue, newTrOut, newState, simplifiedContract) dynProbList
-    Nothing -> MCouldNotApply InternalError
+  let (currTrOut, newState) = redeemMoney sigs state in
+  let newValue = value + outcomeEffect currTrOut in
+  if newValue < 0
+  then MCouldNotApply InternalError
+  else let newTrOut = combineOutcomes currTrOut trOut in
+       let simplifiedContract = simplify contract in
+       MSuccessfullyApplied (newValue, newTrOut, newState, simplifiedContract) dynProbList
 applyAnyInputs (h:t) sigs neededInputs blockNum state contract value trOut dynProbList =
   case applyAnyInput h sigs neededInputs blockNum state contract of
     SuccessfullyApplied (currTrOut, newState, newContract) newDynProb ->

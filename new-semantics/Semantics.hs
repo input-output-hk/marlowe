@@ -538,9 +538,60 @@ reduce :: BlockNumber -> State -> Contract -> Contract
 reduce blockNum state contract =
    reduceRec blockNum state emptyEnvironment contract
 
--- ToDo: reduce useless primitives to Null
+-- Reduce useless primitives to Null
+simplify_aux :: Contract -> (Contract, S.Set LetLabel)
+simplify_aux Null = (Null, S.empty)
+simplify_aux (Commit idAction idCommit person value timeout1 timeout2 contract1 contract2) =
+  (let (nc1, sl1) = simplify_aux contract1 in
+   let (nc2, sl2) = simplify_aux contract2 in
+   let nc = Commit idAction idCommit person value timeout1 timeout2 nc1 nc2 in
+   let sl = S.union sl1 sl2 in
+   (nc, sl))
+simplify_aux (Pay idAction idCommit person value timeout contract1 contract2) =
+  (let (nc1, sl1) = simplify_aux contract1 in
+   let (nc2, sl2) = simplify_aux contract2 in
+   let nc = Pay idAction idCommit person value timeout nc1 nc2 in
+   let sl = S.union sl1 sl2 in
+   (nc, sl))
+simplify_aux (Both contract1 contract2) =
+  (let (nc1, sl1) = simplify_aux contract1 in
+   let (nc2, sl2) = simplify_aux contract2 in
+   if (nc1 == Null) then (nc2, sl2) else
+   (if (nc2 == Null) then (nc1, sl1) else ((Both nc1 nc2), S.union sl1 sl2)))
+simplify_aux (Choice observation contract1 contract2) =
+  (let (nc1, sl1) = simplify_aux contract1 in
+   let (nc2, sl2) = simplify_aux contract2 in
+   let nc = if (nc1 == Null) && (nc2 == Null) then Null else
+            Choice observation nc1 nc2 in
+   let sl = S.union sl1 sl2 in
+   (nc, sl))
+simplify_aux (When observation timeout contract1 contract2) =
+  (let (nc1, sl1) = simplify_aux contract1 in
+   let (nc2, sl2) = simplify_aux contract2 in
+   let nc = if (nc1 == Null) && (nc2 == Null) then Null else
+            When observation timeout nc1 nc2 in
+   let sl = S.union sl1 sl2 in
+   (nc, sl))
+simplify_aux (While observation timeout contract1 contract2) =
+  (let (nc1, sl1) = simplify_aux contract1 in
+   let (nc2, sl2) = simplify_aux contract2 in
+   if (nc1 == Null) && (nc2 == Null) then (Null, S.empty) else
+            (While observation timeout nc1 nc2, S.union sl1 sl2))
+simplify_aux (Scale value1 value2 value3 contract) =
+  (let (snc, sl) = simplify_aux contract in
+   if (snc == Null) then (Null, S.empty)
+   else (Scale value1 value2 value3 snc, sl))
+simplify_aux (Let letLabel contract1 contract2) =
+  (let (nc1, sl1) = simplify_aux contract1 in
+   (let (nc2, sl2) = simplify_aux contract2 in
+    (if S.member letLabel sl2
+     then (Let letLabel nc1 nc2, S.union sl1 (S.delete letLabel sl2))
+     else (nc2, sl2))))
+simplify_aux (Use letLabel) =
+  (Use letLabel, S.singleton letLabel)
+
 simplify :: Contract -> Contract
-simplify contract = contract 
+simplify c = let (nc, _) = simplify_aux c in nc
 
 -- How much everybody pays or receives in transaction
 type TransactionOutcomes = M.Map Person Integer

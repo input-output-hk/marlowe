@@ -421,10 +421,10 @@ maxIdFromContract (Use letLabel) =
 -- (assuming that labels are numbers)
 getFreshLabel :: Environment -> Contract -> LetLabel
 getFreshLabel env c =
-  max (case M.lookupMax env of
-         Nothing -> 1
-         Just (k, _) -> k + 1)
-      (maxIdFromContract c)
+  1 + (max (case M.lookupMax env of
+             Nothing -> 0
+             Just (k, _) -> k)
+           (maxIdFromContract c))
   -- We check subcontract in case it uses undefined labels
   -- (to prevent potential infinite loop)
   -- Optimisation: We do not need to check existing bindings because all

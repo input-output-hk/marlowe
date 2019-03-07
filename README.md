@@ -6,7 +6,7 @@ This repository contains the design of Marlowe, a DSL for describing smart-contr
 
 The last stable version of Marlowe can be found in the branch `stable`. This branch currenty contains very small improvements with respect to version `1.3` and is the one in which the current version of Meadow is based (see Meadow section below). For the pure version `1.3` you can check the `v1.3` tag. A full description of the `1.3` version was presented at ISoLA 2018, and the paper is available [here](https://iohk.io/research/papers/#2WHKDRA8).   
 
-The `master` branch contains the latest developments of Marlowe, because of this, the Haskell semantics, the Coq formalisation, and the Meadow implementation may be out of sync with each other in this branch, but they contain the latest functionality.
+The `master` branch contains the latest developments of Marlowe, because of this, the Haskell semantics, the Coq formalisation, and the Meadow implementation, may be out of sync with each other in this branch, but they contain the latest functionality.
 
 ## Main files
 

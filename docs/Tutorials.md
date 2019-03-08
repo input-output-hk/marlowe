@@ -18,9 +18,9 @@ This document gives an overview of a set of Marlowe tutorials.
 - ACTUS example(s)
 - Marlowe 2.0 rationale
 
-## Introducing Marlowe
+##  [Introducing Marlowe](./introducing-marlowe.md)
 
-An overview of the ideas behind Marlowe, introduced informally. This will cover timeouts and commitments: how to work in a blockchain context.
+This tutorial gives an overview of the ideas behind Marlowe, and in particular for working in a blockchain context it introuduces timeouts and commitments.
 
 ## Marlowe as a Haskell `data` type
 

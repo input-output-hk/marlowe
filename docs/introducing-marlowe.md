@@ -41,4 +41,4 @@ We are working on a production release of Marlowe on the Cardano blockchain late
 - The Marlowe paper: [link](https://files.zotero.net/19150029952/Seijas%20and%20Thompson%20-%20Marlowe%20financial%20contracts%20on%20blockchain.pdf)
 - Marlowe video at PlutusFest, December 2018: [link](https://www.youtube.com/watch?v=rSpFOADHLqw)
 
-### [Next tutorial](marlowe-data.md)
+### [Up](Tutorials.md) [Next](marlowe-data.md)

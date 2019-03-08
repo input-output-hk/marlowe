@@ -1,6 +1,6 @@
 # Introducing Marlowe
 
-This tutorial gives an overview of the ideas behind Marlowe, as a domain-specific languages embedded in Haskell. It also introuduces commitments and timeouts, which are central to how Marlowe works in a blockchain context. 
+This tutorial gives an overview of the ideas behind Marlowe, as a domain-specific language embedded in Haskell. It also introduces commitments and timeouts, which are central to how Marlowe works in a blockchain context. 
 
 ## Programming Languages and Domain-Specific Languages
 

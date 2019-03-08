@@ -21,6 +21,11 @@ The observation here is a disjunction: it is true if two of the participants (pr
 
 The second contract is itself a `Choice` depending on whether or not there has been agreement to pay `bob`. If that is indeed the case, then the payment is offered to `bob`; if not, then a refund is offered to `alice`.
 
+```diff
+- Exercise
+```
+
+
 ## Where to go to find out more
 
 - SPJ original paper

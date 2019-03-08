@@ -39,6 +39,7 @@ We are working on a production release of Marlowe on the Cardano blockchain late
 ## Where to go to find out more 
 - The Marlowe github repository: [link](https://github.com/input-output-hk/marlowe)
 - The Marlowe paper: [link](https://files.zotero.net/19150029952/Seijas%20and%20Thompson%20-%20Marlowe%20financial%20contracts%20on%20blockchain.pdf)
-- Marlowe video at PlutusFest, December 2018: [link](https://www.youtube.com/watch?v=rSpFOADHLqw)
+- Marlowe video from PlutusFest, December 2018: [link](https://www.youtube.com/watch?v=rSpFOADHLqw)
+- Marlowe video from Coinscrum, London, March 2019: [link to be added]()
 
 ### [Up](Tutorials.md) [Next](marlowe-data.md)

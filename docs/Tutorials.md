@@ -25,10 +25,11 @@ This tutorial gives an overview of the ideas behind Marlowe, as a domain-specifi
 
 ## [A first example: the escrow contract](./escrow-ex.md)
 
-As introduced in the slides from PlutusFest.
-
+This tutorial introduces a simple financial contract in pseudocode, before explaining how it is modified to work in Marlowe, giving the first example of a Marlowe contract.
 
 ## [Marlowe as a Haskell data type](./marlowe-data.md)
+
+This tutorial examines how a Haskell data type is used to describe Marlowe contracts.
 
 The constructors of Marlowe: informal introduction.
 

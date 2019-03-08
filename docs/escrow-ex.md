@@ -1,6 +1,6 @@
 # A first example
 
-This tutorial examines how a Haskell data type can be used to describe a contract, first in the abstract, and then in the blockchain context using Marlowe.
+This tutorial introduces a simple financial contract in pseudocode, before explaining how it is modified to work in Marlowe, giving the first example of a Marlowe contract.
 
 ## A simple escrow contract
 
@@ -43,7 +43,35 @@ First, let us examine how to modify what we have written to take care of the cas
 ```  
 The `90` is a _timeout_ on the time to wait for the observation to become true; if this timeout is passed, then the contract `redeem_original` is then executed, thus making sure that the money locked into the contract is not lost.
 
+In a similar way, the `Pay` sub-contract is given a timeout (of `100`) and a contract to perform on timeout, `redeem_original`. The contract also _identifies_ the payment with `iP1` and refers to a commitment through its identifier, `iCC1`:
+
+```haskell
+(When (Or (two_chose alice bob carol refund)
+          (two_chose alice bob carol pay))
+      90                 
+      (Choice (two_chose alice bob carol pay)
+              (Pay iP1 alice bob (AvailableMoney iCC1) 100 redeem_original) -- ADDED
+              redeem_original))
+      redeem_original     
+```  
+
+
+
 In a similar way, the `Pay` sub-contract is given a timeout and a contract to perform on timeout, which is again `redeem_original`.
+
+Finally, we should look at how cash is committed as the first step of the contract.
+
+```haskell
+CommitCash iCC1 1 (ConstMoney 450) 10 100
+                    (When (OrObs (two_chose alice bob carol refund)
+                                 (two_chose alice bob carol pay))
+                          90
+                          (Choice (two_chose alice bob carol pay)
+                                  (Pay iP1 alice bob (AvailableMoney iCC1) 100
+                                       redeem_original)
+                                  redeem_original)
+                          redeem_original)
+Null
 
 ## Where to go to find out more
 

@@ -42,4 +42,4 @@ We are working on a production release of Marlowe on the Cardano blockchain late
 - Marlowe video from PlutusFest, December 2018: [link](https://www.youtube.com/watch?v=rSpFOADHLqw)
 - Marlowe video from Coinscrum, London, March 2019: [link to be added]()
 
-### [Up](Tutorials.md) [Next](marlowe-data.md)
+### [Up](./Tutorials.md) [Next](./escrow-ex.md)

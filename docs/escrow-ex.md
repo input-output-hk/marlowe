@@ -21,12 +21,11 @@ The observation here is a disjunction: it is true if two of the participants (pr
 
 The second contract is itself a `Choice` depending on whether or not there has been agreement to pay `bob`. If that is indeed the case, then the payment is offered to `bob`; if not, then a refund is offered to `alice`.
 
-```diff
-- Exercise
-```
-Think about executing this contract in practice. Suppose that Alice has already committed some money to the contract. What will happen if one of the participants chooses not to participate any further?
-
-We have assumed that Alice has already committed her payment, but suppose that we want to design a contract to ensure that: what would we need to do to?
+> __Exercise__
+>  
+> Think about executing this contract in practice. Suppose that Alice has already committed some money to the contract. What will happen if one of the participants chooses not to participate any further?
+> 
+> We have assumed that Alice has already committed her payment, but suppose that we want to design a contract to ensure that: what would we need to do to?
 
 ## Escrow in Marlowe
 
@@ -44,10 +43,12 @@ First, let us examine how to modify what we have written to take care of the cas
 ```  
 The `90` is a _timeout_ on the time to wait for the observation to become true; if this timeout is passed, then the contract `redeem_original` is then executed, thus making sure that the money locked into the contract is not lost.
 
+In a similar way, the `Pay` sub-contract is given a timeout and a contract to perform on timeout, which is again `redeem_original`.
+
 ## Where to go to find out more
 
 - SPJ original paper
 - Patrick Barr paper
 
 
-### [Up](Tutorials.md) [Next](marlowe-data.md)
+### [Prev](./introducing-marlowe) [Up](./Tutorials.md) [Next](./marlowe-data.md)

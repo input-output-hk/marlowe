@@ -2,12 +2,12 @@
 
 This document gives an overview of a set of Marlowe tutorials.
 
-> Important note: these tutorials address Marlowe 1.3, which 
+> __Important note:__ these tutorials address Marlowe 1.3, which 
 > is the version implemented in the current version of Meadow,
 > and is covered in the ISoLA paper.
-
-> They will be updated to cover Marlowe 2.0, which 
-> will be in the new version of Meadow, for the summit in April.
+>
+> They will be updated for the summit in April to cover Marlowe 2.0, which irons out
+> a number of infelicities in 1.3, and which will be in the new version of Meadow.
 
 ### Contributing materials
 - Marlowe paper from ISoLA

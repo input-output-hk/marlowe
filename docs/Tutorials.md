@@ -12,7 +12,6 @@ This document gives an overview of a set of Marlowe tutorials.
 ### Contributing materials
 - Marlowe paper from ISoLA
 - Marlowe section in the Plutus platform paper
-- The Meadow video from PlutusFest
 - Examples from repo and presentations
 - Using the functions in the Marlowe codebase
   - Particularly the semantics and analysis functions
@@ -29,11 +28,8 @@ This tutorial introduces a simple financial contract in pseudocode, before expla
 
 ## [Marlowe as a Haskell data type](./marlowe-data.md)
 
-This tutorial examines how a Haskell data type is used to describe Marlowe contracts.
+This tutorial formally introduces Marlowe as a Haskell data type.
 
-The constructors of Marlowe: informal introduction.
-
-- Simple exercise building a contract.
 ## Understanding the semantics
 
 Based on the ISoLA paper

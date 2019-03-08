@@ -20,7 +20,7 @@ This document gives an overview of a set of Marlowe tutorials.
 
 ##  [Introducing Marlowe](./introducing-marlowe.md)
 
-This tutorial gives an overview of the ideas behind Marlowe, and in particular for working in a blockchain context it introuduces timeouts and commitments.
+This tutorial gives an overview of the ideas behind Marlowe, as a domain-specific languages embedded in Haskell. It also introuduces commitments and timeouts, which are central to how Marlowe works in a blockchain context. 
 
 ## Marlowe as a Haskell `data` type
 

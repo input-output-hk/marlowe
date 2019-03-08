@@ -3,7 +3,8 @@
 This document gives an overview of a set of Marlowe tutorials.
 
 > Important note: these tutorials address Marlowe 1.3, which 
-> is the version implemented in the current version of Meadow.
+> is the version implemented in the current version of Meadow,
+> and is covered in the ISoLA paper.
 
 > They will be updated to cover Marlowe 2.0, which 
 > will be in the new version of Meadow, for the summit in April.
@@ -22,7 +23,7 @@ This document gives an overview of a set of Marlowe tutorials.
 
 This tutorial gives an overview of the ideas behind Marlowe, as a domain-specific languages embedded in Haskell. It also introduces commitments and timeouts, which are central to how Marlowe works in a blockchain context. 
 
-## Marlowe as a Haskell `data` type
+## [Marlowe as a Haskell data type](./marlowe-data.md)
 
 The constructors of Marlowe: informal introduction.
 

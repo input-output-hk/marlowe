@@ -28,11 +28,11 @@ This tutorial introduces a simple financial contract in pseudocode, before expla
 
 ## [Marlowe as a Haskell data type](./marlowe-data.md)
 
-This tutorial formally introduces Marlowe as a Haskell data type.
+This tutorial formally introduces Marlowe as a Haskell data type, building on the escrow example in the previous tutorial. It also describes the different types used by the model, as well as discussing a number of assumptions about the infrastructure in which contracts will be run.
 
-## Understanding the semantics
+## [Understanding the semantics](./marlowe-semantics.md)
 
-Based on the ISoLA paper
+This tutorial gives a formal semantics for Marlowe by presenting a Haskell definition of the semantic `step` function, so that we have a _semantics that we can execute_. 
 
 ## Meadow overview (part 1)
 

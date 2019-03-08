@@ -17,6 +17,20 @@ data Contract =
    When Observation Timeout Contract Contract
 ```
 
+Informally, this type provides test contracts.
+- A `Null` contract, which does nothing. 
+- The next three constructs form contracts that do something, and then continue according to another contrac, (which is one of the components of the original contract:
+    - `CommitCash` will wait for a participant to make a commitment, 
+    - `RedeemCC` allows for a commitment to be redeemed, and 
+    - `Pay` for a payment between participants to be claimed by the recipient.
+- The remaining constructors form composite contracts from simpler components: 
+  - `Both` has the behaviour of both its components, 
+  - `Choice` chooses between two contracts on the basis of an observation, and 
+  - `When` is quiescent until a condition – i.e. an `Observation` – becomes true.
+
+Additionally, many of the contracts have timeouts that also determine their behaviour. The remainder of this tutorial
+
+
 ## The model types
 
 A running contract interacts with its environment in two ways, as shown here.
@@ -50,27 +64,9 @@ The model makes a number of assumptions about the blockchain infrastructure in w
 - Making a commitment is not something that a contract can perform; rather, it can request that a commitment is made, but that then has to be established externally: hence the input of (a set of) commitments at each step.
 - The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the stepBlock function below).
  
+## Notes
 
-### Computation 
+- Marlowe 2.0 extends the Marlowe type with local definitions and a `While` construct.
+- The informal semantics of Marlowe 2.0 differs from that presented here, replacing sets of input and observations with single values. This is done to guarantee that the semantics is deterministic.
 
-Computation is modelled at two different levels.
-
-The step function represents a single computation step and has this type:
-```haskell
-step :: Input -> State -> Contract -> OS -> (State,Contract,AS)
-```
-which is also illustrated here: 
-
-![the step type](./pix/step-type.png)
-
-The `step` function is total, so that for every contract a result of stepping is defined. However, for some kinds of contracts – commits, redeems or time-shifted contracts – it is possible that performing a step produces the same contract as the result; we call these _quiescent_ steps whereas all others make progress. We use this distinction in the explanation that follows.
-
-Execution of a contract will involve multiple blocks, with multiple steps in each block. The computation at a single block is given by the `stepBlock` function: this will call the `stepAll` function that calls `step` repeatedly until it is quiescent.
-In addition to calling `stepAll`, `stepBlock` will first enable expired cash commitments to be refunded and record, in the state, any choices made at that step. The functions `stepAll` and `stepBlock` have the same type as `step` itself.
-
-
-
-## Where to go to find out more 
-- blah
-
-### [Prev](./escrow-ex.md) [Up](./Tutorials.md) [Next](./escrow-ex.md)
+### [Prev](./escrow-ex.md) [Up](./Tutorials.md) [Next](./marlowe-semantics.md)

@@ -23,16 +23,16 @@ This document gives an overview of a set of Marlowe tutorials.
 
 This tutorial gives an overview of the ideas behind Marlowe, as a domain-specific languages embedded in Haskell. It also introduces commitments and timeouts, which are central to how Marlowe works in a blockchain context. 
 
+## [A first example: the escrow contract](./escrow-ex.md)
+
+As introduced in the slides from PlutusFest.
+
+
 ## [Marlowe as a Haskell data type](./marlowe-data.md)
 
 The constructors of Marlowe: informal introduction.
 
 - Simple exercise building a contract.
-
-## A first example: the escrow contract
-
-As introduced in the slides from PlutusFest.
-
 ## Understanding the semantics
 
 Based on the ISoLA paper

@@ -71,9 +71,15 @@ CommitCash iCC1 alice (ConstMoney 450) 10 100  -- ADDED
                                        redeem_original)
                                   redeem_original)
                           redeem_original)
-Null                                       -- ADDED
+           Null                               -- ADDED
 ```
 The commitment requested from `alice` is given an identifier, `iCC1`. The cash value (`450`) and timeout (`100`) on the commitment are also specified. Moreover, a _timeout on making the commitment_, `10`, is also specified as part of the contract, too, as well as a contract to be followed if the commitment is not forthcoming: that is  `Null` in this case.
+
+
+> __Exercise__
+>  
+> Comment on the choice of timeout values, and look at alternatives. For example,  what would happen if the timeout on the `When` (`90`) were to be replaced by `110`? Is it sensible to have the same timeout (`100`) on both the commitment and the payment? If not, what choice would you make?
+
 
 This example has shown many of the ingredients of the Marlowe contract language; in the next tutorial we will present the complete language. 
 

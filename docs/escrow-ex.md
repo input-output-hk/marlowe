@@ -93,4 +93,4 @@ Notes
 - [Certified symbolic management of financial multi-party contracts](https://dl.acm.org/citation.cfm?id=2784747)
 
 
-### [Prev](./introducing-marlowe) [Up](./Tutorials.md) [Next](./marlowe-data.md)
+### [Prev](./introducing-marlowe.md) [Up](./Tutorials.md) [Next](./marlowe-data.md)

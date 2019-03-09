@@ -41,11 +41,11 @@ This tutorial shows how to use some simple features of Haskell to write Marlowe 
 
 ## [Using Marlowe](./using-marlowe.md)
 
-Running Marlowe in Haskell, and trying out some examples.
+his tutorial shows you how to use Marlowe from within Haskell, and in particular shows how to exercise a contract using the semantics given in the [earlier tutorial](./marlowe-semantics.md).
 
-## Meadow overview (part 1)
+## Meadow overview 
 
-A tour of the some of the facilities; the video accompanies this.
+A tour of the some of the facilities; the video accompanies this. As we've already explained [embedded Marlowe](./embedded-marlowe.md) it's probably best to explain Meadow in one go.
 
 Include an image with callouts.
 
@@ -56,16 +56,6 @@ Exercising an example: taking it through its paces in Meadow.
 ## Other functions in Marlowe: analysis
 
 Understanding aspects of a contract *without* running it.
-
-## Marlowe as an embedded DSL
-
-Using the embedding to define common values, functions etc.
-
-- Smart constructors?
-
-## Meadow overview (part 2)
-
-Looking at the *elaboration* of embedded contracts (or whatever else we call it) into pure Marlowe.
 
 ## ACTUS
 

@@ -1,23 +1,32 @@
-# The semantics of Marlowe
+# Using Marlowe
 
-This tutorial gives a formal semantics for Marlowe by presenting a Haskell definition of the semantic `step` function, so that we have a _semantics that we can execute_. This semantics underpins the simulations of Marlowe contracts in Meadow and indeed a revised version of the semantics is precisely what underpins the implementation of Marlowe on the “mockchain”.
+This tutorial shows you how to use Marlowe from within Haskell, and explores a number of examples.
 
-## Marlowe
+## Marlowe in Haskell
 
-As a reminder Marlowe domain-specific language (DSL) is modelled as an algebraic type in Haskell. 
-
-```haskell
-data Contract =
-   Null |
-   CommitCash IdentCC Person Money Timeout Timeout Contract Contract |
-   RedeemCC IdentCC Contract |
-   Pay IdentPay Person Person Money Timeout Contract |
-   Both Contract Contract |
-   Choice Observation Contract Contract |
-   When Observation Timeout Contract Contract
+This tutorial works in `v1.3` of Marlowe, and to use it you need to clone the repository,
+```bash
+git clone https://github.com/input-output-hk/marlowe.git
 ```
+Once you have done this, or if you have already cloned the repository, you need to  switch into version `v1.3`,
+```bash
+git checkout v1.3
+```
+Alternatively, you can perform the clone and version change in one step,
+```bash
+git clone -b 'v1.3' https://github.com/input-output-hk/marlowe.git
+```
+In either case, this command yields a warning:
+```bash
+Note: checking out 'v1.3'.
+You are in 'detached HEAD' state. ...
+```
+but as you simply want to use Marlowe this can be safely ignored. (The warning message also tells you want you need to do if you do indeed want to make changes to this version of Marlowe).
 
-## The step function
+
+
+
+As we saw in the previous 
  
 
 Computation is modelled at two different levels.
@@ -159,10 +168,10 @@ step _ st (Choice obs conT conF) os =
      | otherwise 
        = (st, When obs expi con con2, [])
 ```
-
+       
 We look next at an example of Marlowe in action.
 
 ## Where to go to find out more 
 - blah
 
-### [Prev](./marlowe-data.md) [Up](./Tutorials.md) [Next](embedded-marlowe.md)
+### [Prev](./embedded-marlowe.md) [Up](./Tutorials.md) [Next]()

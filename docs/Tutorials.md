@@ -35,6 +35,14 @@ This tutorial formally introduces Marlowe as a Haskell data type, building on th
 
 This tutorial gives a formal semantics for Marlowe by presenting a Haskell definition of the semantic `step` function, so that we have a _semantics that we can execute_. 
 
+## [Embedded Marlowe](./embedded-marlowe.md)
+
+Discussion of Marlowe embedded; relate to the escrow contract.
+
+## [Using Marlowe](./using-marlowe.md)
+
+Running Marlowe in Haskell, and trying out some examples.
+
 ## Meadow overview (part 1)
 
 A tour of the some of the facilities; the video accompanies this.
@@ -67,7 +75,7 @@ Introduction to the general idea of the ACTUS taxonomy.
 
 At least the PAM contract, and hopefully others.
 
-## Marlowe as a Plutus contract
+## Marlowe as a Plutus contract
 
 Marlowe on mockchain: from the Plutus platform paper.
 

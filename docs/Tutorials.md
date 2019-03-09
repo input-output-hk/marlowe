@@ -35,9 +35,9 @@ This tutorial formally introduces Marlowe as a Haskell data type, building on th
 
 This tutorial gives a formal semantics for Marlowe by presenting a Haskell definition of the semantic `step` function, so that we have a _semantics that we can execute_. 
 
-## [Embedded Marlowe](./embedded-marlowe.md)
+## [Embedded Marlowe](./embedded-marlowe.md)
 
-Discussion of Marlowe embedded; relate to the escrow contract.
+This tutorial shows how to use some simple features of Haskell to write Marlowe contracts that are more readable, maintainable and reusable, by revisiting the  escrow contract.
 
 ## [Using Marlowe](./using-marlowe.md)
 

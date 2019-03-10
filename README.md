@@ -1,3 +1,7 @@
+<p align="center">
+  <img width="266" height="185" src="docs/pix/logo.png">
+</p>
+
 # Marlowe
 
 This repository contains Marlowe, a domain-specific language (DSL) for describing financial smart contracts that can be enforced by scripts deployed on a blockchain, as well as some tools for analysing and simulating the execution of contracts written in the DSL.

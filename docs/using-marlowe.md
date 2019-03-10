@@ -172,7 +172,7 @@ that takes a (lazy) list of `Input` and `OS` pairs, one for each block, and deli
 
 Yes, there is! 
        
-We look next at how we can build a tool that will _automate_ picking the right inputs and allow users to interact with contracts. That motivates Meadow, and _smart inputs_
+We look next at how we can build a tool, Meadow, that will _automate_ picking the right inputs and allow users to interact with contracts.
 
 
-### [Prev](./embedded-marlowe.md) [Up](./Tutorials.md) [Next]()
+### [Prev](./embedded-marlowe.md) [Up](./Tutorials.md) [Next](./meadow-overview.md)

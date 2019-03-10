@@ -50,4 +50,4 @@ The smart interface is usually more convenient to use than the manual interface 
 - A video showing Meadow in action: [link](https://youtu.be/_loz70XkHM8)
 - More details about the implementation of Meadow can be found in [our paper](https://iohk.io/research/papers/#2WHKDRA8).
 
-### [Prev](./using-marlowe.md)  [Up](./Tutorials.md) [Next]()
+### [Prev](./using-marlowe.md)  [Up](./Tutorials.md) [Next](./analysis.md)

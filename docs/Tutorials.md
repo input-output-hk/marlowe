@@ -1,5 +1,7 @@
 # Marlowe Tutorials
 
+![Marlowe logo](pix/logo.png)
+
 This document gives an overview of a set of Marlowe tutorials.
 
 > __Important note:__ these tutorials address Marlowe 1.3, which 

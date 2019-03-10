@@ -110,19 +110,69 @@ input3 = Input Set.empty Set.empty map2 Map.empty
 ```                    
 Why is single stepping useful? It is the equivalent of debugging,and we're able to see the internal state of the contract at each stage, the contract _continuation_, i.e. what remains to be executed, and the actions produced at each step.
 
-## TO DO
-- add exercise: other ways of exercising the contract
-- talk about how to build input sequences: and the `driver` function.
-- look at the redemption case
-- add exercises: variants of the contract
+> __Exercise__
+>  
+> Explore some other ways of engaging with the contract
+> - What happens when two participants choose to refund the money to Alice? 
+> - What happens if Bob requests a payment before the choice is made to make the payment to him?
+> - What happens if the contract reaches timeout? 
+>
+> The last case here is tedious to do by hand, so next we look at another way of engaging with contracts.
 
+## Building sequences of inputs and `OS` values
+
+Single stepping allows us to see the “internal state” of a contract as it evolves, but it can be tedious to do that when a timeout might be set for block 100, as in the case of `escrow`. We can instead use the `driver` function 
+```haskell
+driver :: State -> Contract -> [(Input,OS)] -> [AS]
+```
+that takes a (lazy) list of `Input` and `OS` pairs, one for each block, and delivers the corresponding list of (sets of) actions, `AS`, block by block.
+
+> __Exercise__
+>  
+> To assist in constructing input/OS sequences for `driver`, define the value  `empties` and the function `wrap`
+> 
+> ```haskell
+> -- a list of empty inputs 
+> empties :: [Input]
+>
+> -- wrap a list of inputs with OS values
+> -- 42 as constant random value
+>
+> wrap :: [Input] -> [(Input,OS)]
+> ```
+
+
+
+
+
+>
+> __Exercise__
+>  
+> Using the `driver` function, explore how the `escrow` contract behaves 
+> - in the two scenarios when choices are made,  
+> - on timeout of the original commitment, when Alice's original payment can be 
+>     redeemed, and
+> - in situations where inputs are presented out of order.
+>
+
+
+>
+> __Exercise__
+>  
+> The `escrow` contract has been written so that _any two_ participants can choose 
+> one of the options; modify it so that it is more precise, identifying the two 
+> participants who can make the two choices. 
+>
+> Add a third choice the the contract whereby Alice and
+> Bob can choose for the money to go one of the three participants, chosen randomly.
+> Devise inputs that will demonstrate the correct behaviour of the contract; you may > wish to modify the `wrap` function so that it contains a (repeatable) sequence of random choices of `1`, `2` or `3`.
 
 
 ## There must be an easier way!
 
 Yes, there is! 
        
-We look next at how we can build a tool that will automate picking the right inputs and allow users to interact with contracts. That motivates Meadow, and _smart inputs_
+We look next at how we can build a tool that will _automate_ picking the right inputs and allow users to interact with contracts. That motivates Meadow, and _smart inputs_
 
 
 ### [Prev](./embedded-marlowe.md) [Up](./Tutorials.md) [Next]()

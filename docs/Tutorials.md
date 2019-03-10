@@ -41,7 +41,7 @@ This tutorial shows how to use some simple features of Haskell to write Marlowe 
 
 ## [Using Marlowe](./using-marlowe.md)
 
-his tutorial shows you how to use Marlowe from within Haskell, and in particular shows how to exercise a contract using the semantics given in the [earlier tutorial](./marlowe-semantics.md).
+This tutorial shows you how to use Marlowe from within Haskell, and in particular shows how to exercise a contract using the semantics given in the [earlier tutorial](./marlowe-semantics.md).
 
 ## Meadow overview 
 

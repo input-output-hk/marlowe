@@ -44,7 +44,7 @@ This tutorial shows how Marlowe contracts can be analysed _without_ having to be
 
 ## [ACTUS and Marlowe](./actus-marlowe.md)
 
-Introduction to the general idea of the ACTUS taxonomy, plus examples implemented in Marlowe (at least the PAM contract, and hopefully others).
+This tutorial gives an introduction to the general idea of the ACTUS taxonomy, plus examples implemented in Marlowe (at least the PAM contract, and hopefully others).
 
 ## [Implementing Marlowe in Plutus](./marlowe-plutus.md)
 

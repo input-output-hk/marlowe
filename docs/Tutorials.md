@@ -10,15 +10,6 @@ This document gives an overview of a set of Marlowe tutorials.
 > They will be updated for the summit in April to cover Marlowe 2.0, which irons out
 > a number of infelicities in 1.3, and which will be in the current version of Meadow.
 
-### Contributing materials
-- Marlowe paper from ISoLA
-- Marlowe section in the Plutus platform paper
-- Examples from repo and presentations
-- Using the functions in the Marlowe codebase
-  - Particularly the semantics and analysis functions
-- ACTUS example(s)
-- Marlowe 2.0 rationale
-
 ##  [Introducing Marlowe](./introducing-marlowe.md)
 
 This tutorial gives an overview of the ideas behind Marlowe, as a domain-specific languages embedded in Haskell. It also introduces commitments and timeouts, which are central to how Marlowe works in a blockchain context. 
@@ -45,13 +36,7 @@ This tutorial shows you how to use Marlowe from within Haskell, and in particula
 
 ## [Meadow overview](./meadow-overview.md) 
 
-A tour of the some of the facilities; the video accompanies this. As we've already explained [embedded Marlowe](./embedded-marlowe.md) it's probably best to explain Meadow in one go.
-
-Include an image with callouts.
-
-## An example in Meadow
-
-Exercising an example: taking it through its paces in Meadow.
+This tutorial introduces Meadow, and is accompanied by a video. Once you have followed this video you will be able to use Meadow to interact with the escrow and other Meadow contracts.
 
 ## Other functions in Marlowe: analysis
 
@@ -68,11 +53,4 @@ At least the PAM contract, and hopefully others.
 ## Marlowe as a Plutus contract
 
 Marlowe on mockchain: from the Plutus platform paper.
-
-## For the future: Marlowe 1.3 and 2.0
-
-*Might just include this as an appendix.*
-
-What has changed in moving from 1.3 (the version in the ISoLA paper) and the current version. This is added to put this document into context, and to give an indication of how sections of this tutorial will have be changed before the summit in April.
-
 

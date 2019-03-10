@@ -15,7 +15,7 @@ This document gives an overview of a set of Marlowe tutorials.
 > and is available here: [https://github.com/input-output-hk/marlowe/tree/v1.3](https://github.com/input-output-hk/marlowe/tree/v1.3).
 >
 > They will be updated for [the summit in April](https://iohksummit.io) to cover Marlowe 2.0, which irons out
-> a number of infelicities in 1.3, and which will be in the version released at the summit.
+> a number of infelicities in 1.3, and the new version of Meadow, both of which should be in the version released at the summit.
 
 ##  [Introducing Marlowe](./introducing-marlowe.md)
 

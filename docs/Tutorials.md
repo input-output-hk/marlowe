@@ -7,8 +7,8 @@ This document gives an overview of a set of Marlowe tutorials.
 > and is covered in the ISoLA paper. This version is tagged as **v1.3**
 > and is available here: [https://github.com/input-output-hk/marlowe/tree/v1.3](https://github.com/input-output-hk/marlowe/tree/v1.3).
 >
-> They will be updated for the summit in April to cover Marlowe 2.0, which irons out
-> a number of infelicities in 1.3, and which will be in the current version of Meadow.
+> They will be updated for [the summit in April](https://iohksummit.io) to cover Marlowe 2.0, which irons out
+> a number of infelicities in 1.3, and which will be in the version released at the summit.
 
 ##  [Introducing Marlowe](./introducing-marlowe.md)
 
@@ -38,19 +38,15 @@ This tutorial shows you how to use Marlowe from within Haskell, and in particula
 
 This tutorial introduces Meadow, and is accompanied by a video. Once you have followed this video you will be able to use Meadow to interact with the escrow and other Meadow contracts.
 
-## Other functions in Marlowe: analysis
+## [Other functions in Marlowe: analysis](./analysis.md)
 
-Understanding aspects of a contract *without* running it.
+Understanding aspects of a contract without running it.
 
-## ACTUS
+## [ACTUS and Marlowe](./actus-marlowe.md)
 
-Introduction to the general idea of the ACTUS taxonomy.
+Introduction to the general idea of the ACTUS taxonomy, plus examples implemented in Marlowe (at least the PAM contract, and hopefully others).
 
-## ACTUS example(s) in Marlowe
+## [Implementing Marlowe in Plutus](./marlowe-plutus.md)
 
-At least the PAM contract, and hopefully others.
-
-## Marlowe as a Plutus contract
-
-Marlowe on mockchain: from the Plutus platform paper.
+So far these tutorials have dealt with Marlowe as a “stand alone” artefact; this tutorial describes how Marlowe is implemented on blockchain, using the “mockchain” that provides a high-fidelity simulation of the Cardano SL layer.
 

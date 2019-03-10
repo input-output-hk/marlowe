@@ -40,7 +40,7 @@ This tutorial introduces Meadow, and is accompanied by a video. Once you have fo
 
 ## [Other functions in Marlowe: analysis](./analysis.md)
 
-Understanding aspects of a contract without running it.
+This tutorial shows how Marlowe contracts can be analysed _without_ having to be executed. This made much easier because Marlowe is a special-purpose DSL, rather than a general-purpose language like Plutus.
 
 ## [ACTUS and Marlowe](./actus-marlowe.md)
 

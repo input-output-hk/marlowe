@@ -1,6 +1,11 @@
-# Marlowe Tutorials
 
-![Marlowe logo](pix/logo.png)
+<p align="center">
+  <img width="266" height="185" src="pix/logo.png">
+</p>
+
+
+# Marlowe tutorials
+
 
 This document gives an overview of a set of Marlowe tutorials.
 

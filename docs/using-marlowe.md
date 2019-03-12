@@ -34,7 +34,7 @@ which has the same type as `step`, as illustrated here:
 
 ![the step type](./pix/step-type.png)
 
-We can use the facilities of `ghci` to step through a contract one block at a time, and here we will do that with the embedded escrow contract contained in [`EscrowV2.hs`](https://github.com/input-output-hk/marlowe/blob/v1.3/src/EscrowV2.hs).
+We can use the facilities of `ghci` to step through a contract one block at a time, and, here, we will do that with the embedded escrow contract contained in [`EscrowV2.hs`](https://github.com/input-output-hk/marlowe/blob/v1.3/src/EscrowV2.hs).
 
 To single step you can work in `ghci` like this, using the facility to make local bindings:
 ```haskell
@@ -43,7 +43,7 @@ To single step you can work in `ghci` like this, using the facility to make loca
 *Build> let (st3,c3,as3) = stepBlock input3 st2 c2 os2
 *Build> ...
 ```
-and then explore the values produced: note, however, that the local bindings each time a `:load` or `:l` command is performed). 
+and then explore the values produced. Note, however, that the local bindings each time a `:load` or `:l` command is performed). 
 
 An alternative way of doing this is to add these definitions to a working file, e.g. `Build.hs`, where these definitions will be preserved. Indeed, it would be very sensible to include some of the definitions used above in such a file.
 
@@ -59,16 +59,16 @@ data State = State {
                sch :: Map.Map (IdentChoice, Person) ConcreteChoice
              }
 ```
-and so at the start the state contains no information,
+and so, at the start, the state contains no information,
 ```haskell
 start_state = State Map.empty Map.empty
 ```
-and at each block the `OS` contains a random number and the current block number, so for the cases above
+and, at each block, the `OS` contains a random number and the current block number, so for the cases above
 ```haskell
 os0 = OS 42 1
 os1 = OS 42 2
 ```
-Before For the contract to progress, it needs to be presented with inputs, as represented by the `Input` type, which has  four components
+For the contract to progress, it needs to be presented with inputs, as represented by the `Input` type, which has  four components
   - a set `cc` of cash commitments made at that step
   - a set `rc` of cash redemptions made at that step
   - a map `rp` of payment requests made at that step, and
@@ -108,7 +108,7 @@ input3 = Input Set.empty Set.empty map2 Map.empty
             where
                 map2 = Map.singleton (IdentPay 1,2) 450
 ```                    
-Why is single stepping useful? It is the equivalent of debugging,and we're able to see the internal state of the contract at each stage, the contract _continuation_, i.e. what remains to be executed, and the actions produced at each step.
+Why is single stepping useful? It is the equivalent of debugging, and we are able to see the internal state of the contract at each stage, the contract _continuation_, i.e. what remains to be executed, and the actions produced at each step.
 
 > __Exercise__
 >  
@@ -163,16 +163,16 @@ that takes a (lazy) list of `Input` and `OS` pairs, one for each block, and deli
 > one of the options; modify it so that it is more precise, identifying the two 
 > participants who can make the two choices. 
 >
-> Add a third choice the the contract whereby Alice and
-> Bob can choose for the money to go one of the three participants, chosen randomly.
-> Devise inputs that will demonstrate the correct behaviour of the contract; you may > wish to modify the `wrap` function so that it contains a (repeatable) sequence of random choices of `1`, `2` or `3`.
+> Add a third choice to the contract whereby Alice and
+> Bob can choose for the money to go to one of the three participants, chosen randomly.
+> Devise inputs that will demonstrate the correct behaviour of the contract; you may wish to modify the `wrap` function so that it contains a (repeatable) sequence of random choices of `1`, `2` or `3`.
 
 
 ## There must be an easier way!
 
 Yes, there is! 
        
-We look next at how we can build a tool, Meadow, that will _automate_ picking the right inputs and allow users to interact with contracts.
+We look next at how we can build a tool, Meadow, that will capitalise on the fact that we are working in a DSL to _automate_ picking the right inputs and allow users to interact with contracts.
 
 
 ### [Prev](./embedded-marlowe.md) [Up](./Tutorials.md) [Next](./meadow-overview.md)

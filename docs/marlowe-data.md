@@ -1,6 +1,6 @@
 # Marlowe as a Haskell data type
 
-This tutorial formally introduces Marlowe as a Haskell data type, building on the escrow example in the previous tutorial. It also describes the different types used by the model, as well as discussing a number of assumptions about the infrastructure in which contracts will be run.
+This tutorial formally introduces Marlowe as a Haskell data type, building on the escrow example from the previous tutorial. It also describes the different types used by the model, as well as discussing a number of assumptions about the infrastructure in which contracts will be run.
 
 ## Marlowe
 
@@ -17,9 +17,9 @@ data Contract =
    When Observation Timeout Contract Contract
 ```
 
-Informally, this type provides test contracts.
+Informally, this type provides these contracts.
 - A `Null` contract, which does nothing. 
-- The next three constructs form contracts that do something, and then continue according to another contrac, (which is one of the components of the original contract:
+- The next three constructs form contracts that do something, and then continue according to another contract, (which is one of the components of the original contract):
     - `CommitCash` will wait for a participant to make a commitment, 
     - `RedeemCC` allows for a commitment to be redeemed, and 
     - `Pay` for a payment between participants to be claimed by the recipient.
@@ -28,7 +28,7 @@ Informally, this type provides test contracts.
   - `Choice` chooses between two contracts on the basis of an observation, and 
   - `When` is quiescent until a condition – i.e. an `Observation` – becomes true.
 
-Additionally, many of the contracts have timeouts that also determine their behaviour. The remainder of this tutorial
+Additionally, many of the contracts have timeouts that also determine their behaviour. 
 
 
 ## The model types
@@ -39,8 +39,9 @@ A running contract interacts with its environment in two ways, as shown here.
 
 ### Observables 
 
-First, it  needs to _observe_ different kinds of varying quantities including, for example, the current time, the current block number and, random numbers, as well as “real world” quantities like “the price of oil” or “the exchange rate between currencies A and B”. As the examples illustrate, observables come both from aspects of the blockchain (e.g. the current block or slot number) and externally. In the latter case, it will be necessary to agree between all participants of the contract a trusted oracle or source of information. 
-Each instance of such an observable will be observed at a particular time and in a particular context. 
+First, it  needs to _observe_ different kinds of varying quantities including, for example, the current time, the current block number and sources of random numbers, as well as “real world” quantities like “the price of oil” or “the exchange rate between currencies A and B”. 
+
+As the examples illustrate, observables come both from aspects of the blockchain (e.g. the current block or slot number) and externally. In the latter case, all participants of the contract will need to agree on a trusted oracle or source of information. Each instance of such an observable will be observed at a particular time and in a particular context. 
 
 <!--We assume that the system infrastructure ensures that these values are recorded on the blockchain to allow the computation to be repeated for verification purposes.
 -->
@@ -50,7 +51,7 @@ It is assumed that at each step of the execution of the contract, the values of 
 
 On the other hand, at each step there are – potentially, at least – a variety of inputs available from the participants themselves. These include commitments of currency (or “cash”), redemption of commitments, and claims of payments by a participant. Moreover, it is also possible for a participant to input an arbitrary value (which we term a “choice”). The particular inputs at a given step are described by a value of type `Input`.
 
-While informally we might see a commitment to something as being indefinite, as noted earlier it is important to realise that, on blockchain, a commitment needs to have a timeout so that progress can be forced in a contract. After the timeout period the cash can be refunded through the user creating a transaction to reclaim the cash. Information about the commitments currently in force forms the `State`, which can be modified at each execution step.
+While informally we might see a commitment to something as being indefinite, as noted earlier, it is important to realise that, on blockchain, a commitment needs to have a timeout so that progress is ensured in contracts. After the timeout period, the cash can be refunded through the user creating a transaction to reclaim the cash. Information about the commitments currently in force forms the `State`, which can be modified at each execution step.
 
 ### Actions 
 
@@ -59,7 +60,7 @@ Payments can be granted by using committed money, but they must be manually rede
 ### Infrastructure 
 
 The model makes a number of assumptions about the blockchain infrastructure in which it is run.
-- It is assumed that cryptographic functions and operations are provided by a layer external to the system, and so they need not be modelled explicitly.
+- It is assumed that cryptographic functions and operations are provided by a layer external to Marlowe, and so they need not be modelled explicitly.
 - We assume that time is “coarse grained” and measured by block or slot number, so that, in particular, timeouts are delimited using block/slot numbers.
 - Making a commitment is not something that a contract can perform; rather, it can request that a commitment is made, but that then has to be established externally: hence the input of (a set of) commitments at each step.
 - The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the stepBlock function below).
@@ -67,6 +68,6 @@ The model makes a number of assumptions about the blockchain infrastructure in w
 ## Notes
 
 - Marlowe 2.0 extends the Marlowe type with local definitions and a `While` construct.
-- The informal semantics of Marlowe 2.0 differs from that presented here, replacing sets of input and observations with single values. This is done to guarantee that the semantics is deterministic.
+- The informal semantics of Marlowe 2.0 differs from that presented here, replacing sets of input and observations with individual values. This is done to guarantee that the semantics is deterministic.
 
 ### [Prev](./escrow-ex.md) [Up](./Tutorials.md) [Next](./marlowe-semantics.md)

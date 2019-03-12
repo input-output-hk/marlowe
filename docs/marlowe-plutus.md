@@ -6,7 +6,7 @@ So far these tutorials have dealt with Marlowe as a “stand alone” artefact; 
 
 To implement Marlowe contracts we use the PlutusTx compiler, which compiles Haskell code into serialized Plutus Core code, to create a Cardano _validator script_ that ensures the correct execution of the contract. This form of implementation relies on the extensions to the UTxO model that are described in [this overview](https://github.com/input-output-hk/plutus/blob/master/docs/extended-utxo/README.md).
 
-Marlowe contract execution on the blockchain consists of a chain of transactions where, at each stage, the remaining contract and its state are passed through the _data script_, and actions and inputs (i.e. _choices_ and _oracle_ values) are passed as _redeemer scripts_. Each step in contract execution is a transaction that spends a Marlowe contract script output by providing a valid input in a redeemer script, and produces a transaction output with a Marlowe contract as continuation (remaining contract).
+Marlowe contract execution on the blockchain consists of a chain of transactions where, at each stage, the remaining contract and its state are passed through the _data script_, and actions and inputs (i.e. _choices_ and _oracle_ values) are passed as _redeemer scripts_. Each step in contract execution is a transaction that spends a Marlowe contract script output by providing a valid input in a redeemer script, and produces a transaction output with a Marlowe contract as continuation (remaining contract) in addition to other inputs and outputs.
 
 ## Design space
 
@@ -19,7 +19,7 @@ There are several ways to implement Marlowe contracts on top of Plutus. We could
 - Having a single interpreter for all (or a particular group of) Marlowe contracts allows to monitor the blockchain for these kinds of contract, if desired.
 - Finally, there is a potential to special-case this sort of script, and implement a specialized, highly effective interpreter in Cardano CL itself.
 
-In our implementation we store a remaining contract in the _data script_ (see Section 4), which makes it visible to everyone. This simplifies contract reflection and retrospection.
+In our implementation, we store the remaining contract in the _data script_ (see Section 4), which makes it visible to everyone. This simplifies contract reflection and retrospection.
 
 ## Contract lifecycle on extended UTxO model
 
@@ -44,11 +44,11 @@ We then evaluate the continuation contract and its state, using the `eval` funct
 ```haskell
 eval :: Input → Slot → Ada → Ada → State → Contract → (State,Contract,Bool)
 ```
-using the current slot number and at the same time checking that input makes sense and that payments are within committed bounds; in case it is a valid input it returns the new `State` and `Contract` and the Boolean `True`; otherwise it returns the current `State` and `Contract`, unchanged, together with the value `False`.
+using the current slot number and at the same time checking that the input makes sense and that payments are within committed bounds; if the input is valid then it returns the new `State` and `Contract` and the Boolean `True`; otherwise it returns the current `State` and `Contract`, unchanged, together with the value `False`.
 
-In little more detail, in the type of `eval` above, `Input` is a combination of contract participant actions (i.e. `Commit`, `Payment`, `Redeem`), oracle values, and choices made. The two Ada parameters are the _current_ contract value, and the _result_ contract value. So, for example, if the contract is to perform a 20 Ada Payment and the input current amount is 100 Ada, then the result value will be 80 Ada. The `Contract` and `State` values are the current contract and its `State`, taken from the data script.
+In a little more detail, in the type of `eval` above, `Input` is a combination of contract participant actions (i.e. `Commit`, `Payment`, `Redeem`), oracle values, and choices made. The two Ada parameters are the _current_ contract value, and the _result_ contract value. So, for example, if the contract is to perform a 20 Ada Payment and the input current amount is 100 Ada, then the result value will be 80 Ada. The `Contract` and `State` values are the current contract and its `State`, respectively, taken from the data script.
 
-On-chain code cannot generate transaction outputs, but can only validate whatever a user provides in a transaction. Every step in contract evaluation is created by a user, either manually or automatically (by a wallet, say), and published as a transaction. A user may therefore provide any `Contract` and its `State` as continuation. For example, consider the following contract
+In general, on-chain code cannot generate transaction outputs, but can only validate whatever a user provides in a transaction. Every step in contract evaluation is created by a user, either manually or automatically (by a wallet, say), and published as a transaction. A user may therefore provide any `Contract` and its `State` as continuation. For example, consider the following contract
 ```haskell
 Commit id Alice 100 (Both (Pay Alice to Bob 30 Ada) (Pay Alice to Charlie 70 Ada))
 ```

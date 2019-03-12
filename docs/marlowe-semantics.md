@@ -4,7 +4,7 @@ This tutorial gives a formal semantics for Marlowe by presenting a Haskell defin
 
 ## Marlowe
 
-As a reminder Marlowe domain-specific language (DSL) is modelled as an algebraic type in Haskell. 
+As a reminder, the Marlowe domain-specific language (DSL) is modelled as an algebraic type in Haskell. 
 
 ```haskell
 data Contract =
@@ -20,7 +20,7 @@ data Contract =
 ## The step function
  
 
-Computation is modelled at two different levels.
+Computation is modelled at two different levels: a single “small” step, and the computation that takes place in a single block.
 
 The step function represents a single computation step and has this type:
 ```haskell
@@ -70,13 +70,13 @@ step
           ust = Map.insert ident cns ccs
           cval = evalMoney st val
 ```          
-In the first case, a `SuccessfulCommit` action is generated and the contract continues as `con1`; in the second case no action is generated and the contract continues as `con2`. While neither case holds, the contract is quiescent, waiting for the cash to be committed.
+In the first case, a `SuccessfulCommit` action is generated and the contract continues as `con1`; in the second case no action is generated and the contract continues as `con2`. While neither case holds, the contract is quiescent.
 
 If the cash is committed successfully and the timeout `end_timeout` is reached, then it is impossible to further spend the committed cash, and any unspent funds can be reclaimed by `person`. This is enforced by the `stepBlock` function, as noted above.
 
 ### `RedeemCC`
 
-`RedeemCC ident con` (`CC` stands for ‘cash commitment’). In order for this contract to make progress, the creator of the cash commitment with identifier `ident` is allowed to redeem the unspent funds in that commitment; the contract then continues as `con`, and the action `CommitRedeemed` is produced.
+`RedeemCC ident con` (`CC` stands for ‘cash commitment’). In order for this contract to make progress, the creator of the cash commitment with identifier `ident` must redeem the unspent funds in that commitment; the contract then continues as `con`, and the action `CommitRedeemed` is produced.
 ```haskell
 step commits st c@(RedeemCC ident con) _ =
       case Map.lookup ident ccs of
@@ -120,7 +120,7 @@ step inp st c@(Pay idpay from to val expi con) os
           Just claimed_val -> claimed_val == cval
           Nothing -> False
 ```
-By ‘available’ we mean that sufficient commitments have been made and not yet expired to cover the payment; in this case, the payment uses the currency allocated by the cash commitments made by `from` that expire the earliest. This contract will result in a `FailedPay` action if the funds are not available; otherwise a `SuccessfulPay` action is generated.
+By ‘available’ we mean that sufficient commitments have been made by `from` and not yet expired to cover the payment; in this case, the payment uses the currency allocated by the cash commitments made by `from` that expire the earliest. This contract will result in a `FailedPay` action if the funds are not available; otherwise a `SuccessfulPay` action is generated.
 
 ### `Both`
 `Both con1 con2` enforces the behaviour of both contracts `con1` and `con2`. 
@@ -134,7 +134,7 @@ step comms st (Both con1 con2) os =
           (st1,res1,ac1) = step comms st con1 os
           (st2,res2,ac2) = step comms st1 con2 os
 ```          
-Because the model is _stateful_ and produces output actions, to make a step, it is necessary to execute a single step of each of the contracts `con1` and `con2` in sequence: first `con1` then `con2`.
+Because the model is _stateful_ and produces output actions, to make a step, it is necessary to execute a single step of each of the contracts `con1` and `con2` in sequence: first `con1` then `con2`. With its revised semantics, Marlowe 2.0 makes the `Both` construct commutative.
 
 ### `Choice`
 

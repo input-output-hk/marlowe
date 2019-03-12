@@ -5,6 +5,7 @@ This tutorial gives an overview of Meadow, a tool that allows users to interact 
 ## Introducing Meadow
 
 For Marlowe to be usable in practice, users need to be able to understand how contracts will behave once deployed to the blockchain, but without doing the deployment. We can do that by simulating their behaviour off-chain, interactively stepping through the evaluation of a contract in a browser. We do this in two stages, first transforming an embedded contract (using features of Haskell) to a pure Marlowe contract, and then interactively stepping through that contract. 
+
 This is achieved in  Meadow, a web tool that supports the interactive construction, revision, and simulation of smart-contracts written in Marlowe. 
 
 ![Meadow overview](./pix/screenshot1.png)
@@ -29,7 +30,7 @@ Additionally, to facilitate the introduction of inputs, Meadow provides two diff
 
  - The manual interface, provides a template for each of the four possible types of input: commits, redeems, payment claims, and choices.
 
- - The smart interface (shown in Figure 4), calculates the possible operations that would make sense given the current inputs, state of the contract, block number, and remaining contract; and it provides them in a table with most of the parameters already filled in.
+ - The smart interface (shown in the figure above), calculates the possible operations that would make sense given the current inputs, state of the contract, block number, and remaining contract; and it provides them in a table with most of the parameters already filled in.
 
 The smart interface is usually more convenient to use than the manual interface since the later provides between 3 and 4 fields for each operation whereas the former predicts the possible intentions of the user and usually can input new operations with a single click (except for choices, which still may require the user to input a number).
 

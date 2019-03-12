@@ -30,7 +30,7 @@ carol  = 3
 refund = 0
 pay    = 1
 ```
-which make our contracts more readable. Indeed Marlowe could be extended to include more meaningful ‘atomic’ data, but in our design we chose to keep such constructs to a minimum. We can also give more meaningful abbreviations for contracts and identifiers too:
+which make our contracts more readable. Indeed Marlowe could be extended to include more meaningful ‘atomic’ data, but in our design we chose to keep such constructs to a minimum. We can also give more meaningful abbreviations for contracts and identifiers:
 ```haskell
 redeem_original :: Contract
 redeem_original = RedeemCC iCC1 Null
@@ -48,9 +48,9 @@ chose :: Int -> ConcreteChoice -> Observation
 chose per c = 
         PersonChoseThis (IdentChoice per) per c
 ```
-which labels a choice by person `per` (an `Int`) by a _identifier_ containing that same value, since we have used this convention in writing this particular contract to avoid having to be explicit about identifiers. (Of course, in other situations we will need to be more careful about how we use identifiers).
+which labels a choice by person `per` (an `Int`) by an _identifier_ containing that same value, since we have used this convention in writing this particular contract to avoid having to be explicit about identifiers. (Of course, in other situations we will need to be more careful about how we use identifiers).
 
-Given this definition we can give a description of the pbservation of one person (at least) choosing a particular option
+Given this definition we can give a description of the observation of one person (at least) choosing a particular option
 ```haskell
 one_chose :: Person -> Person -> ConcreteChoice -> Observation
 
@@ -102,7 +102,7 @@ Given all these definitions, we are able to write the contract at the start of t
 > Can you spot any _functions_ that you could define to make the contract shorter, or more modular?
 
 
-This example has shown how embedding in Haskell gives us a more expressive language, simply by reusing some of the basic features of Haskell, namely definitions of constants and functions. In the next tutorial you will learn about how to exercise Marlowe contract in ghci.
+This example has shown how embedding in Haskell gives us a more expressive language, simply by reusing some of the basic features of Haskell, namely definitions of constants and functions. In the next tutorial you will learn about how to exercise Marlowe contracts in ghci.
 
 Notes
 - These contracts are contained in the modules [`Escrow.hs`](https://github.com/input-output-hk/marlowe/blob/v1.3/src/Escrow.hs) and [`EscrowV2.hs`](https://github.com/input-output-hk/marlowe/blob/v1.3/src/EscrowV2.hs) in v1.3 of Marlowe. 

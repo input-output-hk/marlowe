@@ -1068,8 +1068,8 @@ fun scaleResult :: "integer \<Rightarrow> integer \<Rightarrow> integer \<Righta
 fun fetchPrimitive :: "IdAction \<Rightarrow> BlockNumber \<Rightarrow> State \<Rightarrow> Contract
                     \<Rightarrow> (DetachedPrimitive \<times> Contract) fetchResult" where
 "fetchPrimitive idAction blockNum state (Commit idActionC idCommit person value _ timeout continuation _) =
-  (let notCurrentCommit = isCurrentCommit idCommit state in
-   let notExpiredCommit = isExpiredCommit idCommit state in
+  (let notCurrentCommit = \<not> (isCurrentCommit idCommit state) in
+   let notExpiredCommit = \<not> (isExpiredCommit idCommit state) in
    let actualValue = evalValue blockNum state value in
    if ((idAction = idActionC) \<and> notCurrentCommit \<and> notExpiredCommit)
    then Picked ((DCommit idCommit person actualValue timeout),

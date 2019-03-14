@@ -645,8 +645,8 @@ fetchPrimitive idAction blockNum state (Commit idActionC idCommit person value _
   then Picked ((DCommit idCommit person actualValue timeout),
                continuation)
   else NoMatch
-  where notCurrentCommit = isCurrentCommit idCommit state
-        notExpiredCommit = isExpiredCommit idCommit state
+  where notCurrentCommit = not (isCurrentCommit idCommit state)
+        notExpiredCommit = not (isExpiredCommit idCommit state)
         actualValue = evalValue blockNum state value
 fetchPrimitive idAction blockNum state (Pay idActionC idCommit person value _ continuation _) =
   if (idAction == idActionC)

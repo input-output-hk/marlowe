@@ -552,7 +552,7 @@ function reduceRec :: "BlockNumber \<Rightarrow> State \<Rightarrow> Environment
                                 then cont1
                                 else cont2)" |
 "reduceRec blockNum state env (When obs timeout cont1 cont2) =
-  (if isExpired timeout blockNum
+  (if isExpired blockNum timeout
    then reduceRec blockNum state env cont2
    else (if evalObservation blockNum state obs
          then reduceRec blockNum state env cont1

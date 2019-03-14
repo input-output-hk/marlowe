@@ -499,7 +499,7 @@ reduceRec blockNum state env (Choice obs cont1 cont2) =
                                 then cont1
                                 else cont2)
 reduceRec blockNum state env c@(When obs timeout cont1 cont2) =
-  if isExpired timeout blockNum
+  if isExpired blockNum timeout
   then go cont2
   else if evalObservation blockNum state obs
        then go cont1

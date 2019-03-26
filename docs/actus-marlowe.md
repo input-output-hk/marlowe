@@ -1,12 +1,15 @@
 # ACTUS and Marlowe
 
-This tutorial gives an introduction to the general idea of the ACTUS taxonomy, plus examples implemented in Marlowe (at least the PAM contract, and hopefully others).
+This tutorial gives an introduction to the general idea of the ACTUS standards for the algorithmic representation of financial contracts, plus examples implemented in Marlowe (at least the PAM contract, and hopefully others).
 
 ## ACTUS
 
-The ACTUS organisation [https://www.actusfrf.org](https://www.actusfrf.org) has created a standard for financial contracts, categorised by means of a [taxonomy](https://www.actusfrf.org/taxonomy) and described in a detailed [technical specification](https://www.actusfrf.org/algorithmic-standard).
+The ACTUS Financial Research Foundation [https://www.actusfrf.org](https://www.actusfrf.org) has created a standard for financial contracts, categorised by means of a [taxonomy](https://www.actusfrf.org/taxonomy) and described in a detailed [technical specification](https://www.actusfrf.org/algorithmic-standard).
 
-The ACTUS specifications provide a breadth of exercises for implementation in Marlowe, and we illustrate an approach to this in the following example
+The ACTUS standards build on the understanding that financial contracts are legal agreements between two
+(or more) counterparties on the exchange of future cash flows. Historically, such legal agreements are described in natural language leading to ambiguity and artificial diversity. As a response, the ACTUS standards define financial contracts by means of a set of contractual terms and deterministic functions mapping these terms onto future payment obligations. Thereby, it is possible to describe the vast majority of financial instruments through a set of little more than 30 Contract Types or modular templates, respectively.
+
+The ACTUS specifications provide a breadth of exercises for implementation in Marlowe, and we illustrate an approach to this in the following example.
 
 ## Simple Safe Zero Coupon Bond Example
 
@@ -14,8 +17,8 @@ A zero-coupon bond is a debt security that doesn't pay interest (a coupon)
 but is traded at a deep discount, rendering profit at maturity
 when the bond is redeemed for its full face value.
 
-For example, an investor can buy a bond that cost 1000 Ada with 8% discount.
-He pays paying 920 Ada to the bond issuer before _start date_.
+For example, an investor can buy a bond that costs 1000 Ada with 8% discount.
+He pays 920 Ada to the bond issuer before _start date_.
 
 Later, after _maturity date_, investor can exchange the bond for its full notional, i.e. 1000 Ada.
 
@@ -41,8 +44,8 @@ zeroCouponBond issuer investor notional discount startDate maturityDate gracePer
         Null
 ```
 
-This contract has a significant drawback requiring the issuer to commit full bond notional value
-before _start date_, makeing the contract arguably useless.
+This contract has a significant drawback requiring the issuer to commit the full bond notional value
+before _start date_, making the contract arguably useless.
 
 There are at least two ways to solve this: we could trust our issuer and do not require him to commit beforehand,
 or we could ask a third party to be a guarantor of the deal. We'll show both solutions.

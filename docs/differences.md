@@ -2,20 +2,20 @@
 
 Marlowe 2.0 is a thorough revision of Marlowe 1.3 semantics that tries to simplify existing aspects of Marlowe, to include additional functionality, and to present an even more intuitive behaviour when executing contracts.
 
-At the time of writing, Marlowe 2.0 is in the late stages of development but it has not reached the maturity nor the tool support of Marlowe 1.3. For these reasons, the rest of this tutorial has focused on Marlowe 1.3.
+At the time of writing, Marlowe 2.0 is in the late stages of development but it has not reached the maturity nor the tool support of Marlowe 1.3. For these reasons, the tutorial so far has focused on Marlowe 1.3.
 
 This tutorial aims to make it easier for users familiar with Marlowe 1.3 to transition to Marlowe 2.0, but it should not be considered as an extensive description of the differences between the two versions.
 
 ## Changes to syntax
 
-Let us first review the changes in the syntax. The syntax of Marlowe 2.0 is very similar to that of Marlowe 1.3, but there are some important differences, and many new constructs.
+Let us first review the changes in the syntax. The syntax of Marlowe 2.0 is very similar to that of Marlowe 1.3, but there are some important differences, and several new constructs.
 
 ### Actions and identifiers
 
-The most important difference in Marlowe 2.0 is the distinction of action constructs. In Marlowe 1.3 we had three constructs that moved money: `CommitCash`, `Pay`, and `RedeemCC`.
+The most important difference with Marlowe 1.3 is the separation of action constructs. In Marlowe 1.3 we had three constructs that moved money: `CommitCash`, `Pay`, and `RedeemCC`.
 In Marlowe 2.0 we have two: `CommitCash` (which is now called `Commit`), and `Pay`.
 
-There is no longer RedeemCC since it is equivalent to a Pay that has the owner of the commit as payee and the contents of the commit as value.
+There is no longer `RedeemCC` since it is equivalent to a `Pay` that has the owner of the commit as payee and the contents of the commit as value.
 
 The actions in Marlowe 2.0 remain as follows:
 
@@ -24,23 +24,23 @@ The actions in Marlowe 2.0 remain as follows:
     Pay IdAction IdCommit Person Value Timeout Contract Contract
 ```
 
-They are very similar to the ones in Marlowe 1.3, but we now have one identifier for the action itself `IdAction` that must be unique throughout the contract, and one identifier for the commit `IdCommit` which can be reused (even though only one Commit per IdCommit should happen in any given execution).
+They are very similar to the ones in Marlowe 1.3, but we now have one identifier for the action itself `IdAction` that must be unique throughout the contract, and one identifier for the commit `IdCommit` which can be reused (even though only one `Commit` per `IdCommit` will be allowed in any given execution).
 
 Note as well that `Pay` has now two continuations to match `Commit`, and that it now takes a source `IdCommit` instead of a payer `Person`, which makes it explicit where the money comes from.
 
-Also note that `Commit` and `Pay` have the same signature with the exception of the second `Timeout`.
+Also note that `Commit` and `Pay` have the same type-signature except in that `Commit` has an extra `Timeout`.
 
 ### Choices and Oracles
 
 In addition to actions, Marlowe 2.0 contracts can take two types of inputs: choices and oracles.
 
-Choices are similar to the ones in Marlowe 1.3, but now we consider that a choice is identified by a pair:
+Choices work similarly to how they worked in Marlowe 1.3, but now we consider that a choice is identified by a pair:
 
 ```haskell
   type IdChoice = (Integer, Person)
 ```
 
-So each participant can potentially respond differently to choices with the same `Integer` in the pair.
+So each participant can potentially respond differently to choices with the same `Integer` as first element of the pair.
 
 Values of choices can still be observed by using the following observations:
 
@@ -55,7 +55,7 @@ Or by using the following value constructor:
     ValueFromChoice IdChoice Value
 ```
 
-For example, to observe whether participant 1 has made a choice for choice number 3, we would write the following observation:
+However, the reader should note that now all of them take a pair instead of two values. For example, to observe whether participant 1 has made a choice for choice number 3, we would write the following observation:
 
 ```haskell
   ChoseSomething (3, 1)
@@ -75,7 +75,7 @@ Marlowe 2.0 includes some new advanced constructs for creating contracts, analog
 
 ### Let and Use
 
-We have seen how it is possible to use haskell's `let` to define and reuse expressions in embedded Marlowe. But these `let`s necessarily get expanded before the execution of the contract so, while we can use them to increase readability, we cannot use them to make the resulting Marlowe contract more concise and scalable.
+We have seen how it is possible to use Haskell's `let` to define and reuse expressions in embedded Marlowe. But these `let`s necessarily get expanded before the execution of the contract so, while we can use them to increase readability, we cannot use them to make the resulting Marlowe contract more concise and scalable.
 
 Marlowe 2.0 includes one simple type of let/binding mechanism, that allows users to reuse a subcontract without expanding it until it is needed.
 
@@ -87,13 +87,13 @@ Marlowe's `Let` syntax is as follows:
 
 The first argument `LetLabel` is the identifier for the binding, the left `Contract` is the one associated to the identifier, and the right `Contract` is the subcontract where the binding takes effect.
 
-In that second `Contract` we can use `Use` whenever we would like to write the first `Contract`. The syntax of `Use` is as follows:
+In that second `Contract` we can use `Use` wherever we would like to write the first `Contract`. The syntax of `Use` is as follows:
 
 ```haskell
     Use LetLabel
 ```
 
-Where `LetLabel` is again the identifier for the binding, which must have been defined previously by an outter contract, otherwise `Use` expands as `Null`.
+where `LetLabel` is again the identifier for the binding, which must have been defined previously by an outter `Let`, otherwise `Use` expands as `Null`.
 
 ### While
 
@@ -103,7 +103,7 @@ The `While` syntax is as follows:
     While Observation Timeout Contract Contract
 ```
 
-The `While` contructor works similarly to `When` but the first Contract is active only until the condition becomes true. After the condition becomes false, or the current block reaches the `Timeout` the `While` is reduced to the second `Contract`.
+The `While` contructor works similarly to `When` but the first `Contract` is active only until the condition becomes true. After the condition becomes false, or the current block reaches the `Timeout` the `While` is reduced to the second `Contract`.
 
 ### Scale
 
@@ -126,15 +126,15 @@ In addition to the new constructs and modified syntax, Marlowe 2.0 has a slightl
 
 In Marlowe 2.0, a transaction may include any number of inputs that may be signed by any number of participants. A transaction may in some circustances include no inputs too, in order to update the state of the contract as time passes; empty transactions need no signatures.
 
-We have also taken a lot of care in ensuring some properties hold for all contracts. For example: in Marlowe 2.0, the `Both` construct treats both of its subcontracts equally; we achieve this by ensuring that each input is applied sequentially.
+We have also taken a lot of care in ensuring some properties hold for all contracts. For example: in Marlowe 2.0, the `Both` construct treats both of its subcontracts equally (that is: `Both a b` is equivalent to `Both b a`); we achieve this by ensuring that each input is applied sequentially.
 
-Another example: in Marlowe 2.0, for any given contract, there is only a finite number of inputs that the contract can accept, this reduces the chances of a DoS attack, since it is harder to find valid inputs with which to overflow a contract.
+Another example: in Marlowe 2.0, for any given contract, there is only a finite number of inputs that the contract can accept, this reduces the chances of a DoS attack, since it is harder to find valid inputs with which to saturate a contract.
 
 ## Conclusion
 
 We have presented some of the main differences between Marlowe 1.3 and Marlowe 2.0. Marlowe 2.0 includes many more subtle changes that are all aimed at improving the consistency, robustness, and user experience, but they are out of the scope of this tutorial.
 
-Nevertheless, we hope that this document will help and motivate the reader to learn more and use the new Marlowe 2.0.
+Nevertheless, we hope that this document will help and motivate the reader to use and learn more about Marlowe 2.0.
 
 ## Where to go to find out more
 

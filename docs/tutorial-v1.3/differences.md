@@ -138,8 +138,8 @@ Nevertheless, we hope that this document will help and motivate the reader to us
 
 ## Where to go to find out more
 
-The semantics of Marlowe 2.0 can be found [here](../new-semantics/Semantics.hs)
+The semantics of Marlowe 2.0 can be found [here](https://github.com/input-output-hk/marlowe/blob/v1.3/src/Semantics.hs)
 
 We are currently working on a new version of Meadow to include a redesigned interface and the version 2.0 of Marlowe's semantics as described in this document.
 
-### [Prev](./marlowe-plutus.md) [Up](./Tutorials.md) [Next]()
+### [Prev](./marlowe-plutus.md) [Up](./README.md) [Next]()

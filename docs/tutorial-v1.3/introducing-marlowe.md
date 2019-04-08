@@ -46,4 +46,4 @@ In the next six months we will be polishing the language design itself and devel
 - Marlowe video from PlutusFest, December 2018: [link](https://www.youtube.com/watch?v=rSpFOADHLqw)
 - Marlowe video from Coinscrum, London, March 2019: [link to be added]()
 
-### [Up](./Tutorials.md) [Next](./escrow-ex.md)
+### [Up](./README.md) [Next](./escrow-ex.md)

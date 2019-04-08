@@ -165,4 +165,4 @@ We look next at an example of Marlowe in action.
 ## Where to go to find out more 
 - blah
 
-### [Prev](./marlowe-data.md) [Up](./Tutorials.md) [Next](embedded-marlowe.md)
+### [Prev](./marlowe-data.md) [Up](./README.md) [Next](embedded-marlowe.md)

@@ -10,7 +10,7 @@ This is achieved in  Meadow, a web tool that supports the interactive constructi
 
 ![Meadow overview](./pix/screenshot1.png)
 
-The figure shows a screenshot of Meadow in the middle of simulating the execution of the “deposit incentive” contract available in the GitHub repository in the file [`DepositIncentive.hs`](../src/DepositIncentive.hs) and in the examples section of Meadow (to the bottom right of the screen).
+The figure shows a screenshot of Meadow in the middle of simulating the execution of the “deposit incentive” contract available in the GitHub repository in the file [`DepositIncentive.hs`](https://github.com/input-output-hk/marlowe/blob/v1.3/src/DepositIncentive.hs) and in the examples section of Meadow (to the bottom right of the screen).
 
 The Blockly editor allows the user to visualise and edit smart-contracts as interlocking blocks that can be dragged and dropped like pieces of a jigsaw puzzle. Meadow also provides functionality to generate syntactically correct and formatted code (that is displayed in the upper right corner of the application), and to convert the code back to its Blockly representation.
 
@@ -51,4 +51,4 @@ The smart interface is usually more convenient to use than the manual interface 
 - A video showing Meadow in action: [link](https://youtu.be/_loz70XkHM8)
 - More details about the implementation of Meadow can be found in [our paper](https://iohk.io/research/papers/#2WHKDRA8).
 
-### [Prev](./using-marlowe.md)  [Up](./Tutorials.md) [Next](./actus-marlowe.md)
+### [Prev](./using-marlowe.md)  [Up](./README.md) [Next](./actus-marlowe.md)

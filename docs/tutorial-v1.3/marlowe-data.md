@@ -70,4 +70,4 @@ The model makes a number of assumptions about the blockchain infrastructure in w
 - Marlowe 2.0 extends the Marlowe type with local definitions and a `While` construct.
 - The informal semantics of Marlowe 2.0 differs from that presented here, replacing sets of input and observations with individual values. This is done to guarantee that the semantics is deterministic.
 
-### [Prev](./escrow-ex.md) [Up](./Tutorials.md) [Next](./marlowe-semantics.md)
+### [Prev](./escrow-ex.md) [Up](./README.md) [Next](./marlowe-semantics.md)

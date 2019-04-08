@@ -243,4 +243,4 @@ zeroCouponBondGuaranteedMockchainTest = checkMarloweTrace (MarloweScenario {
     return ()
 ```
 
-### [Prev](./meadow-overview.md) [Up](./Tutorials.md) [Next](./marlowe-plutus.md)
+### [Prev](./meadow-overview.md) [Up](./README.md) [Next](./marlowe-plutus.md)

@@ -6,4 +6,4 @@ This tutorial shows how Marlowe contracts can be analysed _without_ having to be
 
 blah blah ... 
 
-### [Prev](./meadow-overview.md) [Up](./Tutorials.md) [Next](./actus-marlowe.md)
+### [Prev](./meadow-overview.md) [Up](./README.md) [Next](./actus-marlowe.md)

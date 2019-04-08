@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="266" height="185" src="docs/pix/logo.png">
+  <img width="266" height="185" src="docs/tutorial-v1.3/pix/logo.png">
 </p>
 
 # Marlowe

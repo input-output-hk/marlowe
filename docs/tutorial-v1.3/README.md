@@ -4,7 +4,7 @@
 </p>
 
 
-# Marlowe tutorials
+# Marlowe 1.3 tutorials
 
 
 This document gives an overview of a set of Marlowe tutorials.

@@ -46,7 +46,7 @@ First, let us examine how to modify what we have written to take care of the cas
 ```  
 The `90` is a _timeout_ on the time to wait for the observation to become true; if this timeout is passed, then the contract `redeem_original` is then executed, thus making sure that the money locked into the contract is not lost.
 
-In a similar way, because a payment cannot be performed directly by the contract, but _must be initiated by the participant_ making the payment, the `Pay` sub-contract is given a timeout (of `100`) for the payment to be made. If the timeout happens, then the contract  `redeem_original` will be performed. The contract also _identifies_ the payment with `iP1` and refers to a commitment through its identifier, `iCC1`:
+In a similar way, because a payment cannot be performed directly by the contract, but _must be initiated by the participant_ making the payment, the `Pay` sub-contract is given a timeout (of `100`) for the payment to be claimed. If the timeout happens, then the contract  `redeem_original` will be performed. The contract also _identifies_ the payment with `iP1` and refers to a commitment through its identifier, `iCC1`:
 
 ```haskell
 (When (Or (two_chose alice bob carol refund)
@@ -84,7 +84,7 @@ The commitment requested from `alice` is given an identifier, `iCC1`. The cash v
 > Comment on the choice of timeout values, and look at alternatives. For example,  what would happen if the timeout on the `When` (`90`) were to be replaced by `110`? Is it sensible to have the same timeout (`100`) on both the commitment and the payment? If not, what choice would you make?
 
 
-Why have we included identifier in commitments and payments, in this case `iCC1` and `iP1`? The identifier is used to identify the commit in a `RedeemCC` or in a `Both` construct to identify a payment or commitment. In the former case to clarify what is being redeemed, and in the latter to distinguish between constructs in the two branches of a `Both`. For a contract to be properly constructed, identifiers need to be unique: i.e they need to identify a single construct only.
+Why have we included identifiers in commitments and payments, in this case `iCC1` and `iP1`? The identifier is used to identify the commit in a `RedeemCC` or in a `Both` construct to identify a payment or commitment. In the former case to clarify what is being redeemed, and in the latter to distinguish between constructs in the two branches of a `Both`. For a contract to be properly constructed, identifiers need to be unique: i.e they need to identify a single construct only.
 
 This example has shown many of the ingredients of the Marlowe contract language; in the next tutorial we will present the complete language. 
 

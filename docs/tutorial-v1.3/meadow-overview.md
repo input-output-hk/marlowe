@@ -16,7 +16,7 @@ The Blockly editor allows the user to visualise and edit smart-contracts as inte
 
 Additionally, Meadow allows the user to edit and evaluate embedded Marlowe contracts into “pure” Marlowe using an embedded editor, which is presented as an overlay to the main view of Marlowe.
 
-In using Meadow you are able to scroll (as indicated by the scrollbars that appear) and to cut, paste and scale using the keyboard shortcuts of your OS and browser: e.g. on Mac OS using  &#8984;-C,  &#8984;-V,  &#8984;-+ etc.
+In using Meadow, you are able to scroll (as indicated by the scrollbars that appear) and to cut, paste and scale using the keyboard shortcuts of your OS and browser: e.g. on Mac OS using  &#8984;-C,  &#8984;-V,  &#8984;-+ etc.
 
 ![Embedded editor](./pix/screenshot2.png)
 

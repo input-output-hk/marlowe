@@ -19,7 +19,9 @@ This document gives an overview of a set of Marlowe tutorials.
 
 ##  [Introducing Marlowe](./introducing-marlowe.md)
 
-This tutorial gives an overview of the ideas behind Marlowe, as a domain-specific languages embedded in Haskell. It also introduces commitments and timeouts, which are central to how Marlowe works in a blockchain context. 
+This tutorial gives an overview of the ideas behind Marlowe, as a domain-specific language embedded in Haskell. It also introduces commitments and timeouts, which are central to how Marlowe works in a blockchain context. 
+
+<!--
 
 ## [A first example: the escrow contract](./escrow-ex.md)
 
@@ -45,11 +47,10 @@ This tutorial shows you how to use Marlowe from within Haskell, and in particula
 
 This tutorial introduces Meadow, and is accompanied by a video. Once you have followed this video you will be able to use Meadow to interact with the escrow and other Meadow contracts.
 
-<!--
 ## [Other functions in Marlowe: analysis](./analysis.md)
 
 This tutorial shows how Marlowe contracts can be analysed _without_ having to be executed. This made much easier because Marlowe is a special-purpose DSL, rather than a general-purpose language like Plutus.
--->
+
 
 ## [ACTUS and Marlowe](./actus-marlowe.md)
 
@@ -59,3 +60,4 @@ This tutorial gives an introduction to the general idea of the ACTUS taxonomy, p
 
 So far these tutorials have dealt with Marlowe as a “stand alone” artefact; this tutorial describes how Marlowe is implemented on blockchain, using the “mockchain” that provides a high-fidelity simulation of the Cardano SL layer.
 
+-->

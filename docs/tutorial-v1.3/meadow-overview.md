@@ -10,11 +10,13 @@ This is achieved in  Meadow, a web tool that supports the interactive constructi
 
 ![Meadow overview](./pix/screenshot1.png)
 
-The figure shows a screenshot of Meadow in the middle of simulating the execution of the “deposit incentive” contract available in the GitHub repository in the file [`DepositIncentive.hs`](https://github.com/input-output-hk/marlowe/blob/v1.3/src/DepositIncentive.hs) and in the examples section of Meadow (to the bottom right of the screen).
+The figure shows a screenshot of Meadow in the middle of simulating the execution of the _deposit incentive_ contract available in the GitHub repository in the file [`DepositIncentive.hs`](https://github.com/input-output-hk/marlowe/blob/v1.3/src/DepositIncentive.hs) and in the examples section of Meadow (to the bottom right of the screen).
 
-The Blockly editor allows the user to visualise and edit smart-contracts as interlocking blocks that can be dragged and dropped like pieces of a jigsaw puzzle. Meadow also provides functionality to generate syntactically correct and formatted code (that is displayed in the upper right corner of the application), and to convert the code back to its Blockly representation.
+The Blockly editor allows the user to visualise and edit smart-contracts as interlocking blocks that can be dragged and dropped like pieces of a jigsaw puzzle. Meadow also provides functionality to generate syntactically correct and formatted code (that is displayed in the upper right corner of the application), and to convert the code back to its Blockly representation. As in the semantics for Marlowe, we use integers to model people; on blockchain we will use public keys for this purpose.
 
 Additionally, Meadow allows the user to edit and evaluate embedded Marlowe contracts into “pure” Marlowe using an embedded editor, which is presented as an overlay to the main view of Marlowe.
+
+In using Meadow you are able to scroll (as indicated by the scrollbars that appear) and to cut, paste and scale using the keyboard shortcuts of your OS and browser: e.g. on Mac OS using  &#8984;-C,  &#8984;-V,  &#8984;-+ etc.
 
 ![Embedded editor](./pix/screenshot2.png)
 

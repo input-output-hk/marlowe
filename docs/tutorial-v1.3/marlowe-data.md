@@ -47,6 +47,8 @@ As the examples illustrate, observables come both from aspects of the blockchain
 -->
 It is assumed that at each step of the execution of the contract, the values of observables will be available if needed, and these values are (together) given by a value of type `OS` (for “observable set”), where individual observations are described in a “little language” for that purpose: `Observation`. Note that these values are not determined by the participants in the contract, but rather by the external environment in which the contract is run.
 
+While we provide some built-in observations, we expect to extend this type. For instance, using `ValueGE` we can check whether one value is greater than or equal to another, but we have not added primitives for equality, or ‘less than or equal’. On the other hand, we can build complex logical combinations of observations using `OrObs` and `NotObs`, and so, if we wished, we could define an equality for values this way.
+
 ### Inputs and Commitments 
 
 On the other hand, at each step there are – potentially, at least – a variety of inputs available from the participants themselves. These include commitments of currency (or “cash”), redemption of commitments, and claims of payments by a participant. Moreover, it is also possible for a participant to input an arbitrary value (which we term a “choice”). The particular inputs at a given step are described by a value of type `Input`.
@@ -56,6 +58,10 @@ While informally we might see a commitment to something as being indefinite, as 
 ### Actions 
 
 Payments can be granted by using committed money, but they must be manually redeemed by the recipient, in the same way that cash commitments are redeemed when they expire. The effects of the contract in the blockchain are represented by a list `AS` of `Actions` that is derived from the execution of each step of the semantics.
+
+### People 
+
+In the semantics for  Marlowe we use integers to model people; on blockchain we will use public keys for this purpose.
 
 ### Infrastructure 
 

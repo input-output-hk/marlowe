@@ -26,6 +26,12 @@ The actions in Marlowe 2.0 remain as follows:
 
 They are very similar to the ones in Marlowe 1.3, but we now have one identifier for the action itself `IdAction` that must be unique throughout the contract, and one identifier for the commit `IdCommit` which can be reused (even though only one `Commit` per `IdCommit` will be allowed in any given execution).
 
+The `IdAction` identifiers, as long as they are unique, do not affect the meaning of the contract, they are only necessary for participants to be able to specify which part of the contract they want to exercise, since there may be several possibilities (typically because of `Both` constructs).
+
+It is important that `IdAction` identifiers are unique because, if a deployed contract becomes ambiguous due to replicated `IdAction` identifiers, participants of the contract will not be able to trigger any of the constructs that share an identifier.
+
+Nevertheless, generating `IdAction` for contracts is trivial, and we intend to automate the process as we implement new tools to aid the construction and deployment of Marlowe contracts.
+
 Note as well that `Pay` has now two continuations to match `Commit`, and that it now takes a source `IdCommit` instead of a payer `Person`, which makes it explicit where the money comes from.
 
 Also note that `Commit` and `Pay` have the same type-signature except in that `Commit` has an extra `Timeout`.

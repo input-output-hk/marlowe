@@ -31,47 +31,33 @@ Informally, this type provides these contracts, some of which were introduced al
   - `Choice` chooses between two contracts on the basis of an observation,  
   - `When` is quiescent until a condition – an observation – becomes true,
   - `While` is active until a condition becomes false.
-  - `Scale` is used to scale the scalar values in a contract, and
-  - `Let` and `Use` allow for making and using local definitions (“shorthand”) within a contract.
+  - `Scale` is used to scale the amounts specified in `Commit`s and `Pay`s in a contract, and
+  - `Let` and `Use` allow for making and using local definitions (“shorthand”) of contracts within a contract.
 
 Additionally, many of the contracts have `Timeout`s that also help to determine their behaviour. 
 
 
 ## The model types
 
-A running contract interacts with its environment in two ways, as shown here.
+The interface between Marlowe contracts and the real world is governed by a series of types that represent the elements that the contracts need to consider.
 
 ![Environment](./pix/context.png)
 
-### Observables 
+### Inputs
 
-First, it  needs to _observe_ different kinds of varying quantities including, for example, the current time, the current block number and sources of random numbers, as well as “real world” quantities like “the price of oil” or “the exchange rate between currencies A and B”. 
+First, contracts need to receive information from the real world. Because Marlowe contracts are pasive (they follow a pull model), all interactions are done through inputs.
 
-As the examples illustrate, observables come both 
- - from aspects of the blockchain (e.g. the current block or slot number) and 
- - externally. 
- 
- In the latter case, all participants of the contract will need to agree on a trusted oracle or source of information. Each instance of such an observable will be observed at a particular time and in a particular context. 
+Inputs can have one out of four types: `Commit`, `Pay`, `Choice`, and `Oracle`. From these four types, `Commit` and `Pay` are considered actions and have typically associated the transference of some money between the participant and the contract. The attentive may have noticed that `Commit` and `Pay` inputs correspond to two types of contract with the same name. Indeed, actions of type `Commit` and `Pay` are enabled by the constructs of the same name.
 
-<!--We assume that the system infrastructure ensures that these values are recorded on the blockchain to allow the computation to be repeated for verification purposes.
--->
-It is assumed that at each step of the execution of the contract, the values of observables will be available if needed, and these values are described in a “little language” for that purpose, namely `Observation`. Note that these values are not determined by the participants in the contract, but rather by the external environment in which the contract is run.
+Inputs of the type `Commit` represent commitments of currency (or “cash”), while inputs of the type `Pay` represent claims of payments by a participant. While informally we might see a commitment to something as being indefinite, as noted earlier, it is important to realise that, on blockchain, a commitment needs to have a timeout so that progress is ensured in contracts. After the timeout period, the cash will be refunded in the next transaction that is signed by the participant that made the commitment. Information about the commitments currently in force forms the `State`, which can be modified at each execution step.
 
-While we provide some built-in observations, we expect to extend this type. For instance, using `ValueGE` we can check whether one value is greater than or equal to another, but we have not added primitives for equality, or ‘less than or equal’. On the other hand, we can build complex logical combinations of observations using `OrObs` and `NotObs`, and so, if we wished, we could define an equality for values this way.
+`Choice` and `Oracle` inputs are only used to provide information to the contract. `Choice`s are values _chosen_ by participants; while `Oracle`s are values provided by a trusted source of information and can change over time. Oracles can be used to provided varying quantities of the real world, for example, the current time, "the price of oil", or "the exchange rate between currencies A and B".
 
-### Inputs and Commitments 
+Values provided by `Choice`s and `Oracle`s can be inspected and acted upon by contracts by using a "little language" for that purpose called `Observation`. Note some of the constructs above include values of the type `Observation`.
 
-On the other hand, at each step there are – potentially, at least – a variety of inputs available from the participants themselves. These include commitments of currency (or “cash”), redemption of commitments, and claims of payments by a participant. Moreover, it is also possible for a participant to input an arbitrary value (which we term a “choice”). The particular inputs at a given step are described by a value of type `Input`.
+### Participants
 
-While informally we might see a commitment to something as being indefinite, as noted earlier, it is important to realise that, on blockchain, a commitment needs to have a timeout so that progress is ensured in contracts. After the timeout period, the cash can be refunded through the user creating a transaction to reclaim the cash. Information about the commitments currently in force forms the `State`, which can be modified at each execution step.
-
-### Actions 
-
-Payments can be granted by using committed money, but they must be manually redeemed by the recipient, in the same way that cash commitments are redeemed when they expire. The effects of the contract in the blockchain are represented by a list `AS` of `Actions` that is derived from the execution of each step of the semantics.
-
-### People 
-
-In the semantics for  Marlowe we use integers to model people; on blockchain we will use public keys for this purpose.
+All Marlowe contracts have a finite number of participants. In Marlowe semantics, we use integers to model participants; in the actual implementation, participants are typically represented by a public key or by its hash. In addition, the semantics take a list of signatures (represented as a list of integer numbers), but in the implementation we assume that transactions are cryptographically signed using the private key of the participants, and that the implementation will check that this signatures are valid.
 
 ### Infrastructure 
 
@@ -79,12 +65,11 @@ The model makes a number of assumptions about the blockchain infrastructure in w
 - It is assumed that cryptographic functions and operations are provided by a layer external to Marlowe, and so they need not be modelled explicitly.
 - We assume that time is “coarse grained” and measured by block or slot number, so that, in particular, timeouts are delimited using block/slot numbers.
 - Making a commitment is not something that a contract can perform; rather, it can request that a commitment is made, but that then has to be established externally: hence the input of (a set of) commitments at each step.
-- The model manages the release of funds back to the committer when a cash commitment expires (see discussion of the stepBlock function below).
+- The model manages the release of funds back to the committer when a cash commitment expires.
  
 ## Notes
 
 - Marlowe 2.0 extends the Marlowe type with local definitions and a `While` construct.
-- The informal semantics of Marlowe 2.0 differs from that presented here, replacing sets of input and observations with individual values. This is done to guarantee that the semantics is deterministic.
-- For ease of reading, in the `data` type definition at the start of this section, we omit the `!` symbol before every field of all constructors. This makes them  strict in that  field. We choose to make Marlowe strict in all arguments to all constructors, so that  Marlowe contracts are wholly _finite_ data structures, with no partial or infinite components.
+- For ease of reading, in the `data` type definition at the start of this section, we omit the `!` symbol before every field of all constructors. This makes them  strict in that field. We choose to make Marlowe strict in all arguments to all constructors, so that Marlowe contracts are wholly _finite_ data structures, with no partial or infinite components.
 
 ### [Prev](./escrow-ex.md) [Up](./README.md) [Next](./marlowe-semantics.md)

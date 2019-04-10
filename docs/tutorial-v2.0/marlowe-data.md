@@ -4,7 +4,7 @@ This tutorial formally introduces Marlowe as a Haskell data type, building on th
 
 ## Marlowe
 
-The Marlowe domain-specific language (DSL) is modelled as an algebraic type in Haskell 
+The Marlowe domain-specific language (DSL) is modelled as an algebraic type in Haskell:
 
 ```haskell
 data Contract =
@@ -20,7 +20,7 @@ data Contract =
     Use LetLabel
 ```
 
-Informally, this type provides these contracts.
+Informally, this type provides these contracts, some of which were introduced already when we introduced the [escrow example](./escrow-ex.md):
 - A `Null` contract, which does nothing. 
 - The next two constructs are the simplest contract-building primitives. They contain two sub-contracts: the first to be followed if the action has been performed successfully, and the second to use in the case of a timeout.
     - `Commit` will wait for a participant to make a commitment, and 
@@ -34,7 +34,7 @@ Informally, this type provides these contracts.
   - `Scale` is used to scale the scalar values in a contract, and
   - `Let` and `Use` allow for making and using local definitions (“shorthand”) within a contract.
 
-Additionally, many of the contracts have timeouts that also help to shape their behaviour. 
+Additionally, many of the contracts have `Timeout`s that also help to determine their behaviour. 
 
 
 ## The model types
@@ -47,11 +47,15 @@ A running contract interacts with its environment in two ways, as shown here.
 
 First, it  needs to _observe_ different kinds of varying quantities including, for example, the current time, the current block number and sources of random numbers, as well as “real world” quantities like “the price of oil” or “the exchange rate between currencies A and B”. 
 
-As the examples illustrate, observables come both from aspects of the blockchain (e.g. the current block or slot number) and externally. In the latter case, all participants of the contract will need to agree on a trusted oracle or source of information. Each instance of such an observable will be observed at a particular time and in a particular context. 
+As the examples illustrate, observables come both 
+ - from aspects of the blockchain (e.g. the current block or slot number) and 
+ - externally. 
+ 
+ In the latter case, all participants of the contract will need to agree on a trusted oracle or source of information. Each instance of such an observable will be observed at a particular time and in a particular context. 
 
 <!--We assume that the system infrastructure ensures that these values are recorded on the blockchain to allow the computation to be repeated for verification purposes.
 -->
-It is assumed that at each step of the execution of the contract, the values of observables will be available if needed, and these values are (together) given by a value of type `OS` (for “observable set”), where individual observations are described in a “little language” for that purpose: `Observation`. Note that these values are not determined by the participants in the contract, but rather by the external environment in which the contract is run.
+It is assumed that at each step of the execution of the contract, the values of observables will be available if needed, and these values are described in a “little language” for that purpose, namely `Observation`. Note that these values are not determined by the participants in the contract, but rather by the external environment in which the contract is run.
 
 While we provide some built-in observations, we expect to extend this type. For instance, using `ValueGE` we can check whether one value is greater than or equal to another, but we have not added primitives for equality, or ‘less than or equal’. On the other hand, we can build complex logical combinations of observations using `OrObs` and `NotObs`, and so, if we wished, we could define an equality for values this way.
 
@@ -81,6 +85,6 @@ The model makes a number of assumptions about the blockchain infrastructure in w
 
 - Marlowe 2.0 extends the Marlowe type with local definitions and a `While` construct.
 - The informal semantics of Marlowe 2.0 differs from that presented here, replacing sets of input and observations with individual values. This is done to guarantee that the semantics is deterministic.
-- For ease of reading, in the `data` type definition at the start of this section, we omit the `!` symbol before every field of all constructors. This makes them  strict in that  field. We choose to make Marlowe strict in all arguments to all constructors, so that  Marlowe contracts are _finite_ data structures, with no partial or infinite components.
+- For ease of reading, in the `data` type definition at the start of this section, we omit the `!` symbol before every field of all constructors. This makes them  strict in that  field. We choose to make Marlowe strict in all arguments to all constructors, so that  Marlowe contracts are wholly _finite_ data structures, with no partial or infinite components.
 
 ### [Prev](./escrow-ex.md) [Up](./README.md) [Next](./marlowe-semantics.md)

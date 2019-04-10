@@ -46,7 +46,7 @@ Choices work similarly to the way that they worked in Marlowe 1.3, except for th
 type IdChoice = (Integer, Person)
 ```
 
-This has the effect that each participant can respond separately to a `Choice`.
+This has the effect that a contract can potentially allow different participants to respond differently to a `Choice`.
 Values of choices can still be observed by using the following observations:
 
 ```haskell

@@ -4,37 +4,25 @@ This tutorial formally introduces Marlowe as a Haskell data type, building on th
 
 ## Marlowe
 
-The Marlowe domain-specific language (DSL) is modelled as an algebraic type in Haskell: the `!` symbol makes a constructor strict in a particular argument. In our case we choose to make Marlowe strict in all arguments to all constructors, which has the effect of making Marlowe contracts strictly finite as data structures. 
+The Marlowe domain-specific language (DSL) is modelled as an algebraic type in Haskell 
 
 ```haskell
 data Contract =
     Null |
-    Commit !IdAction !IdCommit !Person !Value !Timeout !Timeout !Contract !Contract |
-    Pay !IdAction !IdCommit !Person !Value !Timeout !Contract !Contract |
-    Both !Contract !Contract |
-    Choice !Observation !Contract !Contract |
-    When !Observation !Timeout !Contract !Contract |
-    While !Observation !Timeout !Contract !Contract |
-    Scale !Value !Value !Value !Contract |
-    Let !LetLabel !Contract !Contract |
-    Use !LetLabel
-               deriving (Eq,Ord,Show,Read)
-```
-
-```haskell
-data Contract =
-   Null |
-   CommitCash IdentCC Person Money Timeout Timeout Contract Contract |
-   RedeemCC IdentCC Contract |
-   Pay IdentPay Person Person Money Timeout Contract |
-   Both Contract Contract |
-   Choice Observation Contract Contract |
-   When Observation Timeout Contract Contract
+    Commit IdAction IdCommit Person Value Timeout Timeout Contract Contract |
+    Pay IdAction IdCommit Person Value Timeout Contract Contract |
+    Both Contract Contract |
+    Choice Observation Contract Contract |
+    When Observation Timeout Contract Contract |
+    While Observation Timeout Contract Contract |
+    Scale Value Value Value Contract |
+    Let LetLabel Contract Contract |
+    Use LetLabel
 ```
 
 Informally, this type provides these contracts.
 - A `Null` contract, which does nothing. 
-- The next two constructs are the simplest contract-building prmitives. They contain two sub-contracts: the first to be followed if the action has been performed successfully, and the second to use in the case of a timeout.
+- The next two constructs are the simplest contract-building primitives. They contain two sub-contracts: the first to be followed if the action has been performed successfully, and the second to use in the case of a timeout.
     - `Commit` will wait for a participant to make a commitment, and 
     - `Pay` will wait for a payment to be claimed by the recipient.
  
@@ -93,5 +81,6 @@ The model makes a number of assumptions about the blockchain infrastructure in w
 
 - Marlowe 2.0 extends the Marlowe type with local definitions and a `While` construct.
 - The informal semantics of Marlowe 2.0 differs from that presented here, replacing sets of input and observations with individual values. This is done to guarantee that the semantics is deterministic.
+- For ease of reading, in the `data` type definition at the start of this section, we omit the `!` symbol before every field of all constructors. This makes them  strict in that  field. We choose to make Marlowe strict in all arguments to all constructors, so that  Marlowe contracts are _finite_ data structures, with no partial or infinite components.
 
 ### [Prev](./escrow-ex.md) [Up](./README.md) [Next](./marlowe-semantics.md)

@@ -47,11 +47,21 @@ The interface between Marlowe contracts and the real world is governed by a seri
 
 First, contracts need to receive information from the real world. Because Marlowe contracts are pasive (they follow a pull model), all interactions are done through inputs.
 
-Inputs can have one out of four types: `Commit`, `Pay`, `Choice`, and `Oracle`. From these four types, `Commit` and `Pay` are considered actions and have typically associated the transference of some money between the participant and the contract. The attentive may have noticed that `Commit` and `Pay` inputs correspond to two types of contract with the same name. Indeed, actions of type `Commit` and `Pay` are enabled by the constructs of the same name.
+Inputs can have one out of four types: `Commit`, `Pay`, `Choice`, and `Oracle`. From these four types, `Commit` and `Pay` are considered actions and have typically associated the transference of some money between the participant and the contract. The attentive may have noticed that `Commit` and `Pay` inputs correspond to two types of contract with the same name. Indeed, actions of type `Commit` and `Pay` are enabled by the constructs of the same name. In fact, inputs for `Commit`s and `Pay`s only consist of their identifier (`IdAction`), since the rest of information can be inferred from the contract.
 
-Inputs of the type `Commit` represent commitments of currency (or “cash”), while inputs of the type `Pay` represent claims of payments by a participant. While informally we might see a commitment to something as being indefinite, as noted earlier, it is important to realise that, on blockchain, a commitment needs to have a timeout so that progress is ensured in contracts. After the timeout period, the cash will be refunded in the next transaction that is signed by the participant that made the commitment. Information about the commitments currently in force forms the `State`, which can be modified at each execution step.
+```haskell
+data AnyInput = Action IdAction
+              | Input Input
+```
+
+Inputs of the type `Commit` represent commitments of currency (or “cash”), while inputs of the type `Pay` represent claims of payments by a participant. While informally we might see a commitment to something as being indefinite, as noted earlier, it is important to realise that, on blockchain, a commitment needs to have a timeout so that progress is ensured in contracts.After the timeout period, the cash will be refunded in the next transaction that is signed by the participant that made the commitment. Information about the commitments currently in force forms the `State`, which can be modified at each execution step.
 
 `Choice` and `Oracle` inputs are only used to provide information to the contract. `Choice`s are values _chosen_ by participants; while `Oracle`s are values provided by a trusted source of information and can change over time. Oracles can be used to provided varying quantities of the real world, for example, the current time, "the price of oil", or "the exchange rate between currencies A and B".
+
+```haskell
+data Input = IChoice IdChoice Choice
+           | IOracle IdOracle BlockNumber Integer
+```
 
 Values provided by `Choice`s and `Oracle`s can be inspected and acted upon by contracts by using a "little language" for that purpose called `Observation`. Note some of the constructs above include values of the type `Observation`.
 

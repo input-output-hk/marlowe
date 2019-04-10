@@ -8,6 +8,6 @@ Inputs can have one out of four types: `Commit`, `Pay`, `Choice`, and `Oracle`. 
 
 Transaction inputs are processed mainly by three fundamental functions in the semantics: `reduce`, `fetchPrimitive`, and `eval`. The `reduce` function is applied before and after every input, `fetchPrimitve` is applied only for inputs that are actions (i.e: `Commit` and `Pay` inputs), and `eval` is applied to the result of `fetchPrimitive` whenever appropriate.
 
-In addition to these three functions, there three additional functions that are applied in every transaction. Before processing the inputs, the function `expireCommits` is applied, and after processing the inputs the functions `redeemMoney` and `simplify` are applied.
+In addition to these three functions, there are three additional functions that are applied in every transaction. Before processing the inputs, the function `expireCommits` is applied, and after processing the inputs the functions `redeemMoney` and `simplify` are applied.
 
 

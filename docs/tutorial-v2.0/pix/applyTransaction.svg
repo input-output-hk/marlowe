@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/PR-SVG-20010719/DTD/svg10.dtd">
+<svg width="66cm" height="34cm" viewBox="-142 -28 1306 677" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <g>
+    <rect style="fill: #ffffff" x="700" y="-20" width="463.069" height="240"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke-dasharray: 20; stroke: #000000" x="700" y="-20" width="463.069" height="240"/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="80" y="-20" width="400" height="180"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke-dasharray: 20; stroke: #000000" x="80" y="-20" width="400" height="180"/>
+  </g>
+  <g>
+    <ellipse style="fill: #ffffff" cx="610.155" cy="292.539" rx="130.155" ry="32.5387"/>
+    <ellipse style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" cx="610.155" cy="292.539" rx="130.155" ry="32.5387"/>
+    <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="610.155" y="298.541">
+      <tspan x="610.155" y="298.541">applyTransaction</tspan>
+    </text>
+  </g>
+  <g>
+    <g>
+      <rect style="fill: #ffffff" x="100" y="60" width="164.8" height="49"/>
+      <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="100" y="60" width="164.8" height="49"/>
+      <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="182.4" y="90.5028">
+        <tspan x="182.4" y="90.5028">[ AnyInput ]</tspan>
+      </text>
+    </g>
+    <text font-size="14.6753" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="144.525" y="129">
+      <tspan x="144.525" y="129">(Input list)</tspan>
+    </text>
+  </g>
+  <g>
+    <g>
+      <rect style="fill: #ffffff" x="300" y="60" width="164.8" height="49"/>
+      <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="300" y="60" width="164.8" height="49"/>
+      <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="382.4" y="90.5028">
+        <tspan x="382.4" y="90.5028">Set Person</tspan>
+      </text>
+    </g>
+    <text font-size="14.6753" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="327.461" y="129">
+      <tspan x="327.461" y="129">(Signature set)</tspan>
+    </text>
+  </g>
+  <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:serif;font-style:normal;font-weight:normal" x="280" y="-8.78333">
+    <tspan x="280" y="-8.78333"></tspan>
+    <tspan x="280" y="15.9111">Transaction</tspan>
+    <tspan x="280" y="40.6056"></tspan>
+    <tspan x="280" y="65.3"></tspan>
+  </text>
+  <g>
+    <rect style="fill: #ffffff" x="500" y="40" width="164.8" height="49"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="500" y="40" width="164.8" height="49"/>
+    <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="582.4" y="70.5028">
+      <tspan x="582.4" y="70.5028">BlockNumber</tspan>
+    </text>
+  </g>
+  <g>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 223.6 109 C 280,140 440,180 511.72,262.194"/>
+    <polygon style="fill: #000000" points="516.651,267.846 506.309,263.598 511.72,262.194 513.844,257.023 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="516.651,267.846 506.309,263.598 511.72,262.194 513.844,257.023 "/>
+  </g>
+  <g>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 423.6 109 C 500,140 560,220 560.267,252.741"/>
+    <polygon style="fill: #000000" points="560.328,260.241 555.247,250.282 560.267,252.741 565.247,250.2 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="560.328,260.241 555.247,250.282 560.267,252.741 565.247,250.2 "/>
+  </g>
+  <g>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 582.4 89 C 580,140 620,160 611.109,250.311"/>
+    <polygon style="fill: #000000" points="610.374,257.775 606.378,247.333 611.109,250.311 616.329,248.313 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="610.374,257.775 606.378,247.333 611.109,250.311 616.329,248.313 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="720" y="40" width="164.8" height="49"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="720" y="40" width="164.8" height="49"/>
+    <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="802.4" y="70.5028">
+      <tspan x="802.4" y="70.5028">State</tspan>
+    </text>
+  </g>
+  <g>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 761.2 89 C 740,140 669.808,162.477 660.917,252.788"/>
+    <polygon style="fill: #000000" points="660.182,260.252 656.186,249.81 660.917,252.788 666.137,250.79 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="660.182,260.252 656.186,249.81 660.917,252.788 666.137,250.79 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="920" y="40" width="164.8" height="49"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="920" y="40" width="164.8" height="49"/>
+    <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="1002.4" y="70.5028">
+      <tspan x="1002.4" y="70.5028">Contract</tspan>
+    </text>
+  </g>
+  <g>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 961.2 89 C 920,120 712.033,169.53 703.142,259.841"/>
+    <polygon style="fill: #000000" points="702.407,267.305 698.411,256.863 703.142,259.841 708.363,257.843 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="702.407,267.305 698.411,256.863 703.142,259.841 708.363,257.843 "/>
+  </g>
+  <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:serif;font-style:normal;font-weight:normal" x="931.534" y="15.067">
+    <tspan x="931.534" y="15.067">Contract information</tspan>
+    <tspan x="931.534" y="39.7615"></tspan>
+    <tspan x="931.534" y="64.4559"></tspan>
+  </text>
+  <g>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 980 144.5 C 900,160 760,200 733.777,270.954"/>
+    <polygon style="fill: #000000" points="731.177,277.989 729.954,266.876 733.777,270.954 739.334,270.343 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="731.177,277.989 729.954,266.876 733.777,270.954 739.334,270.343 "/>
+  </g>
+  <g>
+    <g>
+      <rect style="fill: #ffffff" x="980" y="120" width="164.8" height="49"/>
+      <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="980" y="120" width="164.8" height="49"/>
+      <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="1062.4" y="150.503">
+        <tspan x="1062.4" y="150.503">Integer</tspan>
+      </text>
+    </g>
+    <text font-size="14.6756" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="1062.4" y="189">
+      <tspan x="1062.4" y="189">(Available money</tspan>
+      <tspan x="1062.4" y="207.344">in contract)</tspan>
+    </text>
+  </g>
+  <g>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 610.155 325.077 C 600,400 300,360 300,450.264"/>
+    <polygon style="fill: #000000" points="300,457.764 295,447.764 300,450.264 305,447.764 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="300,457.764 295,447.764 300,450.264 305,447.764 "/>
+  </g>
+  <g>
+    <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 610.155 325.077 C 600,400 920,360 920,450.264"/>
+    <polygon style="fill: #000000" points="920,457.764 915,447.764 920,450.264 925,447.764 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="920,457.764 915,447.764 920,450.264 925,447.764 "/>
+  </g>
+  <text font-size="19.7556" style="fill: #000000;text-anchor:start;font-family:serif;font-style:normal;font-weight:normal" x="574.813" y="380">
+    <tspan x="574.813" y="380">either</tspan>
+  </text>
+  <path style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" d="M 489.566,376.855 A 335.41,335.41 0 0 0 717.743,376.112"/>
+  <g>
+    <rect style="fill: #ffffff" x="-140.093" y="457.821" width="897.562" height="190.079"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-140.093" y="457.821" width="897.562" height="190.079"/>
+  </g>
+  <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:serif;font-style:normal;font-weight:normal" x="308.688" y="498.771">
+    <tspan x="308.688" y="498.771">MApplicationResult (Success)</tspan>
+    <tspan x="308.688" y="523.466"></tspan>
+    <tspan x="308.688" y="548.16"></tspan>
+  </text>
+  <g>
+    <g>
+      <rect style="fill: #ffffff" x="372.023" y="528.421" width="164.8" height="49"/>
+      <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="372.023" y="528.421" width="164.8" height="49"/>
+      <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="454.423" y="558.924">
+        <tspan x="454.423" y="558.924">State</tspan>
+      </text>
+    </g>
+    <g>
+      <rect style="fill: #ffffff" x="556.393" y="528.421" width="164.8" height="49"/>
+      <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="556.393" y="528.421" width="164.8" height="49"/>
+      <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="638.793" y="558.924">
+        <tspan x="638.793" y="558.924">Contract</tspan>
+      </text>
+    </g>
+    <g>
+      <g>
+        <rect style="fill: #ffffff" x="-103.816" y="528.421" width="164.8" height="49"/>
+        <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="-103.816" y="528.421" width="164.8" height="49"/>
+        <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="-21.4164" y="558.924">
+          <tspan x="-21.4164" y="558.924">Integer</tspan>
+        </text>
+      </g>
+      <text font-size="14.6756" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-21.4164" y="597.421">
+        <tspan x="-21.4164" y="597.421">(Available money</tspan>
+        <tspan x="-21.4164" y="615.766">in contract)</tspan>
+      </text>
+    </g>
+    <g>
+      <g>
+        <rect style="fill: #ffffff" x="80.5533" y="528.421" width="271.9" height="49"/>
+        <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="80.5533" y="528.421" width="271.9" height="49"/>
+        <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="216.503" y="558.924">
+          <tspan x="216.503" y="558.924">TransactionOutcomes</tspan>
+        </text>
+      </g>
+      <text font-size="14.6756" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="216.503" y="597.421">
+        <tspan x="216.503" y="597.421">(Incoming and outgoing</tspan>
+        <tspan x="216.503" y="615.766">money per participant)</tspan>
+      </text>
+    </g>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="790.47" y="462.835" width="271.428" height="80.1946"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="790.47" y="462.835" width="271.428" height="80.1946"/>
+  </g>
+  <text font-size="19.7556" style="fill: #000000;text-anchor:middle;font-family:serif;font-style:normal;font-weight:normal" x="926.184" y="499.347">
+    <tspan x="926.184" y="499.347">MCouldNotApply</tspan>
+    <tspan x="926.184" y="524.042">(Error)</tspan>
+    <tspan x="926.184" y="548.736"></tspan>
+  </text>
+</svg>

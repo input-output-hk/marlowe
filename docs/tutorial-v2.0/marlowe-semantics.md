@@ -2,9 +2,9 @@
 
 This tutorial gives a high-level formal semantics of Marlowe 2.0 by describing the types of inputs supported, and by showing the Haskell code for the main functions that constituite the semantics.
 
-In general, participants of a Marlowe contract can communicate with the contract by issuing transactions. From the point of view of the Marlowe's semantics, a transaction consists basically of a list of inputs that may be signed by one or more participants.
+In general, participants of a Marlowe contract can communicate with the contract by issuing transactions. From the point of view of Marlowe's semantics, a transaction consists basically of a list of inputs that may be signed by one or more participants. In the semantics, we represent a transaction as a list of inputs together with a set of integer numbers (the set of integer numbers represents the set of participants that signed the transaction).
 
-Inputs can have one out of four types: `Commit`, `Pay`, `Choice`, and `Oracle`. From these four types, `Commit` and `Pay` are considered actions and have typically associated the transference of some money between the participant and the contract. `Choice` and `Oracle` are used to provide information from the external world to the contract.
+As we mentioned in the previous tutorial, inputs can have one out of four types: `Commit`, `Pay`, `Choice`, and `Oracle`. From these four types, `Commit` and `Pay` are considered actions and have typically associated the transference of some money between the participant and the contract. `Choice` and `Oracle` are used to provide information from the external world to the contract.
 
 Transaction inputs are processed mainly by three fundamental functions in the semantics: `reduce`, `fetchPrimitive`, and `eval`. The `reduce` function is applied before and after every input, `fetchPrimitve` is applied only for inputs that are actions (i.e: `Commit` and `Pay` inputs), and `eval` is applied to the result of `fetchPrimitive` whenever appropriate.
 

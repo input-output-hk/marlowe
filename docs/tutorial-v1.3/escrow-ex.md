@@ -44,7 +44,7 @@ First, let us examine how to modify what we have written to take care of the cas
               redeem_original))
       redeem_original    -- ADDED 
 ```  
-The `90` is a _timeout_ on the time to wait for the observation to become true; if this timeout is passed, then the contract `redeem_original` is then executed, thus making sure that the money locked into the contract is not lost.
+The `90` is a _timeout_ on the time to wait for the observation to become true; if this timeout is passed, then the contract `redeem_original` is executed, thus making sure that the money locked into the contract is not lost.
 
 In a similar way, because a payment cannot be performed directly by the contract, but _must be initiated by the participant_ making the payment, the `Pay` sub-contract is given a timeout (of `100`) for the payment to be claimed. If the timeout happens, then the contract  `redeem_original` will be performed. The contract also _identifies_ the payment with `iP1` and refers to a commitment through its identifier, `iCC1`:
 

@@ -88,7 +88,7 @@ Marlowe's `Let` syntax is as follows:
 ```haskell
 Let LetLabel Contract Contract
 ```
-The first argument `LetLabel` is the identifier for the binding, the first `Contract` is that associated to the identifier, and the right `Contract` is the subcontract in which the binding takes effect.
+The first argument `LetLabel` is the identifier for the binding, the first `Contract` will be associated to the identifier, and the right `Contract` is the subcontract in which the binding takes effect.
 
 In the second `Contract` we can use `Use` wherever we would like to write the first `Contract`. The syntax of `Use` is as follows:
 

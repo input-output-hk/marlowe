@@ -67,7 +67,7 @@ You should note, however, that each of them now takes a _pair_ instead of two va
 ChoseSomething (3, 1)
 ```
 
-Marlowe 2.0 also includes support for external _oracles_, which have their own identifier `IdOracle` and can supply values that can are different at every block. Oracles can be used for representing values from the real world, such as the oil price at any given time.
+Marlowe 2.0 also includes support for external _oracles_, which have their own identifier `IdOracle` and can supply values that can be different at every block. Oracles can be used for representing values from the real world, such as the oil price at any given time.
 Values from oracles can be observed by using the following value constructor:
 
 ```haskell

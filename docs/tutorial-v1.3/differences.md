@@ -129,7 +129,7 @@ In Marlowe 2.0, a transaction may include any number of inputs that may be signe
 
 We have also taken a lot of care in ensuring some properties hold for all contracts. For example: in Marlowe 2.0, the `Both` construct treats both of its subcontracts equally (that is: `Both a b` is equivalent to `Both b a`); we achieve this by ensuring that each input is applied sequentially.
 
-Another example: in Marlowe 2.0, for any given contract, there are only a finite number of inputs that the contract can accept. This reduces the chances of a DoS attack, since it is harder to find valid inputs with which to saturate a contract.
+Another example: in Marlowe 2.0, for any given contract, there is only a finite number of inputs that the contract can accept. This reduces the chances of a DoS attack, since it is harder to find valid inputs with which to saturate a contract.
 
 ## Conclusion
 

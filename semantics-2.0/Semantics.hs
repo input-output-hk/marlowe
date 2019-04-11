@@ -527,7 +527,7 @@ reduceRec blockNum state env (Scale divid divis def contract) =
         vsDivis = evalValue blockNum state divis
         vsDef = evalValue blockNum state def
 reduceRec blockNum state env (While obs timeout contractWhile contractAfter) =
-  if isExpired timeout blockNum
+  if isExpired blockNum timeout
   then go contractAfter
   else if evalObservation blockNum state obs
        then (While obs timeout (go contractWhile) contractAfter)

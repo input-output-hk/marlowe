@@ -139,7 +139,7 @@ Nevertheless, we hope that this document will help and motivate you to use and l
 
 ## Where to go to find out more
 
-- Here are tutorials on [Marlowe v1.3](./tutorial-v1.3/README.md) and [Marlowe v2.0](./tutorial-v2.0/README.md), and [Meadow in the cloud](https://prod.meadow.marlowe.iohkdev.io).
+- Here are tutorials on [Marlowe v1.3](./README.md) and [Marlowe v2.0](../tutorial-v2.0/README.md), and [Meadow in the cloud](https://prod.meadow.marlowe.iohkdev.io).
 
 - The semantics of Marlowe 2.0 can be found [here](https://github.com/input-output-hk/marlowe/blob/v1.3/src/Semantics.hs)*
 

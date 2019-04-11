@@ -10,10 +10,10 @@
 This document gives an overview of a set of Marlowe tutorials.
 
 > __Important note:__ these tutorials address the current version of Marlowe,  2.0, which irons out
-> a number of infelicities in earlier versions. Meadow 2.0 is implemented in _Meadow in the Cloud_ **ADD LINK**.
+> a number of infelicities in earlier versions. Marlowe 2.0 is implemented in _Meadow in the Cloud_, available [here](https://prod.meadow.marlowe.iohkdev.io).
 >
 > The version covered in the ISoLA paper, and supported in the original version of Meadow that includes Blockly, is tagged as **v1.3**
-> and is available here: [https://github.com/input-output-hk/marlowe/tree/v1.3](https://github.com/input-output-hk/marlowe/tree/v1.3). 
+> and is available [here](https://github.com/input-output-hk/marlowe/tree/v1.3). 
 >
 
 

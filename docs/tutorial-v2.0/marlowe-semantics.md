@@ -147,12 +147,25 @@ reduceRec blockNum state env c@(Pay _ _ _ _ timeout _ continuation) =
 
 Other than that, the only thing that Marlowe does when provided with `Choice`s and `Oracle`s is to record them in the state so that the `reduce` function can access them.
 
-## Reducing contracts
-<!-- Combinators and `Null` -->
+## Combinators and `Null`
 
-In this section, we describe the remaining Marlowe contracts, which in general can be used to combine other contracts together and to decide between them depending on the information known to the contract at any given moment.
+In this section, we describe the semantics of the remaining Marlowe contracts, which can be used to combine other contracts together and to decide between them, depending on the information known to the contract at any given moment. The semantics of these combinators are mainly defined by `reduceRec` (the auxiliary function of `reduce`). However, their behaviour also affects other functions, in particular `fetchPrimitive` and `simplify`.
 
-**NEED SOMETHING HERE that explains that `reduce/Rec` is being described? Could be reflected in the title, which I have modified. A short paragraph should be enough. Also add a type for `reduce/Rec`?** 
+For example, the activation rules of each construct are reflected in `fetchPrimitive`, that is, if the construct immediately activates its subcontracts that is translated in that `fetchPrimitive` will be able to recursively examine some of its subcontracts. This is the case of the second subcontract of `Let`:
+
+```haskell
+fetchPrimitive idAction blockNum state (Let label boundContract subContract) =
+  case fetchPrimitive idAction blockNum state subContract of
+     Picked (result, cont) -> Picked (result, Let label boundContract cont)
+     NoMatch -> NoMatch
+     MultipleMatches -> MultipleMatches
+```
+
+Whereas in the case of `When`, `fetchPrimitive` will just leave the whole construct unchanged.
+
+```haskell
+fetchPrimitive _ _ _ _ = NoMatch
+```
 
 ### `Null`
 
@@ -162,7 +175,7 @@ The `Null` contract does nothing and stays quiescent forever.
 reduceRec _ _ _ Null = Null
 ```
 
-Nevertheless, it is used by the `simplify` function and it can be used to replace a contract by a smaller but equivalent one. For example, `Both Null Null` can be reduced to `Null`
+Nevertheless, it is used by the `simplify` function and it can be used to replace a contract by a smaller but equivalent one. For example, `Both Null Null` can be reduced to `Null`.
 
 ### `Both`
 

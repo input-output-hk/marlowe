@@ -88,14 +88,7 @@ chose :: Integer -> Choice -> Observation
 chose per c = ChoseThis (1, per) c
 ```
 
-```haskell
-chose :: Int -> ConcreteChoice -> Observation
-
-chose per c = 
-        PersonChoseThis (IdentChoice per) per c
-```
-
-**WHAT IS THE ROLE OF `1` HERE??** which encapsulates the choice of `c` by person `per`, identifying it with identifier `1`.  (Of course, in other situations we will need to be more careful about how we use identifiers).
+which encapsulates the choice of `c` by person `per`, identifying it with identifier `1`.  
 
 Given this definition we can give a description of the observation of one person (at least) choosing a particular option
 
@@ -168,9 +161,6 @@ This example has shown how embedding in Haskell gives us a more expressive langu
 
 ### Note
 
-- **TO UPDATE: LINKS BELOW**
-- These contracts are contained in the modules [`Escrow.hs`](https://github.com/input-output-hk/marlowe/blob/v1.3/src/Escrow.hs) and [`EscrowV2.hs`](https://github.com/input-output-hk/marlowe/blob/v1.3/src/EscrowV2.hs) in v2.0 of Marlowe. 
-
-
+- These contracts are contained in the modules [`Escrow.hs`](https://github.com/input-output-hk/marlowe/blob/master/semantics-2.0/examples/pure/Escrow.hs) and [`EscrowV2.hs`](https://github.com/input-output-hk/marlowe/blob/master/semantics-2.0/examples/embedded/Escrow.hs) in v2.0 of Marlowe. 
 
 ### [Prev](./marlowe-semantics.md) [Up](./README.md) [Next](./using-marlowe.md)

@@ -30,13 +30,9 @@ This tutorial introduces a simple financial contract in pseudocode, before expla
 
 This tutorial formally introduces Marlowe as a Haskell data type, building on the escrow example in the previous tutorial. It also describes the different types used by the model, as well as discussing a number of assumptions about the infrastructure in which contracts will be run.
 
-<!--
-
 ## [Understanding the semantics](./marlowe-semantics.md)
 
-This tutorial gives a formal semantics for Marlowe by presenting a Haskell definition of the semantic `step` function, so that we have a _semantics that we can execute_. 
-
--->
+This tutorial gives an introduction to the formal semantics of Marlowe by presenting an overview of the key Haskell definitions that interpret inputs and transactions, as well as fitting those into a schematic overview of how the components of the semantics work together.
 
 ## [Embedded Marlowe](./embedded-marlowe.md)
 
@@ -60,11 +56,9 @@ This tutorial introduces Meadow in the cloud, an online tool for creating embedd
 This tutorial shows how Marlowe contracts can be analysed _without_ having to be executed. This made much easier because Marlowe is a special-purpose DSL, rather than a general-purpose language like Plutus.
 -->
 
-<!--
 ## [ACTUS and Marlowe](./actus-marlowe.md)
 
-This tutorial gives an introduction to the general idea of the ACTUS taxonomy, plus examples implemented in Marlowe (at least the PAM contract, and hopefully others).
--->
+This tutorial gives an introduction to the general idea of the ACTUS taxonomy, plus examples implemented in Marlowe.
 
 ## [Implementing Marlowe in Plutus](./marlowe-plutus.md)
 

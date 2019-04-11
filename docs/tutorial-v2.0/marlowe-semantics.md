@@ -67,7 +67,7 @@ fetchPrimitive :: IdAction -> BlockNumber -> State -> Contract
 
 ### `Commit`
 
-A `Commit` allows a participant `person` to transfer to the contract an amount of money `value`. This money will be recorded in the contract under the identifier `idCommit` and future payments can use this identifier as a source of money. Once the block specified by `timeout` (the second `Timeout` in `Commit`) is reached, any money from the `Commit` that has not been spent (through payments) will be frozen, and the participant that performed the commitment will be able to withdraw with the next transaction that he or she signs.
+A `Commit` allows a participant `person` to transfer to the contract an amount of money `value`. This money will be recorded in the contract under the identifier `idCommit` and future payments can use this identifier as a source of money. Once the block specified by `timeout` (the second `Timeout` in `Commit`) is reached, any money from the `Commit` that has not been spent (through payments) will be frozen, and the participant that performed the commitment will be able to withdraw it with the next transaction that he or she signs.
 
 ```haskell
 eval (DCommit idCommit person value timeout) state =
@@ -80,7 +80,20 @@ eval (DCommit idCommit person value timeout) state =
 
 For a commitment to be valid, no commitment with the identifier `idCommit` must have been issued before (only one `Commit` per identifier is allowed).
 
-In addition, `reduceRec` (the auxiliary function of `reduce`) specifies that a `Commit` will be reduced to its second `continuation` if any of the timeouts is reached.
+If the `Commit` does not timeout and is issued correctly, the remaining contract, as returned by the `fetchPrimitive` function, will use the first `continuation` (the first `Contract` in `Commit`).
+
+```haskell
+fetchPrimitive idAction blockNum state (Commit idActionC idCommit person value _ timeout continuation _) =
+  if (idAction == idActionC && notCurrentCommit && notExpiredCommit)
+  then Picked ((DCommit idCommit person actualValue timeout),
+               continuation)
+  else NoMatch
+  where notCurrentCommit = not (isCurrentCommit idCommit state)
+        notExpiredCommit = not (isExpiredCommit idCommit state)
+        actualValue = evalValue blockNum state value
+```
+
+On the other hand, if any of the timeouts of the `Commit` are reached, `reduceRec` (the auxiliary function of `reduce`) specifies that a `Commit` will be reduced to its second `continuation`.
 
 ```haskell
 reduceRec blockNum state env c@(Commit _ _ _ _ timeout_start timeout_end _ continuation) =
@@ -88,9 +101,6 @@ reduceRec blockNum state env c@(Commit _ _ _ _ timeout_start timeout_end _ conti
   then reduceRec blockNum state env continuation
   else c
 ```
-
-**COMMENT: this next sentence seems not be linked with what comes before. Specifically, "instead of" what? (Same comment for `Pay` too)** 
-The `fetchPrimitive` function will use the first continuation (the first `Contract` in `Commit`) instead.
 
 ### `Pay`
 
@@ -110,10 +120,19 @@ eval (DPay idCommit person value) state =
                     , fromJust $ discountAvailableMoneyFromCommit idCommit value state )
                     NoProblem)
   where maxValue = getAvailableAmountInCommit idCommit state
-
 ```
 
-Regarding `reduceRec`, `Pay` behaves similarly to `Commit` except in that `Pay` only has one `Timeout`; `Pay` will be reduced to its second `continuation` if its timeout is reached before it is claimed.
+If the `Pay` does not timeout and is claimed correctly, the remaining contract, as returned by the `fetchPrimitive` function, will use the first `continuation` (the first `Contract` in `Pay`).
+
+```haskell
+fetchPrimitive idAction blockNum state (Pay idActionC idCommit person value _ continuation _) =
+  if (idAction == idActionC)
+  then Picked ((DPay idCommit person actualValue), continuation)
+  else NoMatch
+  where actualValue = evalValue blockNum state value
+```
+
+On the other hand, if the timeouts of the `Pay` is reached, `reduceRec` (the auxiliary function of `reduce`) specifies that a `Pay` will be reduced to its second `continuation`.
 
 ```haskell
 reduceRec blockNum state env c@(Pay _ _ _ _ timeout _ continuation) =
@@ -121,8 +140,6 @@ reduceRec blockNum state env c@(Pay _ _ _ _ timeout _ continuation) =
   then reduceRec blockNum state env continuation
   else c
 ```
-
-Again, the `fetchPrimitive` function will use the first continuation (the first `Contract` in `Pay`) instead.
 
 ## Non-action input processing
 

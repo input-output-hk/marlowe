@@ -198,12 +198,12 @@ However, there is one fundamental difference: `When` does not activate its subco
 For example, in the following contract: 
 
 ```
-   While 
-     (NotObs 
-        (ChoseSomething (1, 1))) 20 
-     (Commit 1 1 1 
-        (ValueFromChoice (1, 1) 
-           (Constant 20)) 10 20 Null Null) Null
+While 
+  (NotObs 
+     (ChoseSomething (1, 1))) 20 
+  (Commit 1 1 1 
+     (ValueFromChoice (1, 1) 
+        (Constant 20)) 10 20 Null Null) Null
 ```
 
 once the choice `(1, 1)` is made, it will no longer be possible to use the `Commit`.

@@ -126,23 +126,26 @@ Again, the `fetchPrimitive` function will use the first continuation (the first 
 
 ## Non-action input processing
 
-`Choice`s and `Oracle`s inputs are processed very differently to actions. They are relatively independent of the state of the contract, and they may be issued anytime, as long as the values provided can potentially be used by the contract. In other words, there must be somewhere in the code of the contract that inspects the `Choice` or `Oracle` value in order for a participant to be able to provide that value. Otherwise, the contract does not need to know the value, and providing it anyway would just be adding clutter and load to the contract and blockchain, which could end up translating into problems like DoS. For these reasons, the Marlowe 2.0 semantics disallows providing  information that is not required.
+`Choice`s and `Oracle`s inputs are processed very differently to actions. They are relatively independent of the state of the contract, and they may be issued at any time, as long as the values provided can potentially be used by the contract. In other words, there must be somewhere in the code of the contract that inspects the `Choice` or `Oracle` value in order for a participant to be able to provide that value. Otherwise, the contract does not need to know the value, and providing it anyway would just be adding clutter and load to the contract and blockchain, which could end up translating into problems like DoS. For these reasons, the Marlowe 2.0 semantics disallows providing  information that is not required.
 
 Other than that, the only thing that Marlowe does when provided with `Choice`s and `Oracle`s is to record them in the state so that the `reduce` function can access them.
 
-## Combinators and `Null`
+## Reducing contracts
+<!-- Combinators and `Null` -->
 
 In this section, we describe the remaining Marlowe contracts, which in general can be used to combine other contracts together and to decide between them depending on the information known to the contract at any given moment.
 
+**NEED SOMETHING HERE that explains that `reduce/Rec` is being described? Could be reflected in the title, which I have modified. A short paragraph should be enough. Also add a type for `reduce/Rec`?** 
+
 ### `Null`
 
-The `Null` contract does nothing and it stays quiescent forever.
+The `Null` contract does nothing and stays quiescent forever.
 
 ```haskell
 reduceRec _ _ _ Null = Null
 ```
 
-Nevertheless, it is used by the `simplify` function and it can be used to replace the contract with a smaller but equivalent one. For example, `Both Null Null` gets reduced to `Null`
+Nevertheless, it is used by the `simplify` function and it can be used to replace a contract by a smaller but equivalent one. For example, `Both Null Null` can be reduced to `Null`
 
 ### `Both`
 
@@ -166,7 +169,7 @@ reduceRec blockNum state env (Choice obs cont1 cont2) =
 
 ### `When`
 
-The `When` contruct delays a contract in time until an `Observation` becomes true. `When` will not activate any of its subcontracts until either the `Observation` becomes true, or until the `timeout` block is reached. If `obs` is true, then `When` is reduced to `cont1`, if `timeout` has been reached, then `When` is reduced to `cont2`.
+The `When` construct delays a contract in time until an `Observation` becomes true. `When` will not activate any of its subcontracts until either the `Observation` becomes true, or until the `timeout` block is reached. If `obs` is true, then `When` is reduced to `cont1`, if `timeout` has been reached, then `When` is reduced to `cont2`.
 
 ```haskell
 reduceRec blockNum state env c@(When obs timeout cont1 cont2) =
@@ -178,11 +181,11 @@ reduceRec blockNum state env c@(When obs timeout cont1 cont2) =
   where go = reduceRec blockNum state env
 ```
 
-It is worth noting that, because Marlowe follows the pull model, it is not just enough for the `Observation` to become true for `When` to evolve; the contract needs to be triggered while the `Observation` is true. The contract can be triggered at any time by issuing a transaction that does not need to have any inputs and does not need to be signed (anyone can trigger the contract).
+It is worth noting that, because Marlowe follows a ‘pull’ model, it is not just enough for the `Observation` to become true for `When` to evolve; the contract needs to be triggered while the `Observation` is true. The contract can be triggered at any time by issuing a transaction that does not need to have any inputs and does not need to be signed; indeed anyone can trigger the contract.
 
 ### `While`
 
-The `While` construct works opposite to `When` in the sense that while `When` gets reduced when it `Observation` becomes true, `While` gets reduced when its `Observation` becomes false.
+The `While` construct works in the opposite way to `When`, in the sense that while `When` gets reduced when it `Observation` becomes true, `While` gets reduced when its `Observation` becomes false.
 
 ```haskell
 reduceRec blockNum state env (While obs timeout contractWhile contractAfter) =
@@ -194,8 +197,7 @@ reduceRec blockNum state env (While obs timeout contractWhile contractAfter) =
   where go = reduceRec blockNum state env
 ```
 
-However, there is one fundamental difference: `When` does not activate its subcontract until it gets reduced, and `While` activates its subcontract immediately (similarly to what `Both` does). And there is something unique about `While`, it may delete a contract that has already been activated once the `Observation` becomes true.
-
+However, there is one fundamental difference: `When` does not activate its subcontract until it gets reduced, and `While` activates its subcontract immediately, similarly to the behaviour of `Both`. And there is something unique about `While`: it may delete a contract that has already been activated once the `Observation` becomes true. 
 For example, in the following contract: 
 
 ```
@@ -213,7 +215,7 @@ once the choice `(1, 1)` is made, it will no longer be possible to use the `Comm
 
 The `Scale` construct scales the amounts paid by `Commit` and `Pay`. It takes three `Value`s, the first one is the numerator, the second one is the denominator, and the third one is the default.
 
-As soon as the `Scale` construct is activated, it activates its subcontract `contract`, and it evaluates all the three `Value`s and replaces them with a `Constant` (so that they may not change anymore).
+As soon as the `Scale` construct is activated, it activates its subcontract `contract`, and it evaluates all the three `Value`s and replaces them with a `Constant` (so that they may not change any more).
 
 ```haskell
 reduceRec blockNum state env (Scale divid divis def contract) =
@@ -225,8 +227,9 @@ reduceRec blockNum state env (Scale divid divis def contract) =
 ```
 
 Once evaluated, any inner `Commit` or `Pay` (in `contract`) will get their amount scaled as follows:
-* If the divisor is `0`, then the amount is replace with the default.
-* If the divisor is not `0`, then the amount is multiplied by the numerator, and divided (using integer division) by the denominator.
+
+- If the divisor is `0`, then the amount is replace with the default.
+- If the divisor is not `0`, then the amount is multiplied by the numerator, and divided (using integer division) by the denominator.
 
 ```haskell
 scaleValue :: Integer -> Integer -> Integer -> Integer -> Integer
@@ -247,7 +250,7 @@ fetchPrimitive idAction blockNum state (Scale divid divis def subContract) =
         sDef = evalValue blockNum state def
 ```
 
-Once there are no `Commit`s or `Pay`s inside a `Scale`, it gets removed by the `simplify` funtion.
+Once there are no `Commit`s or `Pay`s inside a `Scale`, it gets removed by the `simplify` function.
 
 ### `Let` and `Use`
 

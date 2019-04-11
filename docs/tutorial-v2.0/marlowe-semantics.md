@@ -25,8 +25,8 @@ applyTransaction :: [AnyInput] -> S.Set Person -> BlockNumber -> State -> Contra
 
 In turn, the `applyTransaction` function calls three principal auxiliary functions: `reduce`, `fetchPrimitive`, and `eval`.
 
-- The `reduce` function is applied before and after every input, 
-- `fetchPrimitive` is applied only for inputs that are actions (i.e: `Commit` and `Pay` inputs), and 
+- The `reduce` function (and its auxiliary function `reduceRec`) are applied before and after each input, 
+- `fetchPrimitive` is applied only for inputs that are actions (i.e: `Commit`s and `Pay`s), and 
 - `eval` is applied to the result of `fetchPrimitive` whenever appropriate.
 
 In addition to these three functions, there are three additional functions that are applied in every transaction. Before processing the inputs, the function `expireCommits` is applied, and after processing the inputs the functions `redeemMoney` and `simplify` are applied.
@@ -126,13 +126,13 @@ Again, the `fetchPrimitive` function will use the first continuation (the first 
 
 ## Non-action input processing
 
-`Choice`s and `Oracle`s inputs are processed very differently to actions. They are relatively independent of the state of the contract, and they may be issued anytime, as long as the values provided can potentially be used by the contract. In other words, there must be somewhere in the code of the contract that inspects the `Choice` or `Oracle` value in order for a participant to be able to provide that value. Otherwise, the contract does not need to know the value, and providing it anyway would just be adding clutter and load to the contract and blockchain which could end up translating into problems like DoS. For these reasons, the Marlowe 2.0 semantics disallow providing unnecessary information.
+`Choice`s and `Oracle`s inputs are processed very differently to actions. They are relatively independent of the state of the contract, and they may be issued anytime, as long as the values provided can potentially be used by the contract. In other words, there must be somewhere in the code of the contract that inspects the `Choice` or `Oracle` value in order for a participant to be able to provide that value. Otherwise, the contract does not need to know the value, and providing it anyway would just be adding clutter and load to the contract and blockchain, which could end up translating into problems like DoS. For these reasons, the Marlowe 2.0 semantics disallows providing  information that is not required.
 
 Other than that, the only thing that Marlowe does when provided with `Choice`s and `Oracle`s is to record them in the state so that the `reduce` function can access them.
 
 ## Combinators and `Null`
 
-In this section, we describe the remaining of Marlowe contracts, which in general can be used to combine other contracts together and to decide between them depending on the information known to the contract at any given moment.
+In this section, we describe the remaining Marlowe contracts, which in general can be used to combine other contracts together and to decide between them depending on the information known to the contract at any given moment.
 
 ### `Null`
 

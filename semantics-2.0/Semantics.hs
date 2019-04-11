@@ -88,6 +88,21 @@ data State = State { commits :: CommitInfo
                    , usedIds :: S.Set IdAction}
                deriving (Eq,Ord,Show,Read)
 
+emptyCommitInfo :: CommitInfo
+emptyCommitInfo = CommitInfo { redeemedPerPerson = M.empty
+                             , currentCommitsById = M.empty
+                             , expiredCommitIds = S.empty
+                             , timeoutData = M.empty
+                             }
+
+emptyState :: State
+emptyState = State { commits = emptyCommitInfo
+                   , choices = M.empty
+                   , oracles = M.empty
+                   , usedIds = S.empty
+                   }
+
+
 -- Adds a commit identifier to the timeout data map 
 addToCommByTim :: Timeout -> IdCommit -> TimeoutData -> TimeoutData 
 addToCommByTim timeout idCommit timData =

@@ -1,6 +1,6 @@
-# An overview of Meadow in the cloud
+# Meadow in the cloud
 
-This tutorial gives an overview of Meadow in the cloud, an online tool that allows users to interact with and simulate the operation of Marlowe contracts and embedded Marlowe contracts. Meadow is available at [https://prod.meadow.marlowe.iohkdev.io](https://prod.meadow.marlowe.iohkdev.io).
+This tutorial gives an overview of Meadow in the cloud, an online tool that allows users to interact with and simulate the operation of embedded Marlowe contracts. Meadow is available at [https://prod.meadow.marlowe.iohkdev.io](https://prod.meadow.marlowe.iohkdev.io).
 
 ## Introducing Meadow in the cloud
 

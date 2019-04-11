@@ -161,7 +161,7 @@ fetchPrimitive idAction blockNum state (Let label boundContract subContract) =
      MultipleMatches -> MultipleMatches
 ```
 
-Whereas in the case of `When`, `fetchPrimitive` will just leave the whole construct unchanged.
+Whereas, in the case of other constructs like `When`, `fetchPrimitive` will just leave the whole construct unchanged:
 
 ```haskell
 fetchPrimitive _ _ _ _ = NoMatch
@@ -284,6 +284,35 @@ Once there are no `Commit`s or `Pay`s inside a `Scale`, it gets removed by the `
 
 ### `Let` and `Use`
 
-**TODO**
+The `Let` construct binds its first subcontract `boundContract` to an identifier `label`.
+
+```haskell
+reduceRec blockNum state env (Let label boundContract contract) =
+  case lookupEnvironment label env of
+    Nothing -> let newEnv = addToEnvironment label checkedBoundContract env in
+               Let label checkedBoundContract $ reduceRec blockNum state newEnv contract
+    Just _ -> let freshLabel = getFreshLabel env contract in
+              let newEnv = addToEnvironment freshLabel checkedBoundContract env in
+              let fixedContract = relabel label freshLabel contract in
+              Let freshLabel checkedBoundContract $ reduceRec blockNum state newEnv fixedContract
+  where checkedBoundContract = nullifyInvalidUses env boundContract
+```
+
+We think that every `Let` should have a different identifier `label`, because reusing them leads to confusion, confusion leads to errors, and errors lead to the dark... hem... I mean... to potential loss of money.
+
+However, we have written Marlowe semantics so that the most recent occurrence of a `Let` (the innermost) has priority in case of conflict (this is commonly known as shadowing). The way this is implemented is that whenever there is a conflict of identifiers, the newly defined identifier gets renamed to a fresh identifier that has not been used yet (in the current subtree), that is what the `relabel` function does.
+
+Inside the second continuation (`contract`) of a `Let` may use the `Use` construct to represent a copy of `boundContract` that will only be expanded when the contract `Use` is activated:
+
+```haskell
+reduceRec blockNum state env (Use label) =
+  case lookupEnvironment label env of
+    Just contract -> reduceRec blockNum state env contract
+    Nothing -> Null
+```
+
+Note that if `Use` is not defined it will expand to `Null`.
+
+As with `Scale`, `Let` construct will only get reduced when there are no corresponding `Use` constructs that use it, this clean-up procedure is carried out by `simplify` function.
 
 ### [Prev](./marlowe-data.md) [Up](./README.md) [Next](./embedded-marlowe.md)

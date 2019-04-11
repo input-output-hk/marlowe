@@ -38,13 +38,13 @@ crowdFunding = Both
                                 (Constant 0)) 10 20 Null Null) Null) 
                        (When 
                           (AndObs 
-                             (ChoseSomething (4, 4)) 
+                             (ChoseSomething (1, 4)) 
                              (ValueGE 
-                                (ValueFromChoice (4, 4) 
+                                (ValueFromChoice (1, 4) 
                                    (Constant 0)) 
                                 (Constant 1))) 10 
                           (Commit 4 4 4 
-                             (ValueFromChoice (4, 4) 
+                             (ValueFromChoice (1, 4) 
                                 (Constant 0)) 10 20 Null Null) Null))) 
                  (When FalseObs 10 Null 
                     (Choice 

@@ -107,4 +107,4 @@ reduceRec blockNum state env c@(Pay _ _ _ _ timeout _ continuation) =
 Again, the `fetchPrimitive` function will use the first continuation (the first `Contract` in `Pay`) instead.
 
 
-
+### [Prev](./marlowe-data.md) [Up](./README.md) [Next](./embedded-marlowe.md)

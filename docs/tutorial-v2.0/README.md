@@ -48,11 +48,11 @@ This tutorial shows how to use some simple features of Haskell to write Marlowe 
 
 This tutorial shows you how to use Marlowe from within Haskell, and in particular shows how to exercise a contract using the semantics given in the [earlier tutorial](./marlowe-semantics.md).
 
-## [Meadow overview](./meadow-overview.md) 
-
-This tutorial introduces Meadow, and is accompanied by a video. Once you have followed this video you will be able to use Meadow to interact with the escrow and other Meadow contracts.
-
 -->
+
+## [Meadow in the cloud](./meadow-overview.md) 
+
+This tutorial introduces Meadow in the cloud, an online tool for creating embedded Marlowe contracts, and interactively stepping through their execution.
 
 <!--
 ## [Other functions in Marlowe: analysis](./analysis.md)

@@ -313,6 +313,6 @@ reduceRec blockNum state env (Use label) =
 
 Note that if `Use` is not defined it will expand to `Null`.
 
-As with `Scale`, `Let` construct will only get reduced when there are no corresponding `Use` constructs that use it, this clean-up procedure is carried out by `simplify` function.
+Analogously to `Scale`, `Let` construct will only get reduced when there are no corresponding `Use` constructs that use it, this clean-up procedure is carried out by `simplify` function.
 
 ### [Prev](./marlowe-data.md) [Up](./README.md) [Next](./embedded-marlowe.md)

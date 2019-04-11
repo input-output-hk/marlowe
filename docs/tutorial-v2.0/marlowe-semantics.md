@@ -46,11 +46,11 @@ data DetachedPrimitive = DCommit IdCommit Person Integer Timeout
                        | DPay IdCommit Person Integer
 ```
 
-`fetchPrimitive` will also return the contract after removing the chosen primitive; this new contract will be taken as the remaining contract if the evaluation succeeds. The `DetachedPrimitive` is the passed to `eval`, together with the current `State` of the contract.
+`fetchPrimitive` will also return the contract after removing the chosen primitive; this new contract will be taken as the remaining contract if the evaluation succeeds. The `DetachedPrimitive` is passed to `eval`, together with the current `State` of the contract.
 
 ### `Commit`
 
-A `Commit` allows a participant `person` to transfer to the contract an amount of money `value`. This money will be recorded in the contract under the identifier `idCommit` and future payments can use this identifier as a source o money. Once the block specified by `timeout` (second `Timeout` in `Commit`) is reached, any money from the `Commit` that has not been spent (through payments) will be frozen, and the participant that performed the commitment will be able to withdraw with the next transaction that he or she signs.
+A `Commit` allows a participant `person` to transfer to the contract an amount of money `value`. This money will be recorded in the contract under the identifier `idCommit` and future payments can use this identifier as a source of money. Once the block specified by `timeout` (the second `Timeout` in `Commit`) is reached, any money from the `Commit` that has not been spent (through payments) will be frozen, and the participant that performed the commitment will be able to withdraw with the next transaction that he or she signs.
 
 ```haskell
 eval (DCommit idCommit person value timeout) state =
@@ -63,7 +63,7 @@ eval (DCommit idCommit person value timeout) state =
 
 For a commitment to be valid, no commitment with the identifier `idCommit` must have been issued before (only one `Commit` per identifier is allowed).
 
-In addition, `reduceRec` (the auxiliar function of `reduce`) specifies that a `Commit` will be reduced to its second `continuation` if any of the timeouts are reached.
+In addition, `reduceRec` (the auxiliary function of `reduce`) specifies that a `Commit` will be reduced to its second `continuation` if any of the timeouts is reached.
 
 ```haskell
 reduceRec blockNum state env c@(Commit _ _ _ _ timeout_start timeout_end _ continuation) =
@@ -72,6 +72,7 @@ reduceRec blockNum state env c@(Commit _ _ _ _ timeout_start timeout_end _ conti
   else c
 ```
 
+**COMMENT: this next sentence seems not be linked with what comes before. Specifically, "instead of" what? (Same comment for `Pay` too)** 
 The `fetchPrimitive` function will use the first continuation (the first `Contract` in `Commit`) instead.
 
 ### `Pay`

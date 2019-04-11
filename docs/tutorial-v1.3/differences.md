@@ -143,4 +143,3 @@ The semantics of Marlowe 2.0 can be found [here](https://github.com/input-output
 
 We are currently working on a new version of Meadow to include a redesigned interface and the version 2.0 of Marlowe's semantics as described in this document. **ADD LINK**
 
-### [Prev](./marlowe-plutus.md) [Up](./README.md) [Next]()

@@ -635,9 +635,11 @@ combineOutcomes = M.unionWith (+)
 data FetchResult a = Picked a 
                    | NoMatch
                    | MultipleMatches
+               deriving (Eq,Ord,Show,Read)
 
 data DetachedPrimitive = DCommit IdCommit Person Integer Timeout
                        | DPay IdCommit Person Integer
+               deriving (Eq,Ord,Show,Read)
 
 -- Semantics of Scale
 scaleValue :: Integer -> Integer -> Integer -> Integer -> Integer 
@@ -700,9 +702,11 @@ data DynamicProblem = NoProblem
                     | CommitNotMade
                     | NotEnoughMoneyLeftInCommit
                     | CommitIsExpired
+               deriving (Eq,Ord,Show,Read)
 
 data EvaluationResult a = Result a DynamicProblem
                         | InconsistentState -- This should not happen when using fetchPrimitive result
+               deriving (Eq,Ord,Show,Read)
 
 -- Evaluation of actionable input
 eval :: DetachedPrimitive -> State -> EvaluationResult (TransactionOutcomes, State)
@@ -745,9 +749,11 @@ data ErrorResult = InvalidInput
                  | NegativeTransaction
                  | AmbiguousId
                  | InternalError -- This should not happen
+               deriving (Eq,Ord,Show,Read)
 
 data ApplicationResult a = SuccessfullyApplied a DynamicProblem
                          | CouldNotApply ErrorResult
+               deriving (Eq,Ord,Show,Read)
 
 -- High level wrapper that calls the appropriate update function on contract and state.
 -- Does not take care of reducing, that must be done before and after applyAnyInput.
@@ -795,6 +801,7 @@ redeemMoney sigs state = redeemMoneyLoop (S.toList sigs) emptyOutcome state
 
 data MApplicationResult a = MSuccessfullyApplied a [DynamicProblem]
                           | MCouldNotApply ErrorResult
+               deriving (Eq,Ord,Show,Read)
 
 -- Fold applyAnyInput through a list of AnyInputs.
 -- Check that balance is positive at every step

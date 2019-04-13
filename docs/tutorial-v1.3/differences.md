@@ -2,7 +2,7 @@
 
 Marlowe 2.0 is a thorough revision of Marlowe 1.3 semantics that tries to simplify existing aspects of Marlowe, to include additional functionality, and to give more intuitive behaviour when executing contracts.
 
-At the time of writing, Marlowe 2.0 is in the late stages of development but it has not reached the maturity nor the tool support of Marlowe 1.3. For these reasons, the tutorial so far has focused on Marlowe 1.3, but also has a version based on 2.0.
+At the time of writing, Marlowe 2.0 is in the late stages of development but it has not reached the maturity nor the tool support of Marlowe 1.3. For these reasons, the tutorial so far has focused on Marlowe 1.3, but there is also [a version based on 2.0](../tutorial-v2.0/README.md).
 
 This tutorial aims to make it easier for users familiar with Marlowe 1.3 to transition to Marlowe 2.0, but it should not be considered as an exhaustive description of the differences between the two versions.
 

@@ -38,13 +38,11 @@ This tutorial gives an introduction to the formal semantics of Marlowe by presen
 
 This tutorial shows how to use some simple features of Haskell to write Marlowe contracts that are more readable, maintainable and reusable, by revisiting the  escrow contract.
 
-<!--
 
 ## [Using Marlowe](./using-marlowe.md)
 
 This tutorial shows you how to use Marlowe from within Haskell, and in particular shows how to exercise a contract using the semantics given in the [earlier tutorial](./marlowe-semantics.md).
 
--->
 
 ## [Meadow in the cloud](./meadow-overview.md) 
 

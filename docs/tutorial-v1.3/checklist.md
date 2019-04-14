@@ -10,9 +10,9 @@ The [overview](./differences.md) describes the differences between Marlowe 2.0 a
 
    An _action id_ field needs to be added as the first field of the constructor. As long as it is unique within the contract, the particular value is not relevant to the behaviour of the contract, but is used in constructing inputs, e.g. in Meadow.
 
-   The constructor `ConstMoney` of type `Money` should be replaced by  `Constant` of type `Value`.
+   The amount of money to be comitted must be converted from type `Money` to type `Value`, see item 3.
 
-1. `Pay` constructs in `Contract`:
+2. `Pay` constructs in `Contract`:
 
    An _action id_ field needs to replace the payment id as the first field of the constructor. Note that this must be unique within the contract.
 
@@ -20,15 +20,25 @@ The [overview](./differences.md) describes the differences between Marlowe 2.0 a
 
    Payments originally had a single continuation `Contract`, irrespective of whether or not the construct had timed out. This is now distinguished, and so the original continuation should be duplicated.
 
-   The constructor `ConstMoney` and `AvailableMoney`  of type `Money` should be replaced by `Constant` and `Committed` of type `Value`.
+   The amount of money to be paid must be converted from type `Money` to type `Value`, see item 3.
 
-1. `Redeem` expressions in `Contract`:
+3. Expressions of type `Money` should be renamed to their corresponding expressions of type `Value`:
+
+<table>
+   <tr><th>Marlowe 1.3</th><th>Marlowe 2.0</th></tr>
+   <tr><td>AvailableMoney</td><td>Committed</td></tr>
+   <tr><td>AddMoney</td><td>AddValue</td></tr>
+   <tr><td>ConstMoney</td><td>Constant</td></tr>
+   <tr><td>MoneyFromChoice</td><td>ValueFromChoice</td></tr>
+</table>
+
+4. `Redeem` expressions in `Contract`:
 
    The `Redeem` constructor has been removed, and it should be replaced by a `Pay` constructor. This will be a payment from the commitment to the person who made the commitment initially.
    
    More details of how to construct payments in v2.0 are given in the previous item, but note that the extra information required will include an action id, a timeout, and a continuation to use if the timeout is exceeded.
 
-1. `When` and `Choice` contracts.
+5. `When` and `Choice` contracts.
 
    These are not changed at the top level, but `Observation` values within them are changed. In particular, choices are structured in a different way as described in the [overview document](./differences.md). 
 

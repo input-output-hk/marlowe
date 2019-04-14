@@ -104,6 +104,13 @@ To single step through the escrow contract we construct three transaction to rep
 
 Why is single stepping useful? It is the equivalent of debugging, and we are able to see the internal state of the contract at each stage, the contract continuation, i.e. what remains to be executed, and the actions produced at each step.
 
+> __Exercise__
+>  
+> Explore some other ways of engaging with the contract
+> - What happens when two participants choose to refund the money to Alice? 
+> - What happens if Bob requests a payment before the choice is made to make the payment to him?
+> - What happens if the contract reaches timeout? 
+
 ## There must be an easier way!
 
 Yes, there is! 

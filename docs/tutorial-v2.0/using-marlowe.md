@@ -43,9 +43,54 @@ An alternative way of doing this is to add these definitions to a working file, 
 
 The earlier description of the [semantics](./marlowe-semantics.md) concentrated on the high-level steps taken, and did not cover the constituent types in much detail. These are all defined in [`Semantics.hs`](https://github.com/input-output-hk/marlowe/blob/master/semantics-2.0/Semantics.hs)
 
-## States and Inputs
+## State
 
-**TODO**
+The `State` of a Marlowe contract keeps track of the `choices` made by users, the last value provided by each of the `oracles`, and the `IdAction`s already issued (`usedIds`).
+
+```haskell
+data State = State { commits :: CommitInfo
+                   , choices :: M.Map IdChoice Choice
+                   , oracles :: M.Map IdOracle (BlockNumber, Integer)
+                   , usedIds :: S.Set IdAction}
+```
+
+In addition to these, the `State` keeps important information related to `commits`:
+* Who committed the money for each commit? When does each commit expire? How much money is left in each commit? (`currentCommitsById`)
+* Has a commit expired? (`expiredCommitIds`)
+* Which commits expire when? (`timeoutData`)
+* And it also keeps track of how much money is owed to each participant derived from commits that have expired already (`redeemedPerPerson`).
+
+```haskell
+type TimeoutData = M.Map Timeout (S.Set IdCommit)
+
+data CommitInfo = CommitInfo { redeemedPerPerson :: M.Map Person Integer
+                             , currentCommitsById :: M.Map IdCommit (Person, Integer, Timeout)
+                             , expiredCommitIds :: S.Set IdCommit
+                             , timeoutData :: TimeoutData }
+```
+
+## Inputs
+
+For the contract to progress, it needs to be presented with inputs, as represented by the AnyInput type, which has four types grouped in two supertypes:
+
+```haskell
+data AnyInput = Action IdAction
+              | Input Input
+               deriving (Eq,Ord,Show,Read)
+```
+
+### Actions
+
+For any action, we only need to specify the `IdAction`, since the rest of information should already be in the contract. But they can be two types: `Commit` and `Pay`.
+
+### Normal inputs
+
+The rest of inputs can be of two types: `Choice` and `Oracle`.
+
+```haskell
+data Input = IChoice IdChoice Choice
+           | IOracle IdOracle BlockNumber Integer
+```
 
 ## Back to single stepping
 

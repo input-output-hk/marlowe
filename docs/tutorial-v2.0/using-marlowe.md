@@ -94,7 +94,15 @@ data Input = IChoice IdChoice Choice
 
 ## Back to single stepping
 
-**TODO**
+To single step through the escrow contract we construct three transaction to represent: a commitment, two choices being made and a payment. Together these represent the successful execution of the escrow contract: Alice gets the cat, and Bob the money.
+
+```haskell
+*Escrow Data.Set> let (MSuccessfullyApplied (am1, to1, st1, c1) r1) = applyTransaction [Action 1] (Data.Set.fromList [1]) 0 emptyState escrow 0
+*Escrow Data.Set> let (MSuccessfullyApplied (am2, to2, st2, c2) r2) = applyTransaction [Input (IChoice (1, 2) 1), Input (IChoice (1, 3) 1)] (Data.Set.fromList [2, 3]) 1 st1 c1 am1
+*Escrow Data.Set> let (MSuccessfullyApplied (am3, to3, st3, c3) r3) = applyTransaction [Action 2] (Data.Set.fromList [2]) 2 st2 c2 am2
+```
+
+Why is single stepping useful? It is the equivalent of debugging, and we are able to see the internal state of the contract at each stage, the contract continuation, i.e. what remains to be executed, and the actions produced at each step.
 
 ## There must be an easier way!
 

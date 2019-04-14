@@ -563,7 +563,7 @@ function reduceRec :: "BlockNumber \<Rightarrow> State \<Rightarrow> Environment
         (Constant (evalValue blockNum state def))
         (reduceRec blockNum state env contract)" |
 "reduceRec blockNum state env (While obs timeout contractWhile contractAfter) =
-  (if isExpired timeout blockNum
+  (if isExpired blockNum timeout
    then reduceRec blockNum state env contractAfter
    else (if evalObservation blockNum state obs
          then (While obs timeout (reduceRec blockNum state env contractWhile) contractAfter)

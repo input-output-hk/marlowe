@@ -375,7 +375,7 @@ evalObservation :: BlockNumber -> State -> Observation -> Bool
 evalObservation blockNumber _ (BelowTimeout timeout) = not $ isExpired blockNumber timeout 
 evalObservation blockNumber state (AndObs obs1 obs2) = (go obs1) && (go obs2)
   where go = evalObservation blockNumber state
-evalObservation blockNumber state (OrObs obs1 obs2) = (go obs1) && (go obs2) 
+evalObservation blockNumber state (OrObs obs1 obs2) = (go obs1) || (go obs2) 
   where go = evalObservation blockNumber state
 evalObservation blockNumber state (NotObs obs) = not $ evalObservation blockNumber state obs 
 evalObservation _ state (ChoseThis idChoice choice) = 

@@ -421,7 +421,7 @@ fun evalObservation :: "BlockNumber \<Rightarrow> State \<Rightarrow> Observatio
    ((evalObservation blockNumber state obs1) \<and>
     (evalObservation blockNumber state obs2))" |
 "evalObservation blockNumber state (OrObs obs1 obs2) =
-   ((evalObservation blockNumber state obs1) \<and>
+   ((evalObservation blockNumber state obs1) \<or>
     (evalObservation blockNumber state obs2))" |
 "evalObservation blockNumber state (NotObs obs) =
    evalObservation blockNumber state obs" |

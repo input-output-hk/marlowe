@@ -24,13 +24,13 @@ The [overview](./differences.md) describes the differences between Marlowe 2.0 a
 
 3. Expressions of type `Money` should be renamed to their corresponding expressions of type `Value`:
 
-<table>
-   <tr><th>Marlowe 1.3</th><th>Marlowe 2.0</th></tr>
-   <tr><td>AvailableMoney</td><td>Committed</td></tr>
-   <tr><td>AddMoney</td><td>AddValue</td></tr>
-   <tr><td>ConstMoney</td><td>Constant</td></tr>
-   <tr><td>MoneyFromChoice</td><td>ValueFromChoice</td></tr>
-</table>
+   <table>
+      <tr><th>Marlowe 1.3</th><th>Marlowe 2.0</th></tr>
+      <tr><td>AvailableMoney</td><td>Committed</td></tr>
+      <tr><td>AddMoney</td><td>AddValue</td></tr>
+      <tr><td>ConstMoney</td><td>Constant</td></tr>
+      <tr><td>MoneyFromChoice</td><td>ValueFromChoice</td></tr>
+   </table>
 
 4. `Redeem` expressions in `Contract`:
 
@@ -38,15 +38,13 @@ The [overview](./differences.md) describes the differences between Marlowe 2.0 a
    
    More details of how to construct payments in v2.0 are given in the previous item, but note that the extra information required will include an action id, a timeout, and a continuation to use if the timeout is exceeded.
 
-5. `When` and `Choice` contracts.
+5. Choices:
 
-   These are not changed at the top level, but `Observation` values within them are changed. In particular, choices are structured in a different way as described in the [overview document](./differences.md). 
-
-   For example, the construct  
-   `PersonChoseThis … per c`  
-   becomes  
-   `ChoseThis (idCH, per) c`  
-   where `idCH` identifies the choice.
+   Identifiers for choices now include the choice and the participant as part of the identifier as described in the [overview document](./differences.md). 
+   This affects `Observation`s and `Money` expressions that depend on choices:
+    * `PersonChoseThis idCh per c` becomes `ChoseThis (idCh, per) c`
+    * `PersonChoseSomething idCh per c` becomes `ChoseSomething (idCh, per) c`
+    * `MoneyFromChoice idCh per val` becomes `ValueFromChoice (idCh, per) val`
 
 ## Where to go to find out more
 

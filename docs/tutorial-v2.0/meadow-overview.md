@@ -44,7 +44,7 @@ We can build our first transaction by selecting the purple plus symbol `+` to th
 
 ![Simulation step 1](./pix/step1.png)
 
-where this potential action has disappeared, and the signatories now contain person 1. If we choose to apply this transaction, we then see this
+where this potential action has disappeared, and the signatories now contain person 1. And under the signatures we can see that the transaction is expecting to 450 ADA from person 1. If we choose to apply this transaction, we then see this
 commitment by `alice` – we see the following changes in the screen.
 
 - The input composer presents a different set of potential inputs, with the commitment _removed_.

@@ -12,11 +12,17 @@ cd semantics-2.0
 
 ## Stepping through contracts
 
-As we saw in the [semantics for Marlowe](./marlowe-semantics.md) the semantics of a single transaction are defined by the function `applyTransaction` of type
+As we saw in the [semantics for Marlowe](./marlowe-semantics.md) the semantics of a single transaction are defined by the function `applyTransaction` of type:
  ```haskell
 applyTransaction :: [AnyInput] -> S.Set Person -> BlockNumber -> State -> Contract -> Integer
                     -> MApplicationResult (Integer, TransactionOutcomes, State, Contract)
 ```
+
+As illustrated by the diagram:
+
+<p align="center">
+ <img width="100%" src="pix/applyTransaction.svg">
+</p>
 
 We can use the facilities of `ghci` to step through a contract one transaction at a time, and, here, we will do that with the embedded escrow contract contained in [`Escrow.hs`](https://github.com/input-output-hk/marlowe/blob/master/semantics-2.0/examples/pure/Escrow.hs).
 

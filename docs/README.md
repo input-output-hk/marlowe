@@ -39,6 +39,7 @@ This section lists all the learning resources for Marlowe and Meadow.
 * Tutorial for version 1.3 of Marlowe and the first version of the Meadow tool. [Link](./tutorial-v1.3/README.md)
 * Tutorial for version 2.0 of Marlowe and Meadow in the cloud. [Link](./tutorial-v2.0/README.md)
 * An overview of the differences between v1.3 and v2.0. [Link](./tutorial-v1.3/differences.md)
+* A checklist for converting a v1.3 contract to v2.0. [Link](./tutorial-v1.3/checklist.md)
 * Udemy course on Marlowe (v1.3) and Meadow. [Link](https://www.udemy.com/marlowe-programming-language/)
 * Paper on Marlowe, describing v1.3 and the orginal Meadow. [Link](https://iohk.io/research/papers/#2WHKDRA8)
 * Video run-through of the original Meadow. [Link](https://youtu.be/_loz70XkHM8)

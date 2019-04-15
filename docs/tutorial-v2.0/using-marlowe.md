@@ -37,7 +37,7 @@ To single step, you can work in `ghci` like this, using the facility to make loc
 
 Where `inputList`s are lists of inputs that may include any number of inputs depending on the context, and `sigList`s are lists of participant identifiers that represent the signatories of the transaction and there may also be any number of them.
 
-And we can then explore the values produced. Note, however, that the local bindings are lost each time a `:load` or `:l` command is performed.
+We can then explore the values produced. Note, however, that the local bindings are lost each time a `:load` or `:l` command is performed.
 
 An alternative way of doing this is to add these definitions to a working file, e.g. `Build.hs`, where these definitions will be preserved. Indeed, it would be very sensible to include some of the definitions used above in such a file.
 
@@ -71,7 +71,7 @@ data CommitInfo = CommitInfo { redeemedPerPerson :: M.Map Person Integer
 
 ## Inputs
 
-For the contract to progress, it needs to be presented with inputs, as represented by the AnyInput type, which has four types grouped in two supertypes:
+For the contract to progress, it needs to be presented with inputs, as represented by the `AnyInput` type, which has four types grouped in two supertypes:
 
 ```haskell
 data AnyInput = Action IdAction

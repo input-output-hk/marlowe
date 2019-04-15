@@ -36,7 +36,7 @@ The [overview](./differences.md) describes the differences between Marlowe 2.0 a
 
    The `Redeem` constructor has been removed, and it should be replaced by a `Pay` constructor. This will be a payment from the commitment to the person who made the commitment initially.
    
-   More details of how to construct payments in v2.0 are given in the previous item, but note that the extra information required will include an action id, a timeout, and a continuation to use if the timeout is exceeded.
+   More details of how to construct payments in v2.0 are given above, but note that the extra information required will include an action id, a timeout, and a continuation to use if the timeout is exceeded.
 
 5. Choices:
 

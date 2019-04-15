@@ -48,6 +48,8 @@ The [overview](./differences.md) describes the differences between Marlowe 2.0 a
 
 ## Where to go to find out more
 
+- The discussions about _embedded Marlowe_ in the tutorials: [v1.3](embedded-marlowe.md), [V2.0](../tutorial-v2.0/embedded-marlowe.md), give a complete example of a contract in both versions of the language.
+
 - Here are tutorials on [Marlowe v1.3](./README.md) and [Marlowe v2.0](../tutorial-v2.0/README.md), and [Meadow in the cloud](https://prod.meadow.marlowe.iohkdev.io).
 
 - The semantics of Marlowe 2.0 can be found [here](https://github.com/input-output-hk/marlowe/blob/v1.3/src/Semantics.hs).

@@ -56,7 +56,7 @@ commitment by `alice` – we see the following changes in the screen.
 
 We could then advance to the next block, or indeed a number of steps, and the current block is shown below the three buttons, together with the amount of money committed to the contract.
 
-Taking another step to reflect that Alice has received the cat from Bob, participants 2 (Bob) and Carol (3) choose value 1, and make that into a transaction:
+Taking another step to reflect that Alice has received the cat from Bob, participants 2 (Bob) and 3 (Carol) choose value 1, and make that into a transaction:
 
 ![Simulation step 3](./pix/step3.png)
 

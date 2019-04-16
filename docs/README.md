@@ -5,7 +5,7 @@ Marlowe is a domain-specific language (DSL) for writing financial contracts that
 
 This document describes the different materials available for learning about Marlowe and the online tool that accompanies it: Meadow. It also advises you where to begin, depending on what you want to learn, and where you are starting from.
 
-Marlowe is realised as DSL embedded in Haskell, but it is possible to use Marlowe without being a Haskell expert. Marlowe is a live project, and the materials here describe two versions of Marlowe: the earlier [version 1.3]( https://github.com/input-output-hk/marlowe/tree/v1.3), and the [current version](https://github.com/input-output-hk/marlowe/), 2.0.
+Marlowe is realised as DSL embedded in Haskell, but it is possible to use Marlowe without being a Haskell expert. Marlowe is a live project, and the materials here describe two versions of Marlowe: the earlier [version 1.3]( https://github.com/input-output-hk/marlowe/tree/v1.3), and the [current version](https://github.com/input-output-hk/marlowe/tree/master/semantics-2.0), 2.0.
 
 Meadow is also available in two versions:
 

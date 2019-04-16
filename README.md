@@ -6,9 +6,13 @@
 
 This repository contains Marlowe, a domain-specific language (DSL) for describing financial smart contracts that can be enforced by scripts deployed on a blockchain, as well as some tools for analysing and simulating the execution of contracts written in the DSL.
 
+## Learning about Marlowe and Meadow
+
+The [Marlowe tutorials](./docs/README.md) introduce Marlowe and Meadow.
+
 ## Version 1.3, stable branch, and master branch
 
-The last stable version of Marlowe can be found in the branch `stable`. This branch currenty contains very small improvements with respect to version `1.3` and is the one in which the current version of Meadow is based (see Meadow section below). For the pure version `1.3` you can check the `v1.3` tag. A full description of the `1.3` version was presented at ISoLA 2018, and the paper is available [here](https://iohk.io/research/papers/#2WHKDRA8).   
+The last stable version of Marlowe can be found in the branch `stable`. This branch currently contains very small improvements with respect to version `1.3` and is the one in which the current version of Meadow is based (see Meadow section below). For the pure version `1.3` you can check the `v1.3` tag. A full description of the `1.3` version was presented at ISoLA 2018, and the paper is available [here](https://iohk.io/research/papers/#2WHKDRA8).   
 
 The `master` branch contains the latest developments of Marlowe. Because of this, the Haskell semantics, the Coq formalisation, and the Meadow implementation, may be out of sync with each other in this branch, but they contain the latest functionality.
 

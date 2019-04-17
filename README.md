@@ -16,15 +16,12 @@ The last stable version of Marlowe can be found in the branch `stable`. This bra
 
 The `master` branch contains the latest developments of Marlowe. Because of this, the Haskell semantics, the Coq formalisation, and the Meadow implementation, may be out of sync with each other in this branch, but they contain the latest functionality. The latest version of Marlowe `v2.0` is inside the folder `semantics-2.0`; the `src` folder contains the last `1.x` version.
 
-## Meadow
+## Meadow and Meadow in the cloud
 
 Meadow is a browser-based demo prototype that supports graphical editing of smart-contracts (thanks to the Blockly library) and block by block simulation of their execution (translated from the semantics thanks to the Haste compiler).
 
 Meadow is available at: https://input-output-hk.github.io/marlowe/ and a video showing Meadow in Action is here: https://youtu.be/_loz70XkHM8 
 
-The sources for Meadow are available in the `meadow` folder.
-
-## Meadow in the cloud
 
 Together with the last version of Marlowe (`v2.0`) we have also developed a redesigned version of Meadow called Meadow in the cloud. Meadow in the cloud can be found [here](https://prod.meadow.marlowe.iohkdev.io).
 

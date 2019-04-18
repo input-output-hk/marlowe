@@ -13,9 +13,11 @@ Meadow is also available in two versions:
 
 * The latest version, [Meadow in the cloud](https://prod.meadow.marlowe.iohkdev.io), supports development of embedded contracts is a much more efficient way, as well as presenting a substantially cleaner interface, but doesn't currently support visual program development.
 
-## Hackathon challenge
+## Hackathon challenge and slides
 
 [Here](./challenge.md) is the challenge for the Hackathon at the Miami summit.
+
+[PDF](./SummitMarlowe.pdf) for the Marlowe slides from the hackathon.
 
 ## Where should I start?
 

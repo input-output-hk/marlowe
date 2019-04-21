@@ -363,17 +363,17 @@
         <br /><br />
 
         <div class="group">
+          <h3 style="display:inline;" >Current block:</h3>
           <input style="display:inline;" type="number" id="currBlock" value="0" />
           <span class="highlight"></span>
           <span class="bar"></span>
-          <label>Current block</label>
         </div>
 
         <div><h3>Contract state:</h3></div>
         <div class="statusDiv" id="contractStateDiv"></div>
         <script>
           contractState = CodeMirror(document.getElementById('contractStateDiv'), {
-            value: '([], [])',
+            value: '([],[])',
             mode: 'text/x-haskell',
             lineWrapping: true
           });
@@ -383,7 +383,7 @@
         <div class="statusDiv" id="contractInputDiv"></div>
         <script>
           contractInput = CodeMirror(document.getElementById('contractInputDiv'), {
-            value: '([], [], [], [])',
+            value: '([],[],[],[])',
             mode: 'text/x-haskell',
             lineWrapping: true
           });

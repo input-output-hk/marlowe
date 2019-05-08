@@ -1,0 +1,26 @@
+name:                   marlowe
+version:                0.3.0.0
+license:                BSD3
+license-file:           LICENSE
+author:                 Alexander Nemish
+maintainer:             alexander.nemish@iohk.io
+build-type:             Simple
+extra-source-files:     README.md
+cabal-version:          >= 1.10
+
+executable marlowe
+    default-language:   Haskell2010
+    build-depends:      base >=4.9,
+                        mtl,
+                        containers,
+                        sbv,
+                        glpk-hs,
+                        QuickCheck,
+                        tasty,
+                        tasty-hunit,
+                        tasty-smallcheck,
+                        tasty-quickcheck
+    other-modules:
+                        Semantics
+    hs-source-dirs:     .
+    main-is:            Main.hs

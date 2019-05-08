@@ -1,0 +1,5 @@
+resolver: lts-11.22
+extra-deps:
+- sbv-7.10
+- glpk-hs-0.5
+- gasp-1.0.1.0

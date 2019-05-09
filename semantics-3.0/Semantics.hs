@@ -3,6 +3,7 @@ module Semantics where
 
 import Data.List.NonEmpty (NonEmpty(..), (<|))
 import qualified Data.List.NonEmpty as NE
+import Data.List (find)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
@@ -137,7 +138,21 @@ reduce env (c@(All shares)) =
          (\(sv, sc) ->
             reduce (env { envAvailableMoney = sv }) sc) eshares
   else Nothing
-reduce env x = reduce env x -- ToDo
+reduce env (If obs cont1 cont2) =
+  if evalObservation env obs
+  then reduce env cont1
+  else reduce env cont2
+reduce env (c@(When cases timeout timeoutCont)) =
+  if isExpired (envSlotNumber env) timeout
+  then reduce env timeoutCont
+  else case find (\(Case obs _) -> evalObservation env obs) (NE.toList cases) of
+         Nothing -> Just ((envAvailableMoney env, c) :| [])
+         Just (Case _ sc) -> reduce env sc
+reduce env (c@(While obs timeout contractWhile contractAfter)) =
+  if (isExpired (envSlotNumber env) timeout) || (not $ evalObservation env obs)
+  then reduce env contractAfter
+  else do l <- reduce env contractWhile
+          return $ NE.map (\(v,sc) -> (v, While obs timeout sc contractAfter)) l
 
 -- Evaluate a value
 evalValue :: Environment -> Value -> Integer
@@ -192,36 +207,6 @@ contractLifespan contract = case contract of
         in maximum (timeout <| contractLifespan contract <| contractsLifespans)
     While observation timeout contract1 contract2 ->
         maximum [timeout, contractLifespan contract1, contractLifespan contract2]
-
-
-reduceContract :: SlotNumber -> State -> Environment -> Contract -> Contract
-reduceContract slotNumber state env contract = case contract of
-    Null -> Null
-    Commit _ _ timeout _ cont2 ->
-        if isExpired slotNumber timeout then go cont2 else contract
-    Pay _ _ -> contract
-    All shares -> contract -- TODO fixme
-    If obs cont1 cont2 ->
-        if evalObservation env obs then go cont1 else go cont2
-    When cases timeout timeoutCont -> let
-        reduceWhen cases [] =
-            When (NE.fromList $ reverse cases) timeout (expireContract slotNumber timeoutCont)
-        reduceWhen cases (case1@(Case o c) : rest) =
-            -- short circuit on first true observation
-            if evalObservation env o then go c
-            else reduceWhen (case1 : cases) rest
-
-        in if isExpired slotNumber timeout
-           then go timeoutCont
-           else reduceWhen [] (NE.toList cases)
-
-    While obs timeout contractWhile contractAfter ->
-        if isExpired slotNumber timeout
-            then go contractAfter
-            else if evalObservation env obs
-                 then (While obs timeout (go contractWhile) contractAfter)
-                 else go contractAfter
-  where go = reduceContract slotNumber state env
 
 expireContract :: SlotNumber -> Contract -> Contract
 expireContract slotNumber contract = case contract of

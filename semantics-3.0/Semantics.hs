@@ -104,9 +104,18 @@ data Environment =
               , envOracles :: Map OracleId Integer
               , envAvailableMoney :: Money }
 
--- ToDo
-initEnvironment :: SlotNumber -> Input -> State -> Environment
-initEnvironment = initEnvironment
+initEnvironment :: SlotNumber -> Input -> State -> Money -> Maybe Environment
+initEnvironment slotNumber (Input { inputOracleValues = inOra
+                                  , inputChoices = inCho })
+                (State { stateChoices = staCho
+                       , stateBounds = staBou }) availMoney
+  | M.null $ M.intersection inCho staCho = Just $
+       Environment { envSlotNumber = slotNumber
+                   , envChoices = M.union inCho staCho
+                   , envBounds = staBou
+                   , envOracles = inOra
+                   , envAvailableMoney = availMoney }
+  | otherwise = Nothing
 
 contractLifespan :: Contract -> Integer
 contractLifespan contract = case contract of

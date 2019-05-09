@@ -117,23 +117,6 @@ initEnvironment slotNumber (Input { inputOracleValues = inOra
                    , envAvailableMoney = availMoney }
   | otherwise = Nothing
 
-contractLifespan :: Contract -> Integer
-contractLifespan contract = case contract of
-    Null -> 0
-    Commit _ _ timeout contract1 contract2 ->
-        maximum [timeout, contractLifespan contract1, contractLifespan contract2]
-    Pay _ _ -> 0
-    All shares ->   let contractsLifespans = fmap (contractLifespan . snd) shares
-                    in maximum contractsLifespans
-    -- TODO simplify observation and check for always true/false cases
-    If observation contract1 contract2 ->
-        max (contractLifespan contract1) (contractLifespan contract2)
-    When cases timeout contract -> let
-        contractsLifespans = fmap (\(Case obs cont) -> contractLifespan cont) cases
-        in maximum (timeout <| contractLifespan contract <| contractsLifespans)
-    While observation timeout contract1 contract2 ->
-        maximum [timeout, contractLifespan contract1, contractLifespan contract2]
-
 -- Evaluate a value
 evalValue :: Environment -> Value -> Integer
 evalValue env value = case value of
@@ -169,5 +152,23 @@ evalObservation env obs = case obs of
 -- Decides whether something has expired
 isExpired :: SlotNumber -> SlotNumber -> Bool
 isExpired currSlotNumber expirationSlotNumber = currSlotNumber >= expirationSlotNumber
+
+-- Calculates an upper bound for the maximum lifespan of a contract
+contractLifespan :: Contract -> Integer
+contractLifespan contract = case contract of
+    Null -> 0
+    Commit _ _ timeout contract1 contract2 ->
+        maximum [timeout, contractLifespan contract1, contractLifespan contract2]
+    Pay _ _ -> 0
+    All shares ->   let contractsLifespans = fmap (contractLifespan . snd) shares
+                    in maximum contractsLifespans
+    -- TODO simplify observation and check for always true/false cases
+    If observation contract1 contract2 ->
+        max (contractLifespan contract1) (contractLifespan contract2)
+    When cases timeout contract -> let
+        contractsLifespans = fmap (\(Case obs cont) -> contractLifespan cont) cases
+        in maximum (timeout <| contractLifespan contract <| contractsLifespans)
+    While observation timeout contract1 contract2 ->
+        maximum [timeout, contractLifespan contract1, contractLifespan contract2]
 
 

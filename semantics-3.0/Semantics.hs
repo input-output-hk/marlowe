@@ -98,11 +98,13 @@ initialiseState (SetupContract { bounds = inpBounds
         , stateContracts = [(0, inpContract)] }
 
 data Environment =
-  Environment { envChoices :: Map ChoiceId Integer
+  Environment { envSlotNumber :: SlotNumber
+              , envChoices :: Map ChoiceId Integer
               , envBounds :: Bounds
               , envOracles :: Map OracleId Integer }
 
-initEnvironment :: Input -> State -> Environment
+-- ToDo
+initEnvironment :: SlotNumber -> Input -> State -> Environment
 initEnvironment = initEnvironment
 
 contractLifespan :: Contract -> Integer
@@ -123,8 +125,8 @@ contractLifespan contract = case contract of
         maximum [timeout, contractLifespan contract1, contractLifespan contract2]
 
 -- Evaluate a value
-evalValue :: SlotNumber -> Environment -> Value -> Integer
-evalValue slotNumber env value = case value of
+evalValue :: Environment -> Value -> Integer
+evalValue env value = case value of
     Constant i -> i
     AvailableMoney -> error "Take from state?" -- TODO
     AddValue lhs rhs -> go lhs + go rhs
@@ -133,12 +135,12 @@ evalValue slotNumber env value = case value of
         fromMaybe (go value) $ M.lookup choiceId (envChoices env)
     OracleValue oracleId value ->
         fromMaybe (go value) $ M.lookup oracleId (envOracles env)
-    CurrentSlot -> slotNumber
-  where go = evalValue slotNumber env
+    CurrentSlot -> envSlotNumber env
+  where go = evalValue env
 
 -- Evaluate an observation
-evalObservation :: SlotNumber -> Environment -> Observation -> Bool
-evalObservation slotNumber env obs = case obs of
+evalObservation :: Environment -> Observation -> Bool
+evalObservation env obs = case obs of
     AndObs lhs rhs -> go lhs && go rhs
     OrObs lhs rhs -> go lhs || go rhs
     NotObs o -> not (go o)
@@ -151,8 +153,8 @@ evalObservation slotNumber env obs = case obs of
     ValueEQ lhs rhs -> goValue lhs == goValue rhs
     TrueObs -> True
     FalseObs -> False
-  where go = evalObservation slotNumber env
-        goValue  = evalValue slotNumber env
+  where go = evalObservation env
+        goValue  = evalValue env
 
 -- Decides whether something has expired
 isExpired :: SlotNumber -> SlotNumber -> Bool

@@ -1,6 +1,6 @@
 module Semantics where
 
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty(..), (<|))
 import Data.Map (Map)
 
 data SetupContract = SetupContract {
@@ -23,7 +23,7 @@ type ActionId = Integer
 data Contract =
     Commit Party Value Timeout Contract Contract |
     Pay Party Value |
-    Both (NonEmpty (Value, Contract)) |
+    All (NonEmpty (Value, Contract)) |
 --    Catch Contract Contract |
     If Observation Contract Contract |
     When (NonEmpty Case) Timeout Contract |
@@ -77,3 +77,19 @@ data InputCommand = Perform (NonEmpty ActionId)
 
 data State = State { stateChoices :: Map ChoiceId Integer }
                 deriving (Eq, Ord, Show, Read)
+
+contractLifespan :: Contract -> Integer
+contractLifespan contract = case contract of
+    Commit _ _ timeout contract1 contract2 ->
+        maximum [timeout, contractLifespan contract1, contractLifespan contract2]
+    Pay _ _ -> 0
+    All shares ->   let contractsLifespans = fmap (contractLifespan . snd) shares
+                    in maximum contractsLifespans
+    -- TODO simplify observation and check for always true/false cases
+    If observation contract1 contract2 ->
+        max (contractLifespan contract1) (contractLifespan contract2)
+    When cases timeout contract -> let
+        contractsLifespans = fmap (\(Case obs cont) -> contractLifespan cont) cases
+        in maximum (timeout <| contractLifespan contract <| contractsLifespans)
+    While observation timeout contract1 contract2 ->
+        maximum [timeout, contractLifespan contract1, contractLifespan contract2]

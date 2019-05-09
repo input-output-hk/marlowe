@@ -2,6 +2,8 @@ module Semantics where
 
 import Data.List.NonEmpty (NonEmpty(..), (<|))
 import Data.Map (Map)
+import Data.Maybe
+import qualified Data.Map as M
 
 data SetupContract = SetupContract {
     bounds :: Bounds,
@@ -24,6 +26,7 @@ type ActionId = Integer
 type Money = Integer
 
 data Contract =
+    Null |
     Commit Party Value Timeout Contract Contract |
     Pay Party Value |
     All (NonEmpty (Value, Contract)) |
@@ -70,8 +73,8 @@ data Observation = AndObs Observation Observation |
                deriving (Eq, Ord, Show, Read)
 
 data Input = Input { inputCommand :: InputCommand
-                   , inputOracleValues :: (Map OracleId Integer)
-                   , inputChoices :: (Map ChoiceId Integer) }
+                   , inputOracleValues :: Map OracleId Integer
+                   , inputChoices :: Map ChoiceId Integer }
                deriving (Eq, Ord, Show, Read)
 
 data InputCommand = Perform (NonEmpty ActionId)
@@ -81,11 +84,32 @@ data InputCommand = Perform (NonEmpty ActionId)
 
 data State = State { stateChoices :: Map ChoiceId Integer
                    , stateBounds :: Bounds
-                   , stateContract :: [(Money, Contract)] }
+                   , stateContracts :: [(Money, Contract)] }
                deriving (Eq, Ord, Show, Read)
+
+emptyBounds :: Bounds
+emptyBounds = Bounds { oracleBounds = M.empty
+                     , choiceBounds = M.empty }
+
+initialiseState :: SetupContract -> State
+initialiseState (SetupContract { bounds = inpBounds
+                               , contract = inpContract }) =
+  State { stateChoices = M.empty
+        , stateBounds = inpBounds
+        , stateContracts = [(0, inpContract)] }
+
+data Environment =
+    Environment { envChoices :: Map ChoiceId Integer
+                , envBounds :: Bounds
+                , envOracles :: Map OracleId Integer }
+
+initEnvironment :: Input -> State -> Environment
+initEnvironment = initEnvironment
+
 
 contractLifespan :: Contract -> Integer
 contractLifespan contract = case contract of
+    Null -> 0
     Commit _ _ timeout contract1 contract2 ->
         maximum [timeout, contractLifespan contract1, contractLifespan contract2]
     Pay _ _ -> 0
@@ -100,24 +124,39 @@ contractLifespan contract = case contract of
     While observation timeout contract1 contract2 ->
         maximum [timeout, contractLifespan contract1, contractLifespan contract2]
 
-inferPerformableActions :: Contract -> SlotNumber -> [Contract]
-inferPerformableActions contract slot = case contract of
-    Commit _ _ timeout _ cont -> if isExpired slot timeout then [cont] else [contract]
-    Pay Party Value -> [contract]
-    All (NonEmpty (Value, Contract)) |
-    If Observation Contract Contract |
-    When (NonEmpty Case) Timeout Contract |
-    While Observation Timeout Contract Contract
 
-eval :: Input -> Bounds -> Contract -> State -> Either String (State, Contract)
-eval input bounds contract state = case contract of
-    Commit Party Value Timeout Contract Contract ->
-    Pay Party Value |
-    All (NonEmpty (Value, Contract)) |
---    Catch Contract Contract |
-    If Observation Contract Contract |
-    When (NonEmpty Case) Timeout Contract |
-    While Observation Timeout Contract Contract
+-- Evaluate a value
+evalValue :: SlotNumber -> State -> Environment -> Value -> Integer
+evalValue slotNumber state env value = case value of
+    Constant i -> i
+    AvailableMoney -> error "Take from state?" -- TODO
+    AddValue lhs rhs -> go lhs + go rhs
+    SubValue lhs rhs -> go lhs - go rhs
+    ChoiceValue choiceId value ->
+        fromMaybe (go value) $ M.lookup choiceId (stateChoices state)
+    OracleValue oracleId value ->
+        fromMaybe (go value) $ M.lookup oracleId (envOracles env)
+    CurrentSlot -> slotNumber
+  where go = evalValue slotNumber state env
+
+
+-- Evaluate an observation
+evalObservation :: SlotNumber -> State -> Environment -> Observation -> Bool
+evalObservation slotNumber state env obs = case obs of
+    AndObs lhs rhs -> go lhs && go rhs
+    OrObs lhs rhs -> go lhs || go rhs
+    NotObs o -> not (go o)
+    ChoseSomething choiceId -> choiceId `M.member` (stateChoices state)
+    OracleValueProvided oracleId -> oracleId `M.member` (envOracles env)
+    ValueGE lhs rhs -> goValue lhs >= goValue rhs
+    ValueGT lhs rhs -> goValue lhs > goValue rhs
+    ValueLT lhs rhs -> goValue lhs < goValue rhs
+    ValueLE lhs rhs -> goValue lhs <= goValue rhs
+    ValueEQ lhs rhs -> goValue lhs == goValue rhs
+    TrueObs -> True
+    FalseObs -> False
+  where go = evalObservation slotNumber state env
+        goValue  = evalValue slotNumber state env
 
 -- Decides whether something has expired
 isExpired :: SlotNumber -> SlotNumber -> Bool

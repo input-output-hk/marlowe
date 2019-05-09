@@ -9,8 +9,8 @@ import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 
 data SetupContract = SetupContract {
-    bounds :: Bounds,
-    contract :: Contract
+    setupBounds :: Bounds,
+    setupContract :: Contract
 }
                deriving (Eq, Ord, Show, Read)
 
@@ -94,8 +94,8 @@ emptyBounds = Bounds { oracleBounds = M.empty
                      , choiceBounds = M.empty }
 
 initialiseState :: SetupContract -> State
-initialiseState (SetupContract { bounds = inpBounds
-                               , contract = inpContract }) =
+initialiseState (SetupContract { setupBounds = inpBounds
+                               , setupContract = inpContract }) =
   State { stateChoices = M.empty
         , stateBounds = inpBounds
         , stateContracts = [(0, inpContract)] }
@@ -130,7 +130,7 @@ reduce :: Environment -> Contract -> Maybe (NonEmpty (Money, Contract))
 reduce env Null = Just ((envAvailableMoney env, Null) :| [])
 reduce env (c@(Commit _ _ _ _ _)) = Just ((envAvailableMoney env, c) :| [])
 reduce env (c@(Pay _ _)) = Just ((envAvailableMoney env, c) :| [])
-reduce env (c@(All shares)) =
+reduce env (All shares) =
   let eshares = NE.map (\(v, sc) -> (evalValue env v, sc)) shares in
   let total = (sum $ NE.toList $ NE.map fst $ eshares) in
   if total == envAvailableMoney env
@@ -148,7 +148,7 @@ reduce env (c@(When cases timeout timeoutCont)) =
   else case find (\(Case obs _) -> evalObservation env obs) (NE.toList cases) of
          Nothing -> Just ((envAvailableMoney env, c) :| [])
          Just (Case _ sc) -> reduce env sc
-reduce env (c@(While obs timeout contractWhile contractAfter)) =
+reduce env (While obs timeout contractWhile contractAfter) =
   if (isExpired (envSlotNumber env) timeout) || (not $ evalObservation env obs)
   then reduce env contractAfter
   else do l <- reduce env contractWhile
@@ -161,10 +161,10 @@ evalValue env value = case value of
     AvailableMoney -> envAvailableMoney env
     AddValue lhs rhs -> go lhs + go rhs
     SubValue lhs rhs -> go lhs - go rhs
-    ChoiceValue choiceId value ->
-        fromMaybe (go value) $ M.lookup choiceId (envChoices env)
-    OracleValue oracleId value ->
-        fromMaybe (go value) $ M.lookup oracleId (envOracles env)
+    ChoiceValue choiceId val ->
+        fromMaybe (go val) $ M.lookup choiceId (envChoices env)
+    OracleValue oracleId val ->
+        fromMaybe (go val) $ M.lookup oracleId (envOracles env)
     CurrentSlot -> envSlotNumber env
   where go = evalValue env
 
@@ -200,12 +200,12 @@ contractLifespan contract = case contract of
     All shares ->   let contractsLifespans = fmap (contractLifespan . snd) shares
                     in maximum contractsLifespans
     -- TODO simplify observation and check for always true/false cases
-    If observation contract1 contract2 ->
+    If _ contract1 contract2 ->
         max (contractLifespan contract1) (contractLifespan contract2)
-    When cases timeout contract -> let
-        contractsLifespans = fmap (\(Case obs cont) -> contractLifespan cont) cases
-        in maximum (timeout <| contractLifespan contract <| contractsLifespans)
-    While observation timeout contract1 contract2 ->
+    When cases timeout subContract -> let
+        contractsLifespans = fmap (\(Case _ cont) -> contractLifespan cont) cases
+        in maximum (timeout <| contractLifespan subContract <| contractsLifespans)
+    While _ timeout contract1 contract2 ->
         maximum [timeout, contractLifespan contract1, contractLifespan contract2]
 
 expireContract :: SlotNumber -> Contract -> Contract
@@ -235,8 +235,9 @@ inferActions contract = let
         Null -> []
         Commit _ _ _ _ _ -> [contract]
         Pay _ _ -> [contract]
-        All shares -> foldMap (\(v, c) -> inferActions c) (NE.toList shares)
+        All shares -> foldMap (\(_, c) -> inferActions c) (NE.toList shares)
         If _ _ _ -> [contract]
-        When cases timeout timeoutCont -> []
-        While obs _ contractWhile _ -> inferActions contractWhile
+        When _ _ _ -> []
+        While _ _ contractWhile _ -> inferActions contractWhile
     in inner
+

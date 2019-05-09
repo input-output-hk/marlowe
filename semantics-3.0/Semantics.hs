@@ -101,7 +101,8 @@ data Environment =
   Environment { envSlotNumber :: SlotNumber
               , envChoices :: Map ChoiceId Integer
               , envBounds :: Bounds
-              , envOracles :: Map OracleId Integer }
+              , envOracles :: Map OracleId Integer
+              , envAvailableMoney :: Money }
 
 -- ToDo
 initEnvironment :: SlotNumber -> Input -> State -> Environment
@@ -128,7 +129,7 @@ contractLifespan contract = case contract of
 evalValue :: Environment -> Value -> Integer
 evalValue env value = case value of
     Constant i -> i
-    AvailableMoney -> error "Take from state?" -- TODO
+    AvailableMoney -> envAvailableMoney env 
     AddValue lhs rhs -> go lhs + go rhs
     SubValue lhs rhs -> go lhs - go rhs
     ChoiceValue choiceId value ->

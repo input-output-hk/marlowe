@@ -119,9 +119,24 @@ initEnvironment slotNumber (Input { inputOracleValues = inOra
                    , envAvailableMoney = availMoney }
   | otherwise = Nothing
 
+nonEmptyConcatJustMap :: (x -> Maybe (NonEmpty y)) -> NonEmpty x -> Maybe (NonEmpty y)
+nonEmptyConcatJustMap f (h :| t) =
+  do (fhh :| fht) <- f h
+     ft <- mapM ((NE.toList <$>) . f) t
+     return (fhh :| (fht ++ (concat ft)))
+
 reduce :: Environment -> Contract -> Maybe (NonEmpty (Money, Contract))
 reduce env Null = Just ((envAvailableMoney env, Null) :| [])
 reduce env (c@(Commit _ _ _ _ _)) = Just ((envAvailableMoney env, c) :| [])
+reduce env (c@(Pay _ _)) = Just ((envAvailableMoney env, c) :| [])
+reduce env (c@(All shares)) =
+  let eshares = NE.map (\(v, sc) -> (evalValue env v, sc)) shares in
+  let total = (sum $ NE.toList $ NE.map fst $ eshares) in
+  if total == envAvailableMoney env
+  then nonEmptyConcatJustMap
+         (\(sv, sc) ->
+            reduce (env { envAvailableMoney = sv }) sc) eshares
+  else Nothing
 reduce env x = reduce env x -- ToDo
 
 -- Evaluate a value

@@ -1,6 +1,7 @@
 module Semantics where
 
 import Data.List.NonEmpty (NonEmpty(..), (<|))
+import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
@@ -126,7 +127,7 @@ reduce env x = reduce env x -- ToDo
 evalValue :: Environment -> Value -> Integer
 evalValue env value = case value of
     Constant i -> i
-    AvailableMoney -> envAvailableMoney env 
+    AvailableMoney -> envAvailableMoney env
     AddValue lhs rhs -> go lhs + go rhs
     SubValue lhs rhs -> go lhs - go rhs
     ChoiceValue choiceId value ->
@@ -177,3 +178,40 @@ contractLifespan contract = case contract of
         maximum [timeout, contractLifespan contract1, contractLifespan contract2]
 
 
+reduceContract :: SlotNumber -> State -> Environment -> Contract -> Contract
+reduceContract slotNumber state env contract = case contract of
+    Null -> Null
+    Commit _ _ timeout _ cont2 ->
+        if isExpired slotNumber timeout then go cont2 else contract
+    Pay _ _ -> contract
+    All shares -> contract -- TODO fixme
+    If obs cont1 cont2 ->
+        if evalObservation env obs then go cont1 else go cont2
+    When cases timeout timeoutCont -> let
+        reducedTimeoutCont = go timeoutCont
+
+        asdf cases [] = When (NE.fromList $ reverse cases) timeout reducedTimeoutCont
+        asdf cases (case1@(Case o c) : rest) = if evalObservation env o then c else asdf (case1 : cases) rest
+
+        in if isExpired slotNumber timeout
+           then reducedTimeoutCont
+           else asdf [] (NE.toList cases)
+
+    While obs timeout contractWhile contractAfter ->
+        if isExpired slotNumber timeout
+            then go contractAfter
+            else if evalObservation env obs
+                 then (While obs timeout (go contractWhile) contractAfter)
+                 else go contractAfter
+  where go = reduceContract slotNumber state env
+
+inferActions :: Contract -> [Contract]
+inferActions contract = let
+    inner = case contract of
+        Null -> []
+        Commit _ _ _ _ _ -> [contract]
+        Pay _ _ -> [contract]
+        All shares -> [contract] -- TODO fixme
+        When cases timeout timeoutCont -> []
+        While obs _ contractWhile _ -> inferActions contractWhile
+    in inner

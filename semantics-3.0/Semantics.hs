@@ -27,7 +27,7 @@ data Contract =
     Commit Party Value Timeout Contract Contract |
     Pay Party Value |
     All (NonEmpty (Value, Contract)) |
---    Catch Contract Contract | 
+--    Catch Contract Contract |
     If Observation Contract Contract |
     When (NonEmpty Case) Timeout Contract |
     While Observation Timeout Contract Contract
@@ -83,6 +83,7 @@ data State = State { stateChoices :: Map ChoiceId Integer
                    , stateBounds :: Bounds
                    , stateContract :: [(Money, Contract)] }
                deriving (Eq, Ord, Show, Read)
+
 contractLifespan :: Contract -> Integer
 contractLifespan contract = case contract of
     Commit _ _ timeout contract1 contract2 ->
@@ -99,3 +100,25 @@ contractLifespan contract = case contract of
     While observation timeout contract1 contract2 ->
         maximum [timeout, contractLifespan contract1, contractLifespan contract2]
 
+inferPerformableActions :: Contract -> SlotNumber -> [Contract]
+inferPerformableActions contract slot = case contract of
+    Commit _ _ timeout _ cont -> if isExpired slot timeout then [cont] else [contract]
+    Pay Party Value -> [contract]
+    All (NonEmpty (Value, Contract)) |
+    If Observation Contract Contract |
+    When (NonEmpty Case) Timeout Contract |
+    While Observation Timeout Contract Contract
+
+eval :: Input -> Bounds -> Contract -> State -> Either String (State, Contract)
+eval input bounds contract state = case contract of
+    Commit Party Value Timeout Contract Contract ->
+    Pay Party Value |
+    All (NonEmpty (Value, Contract)) |
+--    Catch Contract Contract |
+    If Observation Contract Contract |
+    When (NonEmpty Case) Timeout Contract |
+    While Observation Timeout Contract Contract
+
+-- Decides whether something has expired
+isExpired :: SlotNumber -> SlotNumber -> Bool
+isExpired currSlotNumber expirationSlotNumber = currSlotNumber >= expirationSlotNumber

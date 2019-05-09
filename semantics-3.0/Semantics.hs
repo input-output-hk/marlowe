@@ -1,3 +1,4 @@
+{-# LANGUAGE StrictData     #-}
 module Semantics where
 
 import Data.List.NonEmpty (NonEmpty(..), (<|))
@@ -188,14 +189,16 @@ reduceContract slotNumber state env contract = case contract of
     If obs cont1 cont2 ->
         if evalObservation env obs then go cont1 else go cont2
     When cases timeout timeoutCont -> let
-        reducedTimeoutCont = go timeoutCont
-
-        asdf cases [] = When (NE.fromList $ reverse cases) timeout reducedTimeoutCont
-        asdf cases (case1@(Case o c) : rest) = if evalObservation env o then c else asdf (case1 : cases) rest
+        reduceWhen cases [] =
+            When (NE.fromList $ reverse cases) timeout (expireContract slotNumber timeoutCont)
+        reduceWhen cases (case1@(Case o c) : rest) =
+            -- short circuit on first true observation
+            if evalObservation env o then go c
+            else reduceWhen (case1 : cases) rest
 
         in if isExpired slotNumber timeout
-           then reducedTimeoutCont
-           else asdf [] (NE.toList cases)
+           then go timeoutCont
+           else reduceWhen [] (NE.toList cases)
 
     While obs timeout contractWhile contractAfter ->
         if isExpired slotNumber timeout
@@ -205,13 +208,35 @@ reduceContract slotNumber state env contract = case contract of
                  else go contractAfter
   where go = reduceContract slotNumber state env
 
+expireContract :: SlotNumber -> Contract -> Contract
+expireContract slotNumber contract = case contract of
+    Null -> Null
+    Commit _ _ timeout _ cont2 ->
+        if isExpired slotNumber timeout then go cont2 else contract
+    Pay _ _ -> contract
+    All shares -> All $ fmap (\(v, c) -> (v, go c)) shares
+    If obs cont1 cont2 -> If obs (go cont1) (go cont2)
+    When cases timeout timeoutCont -> let
+        reducedTimeoutCont = go timeoutCont
+        updatedCases = fmap (\(Case obs cont) -> Case obs $ go cont) cases
+        in if isExpired slotNumber timeout
+           then reducedTimeoutCont
+           else When updatedCases timeout reducedTimeoutCont
+
+    While obs timeout contractWhile contractAfter ->
+        if isExpired slotNumber timeout
+            then go contractAfter
+            else While obs timeout (go contractWhile) (go contractAfter)
+  where go = expireContract slotNumber
+
 inferActions :: Contract -> [Contract]
 inferActions contract = let
     inner = case contract of
         Null -> []
         Commit _ _ _ _ _ -> [contract]
         Pay _ _ -> [contract]
-        All shares -> [contract] -- TODO fixme
+        All shares -> foldMap (\(v, c) -> inferActions c) (NE.toList shares)
+        If _ _ _ -> [contract]
         When cases timeout timeoutCont -> []
         While obs _ contractWhile _ -> inferActions contractWhile
     in inner

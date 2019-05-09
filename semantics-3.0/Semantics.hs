@@ -117,6 +117,11 @@ initEnvironment slotNumber (Input { inputOracleValues = inOra
                    , envAvailableMoney = availMoney }
   | otherwise = Nothing
 
+reduce :: Environment -> Contract -> Maybe (NonEmpty (Money, Contract))
+reduce env Null = Just ((envAvailableMoney env, Null) :| [])
+reduce env (c@(Commit _ _ _ _ _)) = Just ((envAvailableMoney env, c) :| [])
+reduce env x = reduce env x -- ToDo
+
 -- Evaluate a value
 evalValue :: Environment -> Value -> Integer
 evalValue env value = case value of

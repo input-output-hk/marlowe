@@ -137,6 +137,7 @@ intersperseAndWrap x (h:t) = (x:h:intersperseAndWrap x t)
 concatM :: (Monad m) => [a -> m a] -> (a -> m a)
 concatM fs = foldr (>=>) return fs
 
+-- ToDo: Check signatures for choices
 applyInput :: SlotNumber -> Signatoires -> Input -> State -> Maybe State
 applyInput sn s inp@(Input { inputCommand }) st =
   do envF <- initEnvironment sn inp st

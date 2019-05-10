@@ -186,32 +186,34 @@ nonEmptyConcatJustMap f (h :| t) =
      return (fhh :| (fht ++ (concat ft)))
 
 reduce :: Environment -> Contract -> Maybe (NonEmpty (Money, Contract))
-reduce env Null = Just ((envAvailableMoney env, Null) :| [])
-reduce env (c@(Commit _ _ _ _ _)) = Just ((envAvailableMoney env, c) :| [])
-reduce env (c@(Pay _ _)) = Just ((envAvailableMoney env, c) :| [])
-reduce env (All shares) =
-  let eshares = NE.map (\(v, sc) -> (evalValue env v, sc)) shares in
-  let total = (sum $ NE.toList $ NE.map fst $ eshares) in
-  if total == envAvailableMoney env
-  then nonEmptyConcatJustMap
-         (\(sv, sc) ->
-            reduce (env { envAvailableMoney = sv }) sc) eshares
-  else Nothing
-reduce env (If obs cont1 cont2) =
-  if evalObservation env obs
-  then reduce env cont1
-  else reduce env cont2
-reduce env (c@(When cases timeout timeoutCont)) =
-  if isExpired (envSlotNumber env) timeout
-  then reduce env timeoutCont
-  else case find (\(Case obs _) -> evalObservation env obs) (NE.toList cases) of
-         Nothing -> Just ((envAvailableMoney env, c) :| [])
-         Just (Case _ sc) -> reduce env sc
-reduce env (While obs timeout contractWhile contractAfter) =
-  if (isExpired (envSlotNumber env) timeout) || (not $ evalObservation env obs)
-  then reduce env contractAfter
-  else do l <- reduce env contractWhile
-          return $ NE.map (\(v,sc) -> (v, While obs timeout sc contractAfter)) l
+reduce env contract = case contract of
+    Null -> Just $ (availableMoney, Null) :| []
+    Commit _ _ _ _ _ -> Just $ (availableMoney, contract) :| []
+    Pay _ _ -> Just $ (availableMoney, contract) :| []
+    All shares -> let
+        eshares = NE.map (\(v, sc) -> (evalValue env v, sc)) shares
+        total = foldr ((+) . fst) 0 eshares in
+        if total == availableMoney
+        then nonEmptyConcatJustMap
+                (\(sv, sc) -> reduce (env { envAvailableMoney = sv }) sc)
+                eshares
+        else Nothing
+    If obs cont1 cont2 ->
+        if evalObservation env obs then go cont1 else go cont2
+    When cases timeout timeoutCont ->
+        if isExpired slotNumber timeout
+        then go timeoutCont
+        else case find (\(Case obs _) -> evalObservation env obs) (NE.toList cases) of
+                Nothing -> Just $ (envAvailableMoney env, contract) :| []
+                Just (Case _ sc) -> go sc
+    While obs timeout contractWhile contractAfter ->
+        if (isExpired slotNumber timeout) || (not $ evalObservation env obs)
+        then go contractAfter
+        else do l <- go contractWhile
+                return $ NE.map (\(v, sc) -> (v, While obs timeout sc contractAfter)) l
+  where slotNumber = envSlotNumber env
+        availableMoney = envAvailableMoney env
+        go = reduce env
 
 type Signatoires = Set Party
 

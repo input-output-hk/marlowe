@@ -334,8 +334,13 @@ alice = 1
 bob = 2
 carol = 3
 
+(|||) :: Observation -> Observation -> Observation
 (|||) = OrObs
+
+(&&&) :: Observation -> Observation -> Observation
 (&&&) = AndObs
+
+(===) :: Value -> Value -> Observation
 (===) = ValueEQ
 
 choseThis :: NumChoice -> ChoiceId -> Observation

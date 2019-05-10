@@ -172,7 +172,7 @@ addOutcome :: Party -> Integer -> TransactionOutcomes -> TransactionOutcomes
 addOutcome party diffValue trOut = M.insert party newValue trOut
   where newValue = case M.lookup party trOut of
                      Just value -> value + diffValue
-                     Nothing -> diffValue 
+                     Nothing -> diffValue
 
 -- Add two transaction outcomes together
 combineOutcomes :: TransactionOutcomes -> TransactionOutcomes -> TransactionOutcomes
@@ -232,7 +232,7 @@ applyCommandRec s env (Commit p v _ sc _)
         ev = evalValue env v
 applyCommandRec s env (Pay p v)
  | (S.member p s) && (am >= ev) = Just (am - ev, Null)
- | otherwise = Nothing 
+ | otherwise = Nothing
   where am = envAvailableMoney env
         ev = evalValue env v
 applyCommandRec _ _ (All _) = Nothing
@@ -329,3 +329,29 @@ inferActions contract = let
         While _ _ contractWhile _ -> inferActions contractWhile
     in inner
 
+alice, bob, carol :: Party
+alice = 1
+bob = 2
+carol = 3
+
+(|||) = OrObs
+(&&&) = AndObs
+(===) = ValueEQ
+
+agreed :: ChoiceId -> Observation
+agreed choiceId = (ChoiceValue choiceId (Constant 0) === Constant 1)
+
+-- party1 and (party2 or party3) or (party2 and party3)
+majorityAgrees :: Observation
+majorityAgrees = (agreed (ChoiceId 1 alice) &&& (agreed (ChoiceId 2 bob) ||| agreed (ChoiceId 3 carol)))
+        ||| (agreed (ChoiceId 2 bob) &&& agreed (ChoiceId 3 carol))
+
+majorityDisagrees :: Observation
+majorityDisagrees = NotObs majorityAgrees
+
+escrow :: Contract
+escrow = Commit alice (Constant 450) 10
+    (When (Case majorityAgrees (Pay bob AvailableMoney) :|
+           [Case majorityDisagrees (Pay alice AvailableMoney)])
+        90 (Pay alice AvailableMoney))
+    Null

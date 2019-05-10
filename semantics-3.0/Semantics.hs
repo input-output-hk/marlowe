@@ -3,6 +3,7 @@
 {-# LANGUAGE NamedFieldPuns     #-}
 module Semantics where
 
+import Control.Monad
 import Data.List.NonEmpty (NonEmpty(..), (<|))
 import qualified Data.List.NonEmpty as NE
 import Data.List (find)
@@ -179,12 +180,6 @@ addOutcome party diffValue trOut = M.insert party newValue trOut
 combineOutcomes :: TransactionOutcomes -> TransactionOutcomes -> TransactionOutcomes
 combineOutcomes = M.unionWith (+)
 
-nonEmptyConcatJustMap :: (x -> Maybe (NonEmpty y)) -> NonEmpty x -> Maybe (NonEmpty y)
-nonEmptyConcatJustMap f (h :| t) =
-  do (fhh :| fht) <- f h
-     ft <- mapM ((NE.toList <$>) . f) t
-     return (fhh :| (fht ++ (concat ft)))
-
 reduce :: Environment -> Contract -> Maybe (NonEmpty (Money, Contract))
 reduce env contract = case contract of
     Null -> Just $ (availableMoney, Null) :| []
@@ -194,9 +189,9 @@ reduce env contract = case contract of
         eshares = NE.map (\(v, sc) -> (evalValue env v, sc)) shares
         total = foldr ((+) . fst) 0 eshares in
         if total == availableMoney
-        then nonEmptyConcatJustMap
-                (\(sv, sc) -> reduce (env { envAvailableMoney = sv }) sc)
-                eshares
+        then do
+            fl <- forM eshares $ \(sv, sc) -> reduce (env { envAvailableMoney = sv }) sc
+            return $ join fl
         else Nothing
     If obs cont1 cont2 ->
         if evalObservation env obs then go cont1 else go cont2
@@ -227,23 +222,22 @@ applyCommand s f aid ((hm, hc):t)
                    return ((hm, hc):x)
 
 applyCommandRec :: Signatoires -> Environment -> Contract -> Maybe (Money, Contract)
-applyCommandRec _ _ Null = Nothing
-applyCommandRec s env (Commit p v _ sc _)
- | (S.member p s) = Just (am + ev, sc)
- | otherwise = Nothing
-  where am = envAvailableMoney env
-        ev = evalValue env v
-applyCommandRec s env (Pay p v)
- | (S.member p s) && (am >= ev) = Just (am - ev, Null)
- | otherwise = Nothing
-  where am = envAvailableMoney env
-        ev = evalValue env v
-applyCommandRec _ _ (All _) = Nothing
-applyCommandRec _ _ (If _ _ _) = Nothing
-applyCommandRec _ _ (When _ _ _) = Nothing
-applyCommandRec s env (While obs timeout contractWhile contractAfter) =
-  do (m, c) <- applyCommandRec s env contractWhile
-     return (m, While obs timeout c contractAfter)
+applyCommandRec signatories env contract = case contract of
+    Null -> Nothing
+    Commit party v _ cont _
+        | party `S.member` signatories -> Just (availableMoney + evalValue env v, cont)
+        | otherwise -> Nothing
+    Pay party val
+        | party `S.member` signatories && availableMoney >= ev -> Just (availableMoney - ev, Null)
+        | otherwise -> Nothing
+        where ev = evalValue env val
+    All _ -> Nothing
+    If _ _ _ -> Nothing
+    When _ _ _ -> Nothing
+    While obs timeout contractWhile contractAfter -> do
+        (money, cont) <- applyCommandRec signatories env contractWhile
+        return (money, While obs timeout cont contractAfter)
+  where availableMoney = envAvailableMoney env
 
 -- Evaluate a value
 evalValue :: Environment -> Value -> Integer

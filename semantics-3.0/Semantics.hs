@@ -155,7 +155,7 @@ applyCommandState s envF aid (st@State { stateContracts }) =
 
 reduceState :: (Money -> Environment) -> State -> Maybe State
 reduceState envF st@(State { stateContracts }) =
-  do x <- traverse (\(m, c) -> reduce (envF m) c) stateContracts 
+  do x <- traverse (\(m, c) -> reduce (envF m) c) stateContracts
      return $ st { stateContracts = concat (map NE.toList x) }
 
 -- How much everybody pays or receives in transaction
@@ -338,16 +338,20 @@ carol = 3
 (&&&) = AndObs
 (===) = ValueEQ
 
-agreed :: ChoiceId -> Observation
-agreed choiceId = (ChoiceValue choiceId (Constant 0) === Constant 1)
+choseThis :: NumChoice -> ChoiceId -> Observation
+choseThis choice choiceId  = (ChoiceValue choiceId (Constant 0) === Constant choice)
+
+majority :: NumChoice -> Observation
+majority choice = (chose (ChoiceId 1 alice) &&& (chose (ChoiceId 2 bob) ||| chose (ChoiceId 3 carol)))
+    ||| (chose (ChoiceId 2 bob) &&& chose (ChoiceId 3 carol))
+  where chose = choseThis choice
 
 -- party1 and (party2 or party3) or (party2 and party3)
 majorityAgrees :: Observation
-majorityAgrees = (agreed (ChoiceId 1 alice) &&& (agreed (ChoiceId 2 bob) ||| agreed (ChoiceId 3 carol)))
-        ||| (agreed (ChoiceId 2 bob) &&& agreed (ChoiceId 3 carol))
+majorityAgrees = majority 1
 
 majorityDisagrees :: Observation
-majorityDisagrees = NotObs majorityAgrees
+majorityDisagrees = majority 2
 
 escrow :: Contract
 escrow = Commit alice (Constant 450) 10

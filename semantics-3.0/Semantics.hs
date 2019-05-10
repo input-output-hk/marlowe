@@ -8,6 +8,8 @@ import qualified Data.List.NonEmpty as NE
 import Data.List (find)
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Maybe (fromMaybe)
 
 data SetupContract = SetupContract {
@@ -156,11 +158,40 @@ reduce env (While obs timeout contractWhile contractAfter) =
   else do l <- reduce env contractWhile
           return $ NE.map (\(v,sc) -> (v, While obs timeout sc contractAfter)) l
 
-applyInput :: Input -> Environment -> Contract -> Maybe Contract
-applyInput Input{inputCommand} env contract = case inputCommand of
-    Evaluate -> reduceContract env contract
-    Perform actions -> undefined -- TODO
+type Signatoires = Set Party
 
+applyCommand :: Signatoires -> ActionId -> (Money -> Environment) -> [(Money, Contract)] -> Maybe [(Money, Contract)]
+applyCommand _ _ _ [] = Nothing
+applyCommand s aid f ((hm, hc):t)
+  | aid < 1 = Nothing
+  | aid == 1 = do x <- applyCommandRec s (f hm) hc
+                  return (x:t)
+  | otherwise = do x <- applyCommand s (aid + 1) f t
+                   return ((hm, hc):x)
+
+applyCommandRec :: Signatoires -> Environment -> Contract -> Maybe (Money, Contract)
+applyCommandRec _ _ Null = Nothing
+applyCommandRec s env (Commit p v _ sc _)
+ | (S.member p s) = Just (am + ev, sc)
+ | otherwise = Nothing
+  where am = envAvailableMoney env
+        ev = evalValue env v
+applyCommandRec s env (Pay p v)
+ | (S.member p s) && (am >= ev) = Just (am - ev, Null)
+ | otherwise = Nothing 
+  where am = envAvailableMoney env
+        ev = evalValue env v
+applyCommandRec _ _ (All _) = Nothing
+applyCommandRec _ _ (If _ _ _) = Nothing
+applyCommandRec _ _ (When _ _ _) = Nothing
+applyCommandRec s env (While obs timeout contractWhile contractAfter) =
+  do (m, c) <- applyCommandRec s env contractWhile
+     return (m, While obs timeout c contractAfter)
+
+--applyInput :: Input -> Environment -> Contract -> Maybe (Money, Contract)
+--applyInput Input{inputCommand} env contract = case inputCommand of
+--    Evaluate -> reduceContract env contract
+--    Perform actions -> undefined -- TODO
 
 -- Evaluate a value
 evalValue :: Environment -> Value -> Integer

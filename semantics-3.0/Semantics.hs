@@ -124,6 +124,26 @@ initEnvironment slotNumber (Input { inputOracleValues = inOra
                    , envAvailableMoney = availMoney }
   | otherwise = Nothing
 
+-- How much everybody pays or receives in transaction
+type TransactionOutcomes = M.Map Party Integer
+
+emptyOutcome :: TransactionOutcomes
+emptyOutcome = M.empty
+
+isEmptyOutcome :: TransactionOutcomes -> Bool
+isEmptyOutcome trOut = all (== 0) trOut
+
+-- Adds a value to the map of outcomes
+addOutcome :: Party -> Integer -> TransactionOutcomes -> TransactionOutcomes
+addOutcome party diffValue trOut = M.insert party newValue trOut
+  where newValue = case M.lookup party trOut of
+                     Just value -> value + diffValue
+                     Nothing -> diffValue 
+
+-- Add two transaction outcomes together
+combineOutcomes :: TransactionOutcomes -> TransactionOutcomes -> TransactionOutcomes
+combineOutcomes = M.unionWith (+)
+
 nonEmptyConcatJustMap :: (x -> Maybe (NonEmpty y)) -> NonEmpty x -> Maybe (NonEmpty y)
 nonEmptyConcatJustMap f (h :| t) =
   do (fhh :| fht) <- f h

@@ -11,6 +11,7 @@ import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Maybe (fromMaybe)
+import Control.Monad ((>=>))
 
 data SetupContract = SetupContract {
     setupBounds :: Bounds,
@@ -111,18 +112,51 @@ data Environment =
               , envOracles :: Map OracleId Integer
               , envAvailableMoney :: Money }
 
-initEnvironment :: SlotNumber -> Input -> State -> Money -> Maybe Environment
+initEnvironment :: SlotNumber -> Input -> State -> (Maybe (Money -> Environment))
 initEnvironment slotNumber (Input { inputOracleValues = inOra
                                   , inputChoices = inCho })
                 (State { stateChoices = staCho
-                       , stateBounds = staBou }) availMoney
+                       , stateBounds = staBou })
   | M.null $ M.intersection inCho staCho = Just $
-       Environment { envSlotNumber = slotNumber
-                   , envChoices = M.union inCho staCho
-                   , envBounds = staBou
-                   , envOracles = inOra
-                   , envAvailableMoney = availMoney }
+       (\availMoney ->
+          Environment { envSlotNumber = slotNumber
+                      , envChoices = M.union inCho staCho
+                      , envBounds = staBou
+                      , envOracles = inOra
+                      , envAvailableMoney = availMoney })
   | otherwise = Nothing
+
+intersperseAndWrap :: a -> [a] -> [a]
+intersperseAndWrap x [] = [x]
+intersperseAndWrap x (h:t) = (x:h:intersperseAndWrap x t)
+
+-- From monad-loops package
+-- |Compose a list of monadic actions into one action.  Composes using
+-- ('>=>') - that is, the output of each action is fed to the input of
+-- the one after it in the list.
+concatM :: (Monad m) => [a -> m a] -> (a -> m a)
+concatM fs = foldr (>=>) return fs
+
+applyInput :: SlotNumber -> Signatoires -> Input -> State -> Maybe State
+applyInput sn s inp@(Input { inputCommand }) st =
+  do envF <- initEnvironment sn inp st
+     let reduceOnce = reduceState envF
+     let performOnce = applyCommandState s envF
+     case inputCommand of
+       Evaluate -> reduceOnce st
+       Perform actions -> let performList = map (performOnce) (NE.toList actions) in
+                          let reducePerformList = intersperseAndWrap reduceOnce performList in
+                          concatM reducePerformList st
+
+applyCommandState :: Signatoires -> (Money -> Environment) -> ActionId -> State -> Maybe State
+applyCommandState s envF aid (st@State { stateContracts }) =
+  do newStateContracts <- applyCommand s envF aid stateContracts
+     return $ st { stateContracts = newStateContracts }
+
+reduceState :: (Money -> Environment) -> State -> Maybe State
+reduceState envF st@(State { stateContracts }) =
+  do x <- traverse (\(m, c) -> reduce (envF m) c) stateContracts 
+     return $ st { stateContracts = concat (map NE.toList x) }
 
 -- How much everybody pays or receives in transaction
 type TransactionOutcomes = M.Map Party Integer
@@ -180,13 +214,13 @@ reduce env (While obs timeout contractWhile contractAfter) =
 
 type Signatoires = Set Party
 
-applyCommand :: Signatoires -> ActionId -> (Money -> Environment) -> [(Money, Contract)] -> Maybe [(Money, Contract)]
+applyCommand :: Signatoires -> (Money -> Environment) -> ActionId -> [(Money, Contract)] -> Maybe [(Money, Contract)]
 applyCommand _ _ _ [] = Nothing
-applyCommand s aid f ((hm, hc):t)
+applyCommand s f aid ((hm, hc):t)
   | aid < 1 = Nothing
   | aid == 1 = do x <- applyCommandRec s (f hm) hc
                   return (x:t)
-  | otherwise = do x <- applyCommand s (aid + 1) f t
+  | otherwise = do x <- applyCommand s f (aid + 1) t
                    return ((hm, hc):x)
 
 applyCommandRec :: Signatoires -> Environment -> Contract -> Maybe (Money, Contract)
@@ -207,11 +241,6 @@ applyCommandRec _ _ (When _ _ _) = Nothing
 applyCommandRec s env (While obs timeout contractWhile contractAfter) =
   do (m, c) <- applyCommandRec s env contractWhile
      return (m, While obs timeout c contractAfter)
-
---applyInput :: Input -> Environment -> Contract -> Maybe (Money, Contract)
---applyInput Input{inputCommand} env contract = case inputCommand of
---    Evaluate -> reduceContract env contract
---    Perform actions -> undefined -- TODO
 
 -- Evaluate a value
 evalValue :: Environment -> Value -> Integer

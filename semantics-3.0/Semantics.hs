@@ -1,4 +1,6 @@
 {-# LANGUAGE StrictData     #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 module Semantics where
 
 import Data.List.NonEmpty (NonEmpty(..), (<|))
@@ -153,6 +155,12 @@ reduce env (While obs timeout contractWhile contractAfter) =
   then reduce env contractAfter
   else do l <- reduce env contractWhile
           return $ NE.map (\(v,sc) -> (v, While obs timeout sc contractAfter)) l
+
+applyInput :: Input -> Environment -> Contract -> Maybe Contract
+applyInput Input{inputCommand} env contract = case inputCommand of
+    Evaluate -> reduceContract env contract
+    Perform actions -> undefined -- TODO
+
 
 -- Evaluate a value
 evalValue :: Environment -> Value -> Integer

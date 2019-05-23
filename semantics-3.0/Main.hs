@@ -12,7 +12,7 @@ import           Test.Tasty.QuickCheck
 import           Test.Tasty.HUnit
 import           Debug.Trace
 
-import           Semantics
+import           Semantics2
 
 main :: IO ()
 main = print "Hello Marlowe!"

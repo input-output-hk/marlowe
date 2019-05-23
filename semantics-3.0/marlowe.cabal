@@ -22,5 +22,6 @@ executable marlowe
                         tasty-quickcheck
     other-modules:
                         Semantics
+                        Semantics2
     hs-source-dirs:     .
     main-is:            Main.hs

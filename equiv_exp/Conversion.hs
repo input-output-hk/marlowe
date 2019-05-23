@@ -64,23 +64,27 @@ maxUsedChoices contract =
 
 data ActionData =
  ActionData { idActionChoice :: M.Map Old.IdAction New.ChoiceId
-            , commitList :: M.Map Old.Person (S.Set Old.IdAction)
-            , payList :: M.Map Old.Person (S.Set Old.IdAction) }
+            , commitIdCom :: M.Map Old.Person (S.Set Old.IdCommit)
+            , commitIdAc :: M.Map Old.IdCommit (S.Set Old.IdAction)
+            , payIdAc :: M.Map Old.IdCommit (S.Set Old.IdAction) }
+  deriving (Eq,Ord,Show,Read)
 
 emptyActionData :: ActionData
-emptyActionData = ActionData M.empty M.empty M.empty
+emptyActionData = ActionData M.empty M.empty M.empty M.empty
 
 addCommit :: Integer -> Old.IdAction -> Old.Person -> ActionData -> ActionData
 addCommit cid aid per ac@(ActionData { idActionChoice = iac 
-                                     , commitList = cl }) =
+                                     , commitIdCom = cic
+                                     , commitIdAc = cia}) =
   ac{ idActionChoice = M.insert aid (New.ChoiceId cid per) iac
-    , commitList = M.insertWith (S.union) per (S.singleton aid) cl }
+    , commitIdCom = M.insertWith (S.union) per (S.singleton cid) cic
+    , commitIdAc = M.insertWith (S.union) cid (S.singleton aid) cia }
 
 addPay :: Integer -> Old.IdAction -> Old.Person -> ActionData -> ActionData
 addPay cid aid per ac@(ActionData { idActionChoice = iac
-                                  , payList = pl }) =
+                                  , payIdAc = pia }) =
   ac{ idActionChoice = M.insert aid (New.ChoiceId cid per) iac
-    , payList = M.insertWith (S.union) per (S.singleton aid) pl }
+    , payIdAc = M.insertWith (S.union) cid (S.singleton aid) pia }
 
 getNewChoiceNum :: Old.Person -> LastUsedChoice -> (LastUsedChoice, Old.Person)
 getNewChoiceNum per luc =
@@ -110,11 +114,18 @@ idActionToChoice ad luc contract =
         chain oad oluc c1 c2 = let (adt, luct) = idActionToChoice oad oluc c1 in
                                    idActionToChoice adt luct c2
 
-convertAux :: ActionData -> Old.Contract -> New.Contract
-convertAux = convertAux
+data ConvertEnv = ConvertEnv {  }
+  deriving (Eq,Ord,Show,Read)
+
+emptyConvertEnv :: ConvertEnv
+emptyConvertEnv = ConvertEnv
+
+convertAux :: ActionData -> ConvertEnv -> Old.Contract -> New.Contract
+convertAux ad ce c = convertAux ad ce c
+
 
 convert :: Old.Contract -> (New.Contract, ActionData)
-convert contract = (convertAux renamings contract, renamings)
+convert contract = (convertAux renamings emptyConvertEnv contract, renamings)
   where (renamings, _) = idActionToChoice emptyActionData maxChoices contract
         maxChoices = maxUsedChoices contract
 

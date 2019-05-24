@@ -39,7 +39,8 @@ type LetLabel = Integer
 data Contract =
     Null |
     Commit CommitId Party Value Timeout Contract Contract |
-    Pay CommitId CommitId Value Timeout Contract Contract | -- transfer Value money from CommitId to CommitId
+    Pay CommitId CommitId Party Value Timeout Contract Contract |
+        -- transfer Value money from CommitId to CommitId owned by Party
     Redeem CommitId | -- withdraw everything left in CommitId
     Both Contract Contract |
     If Observation Contract Contract |
@@ -185,15 +186,15 @@ performAction env state actionId contract = do
                     stateBalance = M.alter (\am -> Just $ fromMaybe 0 am + evaluatedValue) commitId balances
                 }
                 Right $ Just (state, contract)
-            Pay from to value timeout contract fail -> do
+            Pay from to party value timeout contract fail -> do
                 let evaluatedValue = evalValue env state value
-                let commits = stateCommits state
+                let newCommits = M.insert to party $ stateCommits state
                 let balances = stateBalance state
                 let fromBalance = balances M.! from
                 if fromBalance >= evaluatedValue then let
                     newBalances = M.adjust (\amount -> amount - evaluatedValue) from $
                         M.adjust (\amount -> amount + evaluatedValue) to balances
-                    updatedState = state { stateBalance = newBalances }
+                    updatedState = state { stateBalance = newBalances, stateCommits = newCommits }
                     in Right $ Just (state, contract)
                 else Right Nothing
         | otherwise = Left idx
@@ -285,7 +286,8 @@ contractLifespan contract = case contract of
     Null -> 0
     Commit _ _ _ timeout contract1 contract2 ->
         maximum [timeout, contractLifespan contract1, contractLifespan contract2]
-    Pay{} -> 0
+    Pay _ _ _ _ timeout contract1 contract2 ->
+        maximum [timeout, contractLifespan contract1, contractLifespan contract2]
     Redeem{} -> 0
     Both c1 c2 -> contractLifespan c1 `max` contractLifespan c2
     -- TODO simplify observation and check for always true/false cases
@@ -340,7 +342,8 @@ majorityDisagrees = majority 2
 
 escrow :: Contract
 escrow = Commit alice alice (Constant 450) 10
-    (When  [ Case majorityAgrees (Pay alice bob (AvailableMoney alice) 90 (Redeem bob) (Redeem bob))
+    (When  [ Case majorityAgrees
+                (Pay alice bob bob (AvailableMoney alice) 90 (Redeem bob) (Redeem alice))
            , Case majorityDisagrees (Redeem alice) ]
         90 (Redeem alice))
     Null

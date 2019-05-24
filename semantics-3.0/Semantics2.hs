@@ -25,9 +25,8 @@ data Bounds = Bounds {
 }
                deriving (Eq, Ord, Show, Read)
 
-type CommitId = Integer
-type PubKey = Integer
-type Party = PubKey
+newtype CommitId = CommitId Integer deriving (Eq, Ord, Show, Read)
+type Party = Integer
 type NumChoice = Integer
 type Timeout = Integer
 type SlotNumber = Integer
@@ -56,7 +55,7 @@ data Case = Case Observation Contract
 data ChoiceId = ChoiceId NumChoice Party
                deriving (Eq, Ord, Show, Read)
 
-data OracleId = OracleId PubKey
+data OracleId = OracleId Party
                deriving (Eq, Ord, Show, Read)
 
 type Bound = NonEmpty (Integer, Integer) -- lower/upper bounds are included
@@ -341,9 +340,49 @@ majorityDisagrees :: Observation
 majorityDisagrees = majority 2
 
 escrow :: Contract
-escrow = Commit alice alice (Constant 450) 10
+escrow = Commit (CommitId alice) alice (Constant 450) 10
     (When  [ Case majorityAgrees
-                (Pay alice bob bob (AvailableMoney alice) 90 (Redeem bob) (Redeem alice))
-           , Case majorityDisagrees (Redeem alice) ]
-        90 (Redeem alice))
+                (Pay (CommitId alice) (CommitId bob) bob (AvailableMoney $ CommitId alice) 90
+                    (Redeem (CommitId bob))
+                    (Redeem (CommitId alice)))
+           , Case majorityDisagrees (Redeem (CommitId alice)) ]
+        90 (Redeem (CommitId alice)))
     Null
+
+zeroCouponBondGuaranteed :: Party -> Party -> Party -> Integer -> Integer -> Timeout -> Timeout -> Timeout -> Contract
+zeroCouponBondGuaranteed issuer investor guarantor notional discount startDate maturityDate gracePeriod =
+    -- prepare money for zero-coupon bond, before it could be used
+    Commit (CommitId 1) investor (Constant (notional - discount)) startDate
+        -- guarantor commits a 'guarantee' before startDate
+        (Commit (CommitId 2) guarantor (Constant notional) startDate
+            (When [] startDate
+                (Pay (CommitId 1) (CommitId 3) issuer (AvailableMoney $ CommitId 1) (maturityDate - gracePeriod)
+                    (Both (Redeem $ CommitId 3) -- issuer can take the money
+                        (Commit (CommitId 4) issuer (Constant notional) maturityDate
+                            -- if the issuer commits the notional before maturity date pay from it, redeem the 'guarantee'
+                            (Pay (CommitId 4) (CommitId 1) investor (AvailableMoney $ CommitId 4)
+                                (maturityDate + gracePeriod)
+                                (Redeem $ CommitId 1) -- investor can collect his money
+                                Null -- investor didn't confirm Pay, guarantor can redeem now, because we've reached contract's timeout
+                            )
+                            -- pay from the guarantor otherwise
+                            (Pay (CommitId 2) (CommitId 1) investor (AvailableMoney $ CommitId 2)
+                                (maturityDate + gracePeriod)
+                                (Redeem $ CommitId 1) -- investor can collect his money
+                                Null -- investor didn't confirm Pay, guarantor can redeem now, because we've reached contract's timeout
+                            )
+                        )
+                    )
+                    -- issuer didn't collect the loan, so we return those to investor
+                    -- and the guarantor pays the discount
+                    (Pay (CommitId 2) (CommitId 1) investor (Constant discount)
+                        (maturityDate + gracePeriod)
+                        (Both   (Redeem $ CommitId 1) -- investor can collect his money
+                                (Redeem $ CommitId 2))
+                        Null
+                    )
+                )
+            )
+            (Redeem $ CommitId 1) -- guarantor didn't commit, redeem investor commit immediately
+        )
+        Null

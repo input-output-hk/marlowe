@@ -42,8 +42,8 @@ data Case = Case Observation Contract
   deriving (Eq,Ord,Show,Read)
 
 data Contract =
-    Pay [(Integer, Party)] (Either Party Contract) |
+    Pay [(Value, Party)] (Either Party Contract) |
     If Observation Contract Contract |
-    When (NonEmpty Case) Timeout Contract
+    When [Case] Timeout Contract
   deriving (Eq,Ord,Show,Read)
 

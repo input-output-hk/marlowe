@@ -4,6 +4,8 @@ import qualified Semantics as Old
 import qualified Minimal as New
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+import Data.Ord (comparing)
+import Data.List (genericTake, genericDrop, genericLength, sortBy)
 
 type LastUsedChoice = M.Map Old.Person New.NumChoice
 
@@ -65,20 +67,27 @@ maxUsedChoices contract =
 data ActionData =
  ActionData { idActionChoice :: M.Map Old.IdAction New.ChoiceId
             , commitIdCom :: M.Map Old.Person (S.Set Old.IdCommit)
+            , commitPerson :: M.Map Old.IdCommit Old.Person
             , commitIdAc :: M.Map Old.IdCommit (S.Set Old.IdAction)
             , payIdAc :: M.Map Old.IdCommit (S.Set Old.IdAction) }
   deriving (Eq,Ord,Show,Read)
 
 emptyActionData :: ActionData
-emptyActionData = ActionData M.empty M.empty M.empty M.empty
+emptyActionData = ActionData M.empty M.empty M.empty M.empty M.empty
 
 addCommit :: Integer -> Old.IdAction -> Old.Person -> ActionData -> ActionData
 addCommit cid aid per ac@(ActionData { idActionChoice = iac 
                                      , commitIdCom = cic
+                                     , commitPerson = cp
                                      , commitIdAc = cia}) =
-  ac{ idActionChoice = M.insert aid (New.ChoiceId cid per) iac
-    , commitIdCom = M.insertWith (S.union) per (S.singleton cid) cic
-    , commitIdAc = M.insertWith (S.union) cid (S.singleton aid) cia }
+  let result = ac{ idActionChoice = M.insert aid (New.ChoiceId cid per) iac
+                 , commitIdCom = M.insertWith (S.union) per (S.singleton cid) cic
+                 , commitPerson = M.insert cid per cp
+                 , commitIdAc = M.insertWith (S.union) cid (S.singleton aid) cia } in
+  case M.lookup cid cp of
+    Just y -> if y /= per then error "A commitId can only belong to a single person"
+              else result
+    Nothing -> result
 
 addPay :: Integer -> Old.IdAction -> Old.Person -> ActionData -> ActionData
 addPay cid aid per ac@(ActionData { idActionChoice = iac
@@ -114,14 +123,95 @@ idActionToChoice ad luc contract =
         chain oad oluc c1 c2 = let (adt, luct) = idActionToChoice oad oluc c1 in
                                    idActionToChoice adt luct c2
 
-data ConvertEnv = ConvertEnv {  }
+data QuiescentThread =
+    QExpCommit Old.IdCommit Old.Timeout
+  | QWhile Old.Observation Old.Timeout Old.Contract
+  | QCommit Old.IdAction Old.IdCommit Old.Person Old.Value Old.Timeout Old.Timeout Old.Contract Old.Contract
+  | QPay Old.IdAction Old.IdCommit Old.Person Old.Value Old.Timeout Old.Contract Old.Contract
+  | QWhen Old.Observation Old.Timeout Old.Contract
+
+
+data ConvertEnv = ConvertEnv { commits :: M.Map Old.IdCommit Old.Timeout
+                             , minimumBlock :: Old.BlockNumber }
   deriving (Eq,Ord,Show,Read)
 
 emptyConvertEnv :: ConvertEnv
-emptyConvertEnv = ConvertEnv
+emptyConvertEnv = ConvertEnv M.empty 0
+
+unfoldChoicesAux :: ConvertEnv -> Old.Contract ->
+                    Maybe (Old.Observation, (Bool -> Old.Contract))
+unfoldChoicesAux env@(ConvertEnv { minimumBlock = mi }) contract =
+  case contract of
+    Old.Null -> Nothing 
+    Old.Commit _ _ _ _ _ t _ c2 -> unfoldChoicesAux env c2
+    Old.Pay _ _ _ _ t _ c2 -> unfoldChoicesAux env c2
+    Old.Both c1 c2 ->
+      case (unfoldChoicesAux env c1, unfoldChoicesAux env c2) of
+        (Just (no, f), _) -> Just (no, (\x -> Old.Both (f x) c2))
+        (Nothing, Just (no, f)) -> Just (no, (\x -> Old.Both c1 (f x)))
+        (Nothing, Nothing) -> Nothing
+    Old.Choice o c1 c2 -> Just (o, (\x -> if x then c1 else c2)) 
+    Old.When _ _ _ _ -> Nothing 
+    Old.While o t c1 c2 -> do (no, f) <- unfoldChoicesAux env c1
+                              return (no, (\x -> Old.While o t (f x) c2))
+    Old.Scale _ _ _ _ -> error "Scale not implemented" 
+    Old.Let _ _ _ -> error "Expand contract before converting" 
+    Old.Use _ -> error "Expand contract before converting"
+
+unfoldChoices :: ConvertEnv -> Old.Contract -> Old.Contract
+unfoldChoices env c =
+  case unfoldChoicesAux env c of
+    Nothing -> c
+    Just (o, f) -> let nc1 = unfoldChoices env $ f True in
+                   let nc2 = unfoldChoices env $ f False in
+                   Old.Choice o nc1 nc2 
+
+-- Taken from: https://mail.haskell.org/pipermail/libraries/2008-February/009270.html
+select :: [a] -> [(a,[a])]
+select [] = []
+select (x:xs) = (x,xs) : [(y,x:ys) | (y,ys) <- select xs]
+
+addValues :: [New.Value] -> New.Value
+addValues [x] = x
+addValues l = New.AddValue (addValues fp) (addValues sp)
+  where fp = genericTake hl l
+        sp = genericDrop hl l
+        hl = (genericLength l) `div` 2
+
+remMoney :: ActionData -> Old.IdCommit -> New.Value
+remMoney ad cid = New.SubValue (addValues cias) (addValues pias)
+  where Just ciacs = M.lookup cid $ commitIdAc ad
+        Just piacs = M.lookup cid $ payIdAc ad
+        cias = [ let Just choid = M.lookup c $ idActionChoice ad in
+                 New.ChoiceValue choid (New.Constant 0) | c <- (S.toList ciacs) ]
+        pias = [ let Just choid = M.lookup p $ idActionChoice ad in
+                 New.ChoiceValue choid (New.Constant 0) | p <- (S.toList piacs) ]
+
+refundEverything :: ActionData -> [(Old.IdCommit, Old.Timeout)] -> New.Contract
+refundEverything ad [] = New.Pay [] (Left 1) -- Just pay residue to first participant,
+                                             -- there should be no residue 
+refundEverything ad [(oid, tim)] = New.When [] tim $ New.Pay [] (Left oid)
+refundEverything ad ((oid, tim):(t@(_:_))) =
+  New.When [] tim (New.Pay [(s, p)] $ Right $ refundEverything ad t) 
+  where 
+    Just p = M.lookup oid $ commitPerson ad
+    s = remMoney ad oid
+
+flattenQuiescent = flattenQuiescent
+
+getQuiescent = getQuiescent
+
+convertObs :: ActionData -> ConvertEnv -> Old.Observation -> New.Observation
+convertObs = convertObs
+
+skipChoice :: ActionData -> ConvertEnv -> Old.Contract -> New.Contract
+skipChoice ad ce (Old.Null) = refundEverything ad (sortBy (comparing snd) $ M.toList $ commits ce)
+skipChoice ad ce (Old.Choice o c1 c2) = New.If (convertObs ad ce o) (go c1) (go c2)
+  where go = skipChoice ad ce
+skipChoice ad ce c = flattenQuiescent $ getQuiescent ad ce c
 
 convertAux :: ActionData -> ConvertEnv -> Old.Contract -> New.Contract
-convertAux ad ce c = convertAux ad ce c
+convertAux ad ce c = skipChoice ad ce (unfoldChoices ce c)
 
 
 convert :: Old.Contract -> (New.Contract, ActionData)

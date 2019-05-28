@@ -15,4 +15,5 @@ import           Debug.Trace
 import           Semantics2
 
 main :: IO ()
-main = print "Hello Marlowe!"
+main = do
+    print $ contractLifespan escrow

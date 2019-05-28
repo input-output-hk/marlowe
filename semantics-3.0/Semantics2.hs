@@ -141,15 +141,15 @@ applyInput slotNumber signatoires input@Input{..} state contract = do
     env <- initEnvironment slotNumber input state
     case inputCommand of
         Withdraw party amount -> do
-            (st, c) <- reduce env state contract
-            let redeems = stateUnclaimedRedeems st
+            let c = reduce env state contract
+            let redeems = stateUnclaimedRedeems state
             case M.lookup party redeems of
                 Just val | val > amount -> let
-                    updatedState = st {
+                    updatedState = state {
                             stateUnclaimedRedeems = M.adjust (\v -> v - amount) party redeems
                         }
                     in return (updatedState, c)
-        Evaluate -> reduce env state contract
+        Evaluate -> Just (state, reduce env state contract)
         Perform actions -> let
             perform (st, cont) actionId = performAction env st actionId cont
             in foldM perform (state, contract) actions
@@ -157,8 +157,8 @@ applyInput slotNumber signatoires input@Input{..} state contract = do
 
 performAction :: Environment -> State -> ActionId -> Contract -> Maybe (State, Contract)
 performAction env state actionId contract = do
-    (st, c) <- reduce env state contract
-    case transform st actionId 0 c of
+    let reducedContract = reduce env state contract
+    case transform state actionId 0 reducedContract of
         Left _ -> Nothing
         Right r -> r
   where
@@ -192,10 +192,22 @@ performAction env state actionId contract = do
                 let fromBalance = balances M.! from
                 if fromBalance >= evaluatedValue then let
                     newBalances = M.adjust (\amount -> amount - evaluatedValue) from $
-                        M.adjust (\amount -> amount + evaluatedValue) to balances
+                        M.adjust (+ evaluatedValue) to balances
                     updatedState = state { stateBalance = newBalances, stateCommits = newCommits }
                     in Right $ Just (state, contract)
                 else Right Nothing
+            Redeem id -> let
+                unclaimedRedeems = stateUnclaimedRedeems state
+                balances = stateBalance state
+                commits = stateCommits state
+                in case (M.lookup id balances, M.lookup id commits) of
+                    (Just balance, Just party) -> let
+                        newState = state {
+                            stateUnclaimedRedeems = M.adjust (+ balance) party unclaimedRedeems,
+                            stateBalance = M.adjust (const 0) id balances
+                        }
+                        in Right $ Just (newState, Null)
+                    _ -> Right Nothing
         | otherwise = Left idx
 
 -- How much everybody pays or receives in transaction
@@ -218,26 +230,34 @@ addOutcome party diffValue trOut = M.insert party newValue trOut
 combineOutcomes :: TransactionOutcomes -> TransactionOutcomes -> TransactionOutcomes
 combineOutcomes = M.unionWith (+)
 
-reduce :: Environment -> State -> Contract -> Maybe (State, Contract)
+reduce :: Environment -> State -> Contract -> Contract
 reduce env state contract = case contract of
-    Null -> Just (state, Null)
-    Commit{} -> Just (state, contract)
-    Pay{} -> Just (state, contract)
-    Redeem _ -> Just (state, contract)
-    Both c1 c2 -> Just (state, contract)
+    Null -> Null
+    Commit _ _ _ timeout _ fail ->
+        if isExpired slotNumber timeout
+        then go fail
+        else contract
+    Pay _ _ _ _ timeout _ fail ->
+        if isExpired slotNumber timeout
+        then go fail
+        else contract
+    Redeem id -> contract
+    Both c1 c2 -> case (go c1, go c2) of
+        (Null, c) -> c
+        (c, Null) -> c
+        (nc1, nc2) -> Both nc1 nc2
     If obs cont1 cont2 ->
         if evalObservation env state obs then go cont1 else go cont2
     When cases timeout timeoutCont ->
         if isExpired slotNumber timeout
         then go timeoutCont
         else case find (\(Case obs _) -> evalObservation env state obs) cases of
-                Nothing -> Just (state, contract)
+                Nothing -> contract
                 Just (Case _ sc) -> go sc
     While obs timeout contractWhile contractAfter ->
         if isExpired slotNumber timeout || not (evalObservation env state obs)
         then go contractAfter
-        else do l <- go contractWhile
-                return $ fmap (\sc -> While obs timeout sc contractAfter) l
+        else While obs timeout (go contractWhile) contractAfter
   where slotNumber = envSlotNumber env
         go = reduce env state
 
@@ -303,7 +323,7 @@ inferActions env state contract = case contract of
     Null -> []
     Commit{} -> [contract]
     Pay{} -> [contract]
-    Redeem{} -> error "Should not happen. Looks like you infer action for non-reduced contract. Try reduce it first. Redeems should be reduced automatically"
+    Redeem{} -> [contract]
     Both c1 c2 -> go c1 ++ go c2
     If _ c1 c2 -> error "Should not happen. Looks like you infer action for non-reduced contract. Try reduce it first. If should be reduced automatically"
     When{} -> []

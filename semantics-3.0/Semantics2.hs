@@ -96,9 +96,8 @@ data InputCommand = Perform (NonEmpty ActionId)
 
 data State = State { stateChoices :: Map ChoiceId Integer
                    , stateBounds  :: Bounds
-                   , stateCommits :: Map CommitId Party
-                   , stateBalance :: Map CommitId Integer
-                   , stateUnclaimedRedeems :: Map Party Money
+                   , stateCommits :: Map CommitId (Party, Money)
+                   , stateRedeems :: Map Party Money
                    , stateContractTimeout :: Timeout
                    }
                deriving (Eq, Ord, Show, Read)
@@ -112,8 +111,7 @@ initialiseState SetupContract{..} =
   State { stateChoices = M.empty
         , stateBounds = setupBounds
         , stateCommits = M.empty
-        , stateBalance = M.empty
-        , stateUnclaimedRedeems = M.empty
+        , stateRedeems = M.empty
         , stateContractTimeout = contractLifespan setupContract
         }
 
@@ -139,26 +137,26 @@ initEnvironment slotNumber Input{..} State {..}
 applyInput :: SlotNumber -> Signatoires -> Input -> State -> Contract -> Maybe (State, Contract)
 applyInput slotNumber signatoires input@Input{..} state contract = do
     env <- initEnvironment slotNumber input state
+    let (st, cont) = expireContract slotNumber state contract
+    let reducedContract = reduce env st cont
     case inputCommand of
         Withdraw party amount -> do
-            let c = reduce env state contract
-            let redeems = stateUnclaimedRedeems state
+            let redeems = stateRedeems st
             case M.lookup party redeems of
                 Just val | val > amount -> let
-                    updatedState = state {
-                            stateUnclaimedRedeems = M.adjust (\v -> v - amount) party redeems
+                    updatedState = st {
+                            stateRedeems = M.adjust (\v -> v - amount) party redeems
                         }
-                    in return (updatedState, c)
-        Evaluate -> Just (state, reduce env state contract)
+                    in return (updatedState, cont)
+        Evaluate -> Just (st, cont)
         Perform actions -> let
             perform (st, cont) actionId = performAction env st actionId cont
-            in foldM perform (state, contract) actions
+            in foldM perform (st, cont) actions
 
 
 performAction :: Environment -> State -> ActionId -> Contract -> Maybe (State, Contract)
-performAction env state actionId contract = do
-    let reducedContract = reduce env state contract
-    case transform state actionId 0 reducedContract of
+performAction env state actionId contract =
+    case transform state actionId 0 contract of
         Left _ -> Nothing
         Right r -> r
   where
@@ -178,37 +176,50 @@ performAction env state actionId contract = do
         | idx == actionId = case contract of
             Commit commitId party value timeout contract fail -> do
                 let evaluatedValue = evalValue env state value
-                let commits = stateCommits state
-                let balances = stateBalance state
-                let updatedState = state {
-                    stateCommits = M.insert commitId party commits,
-                    stateBalance = M.alter (\am -> Just $ fromMaybe 0 am + evaluatedValue) commitId balances
-                }
-                Right $ Just (state, contract)
+                if evaluatedValue > 0 then let
+                    commits = stateCommits state
+                    updatedState = state {
+                        stateCommits = M.alter (\am -> Just (party, maybe 0 snd am + evaluatedValue)) commitId commits
+                    }
+                    in Right $ Just (state, contract)
+                else Right Nothing
             Pay from to party value timeout contract fail -> do
                 let evaluatedValue = evalValue env state value
-                let newCommits = M.insert to party $ stateCommits state
-                let balances = stateBalance state
-                let fromBalance = balances M.! from
-                if fromBalance >= evaluatedValue then let
-                    newBalances = M.adjust (\amount -> amount - evaluatedValue) from $
-                        M.adjust (+ evaluatedValue) to balances
-                    updatedState = state { stateBalance = newBalances, stateCommits = newCommits }
+                let commits = stateCommits state
+                let (_, fromBalance) = commits M.! from
+                if 0 <= evaluatedValue && evaluatedValue <= fromBalance then let
+                    reduceFromAccount = M.adjust (\(party, amount) -> (party, amount - evaluatedValue)) from commits
+                    newCommits = M.alter (\v -> case v of
+                        Just (p, balance) -> Just (p, balance + evaluatedValue)
+                        Nothing -> Just (party, evaluatedValue)) to reduceFromAccount
+                    updatedState = state { stateCommits = newCommits }
                     in Right $ Just (state, contract)
                 else Right Nothing
             Redeem id -> let
-                unclaimedRedeems = stateUnclaimedRedeems state
-                balances = stateBalance state
+                unclaimedRedeems = stateRedeems state
                 commits = stateCommits state
-                in case (M.lookup id balances, M.lookup id commits) of
-                    (Just balance, Just party) -> let
+                in case M.lookup id commits of
+                    Just (party, balance) -> let
                         newState = state {
-                            stateUnclaimedRedeems = M.adjust (+ balance) party unclaimedRedeems,
-                            stateBalance = M.adjust (const 0) id balances
+                            stateRedeems = M.adjust (+ balance) party unclaimedRedeems,
+                            stateCommits = M.adjust (const (party, 0)) id commits
                         }
                         in Right $ Just (newState, Null)
                     _ -> Right Nothing
         | otherwise = Left idx
+
+
+expireContract :: SlotNumber -> State -> Contract -> (State, Contract)
+expireContract slotNumber state contract =
+    if isExpired (stateContractTimeout state) slotNumber
+    then let
+        commits = stateCommits state
+        redeems = stateRedeems state
+        newRedeems = M.foldr (\(party, balance) reds ->
+            M.alter (\redeem -> Just $ fromMaybe 0 redeem + balance) party reds
+            ) redeems commits
+        in (state { stateCommits = M.empty, stateRedeems = newRedeems }, Null)
+    else (state, contract)
 
 -- How much everybody pays or receives in transaction
 type TransactionOutcomes = M.Map Party Integer
@@ -263,11 +274,16 @@ reduce env state contract = case contract of
 
 type Signatoires = Set Party
 
+getCommitBalance :: CommitId -> State -> Money
+getCommitBalance commitId state = case M.lookup commitId (stateCommits state) of
+    Just (_, balance) -> balance
+    Nothing -> 0
+
 -- Evaluate a value
 evalValue :: Environment -> State -> Value -> Integer
 evalValue env state value = case value of
     Constant i -> i
-    AvailableMoney commitId -> stateBalance state M.! commitId
+    AvailableMoney commitId -> getCommitBalance commitId state
     AddValue lhs rhs -> go lhs + go rhs
     SubValue lhs rhs -> go lhs - go rhs
     ChoiceValue choiceId val ->
@@ -283,8 +299,8 @@ evalObservation env state obs = case obs of
     AndObs lhs rhs -> go lhs && go rhs
     OrObs lhs rhs -> go lhs || go rhs
     NotObs o -> not (go o)
-    ChoseSomething choiceId -> choiceId `M.member` (envChoices env)
-    OracleValueProvided oracleId -> oracleId `M.member` (envOracles env)
+    ChoseSomething choiceId -> choiceId `M.member` envChoices env
+    OracleValueProvided oracleId -> oracleId `M.member` envOracles env
     ValueGE lhs rhs -> goValue lhs >= goValue rhs
     ValueGT lhs rhs -> goValue lhs > goValue rhs
     ValueLT lhs rhs -> goValue lhs < goValue rhs

@@ -241,8 +241,9 @@ convertObs ad ce obs =
     goVal = convertVal ad ce
 
 data QuiescentThread =
-  QuiescentThread { guard :: Either New.Timeout New.Observation
-                  , continuation :: New.Contract }
+  QuiescentThread { convertEnv :: ConvertEnv
+                  , guard :: Either New.Timeout New.Observation
+                  , continuation :: Old.Contract }
 
 onlyOneCommit :: Old.IdAction -> Old.IdCommit -> New.Value -> New.Observation
 onlyOneCommit = onlyOneCommit
@@ -262,88 +263,79 @@ getQuiescent ad ce c =
     Old.Null -> []
     Old.Commit iact icom _ val t1 t2 c1 c2 ->
       if ((M.lookup icom $ commits ce) /= Nothing)
-      then [ QuiescentThread { guard = Left t1
-                             , continuation =
-                                 convertAux ad (ce{ minimumBlock =
-                                                         max (minimumBlock ce) t1 })
-                                            c2 
+      then [ QuiescentThread { convertEnv = ce{ minimumBlock =
+                                                         max (minimumBlock ce) t1 }
+                             , guard = Left t1
+                             , continuation = c2 
                              } ]
-      else [ QuiescentThread { guard = Left t1 
-                             , continuation =
-                                 convertAux ad (ce{ minimumBlock =
+      else [ QuiescentThread { convertEnv = (ce{ minimumBlock =
                                                          max (minimumBlock ce) t1 })
-                                            c2 
+                             , guard = Left t1 
+                             , continuation = c2 
                              }
-           , QuiescentThread { guard = Right (onlyOneCommit iact icom
-                                                            (convertVal ad ce val)) 
-                             , continuation =
-                                 convertAux ad (ce{ commits = M.insert icom t2
+           , QuiescentThread { convertEnv = (ce{ commits = M.insert icom t2
                                                                        (commits ce) })
-                                            c1 
+                             , guard = Right (onlyOneCommit iact icom
+                                                            (convertVal ad ce val)) 
+                             , continuation = c1 
                              }
            ]
     Old.Pay iact icom _ val t c1 c2 ->
-      let badCommit = [ QuiescentThread { guard = Left t 
-                                        , continuation = convertAux ad
-                                                                    (ce{ minimumBlock =
-                                                                           max (minimumBlock ce) t })
-                                                                    c2 
+      let badCommit = [ QuiescentThread { convertEnv = (ce{ minimumBlock =
+                                                               max (minimumBlock ce) t })
+                                        , guard = Left t 
+                                        , continuation = c2 
                                         }
-                      , QuiescentThread { guard = Right (signalZero iact)
-                                        , continuation = convertAux ad
-                                                                    (ce{ pays = S.insert iact (pays ce) })
-                                                                    c1 
+                      , QuiescentThread { convertEnv = (ce{ pays = S.insert iact (pays ce) })
+                                        , guard = Right (signalZero iact)
+                                        , continuation = c1
                                         }
                       ] in
       case (M.lookup icom $ commits ce) of
         Just ct2 ->
           if ct2 < t
-          then [ QuiescentThread { guard = Left t 
-                                 , continuation = convertAux
-                                                    ad
-                                                    (ce{ minimumBlock =
-                                                           max (minimumBlock ce) t })
-                                                    c2 
+          then [ QuiescentThread { convertEnv = (ce{ minimumBlock =
+                                                       max (minimumBlock ce) t })
+                                 , guard = Left t 
+                                 , continuation = c2 
                                  }
-               , QuiescentThread { guard = Right (New.OrObs (enoughMoneyAndClaimedRight iact
+               , QuiescentThread { convertEnv = (ce{ pays = S.insert iact (pays ce) })
+                                 , guard = Right (New.OrObs (enoughMoneyAndClaimedRight iact
                                                                (convertVal ad ce val))
                                                             (notEnoughAndClaimedAll icom
                                                                                     iact))
-                                 , continuation = convertAux ad
-                                                             (ce{ pays = S.insert iact (pays ce) })
-                                                             c1 
+                                 , continuation = c1 
                                  }
                ]
           else badCommit
         Nothing -> badCommit 
-    Old.Both c1 c2 -> (go c1) ++ (go c2) 
+    Old.Both c1 c2 -> (go c1 (\x -> Old.Both x c2)) ++ (go c2 (\x -> Old.Both c1 x)) 
     Old.Choice _ _ _ -> error "Internal error: there should not be a choice here" 
     Old.When obs t c1 c2 ->
-       [ QuiescentThread { guard = Left t 
-                         , continuation = convertAux ad
-                                                     (ce{ minimumBlock =
-                                                            max (minimumBlock ce) t })
-                                                     c2 
+       [ QuiescentThread { convertEnv = (ce{ minimumBlock = max (minimumBlock ce) t })
+                         , guard = Left t 
+                         , continuation = c2
                          }
-       , QuiescentThread { guard = Right $ convertObs ad ce obs
-                         , continuation = convertAux ad ce c1 
+       , QuiescentThread { convertEnv = ce
+                         , guard = Right $ convertObs ad ce obs
+                         , continuation = c1 
                          }
        ]
     Old.While o t c1 c2 ->
-       [ QuiescentThread { guard = Left t 
-                         , continuation = convertAux ad
-                                                     (ce{ minimumBlock =
-                                                            max (minimumBlock ce) t })
-                                                     c2 
+       [ QuiescentThread { convertEnv = (ce{ minimumBlock = max (minimumBlock ce) t })
+                         , guard = Left t 
+                         , continuation = c2 
                          }
-       , QuiescentThread { guard = Right $ New.NotObs $ convertObs ad ce o
-                         , continuation = convertAux ad ce c2 
+       , QuiescentThread { convertEnv = ce
+                         , guard = Right $ New.NotObs $ convertObs ad ce o
+                         , continuation = c2 
                          }
-       ] ++ (go c1)
+       ] ++ (go c1 (\x -> Old.While o t x c2))
     Old.Scale _ _ _ _ -> error "Scale not implemented" 
     Old.Let _ _ _ -> error "Expand contract before converting" 
     Old.Use _ -> error "Expand contract before converting"
-  where go = getQuiescent ad ce
+  where go c2 f = let xl = getQuiescent ad ce c2 in
+                 [x{continuation = f (continuation x)} | x <- xl]
 
 flattenQuiescent :: ActionData -> ConvertEnv -> [QuiescentThread] -> New.Contract
 flattenQuiescent = flattenQuiescent

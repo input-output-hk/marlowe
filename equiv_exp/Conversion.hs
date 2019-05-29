@@ -123,14 +123,6 @@ idActionToChoice ad luc contract =
         chain oad oluc c1 c2 = let (adt, luct) = idActionToChoice oad oluc c1 in
                                    idActionToChoice adt luct c2
 
-data QuiescentThread =
-    QExpCommit Old.IdCommit Old.Timeout
-  | QWhile Old.Observation Old.Timeout Old.Contract
-  | QCommit Old.IdAction Old.IdCommit Old.Person Old.Value Old.Timeout Old.Timeout Old.Contract Old.Contract
-  | QPay Old.IdAction Old.IdCommit Old.Person Old.Value Old.Timeout Old.Contract Old.Contract
-  | QWhen Old.Observation Old.Timeout Old.Contract
-
-
 data ConvertEnv = ConvertEnv { commits :: M.Map Old.IdCommit Old.Timeout
                              , pays :: S.Set Old.IdAction
                              , minimumBlock :: Old.BlockNumber }
@@ -189,7 +181,7 @@ remMoney ad vpays cid = New.SubValue (addValues cias) (addValues pias)
                  New.ChoiceValue choid (New.Constant 0) | c <- (S.toList ciacs) ]
         pias = [ let Just choid = M.lookup p $ idActionChoice ad in
                  New.ChoiceValue choid (New.Constant 0) | p <- (S.toList piacs)
-                                                        , not (p `S.member` vpays) ]
+                                                        , p `S.member` vpays ]
 
 refundEverything :: ActionData -> S.Set Old.IdCommit ->
                     [(Old.IdCommit, Old.Timeout)] -> New.Contract
@@ -202,13 +194,9 @@ refundEverything ad vpays ((oid, tim):(t@(_:_))) =
     Just p = M.lookup oid $ commitPerson ad
     s = remMoney ad vpays oid
 
-flattenQuiescent = flattenQuiescent
-
-getQuiescent = getQuiescent
-
 convertVal :: ActionData -> ConvertEnv -> Old.Value -> New.Value
-convertVal ad ce obs =
- case obs of
+convertVal ad ce val =
+ case val of
    Old.CurrentBlock -> New.CurrentSlot
    Old.Committed idCommit ->
      case M.lookup idCommit $ commits ce of
@@ -252,16 +240,123 @@ convertObs ad ce obs =
     go = convertObs ad ce
     goVal = convertVal ad ce
 
+data QuiescentThread =
+  QuiescentThread { guard :: Either New.Timeout New.Observation
+                  , continuation :: New.Contract }
+
+onlyOneCommit :: Old.IdAction -> Old.IdCommit -> New.Value -> New.Observation
+onlyOneCommit = onlyOneCommit
+
+signalZero :: Old.IdAction -> New.Observation
+signalZero = signalZero  
+
+enoughMoneyAndClaimedRight :: Old.IdAction -> New.Value -> New.Observation
+enoughMoneyAndClaimedRight = enoughMoneyAndClaimedRight  
+
+notEnoughAndClaimedAll :: Old.IdCommit -> Old.IdAction -> New.Observation
+notEnoughAndClaimedAll = notEnoughAndClaimedAll  
+
+getQuiescent :: ActionData -> ConvertEnv -> Old.Contract -> [QuiescentThread]
+getQuiescent ad ce c =
+  case c of
+    Old.Null -> []
+    Old.Commit iact icom _ val t1 t2 c1 c2 ->
+      if ((M.lookup icom $ commits ce) /= Nothing)
+      then [ QuiescentThread { guard = Left t1
+                             , continuation =
+                                 convertAux ad (ce{ minimumBlock =
+                                                         max (minimumBlock ce) t1 })
+                                            c2 
+                             } ]
+      else [ QuiescentThread { guard = Left t1 
+                             , continuation =
+                                 convertAux ad (ce{ minimumBlock =
+                                                         max (minimumBlock ce) t1 })
+                                            c2 
+                             }
+           , QuiescentThread { guard = Right (onlyOneCommit iact icom
+                                                            (convertVal ad ce val)) 
+                             , continuation =
+                                 convertAux ad (ce{ commits = M.insert icom t2
+                                                                       (commits ce) })
+                                            c1 
+                             }
+           ]
+    Old.Pay iact icom _ val t c1 c2 ->
+      let badCommit = [ QuiescentThread { guard = Left t 
+                                        , continuation = convertAux ad
+                                                                    (ce{ minimumBlock =
+                                                                           max (minimumBlock ce) t })
+                                                                    c2 
+                                        }
+                      , QuiescentThread { guard = Right (signalZero iact)
+                                        , continuation = convertAux ad
+                                                                    (ce{ pays = S.insert iact (pays ce) })
+                                                                    c1 
+                                        }
+                      ] in
+      case (M.lookup icom $ commits ce) of
+        Just ct2 ->
+          if ct2 < t
+          then [ QuiescentThread { guard = Left t 
+                                 , continuation = convertAux
+                                                    ad
+                                                    (ce{ minimumBlock =
+                                                           max (minimumBlock ce) t })
+                                                    c2 
+                                 }
+               , QuiescentThread { guard = Right (New.OrObs (enoughMoneyAndClaimedRight iact
+                                                               (convertVal ad ce val))
+                                                            (notEnoughAndClaimedAll icom
+                                                                                    iact))
+                                 , continuation = convertAux ad
+                                                             (ce{ pays = S.insert iact (pays ce) })
+                                                             c1 
+                                 }
+               ]
+          else badCommit
+        Nothing -> badCommit 
+    Old.Both c1 c2 -> (go c1) ++ (go c2) 
+    Old.Choice _ _ _ -> error "Internal error: there should not be a choice here" 
+    Old.When obs t c1 c2 ->
+       [ QuiescentThread { guard = Left t 
+                         , continuation = convertAux ad
+                                                     (ce{ minimumBlock =
+                                                            max (minimumBlock ce) t })
+                                                     c2 
+                         }
+       , QuiescentThread { guard = Right $ convertObs ad ce obs
+                         , continuation = convertAux ad ce c1 
+                         }
+       ]
+    Old.While o t c1 c2 ->
+       [ QuiescentThread { guard = Left t 
+                         , continuation = convertAux ad
+                                                     (ce{ minimumBlock =
+                                                            max (minimumBlock ce) t })
+                                                     c2 
+                         }
+       , QuiescentThread { guard = Right $ New.NotObs $ convertObs ad ce o
+                         , continuation = convertAux ad ce c2 
+                         }
+       ] ++ (go c1)
+    Old.Scale _ _ _ _ -> error "Scale not implemented" 
+    Old.Let _ _ _ -> error "Expand contract before converting" 
+    Old.Use _ -> error "Expand contract before converting"
+  where go = getQuiescent ad ce
+
+flattenQuiescent :: ActionData -> ConvertEnv -> [QuiescentThread] -> New.Contract
+flattenQuiescent = flattenQuiescent
+
 skipChoice :: ActionData -> ConvertEnv -> Old.Contract -> New.Contract
 skipChoice ad ce (Old.Null) = refundEverything ad (pays ce)
                                  (sortBy (comparing snd) $ M.toList $ commits ce)
 skipChoice ad ce (Old.Choice o c1 c2) = New.If (convertObs ad ce o) (go c1) (go c2)
   where go = skipChoice ad ce
-skipChoice ad ce c = flattenQuiescent $ getQuiescent ad ce c
+skipChoice ad ce c = flattenQuiescent ad ce $ getQuiescent ad ce c
 
 convertAux :: ActionData -> ConvertEnv -> Old.Contract -> New.Contract
 convertAux ad ce c = skipChoice ad ce (unfoldChoices ce c)
-
 
 convert :: Old.Contract -> (New.Contract, ActionData)
 convert contract = (convertAux renamings emptyConvertEnv contract, renamings)

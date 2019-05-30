@@ -161,14 +161,16 @@ unfoldChoices env c =
                    let nc2 = unfoldChoices env $ f False in
                    Old.Choice o nc1 nc2 
 
--- Taken from: https://mail.haskell.org/pipermail/libraries/2008-February/009270.html
-select :: [a] -> [(a,[a])]
-select [] = []
-select (x:xs) = (x,xs) : [(y,x:ys) | (y,ys) <- select xs]
-
 addValues :: [New.Value] -> New.Value
 addValues [x] = x
 addValues l = New.AddValue (addValues fp) (addValues sp)
+  where fp = genericTake hl l
+        sp = genericDrop hl l
+        hl = (genericLength l) `div` (2 :: Integer)
+
+andObservations :: [New.Observation] -> New.Observation
+andObservations [x] = x
+andObservations l = New.AndObs (andObservations fp) (andObservations sp)
   where fp = genericTake hl l
         sp = genericDrop hl l
         hl = (genericLength l) `div` (2 :: Integer)
@@ -246,8 +248,17 @@ data QuiescentThread =
                   , guard :: Either New.Timeout New.Observation
                   , continuation :: Old.Contract }
 
-onlyOneCommit :: Old.IdAction -> Old.IdCommit -> New.Value -> New.Observation
-onlyOneCommit = onlyOneCommit
+onlyOneCommit :: ActionData -> Old.IdAction -> Old.IdCommit -> New.Value -> New.Observation
+onlyOneCommit ad idac idcom val =
+  New.AndObs (andObservations othersZero) $
+             New.AndObs (New.ValueEQ val $ New.ChoiceValue thisChoice (New.Constant 0)) $
+                        New.ChoseSomething thisChoice
+  where othersZero = [let Just x = M.lookup comm $ idActionChoice ad in
+                      New.NotObs $ New.ValueEQ (New.Constant 0) $
+                                               New.ChoiceValue x (New.Constant 1)
+                      | comm <- S.toList $ S.delete idac comms]
+        Just comms = M.lookup idcom $ commitIdAc ad
+        Just thisChoice = M.lookup idac $ idActionChoice ad
 
 signalZero :: ActionData -> Old.IdAction -> New.Observation
 signalZero ad idac = New.ValueEQ (New.ChoiceValue x (New.Constant 1)) (New.Constant 0)
@@ -291,7 +302,7 @@ getQuiescent ad ce c =
                              }
            , QuiescentThread { convertEnv = (ce{ commits = M.insert icom t2
                                                                        (commits ce) })
-                             , guard = Right (onlyOneCommit iact icom
+                             , guard = Right (onlyOneCommit ad iact icom
                                                             (convertVal ad ce val)) 
                              , continuation = c1 
                              }

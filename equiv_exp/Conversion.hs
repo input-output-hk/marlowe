@@ -350,7 +350,7 @@ getQuiescent ad ce c =
           else badCommit
         Nothing -> badCommit 
     Old.Both c1 c2 -> (go c1 (\x -> Old.Both x c2)) ++ (go c2 (\x -> Old.Both c1 x)) 
-    Old.Choice _ _ _ -> error "Internal error: there should not be a choice here" 
+    Old.Choice _ _ _ -> error "Internal error: there should not be a Choice here" 
     Old.When obs t c1 c2 ->
        [ QuiescentThread { convertEnv = ce
                          , guard = Left t 
@@ -393,13 +393,13 @@ flattenRest ad qt = map flattenOne qt
   where flattenOne (QuiescentThread { convertEnv = ce
                                     , guard = g
                                     , continuation = oc }) =
-              New.Case (fromRight' g) $ skipChoice ad ce oc
+              New.Case (fromRight' g) $ convertAux ad ce oc
 
 addAndFlattenRest :: ActionData -> QuiescentThread -> [QuiescentThread]
                   -> New.Contract
 addAndFlattenRest ad tq qt =
   New.When (flattenRest ad qt) (fromLeft' $ guard tq)
-           (skipChoice ad (convertEnv tq) (continuation tq))
+           (convertAux ad (convertEnv tq) (continuation tq))
 
 isExpiredCommit :: ConvertEnv -> Old.IdCommit -> Bool
 isExpiredCommit ce = (`S.member` (expiredCommits ce))
@@ -411,7 +411,7 @@ refundOneAndFlattenRest :: ActionData -> ConvertEnv -> Old.Contract -> Old.IdCom
                         -> Old.Timeout -> [QuiescentThread] -> New.Contract 
 refundOneAndFlattenRest ad ce oc idcomm tim qt =
   New.When (flattenRest ad qt) tim
-           (New.Pay [(s, p)] $ Right $ skipChoice ad (expireCommit idcomm ce) oc)
+           (New.Pay [(s, p)] $ Right $ convertAux ad (expireCommit idcomm ce) oc)
   where 
     Just p = M.lookup idcomm $ commitPerson ad
     s = remMoney ad ce idcomm

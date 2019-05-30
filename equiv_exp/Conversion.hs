@@ -173,8 +173,8 @@ addValues l = New.AddValue (addValues fp) (addValues sp)
         sp = genericDrop hl l
         hl = (genericLength l) `div` (2 :: Integer)
 
-remMoney :: ActionData -> S.Set Old.IdCommit -> Old.IdCommit -> New.Value
-remMoney ad vpays cid = New.SubValue (addValues cias) (addValues pias)
+remMoney :: ActionData -> ConvertEnv -> Old.IdCommit -> New.Value
+remMoney ad ce cid = New.SubValue (addValues cias) (addValues pias)
   where Just ciacs = M.lookup cid $ commitIdAc ad
         Just piacs = M.lookup cid $ payIdAc ad
         cias = [ let Just choid = M.lookup c $ idActionChoice ad in
@@ -182,17 +182,18 @@ remMoney ad vpays cid = New.SubValue (addValues cias) (addValues pias)
         pias = [ let Just choid = M.lookup p $ idActionChoice ad in
                  New.ChoiceValue choid (New.Constant 0) | p <- (S.toList piacs)
                                                         , p `S.member` vpays ]
+        vpays = pays ce
 
-refundEverything :: ActionData -> S.Set Old.IdCommit ->
+refundEverything :: ActionData -> ConvertEnv ->
                     [(Old.IdCommit, Old.Timeout)] -> New.Contract
 refundEverything _ _ [] = New.Pay [] (Left 1) -- Just pay residue to first participant,
                                               -- there should be no residue 
 refundEverything _ _ [(oid, tim)] = New.When [] tim $ New.Pay [] (Left oid)
-refundEverything ad vpays ((oid, tim):(t@(_:_))) =
-  New.When [] tim (New.Pay [(s, p)] $ Right $ refundEverything ad vpays t) 
+refundEverything ad ce ((oid, tim):(t@(_:_))) =
+  New.When [] tim (New.Pay [(s, p)] $ Right $ refundEverything ad ce t) 
   where 
     Just p = M.lookup oid $ commitPerson ad
-    s = remMoney ad vpays oid
+    s = remMoney ad ce oid
 
 convertVal :: ActionData -> ConvertEnv -> Old.Value -> New.Value
 convertVal ad ce val =
@@ -201,7 +202,7 @@ convertVal ad ce val =
    Old.Committed idCommit ->
      case M.lookup idCommit $ commits ce of
        Nothing -> New.Constant 0
-       Just cid -> remMoney ad (pays ce) cid 
+       Just cid -> remMoney ad ce cid 
    Old.Constant integer -> New.Constant integer
    Old.NegValue _ -> error "NegValue not implemented" 
    Old.AddValue value1 value2 -> New.AddValue (go value1) (go value2)
@@ -248,11 +249,19 @@ data QuiescentThread =
 onlyOneCommit :: Old.IdAction -> Old.IdCommit -> New.Value -> New.Observation
 onlyOneCommit = onlyOneCommit
 
-signalZero :: Old.IdAction -> New.Observation
-signalZero = signalZero  
+signalZero :: ActionData -> Old.IdAction -> New.Observation
+signalZero ad idac = New.ValueEQ (New.ChoiceValue x (New.Constant 1)) (New.Constant 0)
+  where Just x = M.lookup idac $ idActionChoice ad
 
-enoughMoneyAndClaimedRight :: Old.IdAction -> New.Value -> New.Observation
-enoughMoneyAndClaimedRight = enoughMoneyAndClaimedRight  
+enoughMoneyAndClaimedRight :: ActionData -> ConvertEnv -> Old.IdAction -> Old.IdCommit ->
+                              New.Value -> New.Observation
+enoughMoneyAndClaimedRight ad ce idac idcomm val =
+  New.AndObs (New.ValueGE remInComm val)
+             (New.AndObs (New.ChoseSomething acChoice)
+                         (New.ValueEQ remInComm
+                                      (New.ChoiceValue acChoice (New.Constant 0))))
+  where remInComm = remMoney ad ce idcomm 
+        Just acChoice = M.lookup idac $ idActionChoice ad
 
 notEnoughAndClaimedAll :: Old.IdCommit -> Old.IdAction -> New.Observation
 notEnoughAndClaimedAll = notEnoughAndClaimedAll  
@@ -287,7 +296,7 @@ getQuiescent ad ce c =
                                         , continuation = c2 
                                         }
                       , QuiescentThread { convertEnv = (ce{ pays = S.insert iact (pays ce) })
-                                        , guard = Right (signalZero iact)
+                                        , guard = Right (signalZero ad iact)
                                         , continuation = c1
                                         }
                       ] in
@@ -300,7 +309,8 @@ getQuiescent ad ce c =
                                  , continuation = c2 
                                  }
                , QuiescentThread { convertEnv = (ce{ pays = S.insert iact (pays ce) })
-                                 , guard = Right (New.OrObs (enoughMoneyAndClaimedRight iact
+                                 , guard = Right (New.OrObs (enoughMoneyAndClaimedRight
+                                                               ad ce iact icom
                                                                (convertVal ad ce val))
                                                             (notEnoughAndClaimedAll icom
                                                                                     iact))
@@ -341,7 +351,7 @@ flattenQuiescent :: ActionData -> ConvertEnv -> [QuiescentThread] -> New.Contrac
 flattenQuiescent = flattenQuiescent
 
 skipChoice :: ActionData -> ConvertEnv -> Old.Contract -> New.Contract
-skipChoice ad ce (Old.Null) = refundEverything ad (pays ce)
+skipChoice ad ce (Old.Null) = refundEverything ad ce
                                  (sortBy (comparing snd) $ M.toList $ commits ce)
 skipChoice ad ce (Old.Choice o c1 c2) = New.If (convertObs ad ce o) (go c1) (go c2)
   where go = skipChoice ad ce

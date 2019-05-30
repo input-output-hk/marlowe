@@ -5,7 +5,8 @@ import qualified Minimal as New
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Data.Ord (comparing)
-import Data.List (genericTake, genericDrop, genericLength, sortBy)
+import Data.List (genericTake, genericDrop, genericLength, sortBy, partition)
+import Data.Either (isLeft)
 
 type LastUsedChoice = M.Map Old.Person New.NumChoice
 
@@ -366,8 +367,39 @@ getQuiescent ad ce c =
   where go c2 f = let xl = getQuiescent ad ce c2 in
                  [x{continuation = f (continuation x)} | x <- xl]
 
+earliestExpiringCommit :: ConvertEnv -> Maybe (Old.IdCommit, Old.Timeout)
+earliestExpiringCommit ce =
+  case sortedCommits of
+    [] -> Nothing
+    (h:_) -> Just h
+  where sortedCommits = sortBy (comparing snd) $ M.toList $ commits ce
+
+splitQuiescentThreads :: [QuiescentThread] -> ([QuiescentThread], [QuiescentThread])
+splitQuiescentThreads = partition (isLeft . guard)
+
+addAndFlattenRest :: ActionData -> ConvertEnv -> QuiescentThread -> [QuiescentThread]
+                  -> New.Contract
+addAndFlattenRest = addAndFlattenRest
+
+refundOneAndFlattenRest :: ActionData -> ConvertEnv -> Old.IdCommit -> Old.Timeout 
+                        -> [QuiescentThread] -> New.Contract 
+refundOneAndFlattenRest = refundOneAndFlattenRest
+
+fromLeft' :: Either a b -> a
+fromLeft' (Left x) = x
+fromLeft' _ = error "Left expected"
+
 flattenQuiescent :: ActionData -> ConvertEnv -> [QuiescentThread] -> New.Contract
-flattenQuiescent = flattenQuiescent
+flattenQuiescent ad ce qt =
+  case (sortedTimeouts, earliestExpiringCommit ce) of
+    ([], Nothing) -> refundEverything ad ce [] 
+    ((h:_), Nothing) -> addAndFlattenRest ad ce h guarded
+    ((h:_), Just (idcomm, x)) ->
+        if (fromLeft' $ guard h) < x then addAndFlattenRest ad ce h guarded
+        else refundOneAndFlattenRest ad ce idcomm x guarded
+    ([], Just _) -> refundEverything ad ce $ sortBy (comparing snd) $ M.toList $ commits ce
+  where (timeouts, guarded) = splitQuiescentThreads qt
+        sortedTimeouts = sortBy (comparing $ fromLeft' . guard) timeouts
 
 skipChoice :: ActionData -> ConvertEnv -> Old.Contract -> New.Contract
 skipChoice ad ce (Old.Null) = refundEverything ad ce

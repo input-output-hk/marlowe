@@ -76,12 +76,13 @@ data ActionData =
 emptyActionData :: ActionData
 emptyActionData = ActionData M.empty M.empty M.empty M.empty M.empty
 
-addCommit :: Integer -> Old.IdAction -> Old.Person -> ActionData -> ActionData
-addCommit cid aid per ac@(ActionData { idActionChoice = iac 
-                                     , commitIdCom = cic
-                                     , commitPerson = cp
-                                     , commitIdAc = cia}) =
-  let result = ac{ idActionChoice = M.insert aid (New.ChoiceId cid per) iac
+addCommit :: Integer -> Old.IdAction -> Integer -> Old.Person -> ActionData
+          -> ActionData
+addCommit cid aid cho per ac@(ActionData { idActionChoice = iac 
+                                         , commitIdCom = cic
+                                         , commitPerson = cp
+                                         , commitIdAc = cia}) =
+  let result = ac{ idActionChoice = M.insert aid (New.ChoiceId cho per) iac
                  , commitIdCom = M.insertWith (S.union) per (S.singleton cid) cic
                  , commitPerson = M.insert cid per cp
                  , commitIdAc = M.insertWith (S.union) cid (S.singleton aid) cia } in
@@ -90,10 +91,10 @@ addCommit cid aid per ac@(ActionData { idActionChoice = iac
               else result
     Nothing -> result
 
-addPay :: Integer -> Old.IdAction -> Old.Person -> ActionData -> ActionData
-addPay cid aid per ac@(ActionData { idActionChoice = iac
-                                  , payIdAc = pia }) =
-  ac{ idActionChoice = M.insert aid (New.ChoiceId cid per) iac
+addPay :: Integer -> Old.IdAction -> Integer -> Old.Person -> ActionData -> ActionData
+addPay cid aid cho per ac@(ActionData { idActionChoice = iac
+                                      , payIdAc = pia }) =
+  ac{ idActionChoice = M.insert aid (New.ChoiceId cho per) iac
     , payIdAc = M.insertWith (S.union) cid (S.singleton aid) pia }
 
 getNewChoiceNum :: Old.Person -> LastUsedChoice -> (LastUsedChoice, Old.Person)
@@ -107,12 +108,12 @@ idActionToChoice :: ActionData -> LastUsedChoice -> Old.Contract
 idActionToChoice ad luc contract =
   case contract of
     Old.Null -> (ad, luc)
-    Old.Commit ida _ per _ _ _ c1 c2 ->
-      let (nluc, cid) = getNewChoiceNum per luc in
-      chain (addCommit cid ida per ad) nluc c1 c2
-    Old.Pay ida _ per _ _ c1 c2 ->
-      let (nluc, cid) = getNewChoiceNum per luc in
-      chain (addPay cid ida per ad) nluc c1 c2
+    Old.Commit ida cid per _ _ _ c1 c2 ->
+      let (nluc, cho) = getNewChoiceNum per luc in
+      chain (addCommit cid ida cho per ad) nluc c1 c2
+    Old.Pay ida cid per _ _ c1 c2 ->
+      let (nluc, cho) = getNewChoiceNum per luc in
+      chain (addPay cid ida cho per ad) nluc c1 c2
     Old.Both c1 c2 -> chain2 c1 c2
     Old.Choice _ c1 c2 -> chain2 c1 c2
     Old.When _ _ c1 c2 -> chain2 c1 c2
@@ -125,22 +126,20 @@ idActionToChoice ad luc contract =
                                    idActionToChoice adt luct c2
 
 data ConvertEnv = ConvertEnv { commits :: M.Map Old.IdCommit Old.Timeout
-                             , pays :: S.Set Old.IdAction
-                             , minimumBlock :: Old.BlockNumber }
+                             , expiredCommits :: S.Set Old.IdCommit
+                             , pays :: S.Set Old.IdAction }
   deriving (Eq,Ord,Show,Read)
 
 emptyConvertEnv :: ConvertEnv
-emptyConvertEnv = ConvertEnv M.empty S.empty 0
+emptyConvertEnv = ConvertEnv M.empty S.empty S.empty
 
 unfoldChoicesAux :: ConvertEnv -> Old.Contract ->
                     Maybe (Old.Observation, (Bool -> Old.Contract))
-unfoldChoicesAux env@(ConvertEnv { minimumBlock = mi }) contract =
+unfoldChoicesAux env contract =
   case contract of
     Old.Null -> Nothing 
-    Old.Commit _ _ _ _ _ t _ c2 -> if (t <= mi) then unfoldChoicesAux env c2
-                                                else Nothing
-    Old.Pay _ _ _ _ t _ c2 -> if (t <= mi) then unfoldChoicesAux env c2
-                                          else Nothing
+    Old.Commit _ _ _ _ _ t _ c2 -> Nothing
+    Old.Pay _ _ _ _ t _ c2 -> Nothing
     Old.Both c1 c2 ->
       case (unfoldChoicesAux env c1, unfoldChoicesAux env c2) of
         (Just (no, f), _) -> Just (no, (\x -> Old.Both (f x) c2))
@@ -163,23 +162,29 @@ unfoldChoices env c =
                    Old.Choice o nc1 nc2 
 
 addValues :: [New.Value] -> New.Value
+addValues [] = New.Constant 0 
 addValues [x] = x
+addValues [x, y] = New.AddValue x y
 addValues l = New.AddValue (addValues fp) (addValues sp)
   where fp = genericTake hl l
         sp = genericDrop hl l
         hl = (genericLength l) `div` (2 :: Integer)
 
 andObservations :: [New.Observation] -> New.Observation
+andObservations [] = New.TrueObs
 andObservations [x] = x
+andObservations [x, y] = New.AndObs x y
 andObservations l = New.AndObs (andObservations fp) (andObservations sp)
   where fp = genericTake hl l
         sp = genericDrop hl l
         hl = (genericLength l) `div` (2 :: Integer)
 
 remMoney :: ActionData -> ConvertEnv -> Old.IdCommit -> New.Value
-remMoney ad ce cid = New.SubValue (addValues cias) (addValues pias)
-  where Just ciacs = M.lookup cid $ commitIdAc ad
-        Just piacs = M.lookup cid $ payIdAc ad
+remMoney ad ce cid = if isExpiredCommit ce cid
+                     then New.Constant 0
+                     else New.SubValue (addValues cias) (addValues pias)
+  where ciacs = M.findWithDefault S.empty cid $ commitIdAc ad
+        piacs = M.findWithDefault S.empty cid $ payIdAc ad
         cias = [ let Just choid = M.lookup c $ idActionChoice ad in
                  New.ChoiceValue choid (New.Constant 0) | c <- (S.toList ciacs) ]
         pias = [ let Just choid = M.lookup p $ idActionChoice ad in
@@ -189,11 +194,19 @@ remMoney ad ce cid = New.SubValue (addValues cias) (addValues pias)
 
 refundEverything :: ActionData -> ConvertEnv ->
                     [(Old.IdCommit, Old.Timeout)] -> New.Contract
-refundEverything _ _ [] = New.Pay [] (Left 1) -- Just pay residue to first participant,
-                                              -- there should be no residue 
-refundEverything _ _ [(oid, tim)] = New.When [] tim $ New.Pay [] (Left oid)
-refundEverything ad ce ((oid, tim):(t@(_:_))) =
-  New.When [] tim (New.Pay [(s, p)] $ Right $ refundEverything ad ce t) 
+refundEverything ad ce list =
+  refundEverythingAux ad ce (filter (not . (isExpiredCommit ce) . fst) list)
+
+refundEverythingAux :: ActionData -> ConvertEnv ->
+                    [(Old.IdCommit, Old.Timeout)] -> New.Contract
+refundEverythingAux _ _ [] = New.Pay [] (Left 1) -- Just pay residue to first participant,
+                                                 -- there should be no residue 
+refundEverythingAux ad _ [(oid, tim)] = New.When [] tim $ New.Pay [] (Left p)
+  where
+    Just p = M.lookup oid $ commitPerson ad
+refundEverythingAux ad ce ((oid, tim):(t@(_:_))) =
+  if s == (New.Constant 0) then refundEverythingAux ad ce t
+  else New.When [] tim (New.Pay [(s, p)] $ Right $ refundEverythingAux ad ce t) 
   where 
     Just p = M.lookup oid $ commitPerson ad
     s = remMoney ad ce oid
@@ -203,9 +216,9 @@ convertVal ad ce val =
  case val of
    Old.CurrentBlock -> New.CurrentSlot
    Old.Committed idCommit ->
-     case M.lookup idCommit $ commits ce of
-       Nothing -> New.Constant 0
-       Just cid -> remMoney ad ce cid 
+     if (M.member idCommit $ commits ce) && (not $ S.member idCommit $ expiredCommits ce)
+     then remMoney ad ce idCommit
+     else New.Constant 0
    Old.Constant integer -> New.Constant integer
    Old.NegValue _ -> error "NegValue not implemented" 
    Old.AddValue value1 value2 -> New.AddValue (go value1) (go value2)
@@ -251,9 +264,10 @@ data QuiescentThread =
 
 onlyOneCommit :: ActionData -> Old.IdAction -> Old.IdCommit -> New.Value -> New.Observation
 onlyOneCommit ad idac idcom val =
-  New.AndObs (andObservations othersZero) $
-             New.AndObs (New.ValueEQ val $ New.ChoiceValue thisChoice (New.Constant 0)) $
-                        New.ChoseSomething thisChoice
+  andObservations
+    ((New.ValueEQ val $ New.ChoiceValue thisChoice (New.Constant 0)) :
+     (New.ChoseSomething thisChoice) :
+     othersZero)
   where othersZero = [let Just x = M.lookup comm $ idActionChoice ad in
                       New.NotObs $ New.ValueEQ (New.Constant 0) $
                                                New.ChoiceValue x (New.Constant 1)
@@ -291,13 +305,11 @@ getQuiescent ad ce c =
     Old.Null -> []
     Old.Commit iact icom _ val t1 t2 c1 c2 ->
       if ((M.lookup icom $ commits ce) /= Nothing)
-      then [ QuiescentThread { convertEnv = ce{ minimumBlock =
-                                                         max (minimumBlock ce) t1 }
+      then [ QuiescentThread { convertEnv = ce
                              , guard = Left t1
                              , continuation = c2 
                              } ]
-      else [ QuiescentThread { convertEnv = (ce{ minimumBlock =
-                                                         max (minimumBlock ce) t1 })
+      else [ QuiescentThread { convertEnv = ce
                              , guard = Left t1 
                              , continuation = c2 
                              }
@@ -309,8 +321,7 @@ getQuiescent ad ce c =
                              }
            ]
     Old.Pay iact icom _ val t c1 c2 ->
-      let badCommit = [ QuiescentThread { convertEnv = (ce{ minimumBlock =
-                                                               max (minimumBlock ce) t })
+      let badCommit = [ QuiescentThread { convertEnv = ce
                                         , guard = Left t 
                                         , continuation = c2 
                                         }
@@ -320,10 +331,9 @@ getQuiescent ad ce c =
                                         }
                       ] in
       case (M.lookup icom $ commits ce) of
-        Just ct2 ->
-          if ct2 < t
-          then [ QuiescentThread { convertEnv = (ce{ minimumBlock =
-                                                       max (minimumBlock ce) t })
+        Just _ ->
+          if not $ isExpiredCommit ce icom
+          then [ QuiescentThread { convertEnv = ce
                                  , guard = Left t 
                                  , continuation = c2 
                                  }
@@ -342,7 +352,7 @@ getQuiescent ad ce c =
     Old.Both c1 c2 -> (go c1 (\x -> Old.Both x c2)) ++ (go c2 (\x -> Old.Both c1 x)) 
     Old.Choice _ _ _ -> error "Internal error: there should not be a choice here" 
     Old.When obs t c1 c2 ->
-       [ QuiescentThread { convertEnv = (ce{ minimumBlock = max (minimumBlock ce) t })
+       [ QuiescentThread { convertEnv = ce
                          , guard = Left t 
                          , continuation = c2
                          }
@@ -352,7 +362,7 @@ getQuiescent ad ce c =
                          }
        ]
     Old.While o t c1 c2 ->
-       [ QuiescentThread { convertEnv = (ce{ minimumBlock = max (minimumBlock ce) t })
+       [ QuiescentThread { convertEnv = ce
                          , guard = Left t 
                          , continuation = c2 
                          }
@@ -372,31 +382,57 @@ earliestExpiringCommit ce =
   case sortedCommits of
     [] -> Nothing
     (h:_) -> Just h
-  where sortedCommits = sortBy (comparing snd) $ M.toList $ commits ce
+  where sortedCommits = sortBy (comparing snd) $ filterExp $ M.toList $ commits ce
+        filterExp = filter (not . (isExpiredCommit ce) . fst)
 
 splitQuiescentThreads :: [QuiescentThread] -> ([QuiescentThread], [QuiescentThread])
 splitQuiescentThreads = partition (isLeft . guard)
 
-addAndFlattenRest :: ActionData -> ConvertEnv -> QuiescentThread -> [QuiescentThread]
-                  -> New.Contract
-addAndFlattenRest = addAndFlattenRest
+flattenRest :: ActionData -> [QuiescentThread] -> [New.Case]
+flattenRest ad qt = map flattenOne qt
+  where flattenOne (QuiescentThread { convertEnv = ce
+                                    , guard = g
+                                    , continuation = oc }) =
+              New.Case (fromRight' g) $ skipChoice ad ce oc
 
-refundOneAndFlattenRest :: ActionData -> ConvertEnv -> Old.IdCommit -> Old.Timeout 
-                        -> [QuiescentThread] -> New.Contract 
-refundOneAndFlattenRest = refundOneAndFlattenRest
+addAndFlattenRest :: ActionData -> QuiescentThread -> [QuiescentThread]
+                  -> New.Contract
+addAndFlattenRest ad tq qt =
+  New.When (flattenRest ad qt) (fromLeft' $ guard tq)
+           (skipChoice ad (convertEnv tq) (continuation tq))
+
+isExpiredCommit :: ConvertEnv -> Old.IdCommit -> Bool
+isExpiredCommit ce = (`S.member` (expiredCommits ce))
+
+expireCommit :: Old.IdCommit -> ConvertEnv -> ConvertEnv
+expireCommit oid ce = ce{expiredCommits = S.insert oid (expiredCommits ce)}
+
+refundOneAndFlattenRest :: ActionData -> ConvertEnv -> Old.Contract -> Old.IdCommit
+                        -> Old.Timeout -> [QuiescentThread] -> New.Contract 
+refundOneAndFlattenRest ad ce oc idcomm tim qt =
+  New.When (flattenRest ad qt) tim
+           (New.Pay [(s, p)] $ Right $ skipChoice ad (expireCommit idcomm ce) oc)
+  where 
+    Just p = M.lookup idcomm $ commitPerson ad
+    s = remMoney ad ce idcomm
+
+fromRight' :: Either a b -> b
+fromRight' (Right x) = x
+fromRight' _ = error "Right expected"
 
 fromLeft' :: Either a b -> a
 fromLeft' (Left x) = x
 fromLeft' _ = error "Left expected"
 
-flattenQuiescent :: ActionData -> ConvertEnv -> [QuiescentThread] -> New.Contract
-flattenQuiescent ad ce qt =
+flattenQuiescent :: ActionData -> ConvertEnv -> Old.Contract -> [QuiescentThread]
+                 -> New.Contract
+flattenQuiescent ad ce oc qt =
   case (sortedTimeouts, earliestExpiringCommit ce) of
     ([], Nothing) -> refundEverything ad ce [] 
-    ((h:_), Nothing) -> addAndFlattenRest ad ce h guarded
+    ((h:_), Nothing) -> addAndFlattenRest ad h guarded
     ((h:_), Just (idcomm, x)) ->
-        if (fromLeft' $ guard h) < x then addAndFlattenRest ad ce h guarded
-        else refundOneAndFlattenRest ad ce idcomm x guarded
+        if (fromLeft' $ guard h) < x then addAndFlattenRest ad h guarded
+        else refundOneAndFlattenRest ad ce oc idcomm x guarded
     ([], Just _) -> refundEverything ad ce $ sortBy (comparing snd) $ M.toList $ commits ce
   where (timeouts, guarded) = splitQuiescentThreads qt
         sortedTimeouts = sortBy (comparing $ fromLeft' . guard) timeouts
@@ -406,7 +442,7 @@ skipChoice ad ce (Old.Null) = refundEverything ad ce
                                  (sortBy (comparing snd) $ M.toList $ commits ce)
 skipChoice ad ce (Old.Choice o c1 c2) = New.If (convertObs ad ce o) (go c1) (go c2)
   where go = skipChoice ad ce
-skipChoice ad ce c = flattenQuiescent ad ce $ getQuiescent ad ce c
+skipChoice ad ce c = flattenQuiescent ad ce c $ getQuiescent ad ce c
 
 convertAux :: ActionData -> ConvertEnv -> Old.Contract -> New.Contract
 convertAux ad ce c = skipChoice ad ce (unfoldChoices ce c)

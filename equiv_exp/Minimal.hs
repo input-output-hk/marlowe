@@ -1,8 +1,5 @@
 module Minimal where
 
-import Data.List.NonEmpty (NonEmpty(..), (<|))
-import qualified Data.List.NonEmpty as NE
-
 type SlotNumber = Integer
 type PubKey = Integer
 type Party = PubKey

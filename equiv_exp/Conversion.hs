@@ -199,7 +199,7 @@ refundEverything ad ce list =
 
 refundEverythingAux :: ActionData -> ConvertEnv ->
                     [(Old.IdCommit, Old.Timeout)] -> New.Contract
-refundEverythingAux _ _ [] = New.Pay [] (Left 1) -- Just pay residue to first participant,
+refundEverythingAux _ _ [] = New.Pay [] (Left 0) -- Just pay residue to participant zero,
                                                  -- there should be no residue 
 refundEverythingAux ad _ [(oid, tim)] = New.When [] tim $ New.Pay [] (Left p)
   where
@@ -260,7 +260,8 @@ convertObs ad ce obs =
 data QuiescentThread =
   QuiescentThread { convertEnv :: ConvertEnv
                   , guard :: Either New.Timeout New.Observation
-                  , continuation :: Old.Contract }
+                  , continuation :: Old.Contract
+                  , newContractWrapper :: New.Contract -> New.Contract }
 
 depositCorrect :: ActionData -> ConvertEnv -> Old.Value -> Old.Person
                -> New.Observation
@@ -321,10 +322,12 @@ getQuiescent ad ce c =
       then [ QuiescentThread { convertEnv = ce
                              , guard = Left t1
                              , continuation = c2 
+                             , newContractWrapper = id
                              } ]
       else [ QuiescentThread { convertEnv = ce
                              , guard = Left t1 
                              , continuation = c2 
+                             , newContractWrapper = id
                              }
            , QuiescentThread { convertEnv = (ce{ commits = M.insert icom t2
                                                                        (commits ce) })
@@ -332,33 +335,37 @@ getQuiescent ad ce c =
                                                           (onlyOneCommit ad iact icom
                                                              (convertVal ad ce val)) 
                              , continuation = c1 
+                             , newContractWrapper = id
                              }
            ]
-    Old.Pay iact icom _ val t c1 c2 ->
+    Old.Pay iact icom p val t c1 c2 ->
       let badCommit = [ QuiescentThread { convertEnv = ce
                                         , guard = Left t 
                                         , continuation = c2 
+                                        , newContractWrapper = id
                                         }
                       , QuiescentThread { convertEnv = (ce{ pays = S.insert iact (pays ce) })
                                         , guard = Right (signalZero ad iact)
                                         , continuation = c1
+                                        , newContractWrapper = id
                                         }
                       ] in
+      let cval = convertVal ad ce val in
       case (M.lookup icom $ commits ce) of
         Just _ ->
           if not $ isExpiredCommit ce icom
           then [ QuiescentThread { convertEnv = ce
                                  , guard = Left t 
                                  , continuation = c2 
+                                 , newContractWrapper = id
                                  }
                , QuiescentThread { convertEnv = (ce{ pays = S.insert iact (pays ce) })
                                  , guard = Right (New.OrObs (enoughMoneyAndClaimedRight
-                                                               ad ce iact icom
-                                                               (convertVal ad ce val))
+                                                               ad ce iact icom cval)
                                                             (notEnoughAndClaimedAll
-                                                               ad ce iact icom
-                                                               (convertVal ad ce val)))
+                                                               ad ce iact icom cval))
                                  , continuation = c1 
+                                 , newContractWrapper = \x -> New.Pay [(cval, p)] $ Right x
                                  }
                ]
           else badCommit
@@ -369,20 +376,24 @@ getQuiescent ad ce c =
        [ QuiescentThread { convertEnv = ce
                          , guard = Left t 
                          , continuation = c2
+                         , newContractWrapper = id
                          }
        , QuiescentThread { convertEnv = ce
                          , guard = Right $ convertObs ad ce obs
                          , continuation = c1 
+                         , newContractWrapper = id
                          }
        ]
     Old.While o t c1 c2 ->
        [ QuiescentThread { convertEnv = ce
                          , guard = Left t 
                          , continuation = c2 
+                         , newContractWrapper = id
                          }
        , QuiescentThread { convertEnv = ce
                          , guard = Right $ New.NotObs $ convertObs ad ce o
                          , continuation = c2 
+                         , newContractWrapper = id
                          }
        ] ++ (go c1 (\x -> Old.While o t x c2))
     Old.Scale _ _ _ _ -> error "Scale not implemented" 
@@ -406,14 +417,15 @@ flattenRest :: ActionData -> [QuiescentThread] -> [New.Case]
 flattenRest ad qt = map flattenOne qt
   where flattenOne (QuiescentThread { convertEnv = ce
                                     , guard = g
-                                    , continuation = oc }) =
-              New.Case (fromRight' g) $ convertAux ad ce oc
+                                    , continuation = oc
+                                    , newContractWrapper = ncw }) =
+              New.Case (fromRight' g) $ ncw $ convertAux ad ce oc
 
 addAndFlattenRest :: ActionData -> QuiescentThread -> [QuiescentThread]
                   -> New.Contract
 addAndFlattenRest ad tq qt =
   New.When (flattenRest ad qt) (fromLeft' $ guard tq)
-           (convertAux ad (convertEnv tq) (continuation tq))
+           ((newContractWrapper tq) (convertAux ad (convertEnv tq) (continuation tq)))
 
 isExpiredCommit :: ConvertEnv -> Old.IdCommit -> Bool
 isExpiredCommit ce = (`S.member` (expiredCommits ce))

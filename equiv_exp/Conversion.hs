@@ -308,7 +308,7 @@ notEnoughAndClaimedAll :: ActionData -> ConvertEnv -> Old.IdAction -> Old.IdComm
 notEnoughAndClaimedAll ad ce idac idcomm val =
   New.AndObs (New.ValueLT remInComm val)
              (New.AndObs (New.ChoseSomething acChoice)
-                         (New.ValueEQ val
+                         (New.ValueEQ remInComm
                                       (New.ChoiceValue acChoice (New.Constant 0))))
   where remInComm = remMoney ad ce idcomm 
         Just acChoice = M.lookup idac $ idActionChoice ad

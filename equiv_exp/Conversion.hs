@@ -138,8 +138,8 @@ unfoldChoicesAux :: ConvertEnv -> Old.Contract ->
 unfoldChoicesAux env contract =
   case contract of
     Old.Null -> Nothing 
-    Old.Commit _ _ _ _ _ t _ c2 -> Nothing
-    Old.Pay _ _ _ _ t _ c2 -> Nothing
+    Old.Commit _ _ _ _ _ _ _ _ -> Nothing
+    Old.Pay _ _ _ _ _ _ _ -> Nothing
     Old.Both c1 c2 ->
       case (unfoldChoicesAux env c1, unfoldChoicesAux env c2) of
         (Just (no, f), _) -> Just (no, (\x -> Old.Both (f x) c2))
@@ -262,6 +262,19 @@ data QuiescentThread =
                   , guard :: Either New.Timeout New.Observation
                   , continuation :: Old.Contract }
 
+depositCorrect :: ActionData -> ConvertEnv -> Old.Value -> Old.Person
+               -> New.Observation
+depositCorrect ad ce val per = New.ValueEQ (New.CommittedBy per) amo
+  where
+    amo = addValues (convertVal ad ce val :
+                     (concat [ let Just acIds = M.lookup pc $ commitIdAc ad in
+                               [ let Just chId = M.lookup acId $ idActionChoice ad in
+                                 New.ChoiceValue chId (New.Constant 0)
+                                | acId <- S.toList acIds ]
+                              | pc <- S.toList prevComms]))
+    Just perComms = M.lookup per $ commitIdCom ad
+    prevComms = S.intersection perComms $ M.keysSet $ commits ce
+
 onlyOneCommit :: ActionData -> Old.IdAction -> Old.IdCommit -> New.Value -> New.Observation
 onlyOneCommit ad idac idcom val =
   andObservations
@@ -303,7 +316,7 @@ getQuiescent :: ActionData -> ConvertEnv -> Old.Contract -> [QuiescentThread]
 getQuiescent ad ce c =
   case c of
     Old.Null -> []
-    Old.Commit iact icom _ val t1 t2 c1 c2 ->
+    Old.Commit iact icom p val t1 t2 c1 c2 ->
       if ((M.lookup icom $ commits ce) /= Nothing)
       then [ QuiescentThread { convertEnv = ce
                              , guard = Left t1
@@ -315,8 +328,9 @@ getQuiescent ad ce c =
                              }
            , QuiescentThread { convertEnv = (ce{ commits = M.insert icom t2
                                                                        (commits ce) })
-                             , guard = Right (onlyOneCommit ad iact icom
-                                                            (convertVal ad ce val)) 
+                             , guard = Right $ New.AndObs (depositCorrect ad ce val p)
+                                                          (onlyOneCommit ad iact icom
+                                                             (convertVal ad ce val)) 
                              , continuation = c1 
                              }
            ]

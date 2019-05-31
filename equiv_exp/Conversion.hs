@@ -360,12 +360,17 @@ getQuiescent ad ce c =
                                  , newContractWrapper = id
                                  }
                , QuiescentThread { convertEnv = (ce{ pays = S.insert iact (pays ce) })
-                                 , guard = Right (New.OrObs (enoughMoneyAndClaimedRight
-                                                               ad ce iact icom cval)
-                                                            (notEnoughAndClaimedAll
-                                                               ad ce iact icom cval))
+                                 , guard = Right (enoughMoneyAndClaimedRight
+                                                      ad ce iact icom cval)
                                  , continuation = c1 
                                  , newContractWrapper = \x -> New.Pay [(cval, p)] $ Right x
+                                 }
+               , QuiescentThread { convertEnv = (ce{ pays = S.insert iact (pays ce) })
+                                 , guard = Right (notEnoughAndClaimedAll
+                                                      ad ce iact icom cval)
+                                 , continuation = c1 
+                                 , newContractWrapper =
+                                       \x -> New.Pay [(remMoney ad ce icom, p)] $ Right x
                                  }
                ]
           else badCommit

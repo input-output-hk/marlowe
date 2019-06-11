@@ -4,7 +4,7 @@ type SlotNumber = Integer
 type PubKey = Integer
 type Party = PubKey
 type NumChoice = Integer
-type Timeout = SlotNumber 
+type Timeout = SlotNumber
 
 data ChoiceId = ChoiceId NumChoice Party
   deriving (Eq,Ord,Show,Read)
@@ -16,6 +16,7 @@ data Value = AvailableMoney |
              CommittedBy Party |
              AddValue Value Value |
              SubValue Value Value |
+             MulValue Value Value |
              ChoiceValue ChoiceId Value |
              OracleValue OracleId Value |
              CurrentSlot

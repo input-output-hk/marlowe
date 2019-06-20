@@ -20,5 +20,6 @@ executable minimarlowe
                         tasty-quickcheck
     other-modules:      Minimal
                         Futures
+                        ACTUS
     hs-source-dirs:     .
     main-is:            Main.hs

@@ -27,3 +27,16 @@ contract = do
             ] startTimeout
             (Pay [(CommittedBy alicePk, alicePk)] (Left bobPk))
     contract
+
+alice = undefined
+bob = undefined
+decisionForAlice = undefined
+decisionForBob = undefined
+
+escrow = When [Case (ValueGE (CommittedBy alice) (Constant 20))
+    (When [Case decisionForAlice (Pay [] (Left alice)),
+           Case decisionForBob   (Pay [(Constant 20, bob)] (Left alice)) ]
+        20 -- decision timeout
+        (Pay [(Constant 10, bob)] (Left alice)))
+    ] 10 -- commit timeout
+    (Pay [] (Left alice))

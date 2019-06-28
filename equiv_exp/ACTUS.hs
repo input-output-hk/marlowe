@@ -2,9 +2,16 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module ACTUS where
 
+import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Data.Time
+import Data.Time.Clock
+import Data.Time.Clock.POSIX
+import Data.Time.Clock.System
+import Minimal
 {-
     = Data Dictionary
 
@@ -44,28 +51,31 @@ Unknowns: OPMO
 
 -}
 
-data ContractEvent  = IED  -- Initial Exchange Date Scheduled date of first principal event, start of accrual calculation
-                    | IPCI -- Interest Capitalization Scheduled interest payment which is capitalized instead of paid out
-                    | IP   -- Interest Payment Scheduled interest payment
-                    | FP   -- Fee Payment Scheduled fee payment
+{-| Contract Events. Order of constructors matters for state transition and payout calculations. -}
+data ContractEvent  = AD   -- Analysis Event Retrieves current contract states without alter these
+                    | IED  -- Initial Exchange Date Scheduled date of first principal event, start of accrual calculation
                     | PR   -- Principal Redemption Scheduled principal redemption payment
                     | PI   -- Principal Increase Scheduled principal increase payments
                     | PRF  -- Principal Payment Amount Fixing Scheduled re-fixing of principal payment (PR or PI) amount
-                    | PY   -- Penalty Payment Payment of a penalty (e.g. due to early repayment of principal outstanding)
                     | PP   -- Principal Prepayment Unscheduled (early) repayment of principal outstanding
-                    | CD   -- Credit Default Credit event of counterparty to a contract
-                    | RRF  -- Rate Reset Fixed Scheduled rate reset event where new rate is already fixed
-                    | RR   -- Rate Reset Variable Scheduled rate reset event where new rate is fixed at event time
-                    | DV   -- Dividend Payment Scheduled (e.g. announced) dividend payment
+                    | PY   -- Penalty Payment Payment of a penalty (e.g. due to early repayment of principal outstanding)
+                    | FP   -- Fee Payment Scheduled fee payment
                     | PRD  -- Purchase Date Purchase date of a contract bought in the secondary market
-                    | MR   -- Margin Call Date Scheduled margin call event
                     | TD   -- Termination Date Sell date of a contract sold in the secondary market
-                    | SC   -- Scaling Index Revision Scheduled re-fixing of a scaling index
+                    | IP   -- Interest Payment Scheduled interest payment
+                    | IPCI -- Interest Capitalization Scheduled interest payment which is capitalized instead of paid out
                     | IPCB -- Interest Payment Calculation Base Scheduled update to the calculation base for IP accruing
+                    | RR   -- Rate Reset Variable Scheduled rate reset event where new rate is fixed at event time
+                    | RRF  -- Rate Reset Fixed Scheduled rate reset event where new rate is already fixed
+                    | SC   -- Scaling Index Revision Scheduled re-fixing of a scaling index
                     | XD   -- Execution Date Scheduled or unscheduled execution of e.g. an OPTNS or FUTUR contract
+                    | DV   -- Dividend Payment Scheduled (e.g. announced) dividend payment
+                    | MR   -- Margin Call Date Scheduled margin call event
                     | STD  -- Settlement Date Date when payment for derivatives is settled
                     | MD   -- Maturity Date Scheduled maturity or expiry of a contract
-                    | AD   -- Analysis Event Retrieves current contract states without alter these
+                    | CD   -- Credit Default Credit event of counterparty to a contract
+                    deriving (Eq, Ord, Show)
+
 
 -- CNTRL
 data ContractRole   = RPA -- Real position asset
@@ -130,15 +140,52 @@ data BusinessDayConvention  = NoShift                           -- NULL
 
 -- A schedule is a function S mapping times s, T with s < T and cycle c onto a sequence ~t of cyclic times
 data Schedule = Schedule
-    { scheduleStart :: Timeout
-    , scheduleCycle :: Cycle
-    , scheduleEnd   :: Timeout
-    , scheduleEOMC  :: EndOfMonthConvention
-    , scheduleBDC   :: BusinessDayConvention
+    { scheduleStart :: Maybe Day
+    , scheduleCycle :: Maybe Cycle
+    , scheduleEnd   :: Maybe Day
+    , scheduleEOMC  :: Maybe EndOfMonthConvention
+    , scheduleBDC   :: Maybe BusinessDayConvention
     }
 
-schedule :: Integer -> Schedule -> [Timeout]
-schedule n Schedule{..} = [scheduleStart, scheduleEnd]
+emptySchedule :: Schedule
+emptySchedule = Schedule
+    { scheduleStart = Nothing
+    , scheduleCycle = Nothing
+    , scheduleEnd   = Nothing
+    , scheduleEOMC  = Nothing
+    , scheduleBDC   = Nothing
+    }
+
+singleEvent :: Day -> Schedule
+singleEvent t = emptySchedule { scheduleStart = Just t }
+
+addTimePeriod :: Day -> TimePeriod -> Day
+addTimePeriod d period = case period of
+    Day      -> addDays 1 d
+    Week     -> addDays 7 d
+    Month    -> addGregorianMonthsClip 1 d -- todo EndOfMonth convention
+    Quarter  -> addGregorianMonthsClip 3 d -- todo EndOfMonth convention
+    HalfYear -> addGregorianMonthsClip 6 d -- todo EndOfMonth convention
+    Year     -> addGregorianYearsClip  1 d -- todo EndOfMonth convention
+
+
+schedule :: Schedule -> [Day]
+schedule s = case s of
+    Schedule { scheduleStart=Nothing, scheduleEnd=Nothing }   -> []
+    Schedule { scheduleStart=Just t,  scheduleEnd=Nothing }   -> [t]
+    Schedule { scheduleStart=Nothing, scheduleEnd=Just tmax } -> error "Not specified schedule Start"
+    Schedule { scheduleStart=Just t,  scheduleCycle=Nothing, scheduleEnd=Just tmax } -> [t, tmax]
+    Schedule { scheduleStart=Just t,  scheduleCycle=Just c,  scheduleEnd=Just tmax } ->
+        if t < tmax then let
+            (Cycle n timePeriod stub) = c
+            times = List.unfoldr (\(d, i) ->
+                let r = addTimePeriod d timePeriod
+                in if i <= n && r <= tmax then Just (r, (r, i + 1)) else Nothing) (t, 1)
+            -- times = scanl (\d i -> timePeriodToAsTimeout d timePeriod) t [1..n]
+            -- todo stubs
+            in times
+        else error "scheduleStart must be less than scheduleEnd!"
+
 type Timeout = Integer
 type Money = Integer
 
@@ -155,19 +202,23 @@ contractDefaultConvention :: ContractStatus -> Integer
 contractDefaultConvention PERF  = 1
 contractDefaultConvention _     = 0
 
--- Year Fraction Convention
-yearFractionConvention :: Timeout -> Timeout -> Double
-yearFractionConvention = undefined
+{-| Year Fraction Convention, aka Day count convention.
+    Currently only Actual/365 Fixed.
 
--- type LastEventDate = ContractEvent -> Timeout
-type LastEventDate = Timeout
+    -- TODO: implement other conventions.
+-}
+yearFractionConvention :: Day -> Day -> Double
+yearFractionConvention s e = fromIntegral (abs $ diffDays e s) / 365
+
+-- type LastEventDate = ContractEvent -> Day
+type LastEventDate = Day
 
 -- PAM: State Variables Initialization
 data State = State
-    { tmd :: Timeout        -- Maturity Date ?
+    { tmd :: Day        -- Maturity Date ?
     , nvl :: Money          -- Nominal Value. The outstanding nominal value
     , nv2 :: Money          -- Secondary Nominal Value. The outstanding nominal value of the second leg
-    , nrt :: Money          -- Nominal Rate. The applicable nominal rate
+    , nrt :: Double         -- Nominal Rate. The applicable nominal rate
     , nac :: Money          -- Nominal Accrued. The current value of nominal accrued interest at the Nominal Rate
     , fac :: Money          -- Fee Accrued?
     , icb :: Money          -- Interest Calculation Base. The basis at which interest is being accrued if different from Nvl
@@ -177,7 +228,7 @@ data State = State
     , led :: LastEventDate        -- Last Event Date. The date of the most recent ContractEvent
     }
 
-pamStateInit :: Timeout -> Timeout -> State
+pamStateInit :: Day -> Day -> State
 pamStateInit t0 maturityDate = State
     { tmd = maturityDate
     , nvl = 0
@@ -195,7 +246,12 @@ pamStateInit t0 maturityDate = State
 type FeeRate = Double
 
 data ContractConfig = ContractConfig
-             { notional :: Money
+             { initialExchangeDate :: Day
+             , notional :: Money
+             , nominalInterestRate    :: Double
+             , interestPaymentCycle   :: Maybe Cycle
+             , cycleAnchorDateOfInterestPayment :: Maybe Day -- IPANX
+             , capitalizationEndDate  :: Maybe Day -- IPCED
              , premiumDiscountAtIED   :: Money
              , priceAtPurchaseDate    :: Money
              , priceAtTerminationDate :: Money
@@ -203,9 +259,49 @@ data ContractConfig = ContractConfig
              , feeRate  :: FeeRate
              }
 
+emptyContractConfig d = ContractConfig
+    { initialExchangeDate = d
+    , notional = 0
+    , nominalInterestRate = 0.0
+    , interestPaymentCycle = Nothing
+    , cycleAnchorDateOfInterestPayment = Nothing
+    , capitalizationEndDate = Nothing
+    , premiumDiscountAtIED = 0
+    , priceAtPurchaseDate  = 0
+    , priceAtTerminationDate = 0
+    , feeBasis = AbsoluteValue
+    , feeRate  = 0.0
+    }
+
+contractSchedule :: ContractConfig -> State -> Map ContractEvent Schedule
+contractSchedule ContractConfig{..} State{..} =
+    Map.fromList
+        [ (IED, singleEvent initialExchangeDate)
+        , (PR,  singleEvent tmd)
+        , (PP,  emptySchedule)
+        , (PY,  emptySchedule)
+        , (FP,  emptySchedule)
+        , (PRD, singleEvent initialExchangeDate)
+        , (TD,  singleEvent tmd) -- todo
+        , (IP,  interestPaymentSchedule)
+        ]
+  where
+    interestPaymentSchedule =
+        if nominalInterestRate == 0.0 then emptySchedule
+        else let
+            start = case (cycleAnchorDateOfInterestPayment, interestPaymentCycle, capitalizationEndDate) of
+                    (Nothing, Nothing, Nothing) -> Nothing
+                    (_, _, Just ipced) -> Just ipced
+                    (Nothing, Just (Cycle _ timePeriod _), Nothing) -> Just $ addTimePeriod initialExchangeDate timePeriod
+                    (Just ipanx, _, Nothing) -> Just ipanx
+            in emptySchedule    { scheduleStart = start
+                                , scheduleCycle = interestPaymentCycle
+                                , scheduleEnd = Just tmd
+                                }
+
 pamPayoff :: ContractRole
     -> ContractConfig
-    -> Timeout
+    -> Day
     -> ContractEvent
     -> State
     -> Money
@@ -214,14 +310,14 @@ pamPayoff role ContractConfig{..} currTime event State{..} =
     IED     ->  -- D(Prft− )R(CNTRL)(−1)(NT + PDIED)
                 dperf * rsign * (-1) * (notional + premiumDiscountAtIED)
     IPCI    -> 0
-    IP      -> dperf * round (isc * fromIntegral (nac + round (yearFrac led currTime * fromIntegral nrt) * nvl))
+    IP      -> dperf * round (isc * fromIntegral (nac + yearNrtNvl))
                 -- D(Prft− )Isct− (Nact− + Y (Ledt− , t)Nrtt− Nvlt− )
     FP      ->  let c = fromIntegral (dperf * rsign) * feeRate
                 in case feeBasis of
                     AbsoluteValue -> round c
-                    NotionalOfUnderlying -> round (c * yearFrac led currTime * fromIntegral nvl) + fac
+                    NotionalOfUnderlying -> round (c * yearNvl) + fac
 
-    PR      ->  -- D(Prft− )Nsct− Nvlt−
+    PR      ->  -- D(Prft− )Nsct− Nvlt− Prf
                 round (fromIntegral (dperf * nvl) * nsc)
     PI      -> undefined
     PRF     -> undefined
@@ -231,10 +327,10 @@ pamPayoff role ContractConfig{..} currTime event State{..} =
     RRF     -> 0
     RR      -> 0
     DV      -> undefined
-    PRD     -> dperf * rsign * (-1) * (priceAtPurchaseDate + nac + round (yearFrac led currTime * fromIntegral nrt * fromIntegral nvl))
+    PRD     -> dperf * rsign * (-1) * (priceAtPurchaseDate + nac + yearNrtNvl)
                 -- D(Prft− )R(CNTRL)(−1)(PPRD + Nact− +Y (Ledt− , t)Nrtt− Nvlt− )
     MR      -> undefined
-    TD      -> dperf * rsign * (priceAtTerminationDate + nac + round (yearFrac led currTime * fromIntegral nrt * fromIntegral nvl))
+    TD      -> dperf * rsign * (priceAtTerminationDate + nac + yearNrtNvl)
                 -- D(Prft− )R(CNTRL)(PTD + Nact− + Y (Ledt− , t)Nrtt− Nvlt− )
     SC      -> 0
     IPCB    -> undefined
@@ -245,13 +341,15 @@ pamPayoff role ContractConfig{..} currTime event State{..} =
   where dperf = contractDefaultConvention prf
         rsign = contractRoleSign role
         yearFrac a b = yearFractionConvention a b
+        yearNvl = yearFrac led currTime * fromIntegral nvl
+        yearNrtNvl = round (yearNvl * nrt)
 
 
 
 pamStateTransition :: ContractRole
     -> ContractConfig
     -> ContractEvent
-    -> Timeout
+    -> Day
     -> State
     -> State
 pamStateTransition role ContractConfig{..} event currTime state@State{..} = case event of
@@ -331,7 +429,26 @@ pamStateTransition role ContractConfig{..} event currTime state@State{..} = case
         rsign = contractRoleSign role
         yearFrac a b = yearFractionConvention a b
         yearNvl = yearFrac led currTime * fromIntegral nvl
-        yearNrtNvl = round (yearFrac led currTime * fromIntegral (nrt * nvl))
+        yearNrtNvl = round (yearNvl * nrt)
         newFac = case feeBasis of
             AbsoluteValue -> round feeRate -- todo
             NotionalOfUnderlying -> fac + round (yearNvl * feeRate)
+
+-- pamSchedule =
+
+
+cardanoEpochStart = 1506203091
+
+dayToSlot :: Day -> Integer
+dayToSlot d = let
+    (MkSystemTime secs _) = utcToSystemTime (UTCTime d 0)
+    in fromIntegral secs - cardanoEpochStart `mod` 20
+
+zcb ied notional discount = (emptyContractConfig ied)
+    { notional = notional
+    , premiumDiscountAtIED = discount }
+
+genContract config@ContractConfig{..} = do
+    let state = pamStateInit initialExchangeDate initialExchangeDate
+    let schecule = contractSchedule config state
+    Pay [] $ Left 0

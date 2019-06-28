@@ -11,6 +11,7 @@ executable minimarlowe
     build-depends:      base >=4.9,
                         mtl,
                         containers,
+                        time,
                         sbv,
                         glpk-hs,
                         QuickCheck,

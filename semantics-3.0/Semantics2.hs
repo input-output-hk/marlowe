@@ -25,7 +25,7 @@ data Bounds = Bounds {
 }
                deriving (Eq, Ord, Show, Read)
 
-newtype CommitId = CommitId Integer deriving (Eq, Ord, Show, Read)
+newtype AccountId = AccountId Integer deriving (Eq, Ord, Show, Read)
 type Party = Integer
 type NumChoice = Integer
 type Timeout = Integer
@@ -37,10 +37,10 @@ type LetLabel = Integer
 
 data Contract =
     Null |
-    Commit CommitId Party Value Timeout Contract Contract |
-    Pay CommitId CommitId Party Value Timeout Contract Contract |
-        -- transfer Value money from CommitId to CommitId owned by Party
-    Redeem CommitId | -- withdraw everything left in CommitId
+    Commit AccountId Party Value Timeout Contract Contract |
+    Pay AccountId AccountId Party Value Timeout Contract Contract |
+        -- transfer Value money from AccountId to AccountId owned by Party
+    Redeem AccountId | -- withdraw everything left in AccountId
     Both Contract Contract |
     If Observation Contract Contract |
     When [Case] Timeout Contract | -- empty Case list for 'after timeout' semantics
@@ -61,7 +61,7 @@ data OracleId = OracleId Party
 type Bound = NonEmpty (Integer, Integer) -- lower/upper bounds are included
 
 data Value = Constant Integer |
-             AvailableMoney CommitId |
+             AvailableMoney AccountId |
              AddValue Value Value |
              SubValue Value Value |
              ChoiceValue ChoiceId Value |
@@ -96,7 +96,7 @@ data InputCommand = Perform (NonEmpty ActionId)
 
 data State = State { stateChoices :: Map ChoiceId Integer
                    , stateBounds  :: Bounds
-                   , stateCommits :: Map CommitId (Party, Money)
+                   , stateCommits :: Map AccountId (Party, Money)
                    , stateRedeems :: Map Party Money
                    , stateContractTimeout :: Timeout
                    }
@@ -274,7 +274,7 @@ reduce env state contract = case contract of
 
 type Signatoires = Set Party
 
-getCommitBalance :: CommitId -> State -> Money
+getCommitBalance :: AccountId -> State -> Money
 getCommitBalance commitId state = case M.lookup commitId (stateCommits state) of
     Just (_, balance) -> balance
     Nothing -> 0
@@ -376,49 +376,50 @@ majorityDisagrees :: Observation
 majorityDisagrees = majority 2
 
 escrow :: Contract
-escrow = Commit (CommitId alice) alice (Constant 450) 10
+escrow = Commit (AccountId alice) alice (Constant 450) 10
     (When  [ Case majorityAgrees
-                (Pay (CommitId alice) (CommitId bob) bob (AvailableMoney $ CommitId alice) 90
-                    (Redeem (CommitId bob))
-                    (Redeem (CommitId alice)))
-           , Case majorityDisagrees (Redeem (CommitId alice)) ]
-        90 (Redeem (CommitId alice)))
+                (Pay (AccountId alice) (AccountId bob)
+                        bob (AvailableMoney $ AccountId alice) 90
+                    (Redeem (AccountId bob))
+                    (Redeem (AccountId alice)))
+           , Case majorityDisagrees (Redeem (AccountId alice)) ]
+        90 (Redeem (AccountId alice)))
     Null
 
 zeroCouponBondGuaranteed :: Party -> Party -> Party -> Integer -> Integer -> Timeout -> Timeout -> Timeout -> Contract
 zeroCouponBondGuaranteed issuer investor guarantor notional discount startDate maturityDate gracePeriod =
     -- prepare money for zero-coupon bond, before it could be used
-    Commit (CommitId 1) investor (Constant (notional - discount)) startDate
+    Commit (AccountId 1) investor (Constant (notional - discount)) startDate
         -- guarantor commits a 'guarantee' before startDate
-        (Commit (CommitId 2) guarantor (Constant notional) startDate
+        (Commit (AccountId 2) guarantor (Constant notional) startDate
             (When [] startDate
-                (Pay (CommitId 1) (CommitId 3) issuer (AvailableMoney $ CommitId 1) (maturityDate - gracePeriod)
-                    (Both (Redeem $ CommitId 3) -- issuer can take the money
-                        (Commit (CommitId 4) issuer (Constant notional) maturityDate
+                (Pay (AccountId 1) (AccountId 3) issuer (AvailableMoney $ AccountId 1) (maturityDate - gracePeriod)
+                    (Both (Redeem $ AccountId 3) -- issuer can take the money
+                        (Commit (AccountId 4) issuer (Constant notional) maturityDate
                             -- if the issuer commits the notional before maturity date pay from it, redeem the 'guarantee'
-                            (Pay (CommitId 4) (CommitId 1) investor (AvailableMoney $ CommitId 4)
+                            (Pay (AccountId 4) (AccountId 1) investor (AvailableMoney $ AccountId 4)
                                 (maturityDate + gracePeriod)
-                                (Redeem $ CommitId 1) -- investor can collect his money
+                                (Redeem $ AccountId 1) -- investor can collect his money
                                 Null -- investor didn't confirm Pay, guarantor can redeem now, because we've reached contract's timeout
                             )
                             -- pay from the guarantor otherwise
-                            (Pay (CommitId 2) (CommitId 1) investor (AvailableMoney $ CommitId 2)
+                            (Pay (AccountId 2) (AccountId 1) investor (AvailableMoney $ AccountId 2)
                                 (maturityDate + gracePeriod)
-                                (Redeem $ CommitId 1) -- investor can collect his money
+                                (Redeem $ AccountId 1) -- investor can collect his money
                                 Null -- investor didn't confirm Pay, guarantor can redeem now, because we've reached contract's timeout
                             )
                         )
                     )
                     -- issuer didn't collect the loan, so we return those to investor
                     -- and the guarantor pays the discount
-                    (Pay (CommitId 2) (CommitId 1) investor (Constant discount)
+                    (Pay (AccountId 2) (AccountId 1) investor (Constant discount)
                         (maturityDate + gracePeriod)
-                        (Both   (Redeem $ CommitId 1) -- investor can collect his money
-                                (Redeem $ CommitId 2))
+                        (Both   (Redeem $ AccountId 1) -- investor can collect his money
+                                (Redeem $ AccountId 2))
                         Null
                     )
                 )
             )
-            (Redeem $ CommitId 1) -- guarantor didn't commit, redeem investor commit immediately
+            (Redeem $ AccountId 1) -- guarantor didn't commit, redeem investor commit immediately
         )
         Null

@@ -114,4 +114,4 @@ couponBondGuaranteed creatorID counterpartyID guarantor notionalPrincipal
 
 IOHK plans to implement the full ACTUS standard using Marlowe and Plutus over the coming year.
 
-### [Prev](./meadow-overview.md) [Up](./README.md) [Next](./marlowe-plutus.md)
+### [Prev](./playground-overview.md) [Up](./README.md) [Next](./marlowe-plutus.md)

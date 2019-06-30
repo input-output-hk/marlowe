@@ -6,11 +6,11 @@ The contract models the fact that you make regular payments to the company, ever
 
 At the start of the contract you make a deposit, say 150 Ada, and during the year, if you do not pay on time the company keeps the full deposit. If you have paid regularly, at the end of the contract  the deposit is paid back to you.
 
-## Blockly and Meadow in the cloud
+## Blockly and the Marlowe Playground
 
 If you are writing the contract in Blockly, model a contract that includes two cycles of 30 slots.
 
-If you are writing the contract in Haskell using Meadow in the cloud, write a version that is parameterised over the number of cycles.
+If you are writing the contract in Haskell using the Marlowe Playground, write a version that is parameterised over the number of cycles.
 
 ## Variants
 

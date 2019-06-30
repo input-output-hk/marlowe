@@ -10,7 +10,7 @@
 This document gives an overview of a set of Marlowe tutorials.
 
 > __Important note:__ these tutorials address the current version of Marlowe,  2.0, which irons out
-> a number of infelicities in earlier versions. Marlowe 2.0 is implemented in _Meadow in the Cloud_, available [here](https://prod.meadow.marlowe.iohkdev.io).
+> a number of infelicities in earlier versions. Marlowe 2.0 is implemented in the _Marlowe Playground_, available [here](https://prod.meadow.marlowe.iohkdev.io).
 >
 > The version covered in the ISoLA paper, and supported in the original version of Meadow that includes Blockly, is tagged as **v1.3**
 > and is available [here](https://github.com/input-output-hk/marlowe/tree/v1.3). 
@@ -44,9 +44,9 @@ This tutorial shows how to use some simple features of Haskell to write Marlowe 
 This tutorial shows you how to use Marlowe from within Haskell, and in particular shows how to exercise a contract using the semantics given in the [earlier tutorial](./marlowe-semantics.md).
 
 
-## [Meadow in the cloud](./meadow-overview.md) 
+## [The Marlowe Playground](./playground-overview.md) 
 
-This tutorial introduces Meadow in the cloud, an online tool for creating embedded Marlowe contracts, and interactively stepping through their execution.
+This tutorial introduces the Marlowe Playground, an online tool for creating embedded Marlowe contracts, and interactively stepping through their execution.
 
 <!--
 ## [Other functions in Marlowe: analysis](./analysis.md)

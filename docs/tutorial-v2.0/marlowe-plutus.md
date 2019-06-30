@@ -15,7 +15,7 @@ There are several ways to implement Marlowe contracts on top of Plutus. We could
 - It is simple: we implement a single Plutus script that can be used for all Marlowe contracts, thus making it easier to implement, review, and test what we have done.
 - It is close to the semantics of Marlowe, as described in the [earlier tutorial](./marlowe-semantics.md), so making it easier to validate.
 - It means that the same implementation can be used for both on- and off-chain (wallet) execution of Marlowe code.
-- It allows client-side contract evaluation, where we reuse the same code to do contract execution emulation (e.g. in IDE), and compile it to WASM/JavaScript on client side (e.g. in the Plutus Playground or Meadow).
+- It allows client-side contract evaluation, where we reuse the same code to do contract execution emulation (e.g. in IDE), and compile it to WASM/JavaScript on client side (e.g. in the Plutus or Marlowe Playground).
 - Having a single interpreter for all (or a particular group of) Marlowe contracts allows to monitor the blockchain for these kinds of contract, if desired.
 - Finally, there is a potential to special-case this sort of script, and implement a specialized, highly effective interpreter in Cardano CL itself.
 

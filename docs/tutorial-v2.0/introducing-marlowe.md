@@ -20,7 +20,7 @@ Marlowe is also an _embedded_ DSL, hosted in the [Haskell](https://www.haskell.o
 
 ## Marlowe in a nutshell
 
-Marlowe is modelled on financial contract DSLs popularised in the last decade or so by academics and enterprises such as LexiFi, which provides contract software in the financial sector. In developing Marlowe, we have adapted these languages to work on blockchain. Marlowe is implemented on the settlement layer (SL) of the Cardano blockchain, but could equally well be implemented on Ethereum/Solidity or other blockchain platforms; in this respect it is “platform agnostic” just like modern programming languages like Java and C++. The Meadow online emulator tool allows you to experiment with, develop and interact with Marlowe contracts in your web browser, without having to install any software.
+Marlowe is modelled on financial contract DSLs popularised in the last decade or so by academics and enterprises such as LexiFi, which provides contract software in the financial sector. In developing Marlowe, we have adapted these languages to work on blockchain. Marlowe is implemented on the settlement layer (SL) of the Cardano blockchain, but could equally well be implemented on Ethereum/Solidity or other blockchain platforms; in this respect it is “platform agnostic” just like modern programming languages like Java and C++. The Marlowe Playground online emulator tool allows you to experiment with, develop and interact with Marlowe contracts in your web browser, without having to install any software.
 
 What does a Marlowe contract look like? It is built by combining a small number of building blocks that describe making a payment, making an observation of something in the “real world”, waiting until a certain condition becomes true, and so on. 
 
@@ -34,7 +34,7 @@ In our model, a running contract cannot force a payment or a commitment to happe
 
 ## Marlowe in action
 
-We are working on a production release of Marlowe on the Cardano blockchain later this year (2019). From today, you are able to explore Marlowe for yourself, either by downloading it and using the Haskell implementation directly, or by using the online Meadow simulation tool; these are both covered in subsequent tutorials. These will also cover the details of Marlowe, introduce a series of examples, look deeper into the tools for Marlowe. 
+We are working on a production release of Marlowe on the Cardano blockchain later this year (2019). From today, you are able to explore Marlowe for yourself, either by downloading it and using the Haskell implementation directly, or by using the online Marlowe Playground simulation tool; these are both covered in subsequent tutorials. These will also cover the details of Marlowe, introduce a series of examples, look deeper into the tools for Marlowe. 
 
 In the next six months we will be polishing the language design itself and developing a set of templates for popular financial instruments, as well as using formal logic tools to prove properties of Marlowe contracts, giving users the highest level of assurance that their contracts behave as intended.
 

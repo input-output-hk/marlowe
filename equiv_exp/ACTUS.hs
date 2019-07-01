@@ -2,6 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module ACTUS where
 
+import Data.Maybe
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -11,6 +12,7 @@ import Data.Time
 import Data.Time.Clock
 import Data.Time.Clock.POSIX
 import Data.Time.Clock.System
+import Debug.Trace
 import Minimal
 {-
     = Data Dictionary
@@ -91,6 +93,7 @@ data ContractRole   = RPA -- Real position asset
                     | PFL -- Pay first leg
                     | RF  -- Receive fix leg
                     | PF  -- Pay fix leg
+                    deriving (Show, Eq)
 
 -- R
 contractRoleSign :: ContractRole -> Integer
@@ -114,19 +117,20 @@ data ContractStatus = PERF -- PF performant
                     | DL -- delayed
                     | DQ -- delinquent
                     | DF -- default
+                    deriving (Show, Eq)
 
 {-| Indicates whether the cash flows of the underlying financial contract of
     a combined contract are effectively exchanged or only used as
     a calculation base for the settlement cash flow(s).
 -}
-data DeliverySettlement = Delivery | Settlement
+data DeliverySettlement = Delivery | Settlement deriving (Show, Eq)
 
-data FeeBasis = AbsoluteValue {- A -} | NotionalOfUnderlying {- N -}
+data FeeBasis = AbsoluteValue {- A -} | NotionalOfUnderlying {- N -} deriving (Show, Eq)
 
-data TimePeriod = Day | Week | Month | Quarter | HalfYear | Year
-data Stub = LongLastStub | ShortLastStub
-data Cycle = Cycle Integer TimePeriod Stub
-data EndOfMonthConvention = EndOfMonth | SameDay
+data TimePeriod = Day | Week | Month | Quarter | HalfYear | Year deriving (Show, Eq)
+data Stub = LongLastStub | ShortLastStub deriving (Show, Eq)
+data Cycle = Cycle Integer TimePeriod Stub deriving (Show, Eq)
+data EndOfMonthConvention = EndOfMonth | SameDay deriving (Show, Eq)
 data BusinessDayConvention  = NoShift                           -- NULL
                             | ShiftCalculateFollowing           -- SCF
                             | ShiftCalculateModifiedFollowing   -- SCMF
@@ -136,6 +140,7 @@ data BusinessDayConvention  = NoShift                           -- NULL
                             | ShiftCalculateModifiedFreceding   -- SCMP
                             | CalculateShiftPreceding           -- CSP
                             | CalculateShiftModifiedPreceding   -- CSMP
+                            deriving (Show, Eq)
 
 
 -- A schedule is a function S mapping times s, T with s < T and cycle c onto a sequence ~t of cyclic times
@@ -145,7 +150,7 @@ data Schedule = Schedule
     , scheduleEnd   :: Maybe Day
     , scheduleEOMC  :: Maybe EndOfMonthConvention
     , scheduleBDC   :: Maybe BusinessDayConvention
-    }
+    } deriving (Show, Eq)
 
 emptySchedule :: Schedule
 emptySchedule = Schedule
@@ -247,6 +252,7 @@ type FeeRate = Double
 
 data ContractConfig = ContractConfig
              { initialExchangeDate :: Day
+             , maturityDate :: Maybe Day
              , notional :: Money
              , nominalInterestRate    :: Double
              , interestPaymentCycle   :: Maybe Cycle
@@ -261,6 +267,7 @@ data ContractConfig = ContractConfig
 
 emptyContractConfig d = ContractConfig
     { initialExchangeDate = d
+    , maturityDate = Nothing
     , notional = 0
     , nominalInterestRate = 0.0
     , interestPaymentCycle = Nothing
@@ -298,6 +305,14 @@ contractSchedule ContractConfig{..} State{..} =
                                 , scheduleCycle = interestPaymentCycle
                                 , scheduleEnd = Just tmd
                                 }
+
+asdf :: Map ContractEvent Schedule -> Map Day [ContractEvent]
+asdf m = do
+    let eventDays = fmap schedule m
+    let pairs = [(v, [k]) | (k, vs) <- Map.toList eventDays, v <- vs]
+    Map.fromListWith (++) (reverse pairs)
+  where
+
 
 pamPayoff :: ContractRole
     -> ContractConfig
@@ -444,11 +459,24 @@ dayToSlot d = let
     (MkSystemTime secs _) = utcToSystemTime (UTCTime d 0)
     in fromIntegral secs - cardanoEpochStart `mod` 20
 
-zcb ied notional discount = (emptyContractConfig ied)
-    { notional = notional
+zcb ied md notional discount = (emptyContractConfig ied)
+    { maturityDate = Just md
+    , notional = notional
     , premiumDiscountAtIED = discount }
 
-genContract config@ContractConfig{..} = do
-    let state = pamStateInit initialExchangeDate initialExchangeDate
-    let schecule = contractSchedule config state
-    Pay [] $ Left 0
+genZcbContract investor issuer config@ContractConfig{..} = do
+    let maturityDay = fromJust maturityDate
+    let maturitySlot = dayToSlot maturityDay
+    let state = pamStateInit initialExchangeDate maturityDay
+    let schedule = asdf $ contractSchedule config state
+    let startDate = dayToSlot initialExchangeDate
+    When [Case (ValueEQ (CommittedBy investor) (Constant (notional - premiumDiscountAtIED))) -- Wait for investor to commit
+         (When [] startDate
+            (Pay [(Constant (notional - premiumDiscountAtIED), issuer)] -- We give issuer the discounted amount
+                (Right (When [] maturitySlot  -- by maturity date
+                    (Pay [(Constant notional, investor) -- we pay the investor back
+                        -- OPTIONAL: return excess to issuer
+                        , (SubValue (CommittedBy issuer) (Constant notional), issuer)]
+                           (Left investor)))))) -- whatever is left goes back to the guarantor
+        ] startDate -- if money is not provided by startDate we return all the money
+        (Pay [(CommittedBy investor, investor)] (Left issuer))

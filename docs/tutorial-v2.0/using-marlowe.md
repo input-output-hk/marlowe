@@ -115,7 +115,7 @@ Why is single stepping useful? It is the equivalent of debugging, and we are abl
 
 Yes, there is! 
        
-We look next at how we can build a tool, Meadow, that will capitalise on the fact that we are working in a DSL to _automate_ picking the right inputs and allow users to interact with contracts.
+We look next at how we can build a tool, the Marlowe Playground, that will capitalise on the fact that we are working in a DSL to _automate_ picking the right inputs and allow users to interact with contracts.
 
 
 ### [Prev](./embedded-marlowe.md) [Up](./README.md) [Next](./playground-overview.md)

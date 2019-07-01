@@ -46,7 +46,7 @@ This tutorial shows you how to use Marlowe from within Haskell, and in particula
 
 ## [The Marlowe Playground](./playground-overview.md) 
 
-This tutorial introduces the Marlowe Playground, an online tool for creating embedded Marlowe contracts, and interactively stepping through their execution.
+This tutorial introduces the Marlowe Playground, an online tool for creating embedded Marlowe contracts and interactively stepping through their execution.
 
 <!--
 ## [Other functions in Marlowe: analysis](./analysis.md)

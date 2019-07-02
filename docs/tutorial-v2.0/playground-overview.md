@@ -64,6 +64,13 @@ Applying that transaction makes the contract evolve to the payment of the money 
 
 ![Simulation step 4](./pix/step4.png)
 
+At any point it is possible to _undo_ a step by selecting the __Undo__ button. From the current state, doing this twice will return us to the state shown next. From there we can choose to explore _alternatives_ to the choice that we made previously.
+
+![Simulation step 5](./pix/step5.png)
+
+At any point in the simulation, we can also completely _reset_ the system to its initial state by pressing the __Reset__ button.
+
+
 > __Exercise__
 >  
 > Use the Marlowe Playground to interact with the `escrow` contract in the various scenarios discussed earlier, in the tutorial on [using Marlowe](./using-marlowe.md).

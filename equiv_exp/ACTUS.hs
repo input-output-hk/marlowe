@@ -178,7 +178,7 @@ schedule :: Schedule -> [Day]
 schedule s = case s of
     Schedule { scheduleStart=Nothing, scheduleEnd=Nothing }   -> []
     Schedule { scheduleStart=Just t,  scheduleEnd=Nothing }   -> [t]
-    Schedule { scheduleStart=Nothing, scheduleEnd=Just tmax } -> error "Not specified schedule Start"
+    Schedule { scheduleStart=Nothing, scheduleEnd=Just tmax } -> error "Not specified scheduleStart"
     Schedule { scheduleStart=Just t,  scheduleCycle=Nothing, scheduleEnd=Just tmax } -> [t, tmax]
     Schedule { scheduleStart=Just t,  scheduleCycle=Just c,  scheduleEnd=Just tmax } ->
         if t < tmax then let
@@ -231,7 +231,7 @@ data State = State
     , isc :: Double         -- Interest Scaling Multiplier. The multiplier being applied to Interest related cash-flows
     , prf :: ContractStatus -- Contract performance
     , led :: LastEventDate        -- Last Event Date. The date of the most recent ContractEvent
-    }
+    } deriving (Show)
 
 pamStateInit :: Day -> Day -> State
 pamStateInit t0 maturityDate = State
@@ -289,8 +289,9 @@ contractSchedule ContractConfig{..} State{..} =
         , (PY,  emptySchedule)
         , (FP,  emptySchedule)
         , (PRD, singleEvent initialExchangeDate)
-        , (TD,  singleEvent tmd) -- todo
+        -- , (TD,  singleEvent tmd) -- todo
         , (IP,  interestPaymentSchedule)
+        , (MD,  singleEvent tmd)
         ]
   where
     interestPaymentSchedule =
@@ -301,10 +302,10 @@ contractSchedule ContractConfig{..} State{..} =
                     (_, _, Just ipced) -> Just ipced
                     (Nothing, Just (Cycle _ timePeriod _), Nothing) -> Just $ addTimePeriod initialExchangeDate timePeriod
                     (Just ipanx, _, Nothing) -> Just ipanx
-            in emptySchedule    { scheduleStart = start
-                                , scheduleCycle = interestPaymentCycle
-                                , scheduleEnd = Just tmd
-                                }
+            in maybe emptySchedule (\start -> emptySchedule { scheduleStart = Just start
+                , scheduleCycle = interestPaymentCycle
+                , scheduleEnd = Just tmd
+                }) start
 
 asdf :: Map ContractEvent Schedule -> Map Day [ContractEvent]
 asdf m = do
@@ -464,6 +465,14 @@ zcb ied md notional discount = (emptyContractConfig ied)
     , notional = notional
     , premiumDiscountAtIED = discount }
 
+cb ied md notional rate = (emptyContractConfig ied)
+    { maturityDate = Just md
+    , notional = notional
+    , nominalInterestRate = rate
+    , interestPaymentCycle = Just $ Cycle 3 Month LongLastStub
+    , premiumDiscountAtIED = 0 }
+
+
 genZcbContract investor issuer config@ContractConfig{..} = do
     let maturityDay = fromJust maturityDate
     let maturitySlot = dayToSlot maturityDay
@@ -480,3 +489,43 @@ genZcbContract investor issuer config@ContractConfig{..} = do
                            (Left investor)))))) -- whatever is left goes back to the guarantor
         ] startDate -- if money is not provided by startDate we return all the money
         (Pay [(CommittedBy investor, investor)] (Left issuer))
+
+genCouponBondContract :: Party -> Party -> ContractConfig -> Contract
+genCouponBondContract investor issuer config@ContractConfig{..} = do
+    foldr generator (Pay [(CommittedBy investor, investor)] (Left issuer)) sch
+  where
+    maturityDay = fromJust maturityDate
+    maturitySlot :: Integer
+    maturitySlot = dayToSlot maturityDay
+    state = pamStateInit initialExchangeDate maturityDay
+    cs = contractSchedule config state
+    schedule = traceShow state $ asdf $ traceShow cs cs
+    startDate = traceShow schedule $ dayToSlot initialExchangeDate
+    sch = Map.toList schedule
+
+
+    genEvent :: Day -> ContractEvent -> (Integer, Contract) -> (Integer, Contract)
+    genEvent day event (committed, contract) = case event of
+        IED -> genIED contract
+        IP  -> genIP committed 20 (dayToSlot day) contract
+        PR  -> genPR committed contract
+        _   -> (committed, contract)
+
+    generator (day, events) contract = snd $ foldr (genEvent day) (0, contract) events
+
+    genIED cont = (0, When [Case (ValueEQ (CommittedBy investor) (Constant notional)) -- Wait for investor to commit
+        (When [] startDate (Pay [(Constant notional, issuer)] -- We give issuer the amount
+            (Right cont)))] startDate -- if money is not provided by startDate we return all the money
+                (Pay [(CommittedBy investor, investor)] (Left issuer)))
+
+    genPR committed cont = let comm = (committed + notional)
+        in (comm, When [ Case (ValueGE (CommittedBy issuer) (Constant comm))
+                (Pay [(Constant notional, issuer)] (Right cont))] maturitySlot  -- by maturity date
+            (Pay [] (Left investor)))
+
+    genIP committed amount slot cont = let comm = committed + amount in
+        (comm, When [
+            Case (ValueEQ (CommittedBy issuer) (Constant comm))
+                (Pay [(Constant amount, issuer)] (Right cont))] slot cont)
+
+    genMD = Left investor

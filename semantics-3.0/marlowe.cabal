@@ -23,5 +23,6 @@ executable marlowe
     other-modules:
                         Semantics
                         Semantics2
+                        Semantics3
     hs-source-dirs:     .
     main-is:            Main.hs

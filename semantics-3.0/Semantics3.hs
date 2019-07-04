@@ -285,17 +285,15 @@ majorityAgrees = majority 1
 majorityDisagrees :: Observation
 majorityDisagrees = majority 2
 
-{- escrow :: Contract
-escrow = Commit (AccountId alice) alice (Constant 450) 10
+escrow :: Contract
+escrow = CommitAll [Commitment (AccountId alice) alice (Constant 450)] 10
     (When  [ Case majorityAgrees
-                (Pay (AccountId alice) (AccountId bob)
-                        bob (AvailableMoney $ AccountId alice) 90
-                    (Redeem (AccountId bob))
-                    (Redeem (AccountId alice)))
-           , Case majorityDisagrees (Redeem (AccountId alice)) ]
-        90 (Redeem (AccountId alice)))
-    Null
-
+                (Pay (AccountId alice) (Party bob)
+                        (AvailableMoney $ AccountId alice) RedeemAll)
+           , Case majorityDisagrees RedeemAll ]
+        90 RedeemAll)
+    RedeemAll
+{-
 zeroCouponBondGuaranteed :: Party -> Party -> Party -> Integer -> Integer -> Timeout -> Timeout -> Timeout -> Contract
 zeroCouponBondGuaranteed issuer investor guarantor notional discount startDate maturityDate gracePeriod =
     -- prepare money for zero-coupon bond, before it could be used

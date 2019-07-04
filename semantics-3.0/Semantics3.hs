@@ -34,7 +34,7 @@ type ActionId = Integer
 type Money = Integer
 type LetLabel = Integer
 newtype Signature = Signature Party deriving (Eq, Ord, Show, Read)
-
+{- If we pay to a new (non existing) AccountId, then we need to specify its owner @Party@ -}
 data Payee = Account AccountId Party | Party Party deriving (Eq, Ord, Show, Read)
 data Commitment = Commitment AccountId Party Value deriving (Eq, Ord, Show, Read)
 
@@ -94,6 +94,7 @@ data InputCommand = Deposit (NonEmpty (ActionId, Signature, Money))
 data State = State { stateChoices :: Map ChoiceId Integer
                    , stateBounds  :: Bounds
                    , stateBalances :: Map AccountId (Party, Money)
+                   -- ^ accountId to its owner and balance
                    , stateContractTimeout :: Timeout
                    }
                deriving (Eq, Ord, Show, Read)

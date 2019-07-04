@@ -502,16 +502,16 @@ genCouponBondContract investor issuer config@ContractConfig{..} = do
     schedule = traceShow state $ asdf $ traceShow cs cs
     startDate = traceShow schedule $ dayToSlot initialExchangeDate
     sch = Map.toList schedule
+    sum = 1020
 
 
-    genEvent :: Day -> ContractEvent -> (Integer, Contract) -> (Integer, Contract)
-    genEvent day event (committed, contract) = case event of
+    genEvent day event (committed, contract)  = case event of
         IED -> genIED contract
         IP  -> genIP committed 20 (dayToSlot day) contract
         PR  -> genPR committed contract
         _   -> (committed, contract)
 
-    generator (day, events) contract = snd $ foldr (genEvent day) (0, contract) events
+    generator (sum, day, events) contract = snd $ foldr (genEvent day) (sum, contract) events
 
     genIED cont = (0, When [Case (ValueEQ (CommittedBy investor) (Constant notional)) -- Wait for investor to commit
         (When [] startDate (Pay [(Constant notional, issuer)] -- We give issuer the amount
@@ -529,3 +529,12 @@ genCouponBondContract investor issuer config@ContractConfig{..} = do
                 (Pay [(Constant amount, issuer)] (Right cont))] slot cont)
 
     genMD = Left investor
+
+    {-
+[x, y, z]
+
+foldl = f (f (f acc x) y) z
+
+foldr = f x (f y (f z acc))
+
+    -}

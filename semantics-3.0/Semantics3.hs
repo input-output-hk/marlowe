@@ -33,18 +33,17 @@ type SlotNumber = Integer
 type ActionId = Integer
 type Money = Integer
 type LetLabel = Integer
+newtype Signature = Signature Party deriving (Eq, Ord, Show, Read)
 
-data Payee = Account AccountId | Party Party deriving (Eq, Ord, Show, Read)
+data Payee = Account AccountId Party | Party Party deriving (Eq, Ord, Show, Read)
 data Commitment = Commitment AccountId Party Value deriving (Eq, Ord, Show, Read)
 
 data Contract =
     RedeemAll |
     CommitAll [Commitment] Timeout Contract Contract |
     Pay AccountId Payee Value Contract |
-    Redeem AccountId Contract |
     If Observation Contract Contract |
-    When [Case] Timeout Contract -- empty Case list for 'after timeout' semantics
-    -- While Observation Timeout Contract Contract
+    When [Case] Timeout Contract
                deriving (Eq, Ord, Show, Read)
 
 data Case = Case Observation Contract
@@ -86,16 +85,15 @@ data Input = Input { inputCommand :: InputCommand
                    , inputChoices :: Map ChoiceId Integer }
                deriving (Eq, Ord, Show, Read)
 
-data InputCommand = Perform (NonEmpty ActionId)
-                  | Withdraw Party Money
+data InputCommand = Deposit (NonEmpty (ActionId, Signature, Money))
+                  | Redeem Signature AccountId
                   | Evaluate
                deriving (Eq, Ord, Show, Read)
 
 
 data State = State { stateChoices :: Map ChoiceId Integer
                    , stateBounds  :: Bounds
-                   , stateCommits :: Map AccountId (Party, Money)
-                   , stateRedeems :: Map Party Money
+                   , stateBalances :: Map AccountId (Party, Money)
                    , stateContractTimeout :: Timeout
                    }
                deriving (Eq, Ord, Show, Read)
@@ -108,8 +106,7 @@ initialiseState :: SetupContract -> State
 initialiseState SetupContract{..} =
   State { stateChoices = M.empty
         , stateBounds = setupBounds
-        , stateCommits = M.empty
-        , stateRedeems = M.empty
+        , stateBalances = M.empty
         , stateContractTimeout = contractLifespan setupContract
         }
 
@@ -131,47 +128,24 @@ initEnvironment slotNumber Input{..} State {..}
   | otherwise = Nothing
 
 
--- ToDo: Check signatures for choices
-applyInput :: SlotNumber -> Signatoires -> Input -> State -> Contract -> Maybe (State, Contract)
-applyInput slotNumber signatoires input@Input{..} state contract = do
+applyInput :: SlotNumber -> Integer -> Integer -> Input -> State -> Contract -> Maybe (State, Contract)
+applyInput slotNumber beforeBalance afterBalance input@Input{..} state@State{..} contract = do
     env <- initEnvironment slotNumber input state
-    let (st, cont) = expireContract slotNumber state contract
-    let reducedContract = reduce env st cont
-    case inputCommand of
-        Withdraw party amount -> do
-            let redeems = stateRedeems st
-            case M.lookup party redeems of
-                Just val | val > amount -> let
-                    updatedState = st {
-                            stateRedeems = M.adjust (\v -> v - amount) party redeems
-                        }
-                    in return (updatedState, cont)
-        Evaluate -> Just (st, cont)
-        Perform actions -> let
-            perform (st, cont) actionId = performAction env st actionId cont
-            in foldM perform (st, cont) actions
-
-
-performAction :: Environment -> State -> ActionId -> Contract -> Maybe (State, Contract)
-performAction env state actionId contract =
-    case contract of
-        CommitAll commitments _ _ _ | length commitments < (fromIntegral actionId) -> let
-            Commitment accountId party value = commitments !! (fromIntegral actionId)
-            in Just (state, contract)
-        _ -> Nothing
-
-
-expireContract :: SlotNumber -> State -> Contract -> (State, Contract)
-expireContract slotNumber state contract =
-    if isExpired (stateContractTimeout state) slotNumber
-    then let
-        commits = stateCommits state
-        redeems = stateRedeems state
-        newRedeems = M.foldr (\(party, balance) reds ->
-            M.alter (\redeem -> Just $ fromMaybe 0 redeem + balance) party reds
-            ) redeems commits
-        in (state { stateCommits = M.empty, stateRedeems = newRedeems }, RedeemAll)
-    else (state, contract)
+    case eval env state contract of
+        Just (st, cont) -> case (inputCommand, cont) of
+            (Redeem (Signature party) accountId, RedeemAll) -> do
+                case M.lookup accountId stateBalances of
+                    Just (p, val) | p == party && beforeBalance - val == afterBalance -> let
+                        updatedState = st { stateBalances = M.insert accountId (party, 0) stateBalances }
+                        in return (updatedState, RedeemAll)
+                    _ -> Nothing
+            (Evaluate, cont) | beforeBalance == afterBalance -> Just (st, cont)
+            (Deposit actions, CommitAll commitments _ _ _) -> undefined {- let
+                s = sum $ fmap (\(_, _, value) -> evalValue env st value) actions
+                len = length commitments
+                valid = all (\(id, (Signature p), _) -> 0 <= id && id < len && p == commitments ) actions
+                valid = -}
+        Nothing -> Nothing
 
 -- How much everybody pays or receives in transaction
 type TransactionOutcomes = M.Map Party Integer
@@ -193,34 +167,42 @@ addOutcome party diffValue trOut = M.insert party newValue trOut
 combineOutcomes :: TransactionOutcomes -> TransactionOutcomes -> TransactionOutcomes
 combineOutcomes = M.unionWith (+)
 
-reduce :: Environment -> State -> Contract -> Contract
-reduce env state contract = case contract of
-    RedeemAll -> RedeemAll
+eval :: Environment -> State -> Contract -> Maybe (State, Contract)
+eval env state@State{..} contract = case contract of
+    RedeemAll -> Just (state, RedeemAll)
     CommitAll _ timeout _ fail ->
         if isExpired slotNumber timeout
         then go fail
-        else contract
-    Pay from to value cont -> contract
-    Redeem _ _ -> contract
+        else Just (state, contract)
+    Pay from to value cont -> do
+        let evaluatedValue = evalValue env state value
+        case M.lookup from stateBalances of
+            Just (_, amount) | 0 <= evaluatedValue && evaluatedValue <= amount ->
+                case to of
+                    Account accId party -> let
+                        reduceFromAccount = M.adjust (\(party, amount) -> (party, amount - evaluatedValue)) from stateBalances
+                        newBalances = M.alter (\v -> case v of
+                            Just (p, balance) -> Just (p, balance + evaluatedValue)
+                            Nothing -> Just (party, evaluatedValue)) accId reduceFromAccount
+                        updatedState = state { stateBalances = newBalances }
+                        in eval env updatedState cont
+                    Party party -> undefined -- todo
+            _ -> Nothing
     If obs cont1 cont2 ->
         if evalObservation env state obs then go cont1 else go cont2
     When cases timeout timeoutCont ->
         if isExpired slotNumber timeout
         then go timeoutCont
         else case find (\(Case obs _) -> evalObservation env state obs) cases of
-                Nothing -> contract
+                Nothing -> Just (state, contract)
                 Just (Case _ sc) -> go sc
-{-     While obs timeout contractWhile contractAfter ->
-        if isExpired slotNumber timeout || not (evalObservation env state obs)
-        then go contractAfter
-        else While obs timeout (go contractWhile) contractAfter -}
   where slotNumber = envSlotNumber env
-        go = reduce env state
+        go = eval env state
 
 type Signatoires = Set Party
 
 getCommitBalance :: AccountId -> State -> Money
-getCommitBalance commitId state = case M.lookup commitId (stateCommits state) of
+getCommitBalance commitId state = case M.lookup commitId (stateBalances state) of
     Just (_, balance) -> balance
     Nothing -> 0
 
@@ -267,24 +249,12 @@ contractLifespan contract = case contract of
     CommitAll _ timeout contract1 contract2 ->
         maximum [timeout, contractLifespan contract1, contractLifespan contract2]
     Pay _ _ _ cont -> contractLifespan cont
-    Redeem{} -> 0
     -- TODO simplify observation and check for always true/false cases
     If _ contract1 contract2 ->
         max (contractLifespan contract1) (contractLifespan contract2)
     When cases timeout subContract -> let
         contractsLifespans = fmap (\(Case _ cont) -> contractLifespan cont) cases
         in maximum (timeout : contractLifespan subContract : contractsLifespans)
-    {- While _ timeout contract1 contract2 ->
-        maximum [timeout, contractLifespan contract1, contractLifespan contract2] -}
-
-inferActions :: Environment -> State -> Contract -> [Contract]
-inferActions env state contract = case contract of
-    Pay{} -> [contract]
-    Redeem{} -> [contract]
-    If _ c1 c2 -> error "Should not happen. Looks like you infer action for non-reduced contract. Try reduce it first. If should be reduced automatically"
-    When{} -> []
-    -- While _ _ contractWhile _ -> go contractWhile
-  where go = inferActions env state
 
 alice, bob, carol :: Party
 alice = 1

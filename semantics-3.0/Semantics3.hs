@@ -293,41 +293,21 @@ escrow = CommitAll [Commitment (AccountId alice) alice (Constant 450)] 10
            , Case majorityDisagrees RedeemAll ]
         90 RedeemAll)
     RedeemAll
-{-
+
 zeroCouponBondGuaranteed :: Party -> Party -> Party -> Integer -> Integer -> Timeout -> Timeout -> Timeout -> Contract
 zeroCouponBondGuaranteed issuer investor guarantor notional discount startDate maturityDate gracePeriod =
     -- prepare money for zero-coupon bond, before it could be used
-    Commit (AccountId 1) investor (Constant (notional - discount)) startDate
-        -- guarantor commits a 'guarantee' before startDate
-        (Commit (AccountId 2) guarantor (Constant notional) startDate
-            (When [] startDate
-                (Pay (AccountId 1) (AccountId 3) issuer (AvailableMoney $ AccountId 1) (maturityDate - gracePeriod)
-                    (Both (Redeem $ AccountId 3) -- issuer can take the money
-                        (Commit (AccountId 4) issuer (Constant notional) maturityDate
-                            -- if the issuer commits the notional before maturity date pay from it, redeem the 'guarantee'
-                            (Pay (AccountId 4) (AccountId 1) investor (AvailableMoney $ AccountId 4)
-                                (maturityDate + gracePeriod)
-                                (Redeem $ AccountId 1) -- investor can collect his money
-                                Null -- investor didn't confirm Pay, guarantor can redeem now, because we've reached contract's timeout
-                            )
-                            -- pay from the guarantor otherwise
-                            (Pay (AccountId 2) (AccountId 1) investor (AvailableMoney $ AccountId 2)
-                                (maturityDate + gracePeriod)
-                                (Redeem $ AccountId 1) -- investor can collect his money
-                                Null -- investor didn't confirm Pay, guarantor can redeem now, because we've reached contract's timeout
-                            )
-                        )
-                    )
-                    -- issuer didn't collect the loan, so we return those to investor
-                    -- and the guarantor pays the discount
-                    (Pay (AccountId 2) (AccountId 1) investor (Constant discount)
-                        (maturityDate + gracePeriod)
-                        (Both   (Redeem $ AccountId 1) -- investor can collect his money
-                                (Redeem $ AccountId 2))
-                        Null
-                    )
+    -- guarantor commits a 'guarantee' before startDate
+    CommitAll [ Commitment (AccountId 1) investor (Constant (notional - discount))
+              , Commitment (AccountId 2) guarantor (Constant notional) ] startDate
+        (When [] startDate
+            (Pay (AccountId 1) (Party issuer) (AvailableMoney $ AccountId 1)
+                (CommitAll [ Commitment (AccountId 3) issuer (Constant notional) ] maturityDate
+                    -- if the issuer commits the notional before maturity date pay from it, redeem the 'guarantee'
+                    (Pay (AccountId 3) (Party investor) (AvailableMoney $ AccountId 3) RedeemAll) -- investor can collect his money
+                    -- pay from the guarantor otherwise
+                    (Pay (AccountId 2) (Party investor) (AvailableMoney $ AccountId 2) RedeemAll)
                 )
             )
-            (Redeem $ AccountId 1) -- guarantor didn't commit, redeem investor commit immediately
         )
-        Null -}
+        RedeemAll -- investor or guarantor didn't commit, redeem money and finish

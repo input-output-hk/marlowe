@@ -14,28 +14,28 @@ data ChoiceId = ChoiceId NumChoice Party
 data OracleId = OracleId PubKey
   deriving (Eq,Ord,Show,Read)
 
-data Value = AvailableMoney AccountId |
-             Constant Integer |
-             NegValue Value |
-             AddValue Value Value |
-             SubValue Value Value |
-             ChoiceValue ChoiceId Value |
-             OracleValue OracleId Value |
-             CurrentSlot
+data Value = AvailableMoney AccountId 
+           | Constant Integer
+           | NegValue Value
+           | AddValue Value Value
+           | SubValue Value Value
+           | ChoiceValue ChoiceId Value
+           | OracleValue OracleId Value
+           | CurrentSlot
   deriving (Eq,Ord,Show,Read)
 
-data Observation = AndObs Observation Observation |
-                   OrObs Observation Observation |
-                   NotObs Observation |
-                   ChoseSomething ChoiceId |
-                   OracleValueProvided OracleId |
-                   ValueGE Value Value |
-                   ValueGT Value Value |
-                   ValueLT Value Value |
-                   ValueLE Value Value |
-                   ValueEQ Value Value |
-                   TrueObs |
-                   FalseObs
+data Observation = AndObs Observation Observation
+                 | OrObs Observation Observation
+                 | NotObs Observation
+                 | ChoseSomething ChoiceId
+                 | OracleValueProvided OracleId
+                 | ValueGE Value Value
+                 | ValueGT Value Value
+                 | ValueLT Value Value
+                 | ValueLE Value Value
+                 | ValueEQ Value Value
+                 | TrueObs
+                 | FalseObs
   deriving (Eq,Ord,Show,Read)
 
 type Bound = (Integer, Integer)
@@ -50,10 +50,8 @@ data Case = Case Action Contract
 data Payee = Account AccountId
            | Party Party
 
-data Contract =
-    RedeemAll |
-    Pay AccountId Payee Value Contract |
-    If Observation Contract Contract |
-    When [Case] Timeout Contract
-
+data Contract = RedeemAll
+              | Pay AccountId Payee Value Contract
+              | If Observation Contract Contract
+              | When [Case] Timeout Contract
 

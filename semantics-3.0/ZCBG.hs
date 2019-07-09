@@ -26,17 +26,18 @@ payAll acId payee cont =
 zeroCouponBondGuaranteed :: Party -> Party -> Party -> Integer -> Integer -> Timeout ->
                             Timeout -> Contract
 zeroCouponBondGuaranteed issuer investor guarantor notional discount startDate maturityDate =
-   allActions [ Deposit guarantorAcc guarantor (Constant (notional - discount))
-              , Deposit investorAcc investor (Constant notional) ]
+   allActions [ Deposit guarantorAcc guarantor (Constant notional)
+              , Deposit investorAcc investor (Constant (notional - discount)) ]
               startDate
               (When []
                     startDate
-                    (payAll guarantorAcc (Party issuer)
-                            (When [ Case (Deposit guarantorAcc issuer (Constant notional))
+                    (payAll investorAcc (Party issuer)
+                            (When [ Case (Deposit investorAcc issuer (Constant notional))
                                          RedeemAll
                                   ]
                                   maturityDate
-                                  RedeemAll
+                                  (payAll guarantorAcc (Account investorAcc)
+                                          RedeemAll)
                             )
                     )
               )

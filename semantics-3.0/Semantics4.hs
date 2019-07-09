@@ -46,12 +46,15 @@ data Action = Deposit AccountId Party Value
   deriving (Eq,Ord,Show,Read)
 
 data Case = Case Action Contract
+  deriving (Eq,Ord,Show,Read)
 
 data Payee = Account AccountId
            | Party Party
+  deriving (Eq,Ord,Show,Read)
 
 data Contract = RedeemAll
               | Pay AccountId Payee Value Contract
               | If Observation Contract Contract
               | When [Case] Timeout Contract
+  deriving (Eq,Ord,Show,Read)
 

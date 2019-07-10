@@ -42,7 +42,7 @@ type Bound = (Integer, Integer)
 
 data Action = Deposit AccountId Party Value
             | Choice ChoiceId [Bound]
-            | Poll Observation
+            | Notify Observation
   deriving (Eq,Ord,Show,Read)
 
 data Case = Case Action Contract
@@ -52,7 +52,7 @@ data Payee = Account AccountId
            | Party Party
   deriving (Eq,Ord,Show,Read)
 
-data Contract = RedeemAll
+data Contract = RefundAll
               | Pay AccountId Payee Value Contract
               | If Observation Contract Contract
               | When [Case] Timeout Contract

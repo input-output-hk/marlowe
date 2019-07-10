@@ -33,15 +33,15 @@ zeroCouponBondGuaranteed issuer investor guarantor notional discount startDate m
                     startDate
                     (payAll investorAcc (Party issuer)
                             (When [ Case (Deposit investorAcc issuer (Constant notional))
-                                         RedeemAll
+                                         RefundAll
                                   ]
                                   maturityDate
                                   (payAll guarantorAcc (Account investorAcc)
-                                          RedeemAll)
+                                          RefundAll)
                             )
                     )
               )
-              RedeemAll
+              RefundAll
   where guarantorAcc = AccountId 1 guarantor
         investorAcc = AccountId 2 investor
 

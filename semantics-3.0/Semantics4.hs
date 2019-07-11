@@ -20,15 +20,16 @@ data Value = AvailableMoney AccountId
            | AddValue Value Value
            | SubValue Value Value
            | ChoiceValue ChoiceId Value
-           | OracleValue OracleId Value
-           | CurrentSlot
+--           | OracleValue OracleId Value
+--           | SlotIntervalStart
+--           | SlotIntervalEnd
   deriving (Eq,Ord,Show,Read)
 
 data Observation = AndObs Observation Observation
                  | OrObs Observation Observation
                  | NotObs Observation
                  | ChoseSomething ChoiceId
-                 | OracleValueProvided OracleId
+--                 | OracleValueProvided OracleId
                  | ValueGE Value Value
                  | ValueGT Value Value
                  | ValueLT Value Value

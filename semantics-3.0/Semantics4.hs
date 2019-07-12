@@ -343,6 +343,7 @@ type TransactionSignatures = Set Party
 data ProcessError = PEReduceError ReduceError
                   | PEApplyError ApplyError
                   | PEIntervalError IntervalError
+                  | PEUselessTransaction
   deriving (Eq,Ord,Show,Read)
 
 type ProcessWarning = ReduceWarning
@@ -384,7 +385,9 @@ process tra sta c =
          AppliedAll wa ef nsta ncon ->
            let sigs = getSignatures inps in
            let outcomes = getOutcomes ef inps in
-           Processed wa ef sigs outcomes nsta ncon
+           if c == ncon
+           then ProcessError $ PEUselessTransaction
+           else Processed wa ef sigs outcomes nsta ncon
          AAApplyError aperr -> ProcessError $ PEApplyError aperr
          AAReduceError reerr -> ProcessError $ PEReduceError reerr
     IntervalError intErr -> ProcessError $ PEIntervalError intErr 

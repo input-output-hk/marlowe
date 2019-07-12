@@ -1,5 +1,8 @@
 module Semantics4 where
 
+import Data.List (foldl')
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 
@@ -75,14 +78,59 @@ data Contract = RefundAll
 data State = State { account :: Map AccountId Money 
                    , choice :: Map ChoiceId ChosenNum
                    , minSlot :: SlotNumber }
+  deriving (Eq,Ord,Show,Read)
 
 data Environment = Environment { slotInterval :: SlotInterval }
   deriving (Eq,Ord,Show,Read)
 
-data Input = IDeposit AccountId Party Integer 
+data Input = IDeposit AccountId Party Money 
            | IChoice ChoiceId ChosenNum 
            | INotify
   deriving (Eq,Ord,Show,Read)
+
+-- TRANSACTION OUTCOMES
+
+type TransactionOutcomes = M.Map Party Money
+
+emptyOutcome :: TransactionOutcomes
+emptyOutcome = M.empty
+
+isEmptyOutcome :: TransactionOutcomes -> Bool
+isEmptyOutcome trOut = all (== 0) trOut
+
+-- Adds a value to the map of outcomes
+addOutcome :: Party -> Money -> TransactionOutcomes -> TransactionOutcomes
+addOutcome party diffValue trOut = M.insert party newValue trOut
+  where newValue = case M.lookup party trOut of
+                     Just value -> value + diffValue
+                     Nothing -> diffValue
+
+-- Add two transaction outcomes together
+combineOutcomes :: TransactionOutcomes -> TransactionOutcomes -> TransactionOutcomes
+combineOutcomes = M.unionWith (+)
+
+-- INTERVALS
+
+-- Processing of slot interval
+data IntervalError = InvalidInterval SlotInterval 
+                   | IntervalInPastError SlotNumber SlotInterval
+  deriving (Eq,Ord,Show,Read)
+
+data IntervalResult = IntervalTrimmed Environment State
+                    | IntervalError IntervalError
+  deriving (Eq,Ord,Show,Read)
+
+fixInterval :: SlotInterval -> State -> IntervalResult
+fixInterval i@(l, h) st@(State { minSlot = sn })
+  | h < l = IntervalError $ InvalidInterval i
+  | h < sn = IntervalError $ IntervalInPastError sn i
+  | otherwise = IntervalTrimmed env nst
+  where nl = max l sn -- nl is both new "l" and new "sn" (the lower bound for slotNum)
+        tInt = (nl, h) -- We know h is greater or equal than nl (prove)
+        env = Environment tInt
+        nst = st { minSlot = nl }
+
+-- EVALUATION
 
 -- Evaluate a value
 evalValue :: Environment -> State -> Value -> Integer
@@ -161,19 +209,25 @@ giveMoney accs (Party party) mon = (ReduceNormalPay party mon, accs)
 giveMoney accs (Account accId) mon = (ReduceNoEffect, newAccs)
   where newAccs = addMoneyToAccount accs accId mon
 
+-- REDUCE
+
 data ReduceWarning = ReduceNoWarning
                    | ReduceNonPositivePay AccountId Payee Money 
                    | ReducePartialPay AccountId Payee Money Money 
                                     -- ^ src    ^ dest ^ paid ^ expected
+  deriving (Eq,Ord,Show,Read)
 
 data ReduceEffect = ReduceNoEffect
                   | ReduceNormalPay Party Money 
+  deriving (Eq,Ord,Show,Read)
 
 data ReduceError = ReduceAmbiguousSlotInterval
+  deriving (Eq,Ord,Show,Read)
 
 data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
                   | NotReduced
                   | ReduceError ReduceError
+  deriving (Eq,Ord,Show,Read)
 
 -- Carry a step of the contract with no inputs
 reduce :: Environment -> State -> Contract -> ReduceResult
@@ -208,10 +262,35 @@ reduce env state (When _ timeout c) =
   where startSlot = fst $ slotInterval env
         endSlot = snd $ slotInterval env
 
+-- REDUCE ALL
+
+data ReduceAllResult = ReducedAll [ReduceWarning] [ReduceEffect] State Contract
+                     | ReduceAllError ReduceError
+  deriving (Eq,Ord,Show,Read)
+
+-- Reduce until it cannot be reduced more
+reduceAllAux :: Environment -> State -> Contract
+             -> [ReduceWarning] -> [ReduceEffect] -> ReduceAllResult
+reduceAllAux env sta c wa ef =
+  case reduce env sta c of
+    Reduced twa tef nsta nc ->
+      let nwa = if (twa == ReduceNoWarning) then wa else (twa:wa) in
+      let nef = if (tef == ReduceNoEffect) then ef else (tef:ef) in
+      reduceAllAux env nsta nc nwa nef
+    ReduceError err -> ReduceAllError err
+    NotReduced -> ReducedAll (reverse wa) (reverse ef) sta c
+
+reduceAll :: Environment -> State -> Contract -> ReduceAllResult 
+reduceAll env sta c = reduceAllAux env sta c [] []
+
+-- APPLY
+
 data ApplyError = ApplyNoMatch
+  deriving (Eq,Ord,Show,Read)
 
 data ApplyResult = Applied State Contract
                  | ApplyError ApplyError
+  deriving (Eq,Ord,Show,Read)
 
 -- Apply a single Input to the contract (assumes the contract is reduced)
 applyCases :: Environment -> State -> Input -> [Case] -> ApplyResult
@@ -233,6 +312,81 @@ apply :: Environment -> State -> Input -> Contract -> ApplyResult
 apply env state act (When cases _ _) = applyCases env state act cases
 apply _ _ _ _ = ApplyError ApplyNoMatch
 
--- ToDo: need to trim interval and check is valid (higher than minSlot, and ascendent)
--- ToDo: check IDeposit and IChoice have appropriate signatures
+-- APPLY ALL
+
+data ApplyAllResult = AppliedAll [ReduceWarning] [ReduceEffect] State Contract
+                    | AAApplyError ApplyError
+                    | AAReduceError ReduceError
+  deriving (Eq,Ord,Show,Read)
+
+-- Apply a list of Inputs to the contract
+applyAllAux :: Environment -> State -> Contract -> [Input]
+            -> [ReduceWarning] -> [ReduceEffect] -> ApplyAllResult
+applyAllAux env state c l wa ef =
+  case reduceAll env state c of
+    ReduceAllError raerr -> AAReduceError raerr
+    ReducedAll twa tef tstate tc ->
+      case l of 
+        [] -> AppliedAll (wa ++ twa) (ef ++ tef) tstate tc
+        (h:t) -> case apply env tstate h tc of
+                   Applied nst nc -> applyAllAux env nst nc t (wa ++ twa) (ef ++ tef)
+                   ApplyError aeerr -> AAApplyError aeerr
+
+applyAll :: Environment -> State -> Contract -> [Input] -> ApplyAllResult
+applyAll env state c l = applyAllAux env state c l [] []
+
+-- PROCESS
+
+-- List of signatures needed by a transaction
+type TransactionSignatures = Set Party
+
+data ProcessError = PEReduceError ReduceError
+                  | PEApplyError ApplyError
+                  | PEIntervalError IntervalError
+  deriving (Eq,Ord,Show,Read)
+
+type ProcessWarning = ReduceWarning
+type ProcessEffect = ReduceEffect
+ 
+data ProcessResult = Processed [ProcessWarning]
+                               [ProcessEffect]
+                               TransactionSignatures
+                               TransactionOutcomes
+                               State
+                               Contract
+                   | ProcessError ProcessError
+  deriving (Eq,Ord,Show,Read)
+
+data Transaction = Transaction { interval :: SlotInterval
+                               , inputs :: [Input] } 
+  deriving (Eq,Ord,Show,Read)
+
+-- Extract necessary signatures from transaction inputs
+getSignatures :: [Input] -> TransactionSignatures
+getSignatures = foldl' addSig (S.empty)
+  where addSig acc (IDeposit _ p _) = S.insert p acc
+        addSig acc (IChoice (ChoiceId _ p) _) = S.insert p acc
+        addSig acc INotify = acc
+
+-- Extract total outcomes from transaction inputs and outputs
+getOutcomes :: [ReduceEffect] -> [Input] -> TransactionOutcomes
+getOutcomes eff inp =
+  foldl' (\acc (p, m) -> addOutcome p m acc) emptyOutcome (incomes ++ outcomes)
+  where incomes = [(p, m) | ReduceNormalPay p m <- eff] 
+        outcomes = [(p, m) | IDeposit _ p m <- inp]
+
+-- Try to process a transaction
+process :: Transaction -> State -> Contract -> ProcessResult 
+process tra sta c =
+  case fixInterval (interval tra) sta of
+    IntervalTrimmed env fixSta ->
+      case applyAll env fixSta c inps of
+         AppliedAll wa ef nsta ncon ->
+           let sigs = getSignatures inps in
+           let outcomes = getOutcomes ef inps in
+           Processed wa ef sigs outcomes nsta ncon
+         AAApplyError aperr -> ProcessError $ PEApplyError aperr
+         AAReduceError reerr -> ProcessError $ PEReduceError reerr
+    IntervalError intErr -> ProcessError $ PEIntervalError intErr 
+  where inps = inputs tra 
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module Semantics4 where
 
 import           Data.List       (foldl')
@@ -24,7 +25,7 @@ accountOwner (AccountId _ party) = party
 
 data ChoiceId = ChoiceId NumChoice Party
   deriving (Eq,Ord,Show,Read)
-data OracleId = OracleId PubKey
+newtype OracleId = OracleId PubKey
   deriving (Eq,Ord,Show,Read)
 
 data Value = AvailableMoney AccountId
@@ -122,11 +123,11 @@ data IntervalResult = IntervalTrimmed Environment State
   deriving (Eq,Ord,Show,Read)
 
 fixInterval :: SlotInterval -> State -> IntervalResult
-fixInterval i@(l, h) st@(State { minSlot = sn }) | h < l = IntervalError $ InvalidInterval i
-                                                 | h < sn = IntervalError $ IntervalInPastError sn i
-                                                 | otherwise = IntervalTrimmed env nst
+fixInterval i@(l, h) st@State{minSlot} | h < l = IntervalError $ InvalidInterval i
+                                       | h < minSlot = IntervalError $ IntervalInPastError minSlot i
+                                       | otherwise = IntervalTrimmed env nst
   where
-    nl = max l sn -- nl is both new "l" and new "sn" (the lower bound for slotNum)
+    nl = max l minSlot -- nl is both new "l" and new "minSlot" (the lower bound for slotNum)
     tInt = (nl, h) -- We know h is greater or equal than nl (prove)
     env = Environment tInt
     nst = st { minSlot = nl }
@@ -144,7 +145,7 @@ evalValue env state value = case value of
     ChoiceValue choId defVal -> M.findWithDefault (go defVal) choId $ choice state
     SlotIntervalStart        -> fst $ slotInterval env
     SlotIntervalEnd          -> snd $ slotInterval env
-    where go = evalValue env state
+  where go = evalValue env state
 
 -- Evaluate an observation
 evalObservation :: Environment -> State -> Observation -> Bool
@@ -242,12 +243,11 @@ reduce env state (Pay accId payee val nc) = if mon <= 0
     noMonWarn = if paidMon < mon then ReducePartialPay accId payee paidMon mon else ReduceNoWarning
     (payEffect, finalAccs) = giveMoney newAccs payee paidMon
 reduce env state (If obs cont1 cont2) = Reduced ReduceNoWarning ReduceNoEffect state nc
-    where nc = if evalObservation env state obs then cont1 else cont2
-reduce env state (When _ timeout c) = if endSlot < timeout
-    then NotReduced
-    else if startSlot >= timeout
-        then Reduced ReduceNoWarning ReduceNoEffect state c
-        else ReduceError ReduceAmbiguousSlotInterval
+  where nc = if evalObservation env state obs then cont1 else cont2
+reduce env state (When _ timeout c)
+    | endSlot < timeout = NotReduced
+    | startSlot >= timeout = Reduced ReduceNoWarning ReduceNoEffect state c
+    | otherwise = ReduceError ReduceAmbiguousSlotInterval
   where
     startSlot = fst $ slotInterval env
     endSlot = snd $ slotInterval env
@@ -263,8 +263,8 @@ reduceAllAux
     :: Environment -> State -> Contract -> [ReduceWarning] -> [ReduceEffect] -> ReduceAllResult
 reduceAllAux env sta c wa ef = case reduce env sta c of
     Reduced twa tef nsta nc ->
-        let nwa = if (twa == ReduceNoWarning) then wa else (twa : wa)
-        in  let nef = if (tef == ReduceNoEffect) then ef else (tef : ef)
+        let nwa = if twa == ReduceNoWarning then wa else twa : wa
+        in  let nef = if tef == ReduceNoEffect then ef else tef : ef
             in  reduceAllAux env nsta nc nwa nef
     ReduceError err -> ReduceAllError err
     NotReduced -> ReducedAll (reverse wa) (reverse ef) sta c
@@ -358,7 +358,7 @@ data Transaction = Transaction { interval :: SlotInterval
 
 -- Extract necessary signatures from transaction inputs
 getSignatures :: [Input] -> TransactionSignatures
-getSignatures = foldl' addSig (S.empty)
+getSignatures = foldl' addSig S.empty
   where
     addSig acc (IDeposit _ p _)           = S.insert p acc
     addSig acc (IChoice (ChoiceId _ p) _) = S.insert p acc
@@ -379,10 +379,10 @@ process tra sta c = case fixInterval (interval tra) sta of
             let sigs = getSignatures inps
             in  let outcomes = getOutcomes ef inps
                 in  if c == ncon
-                        then ProcessError $ PEUselessTransaction
-                        else Processed wa ef sigs outcomes nsta ncon
+                    then ProcessError PEUselessTransaction
+                    else Processed wa ef sigs outcomes nsta ncon
         AAApplyError aperr -> ProcessError $ PEApplyError aperr
         AAReduceError reerr -> ProcessError $ PEReduceError reerr
     IntervalError intErr -> ProcessError $ PEIntervalError intErr
-    where inps = inputs tra
+  where inps = inputs tra
 

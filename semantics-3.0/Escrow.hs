@@ -42,17 +42,17 @@ whenNOutOfMChooseAux :: [(Integer, ChosenNum, Contract)] -> Integer ->
                      -> Contract
 whenNOutOfMChooseAux [] _ _ _ defCont = defCont
 whenNOutOfMChooseAux ops n partiesLeft timeout defCont
-  | winnerVotes >= n = cont
+  | winnerVotes >= n = winnerCont
   | null cases = defCont
   | otherwise = When cases timeout defCont
   where
-    (winnerVotes, _, cont) = maximumBy (comparing (\(x, _, _) -> x)) ops
+    (winnerVotes, _, winnerCont) = maximumBy (comparing (\(x, _, _) -> x)) ops
     votesLeft = genericLength partiesLeft
-    cases = [ Case (Choice (ChoiceId 1 p) [(choice, choice)]) $
-                   whenNOutOfMChooseAux (bo ++ (votes + 1, choice, cont) : bc)
+    cases = [ Case (Choice (ChoiceId 1 p) [(cchoice, cchoice)]) $
+                   whenNOutOfMChooseAux (bo ++ (votes + 1, cchoice, cont) : bc)
                                         n (bp ++ ap) timeout defCont
              | (bp, p, ap) <- splitEverywhere partiesLeft
-             , (bo, (votes, choice, cont), bc) <- splitEverywhere ops
+             , (bo, (votes, cchoice, cont), bc) <- splitEverywhere ops
              , votesLeft + votes >= n ]
 
 

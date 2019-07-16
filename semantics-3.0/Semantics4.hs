@@ -386,3 +386,14 @@ process tra sta c = case fixInterval (interval tra) sta of
     IntervalError intErr -> ProcessError $ PEIntervalError intErr
   where inps = inputs tra
 
+-- Calculates an upper bound for the maximum lifespan of a contract
+contractLifespan :: Contract -> Integer
+contractLifespan contract = case contract of
+    RefundAll -> 0
+    Pay _ _ _ cont -> contractLifespan cont
+    -- TODO simplify observation and check for always true/false cases
+    If _ contract1 contract2 ->
+        max (contractLifespan contract1) (contractLifespan contract2)
+    When cases timeout subContract -> let
+        contractsLifespans = fmap (\(Case _ cont) -> contractLifespan cont) cases
+        in maximum (timeout : contractLifespan subContract : contractsLifespans)

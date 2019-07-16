@@ -12,8 +12,8 @@ import           Test.Tasty.QuickCheck
 import           Test.Tasty.HUnit
 import           Debug.Trace
 
-import           Semantics2
+import           Semantics4
+import           ZCBG2
 
 main :: IO ()
-main = do
-    print $ contractLifespan escrow
+main = print $ contractLifespan $ zeroCouponBondGuaranteed 1 2 3 1000 200 10 20

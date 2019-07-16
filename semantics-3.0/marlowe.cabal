@@ -24,5 +24,8 @@ executable marlowe
                         Semantics
                         Semantics2
                         Semantics3
+                        Semantics4
+                        ZCBG
+                        ZCBG2
     hs-source-dirs:     .
     main-is:            Main.hs

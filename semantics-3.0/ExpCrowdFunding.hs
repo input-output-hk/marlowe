@@ -3,11 +3,11 @@ module ExpCrowdFunding where
 import           Semantics4
 
 contract :: Contract
-contract = crowdfunding 1000 10000 100 1 [2..5]
+contract = crowdfunding 1000 10000 100
 
 -- Limited crowdfunding example using embedding
-crowdfunding :: Money -> Money -> Timeout -> Party -> [Party] -> Contract
-crowdfunding target maxContrib tim p lp =
+crowdfunding :: Money -> Money -> Timeout -> Contract
+crowdfunding target maxContrib tim =
   multiState [(2,False),(3,False),(4,False),(5,False)] cont tim cont
   where cont = If (ValueGE (AddValue (AddValue (AvailableMoney (AccountId 1 2))
                                                (AvailableMoney (AccountId 1 3)))
@@ -20,7 +20,7 @@ crowdfunding target maxContrib tim p lp =
                                  (Pay (AccountId 1 5) (Account creatorAcc) (AvailableMoney (AccountId 1 5))
                                       RefundAll))))
                   RefundAll
-        creatorAcc = AccountId 1 p
+        creatorAcc = AccountId 1 1
 
 -- Defines a state machine for each contributor:
 -- (party, False) - Has not chosen the amount to contribute

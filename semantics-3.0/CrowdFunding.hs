@@ -1,4 +1,4 @@
-module Escrow where
+module CrowdFunding where
 
 import           Semantics4
 

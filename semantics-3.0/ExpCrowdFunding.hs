@@ -3,11 +3,11 @@ module ExpCrowdFunding where
 import           Semantics4
 
 contract :: Contract
-contract = crowdfunding 1000 10000 100
+contract = crowdfunding 1000 100
 
 -- Limited crowdfunding example using embedding
-crowdfunding :: Money -> Money -> Timeout -> Contract
-crowdfunding target maxContrib tim =
+crowdfunding :: Money -> Timeout -> Contract
+crowdfunding target tim =
   multiState [(2,False),(3,False),(4,False),(5,False)] cont tim cont
   where cont = If (ValueGE (AddValue (AddValue (AvailableMoney (AccountId 1 2))
                                                (AvailableMoney (AccountId 1 3)))

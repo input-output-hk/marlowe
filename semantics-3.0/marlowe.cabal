@@ -15,6 +15,7 @@ executable marlowe
                         containers,
                         sbv,
                         glpk-hs,
+                        time,
                         QuickCheck,
                         tasty,
                         tasty-hunit,
@@ -25,6 +26,8 @@ executable marlowe
                         Semantics2
                         Semantics3
                         Semantics4
+                        ActusContracts
+                        ACTUS
                         ZCBG
                         ZCBG2
     hs-source-dirs:     .

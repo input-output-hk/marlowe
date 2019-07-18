@@ -23,7 +23,9 @@ main = do
     now <- getCurrentTime
     let td = utctDay now
     let couponBondFor6Month12PercentConfig = cb td (addGregorianMonthsClip 6 td) 1000 0.12
+    let zcbConfig = zcb td (addGregorianMonthsClip 6 td) 1000 (-150)
     print $ genCouponBondContract 1 2 couponBondFor6Month12PercentConfig
+    print $ genCouponBondContract 1 2 zcbConfig
 
 acc = AccountId 1 1
 investor = Party 1
@@ -83,6 +85,21 @@ couponBondFor6Month12Percent = When
                     )
                 ]
                 1566086389
+                RefundAll
+            )
+        )
+    ]
+    1563407989
+    RefundAll
+
+zeroCouponBond = When [ Case
+        (Deposit acc 1 (Constant 850))
+        (Pay acc (Party 2) (Constant 850)
+            (When
+                [ Case (Deposit acc 2 (Constant 1000))
+                        (Pay acc (Party 1) (Constant 1000) RefundAll)
+                ]
+                1579305589
                 RefundAll
             )
         )

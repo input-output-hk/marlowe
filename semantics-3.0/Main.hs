@@ -24,8 +24,8 @@ main = do
     let td = utctDay now
     let couponBondFor6Month12PercentConfig = cb td (addGregorianMonthsClip 6 td) 1000 0.12
     let zcbConfig = zcb td (addGregorianMonthsClip 6 td) 1000 (-150)
-    print $ genCouponBondContract 1 2 couponBondFor6Month12PercentConfig
-    print $ genCouponBondContract 1 2 zcbConfig
+    print $ genPrincialAtMaturnityContract 1 2 couponBondFor6Month12PercentConfig
+    print $ genPrincialAtMaturnityContract 1 2 zcbConfig
 
 acc = AccountId 1 1
 investor = Party 1

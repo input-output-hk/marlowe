@@ -163,6 +163,7 @@ emptySchedule = Schedule
 singleEvent :: Day -> Schedule
 singleEvent t = emptySchedule { scheduleStart = Just t }
 
+
 addTimePeriod :: Day -> TimePeriod -> Day
 addTimePeriod d period = case period of
     Day      -> addDays 1 d
@@ -232,6 +233,7 @@ data State = State
     , led :: LastEventDate        -- Last Event Date. The date of the most recent ContractEvent
     } deriving (Show)
 
+
 pamStateInit :: Day -> Day -> State
 pamStateInit t0 maturityDate = State
     { tmd = maturityDate
@@ -264,6 +266,8 @@ data ContractConfig = ContractConfig
              , feeRate  :: FeeRate
              }
 
+
+emptyContractConfig :: Day -> ContractConfig
 emptyContractConfig d = ContractConfig
     { initialExchangeDate = d
     , maturityDate = Nothing
@@ -279,8 +283,9 @@ emptyContractConfig d = ContractConfig
     , feeRate  = 0.0
     }
 
-contractSchedule :: ContractConfig -> State -> Map ContractEvent Schedule
-contractSchedule ContractConfig{..} State{..} =
+
+pamContractSchedule :: ContractConfig -> State -> Map ContractEvent Schedule
+pamContractSchedule ContractConfig{..} State{..} =
     Map.fromList
         [ (IED, singleEvent initialExchangeDate)
         -- , (PR,  singleEvent tmd)
@@ -307,6 +312,7 @@ contractSchedule ContractConfig{..} State{..} =
                 , scheduleEnd = Just tmd
                 }) start
 
+
 eventScheduleByDay :: Map ContractEvent Schedule -> Map Day [ContractEvent]
 eventScheduleByDay m = do
     let eventDays = fmap schedule m
@@ -314,51 +320,145 @@ eventScheduleByDay m = do
     Map.fromListWith (++) (reverse pairs)
 
 
-pamPayoff :: ContractRole
+pamPayoffAndStateTransition :: ContractRole
     -> ContractConfig
-    -> Day
     -> ContractEvent
+    -> Day
     -> State
-    -> Money
-pamPayoff role ContractConfig{..} currTime event State{..} =
-  case event of
-    IED     ->  -- D(Prft− )R(CNTRL)(−1)(NT + PDIED)
-                dperf * rsign * (-1) * (notional + premiumDiscountAtIED)
-    IPCI    -> 0
-    IP      -> traceShow (yearFrac led currTime) $ dperf * round (isc * fromIntegral (nac + yearNrtNvl))
-                -- D(Prft− )Isct− (Nact− + Y (Ledt− , t)Nrtt− Nvlt− )
-    FP      ->  let c = fromIntegral (dperf * rsign) * feeRate
-                in case feeBasis of
+    -> (Money, State)
+pamPayoffAndStateTransition role ContractConfig{..} event currTime state@State{..} = case event of
+    IED ->  let
+        payoff   = dperf * rsign * (-1) * (notional + premiumDiscountAtIED)
+        newState = state { nvl = rsign * notional
+                        , nrt = nominalInterestRate
+                        , nac = yearNrtNvl
+                        , led = currTime
+                        }
+        in (payoff, newState)
+    IPCI -> let
+        payoff = 0
+        newState = state { nvl = nvl + nac + yearNrtNvl
+                         , nac = 0
+                         , fac = newFac
+                         , led = currTime
+                         }
+        in (payoff, newState)
+
+    IP  -> let
+        payoff = dperf * round (isc * fromIntegral (nac + yearNrtNvl))
+        newState = state { nac = 0
+                         , fac = newFac
+                         , led = currTime
+                         }
+        in (payoff, newState)
+    FP  -> let
+        c = fromIntegral (dperf * rsign) * feeRate
+        payoff = case feeBasis of
                     AbsoluteValue -> round c
                     NotionalOfUnderlying -> round (c * yearNvl) + fac
-
-    PR      ->  -- D(Prft− )Nsct− Nvlt− Prf
-                round (fromIntegral (dperf * nvl) * nsc)
-    PI      -> undefined
-    PRF     -> undefined
-    PY      -> 0 -- todo
-    PP      -> 0 -- D(Prft− )Orf (OPMO, t) -- todo
-    CD      -> 0
-    RRF     -> 0
-    RR      -> 0
-    DV      -> undefined
-    PRD     -> dperf * rsign * (-1) * (priceAtPurchaseDate + nac + yearNrtNvl)
-                -- D(Prft− )R(CNTRL)(−1)(PPRD + Nact− +Y (Ledt− , t)Nrtt− Nvlt− )
-    MR      -> undefined
-    TD      -> dperf * rsign * (priceAtTerminationDate + nac + yearNrtNvl)
-                -- D(Prft− )R(CNTRL)(PTD + Nact− + Y (Ledt− , t)Nrtt− Nvlt− )
-    SC      -> 0
-    IPCB    -> undefined
-    XD      -> undefined
-    STD     -> undefined
-    MD      -> undefined
-    AD      -> 0
+        newState = state { nac = nac + yearNrtNvl
+                         , fac = 0
+                         , led = currTime
+                         }
+        in (payoff, newState)
+    PR  -> let
+        payoff = round (fromIntegral (dperf * nvl) * nsc)
+        newState = state { nvl = 0
+                         , nrt = 0
+                         , led = currTime
+                         }
+        in (payoff, newState)
+    PI  -> undefined
+    PRF -> undefined
+    PY  -> let
+        payoff = 0 -- todo
+        newState = state { nac = nac + yearNrtNvl
+                         , fac = newFac
+                         , led = currTime
+                         }
+        in (payoff, newState)
+    PP  -> let
+        payoff = 0  -- todo
+        newState = state { nac = nac + yearNrtNvl
+                         , fac = newFac
+                         , led = currTime
+                         }
+        in (payoff, newState)
+    CD  -> let
+        payoff = 0
+        newState = state { nac = nac + yearNrtNvl
+                         , fac = newFac
+                         , led = currTime
+                         }
+        in (payoff, newState)
+    RRF -> let
+        payoff = 0
+        newState = state { nac = nac + yearNrtNvl
+                         , fac = newFac
+                         , prf = DF
+                         , led = currTime
+                         }
+        in (payoff, newState)
+    RR  -> let
+        payoff = 0
+        newState = state { nac = nac + yearNrtNvl
+                         , fac = newFac
+                         , nrt = nrt -- todo
+                         , led = currTime
+                         }
+        in (payoff, newState)
+    DV  -> undefined
+    PRD -> let
+        payoff = dperf * rsign * (-1) * (priceAtPurchaseDate + nac + yearNrtNvl)
+        newState = state { nac = nac + yearNrtNvl
+                            , fac = newFac
+                            , led = currTime
+                            }
+        in (payoff, newState)
+    MR  -> undefined
+    TD  -> let
+        payoff = dperf * rsign * (priceAtTerminationDate + nac + yearNrtNvl)
+        newState = state { nvl = 0
+                         , nac = 0
+                         , fac = 0
+                         , nrt = 0
+                         , led = currTime
+                         }
+        in (payoff, newState)
+    SC  -> let
+        payoff = 0
+        newState = state { nac = nac + yearNrtNvl
+                         , fac = newFac
+                         , nsc = nsc -- todo
+                         , isc = isc -- todo
+                         , led = currTime
+                         }
+        in (payoff, newState)
+    IPCB -> undefined
+    XD   -> undefined
+    STD  -> undefined
+    MD   -> (nvl, state)
+    AD   -> let
+        payoff = 0
+        newState = state { nac = nac + yearNrtNvl, led = currTime }
+        in (payoff, newState)
   where dperf = contractDefaultConvention prf
         rsign = contractRoleSign role
-        yearFrac a b = yearFractionConvention a b
-        yearNvl = yearFrac led currTime * fromIntegral nvl
+        yearNvl = yearFractionConvention led currTime * fromIntegral nvl
         yearNrtNvl = round (yearNvl * nrt)
+        newFac = case feeBasis of
+            AbsoluteValue -> round feeRate -- todo
+            NotionalOfUnderlying -> fac + round (yearNvl * feeRate)
 
+
+pamPayoff :: ContractRole
+    -> ContractConfig
+    -> ContractEvent
+    -> Day
+    -> State
+    -> Money
+pamPayoff role conf event currTime state =
+    fst $ pamPayoffAndStateTransition role conf event currTime state
 
 
 pamStateTransition :: ContractRole
@@ -367,92 +467,13 @@ pamStateTransition :: ContractRole
     -> Day
     -> State
     -> State
-pamStateTransition role ContractConfig{..} event currTime state@State{..} = case event of
-    IED     -> state { nvl = rsign * notional
-                     , nrt = nominalInterestRate
-                     , nac = yearNrtNvl
-                     , led = currTime
-                     }
-    IPCI    -> state { nvl = nvl + nac + yearNrtNvl
-                     , nac = 0
-                     , fac = newFac
-                     , led = currTime
-                     }
-    IP      -> state { nac = 0
-                     , fac = newFac
-                     , led = currTime
-                     }
-    FP      -> state { nac = nac + yearNrtNvl
-                     , fac = 0
-                     , led = currTime
-                     }
-    PR      -> state { nvl = 0
-                     , nrt = 0
-                     , led = currTime
-                     }
-    PI      -> undefined
-    PRF     -> undefined
-    PY      -> state { nac = nac + yearNrtNvl
-                     , fac = newFac
-                     , led = currTime
-                     }
-    PP      -> state { nac = nac + yearNrtNvl
-                     , fac = newFac
-                     , led = currTime
-                     }
-    CD      -> state { nac = nac + yearNrtNvl
-                     , fac = newFac
-                     , led = currTime
-                     }
-    RRF     -> state { nac = nac + yearNrtNvl
-                     , fac = newFac
-                     , prf = DF
-                     , led = currTime
-                     }
-    RR      -> state { nac = nac + yearNrtNvl
-                     , fac = newFac
-                     , nrt = nrt -- todo
-                     , led = currTime
-                     }
-    DV      -> undefined
-    PRD     -> state { nac = nac + yearNrtNvl
-                     , fac = newFac
-                     , led = currTime
-                     }
-    MR      -> undefined
-    TD      -> state { nvl = 0
-                     , nac = 0
-                     , fac = 0
-                     , nrt = 0
-                     , led = currTime
-                     }
-    SC      -> state { nac = nac + yearNrtNvl
-                     , fac = newFac
-                     , nsc = nsc -- todo
-                     , isc = isc -- todo
-                     , led = currTime
-                     }
-    IPCB    -> undefined
-    XD      -> undefined
-    STD     -> undefined
-    MD      -> undefined
-    AD      -> state { nac = nac + yearNrtNvl
-                     , led = currTime
-                     }
-                -- Nact+ = Nact− + Y (Ledt−1, t)Nrtt− Nvlt−; Ledt+ = t
-  where dperf = contractDefaultConvention prf
-        rsign = contractRoleSign role
-        yearFrac a b = yearFractionConvention a b
-        yearNvl = yearFrac led currTime * fromIntegral nvl
-        yearNrtNvl = round (yearNvl * nrt)
-        newFac = case feeBasis of
-            AbsoluteValue -> round feeRate -- todo
-            NotionalOfUnderlying -> fac + round (yearNvl * feeRate)
-
--- pamSchedule =
+pamStateTransition role conf event currTime state =
+    snd $ pamPayoffAndStateTransition role conf event currTime state
 
 
+cardanoEpochStart :: Integer
 cardanoEpochStart = 1506203091
+
 
 dayToSlot :: Day -> Integer
 dayToSlot d = let

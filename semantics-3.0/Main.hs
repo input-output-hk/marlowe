@@ -22,53 +22,70 @@ main = do
     print $ contractLifespan $ zeroCouponBondGuaranteed 1 2 3 1000 200 10 20
     now <- getCurrentTime
     let td = utctDay now
-    putStrLn $ show $ genCouponBondContract 1 2 (cb td (addGregorianMonthsClip 4 td) 1000 0.05 )
+    let couponBondFor6Month12PercentConfig = cb td (addGregorianMonthsClip 6 td) 1000 0.12
+    print $ genCouponBondContract 1 2 couponBondFor6Month12PercentConfig
 
-account = (AccountId 1 1)
-couponBond1 = When
+acc = AccountId 1 1
+investor = Party 1
+issuer = Party 2
+couponBondFor6Month12Percent = When
     [ Case
-          (Deposit account 1 (Constant 1000))
-          (Pay
-              account
-              (Party 2)
-              (AvailableMoney account)
-              (When
-                  [ Case
-                        (Deposit account 2 (Constant 20))
-                        (Pay
-                            account
-                            (Party 1)
-                            (AvailableMoney account)
-                            (When
-                                [ Case
-                                      (Deposit account 2 (Constant 20))
-                                      (Pay
-                                          account
-                                          (Party 1)
-                                          (AvailableMoney account)
-                                          (When
-                                              [ Case
-                                                    (Deposit account 2 (Constant 1020))
-                                                    (Pay account
-                                                         (Party 1)
-                                                         (AvailableMoney account)
-                                                         RefundAll
-                                                    )
-                                              ]
-                                              1574035189
-                                              RefundAll
-                                          )
-                                      )
-                                ]
-                                1571356789
-                                RefundAll
-                            )
+        (Deposit acc 1 (Constant 1000))
+        (Pay acc issuer (Constant 1000)
+            (When
+                [ Case
+                    (Deposit acc 2 (Constant 10))
+                    (Pay acc investor (Constant 10)
+                        (When
+                            [ Case
+                                (Deposit acc 2 (Constant 10))
+                                (Pay acc investor (Constant 10)
+                                    (When
+                                        [ Case
+                                            (Deposit acc 2 (Constant 10))
+                                            (Pay acc investor (Constant 10)
+                                                (When
+                                                    [ Case
+                                                        (Deposit acc 2 (Constant 10))
+                                                        (Pay acc investor (Constant 10)
+                                                            (When
+                                                                [ Case
+                                                                    (Deposit acc 2 (Constant 10))
+                                                                    (Pay acc investor (Constant 10)
+                                                                        (When
+                                                                            [ Case
+                                                                                (Deposit acc 2 (Constant 1010))
+                                                                                (Pay acc investor (Constant 1010) RefundAll)
+                                                                            ]
+                                                                            1579305589
+                                                                            RefundAll
+                                                                        )
+                                                                    )
+                                                                ]
+                                                                1576627189
+                                                                RefundAll
+                                                            )
+                                                        )
+                                                    ]
+                                                    1574035189
+                                                    RefundAll
+                                                )
+                                            )
+                                        ]
+                                        1571356789
+                                        RefundAll
+                                    )
+                                )
+                            ]
+                            1568764789
+                            RefundAll
                         )
-                  ]
-                  1568764789
-                  RefundAll
-              )
-          )
+                    )
+                ]
+                1566086389
+                RefundAll
+            )
+        )
     ]
     1563407989
     RefundAll

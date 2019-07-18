@@ -184,7 +184,7 @@ schedule s = case s of
             (Cycle n timePeriod stub) = c
             times = List.unfoldr (\(d, i) ->
                 let r = addTimePeriod d timePeriod
-                in if i <= n && r <= tmax then Just (r, (r, i + 1)) else Nothing) (t, 1)
+                in if i <= n && d <= tmax then Just (d, (r, i + 1)) else Nothing) (t, 1)
             -- times = scanl (\d i -> timePeriodToAsTimeout d timePeriod) t [1..n]
             -- todo stubs
             in times
@@ -283,7 +283,8 @@ contractSchedule :: ContractConfig -> State -> Map ContractEvent Schedule
 contractSchedule ContractConfig{..} State{..} =
     Map.fromList
         [ (IED, singleEvent initialExchangeDate)
-        , (PR,  singleEvent tmd)
+        -- , (PR,  singleEvent tmd)
+        , (PR,  emptySchedule)
         , (PP,  emptySchedule)
         , (PY,  emptySchedule)
         , (FP,  emptySchedule)
@@ -368,8 +369,8 @@ pamStateTransition :: ContractRole
     -> State
 pamStateTransition role ContractConfig{..} event currTime state@State{..} = case event of
     IED     -> state { nvl = rsign * notional
-                     , nrt = 0 -- todo
-                     , nac = 0 -- todo
+                     , nrt = nominalInterestRate
+                     , nac = yearNrtNvl
                      , led = currTime
                      }
     IPCI    -> state { nvl = nvl + nac + yearNrtNvl

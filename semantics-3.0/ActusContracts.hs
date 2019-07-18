@@ -27,12 +27,14 @@ cb ied md notional rate = (emptyContractConfig ied)
     { maturityDate = Just md
     , notional = notional
     , nominalInterestRate = rate
-    , interestPaymentCycle = Just $ Cycle 3 Month LongLastStub
+    , interestPaymentCycle = Just $ Cycle 6 Month LongLastStub
     , premiumDiscountAtIED = 0 }
 
 
 genCouponBondContract :: Party -> Party -> ContractConfig -> Contract
-genCouponBondContract investor issuer config@ContractConfig{..} = foldr generator RefundAll sch
+genCouponBondContract investor issuer config@ContractConfig{..} = let
+    (f, _) = foldl generator (id, state) sch
+    in f RefundAll
   where
     acc = AccountId 1 investor
     maturityDay = fromJust maturityDate
@@ -42,21 +44,22 @@ genCouponBondContract investor issuer config@ContractConfig{..} = foldr generato
     cs = contractSchedule config state
     schedule = eventScheduleByDay $ traceShow cs cs
     startDate = dayToSlot initialExchangeDate
-    sch = Map.toList schedule
+    sch = traceShow schedule $ Map.toList schedule
 
-    genEventAmount day event = case event of
-        IED -> pamPayoff RPA config day IED state
-        IP  -> 20 -- pamPayoff RPA config day IP state
-        PR  -> pamPayoff RPA config day PR state
-        MD  -> 0
-        _ -> error $ "Unexpected " ++ (show event)
+    genEventAmount state day event = case event of
+        IED -> (pamPayoff RPA config day IED state, pamStateTransition RPA config event day state)
+        IP  -> (pamPayoff RPA config day IP state,  pamStateTransition RPA config event day state)
+        PR  -> (pamPayoff RPA config day PR state,  pamStateTransition RPA config event day state)
+        MD  -> (notional, state)
+        _ -> error $ "Unexpected " ++ show event
 
-
-    generator (day, events) contract =
-        let daysum = sum $ fmap (genEventAmount day) events
+    generator (f, state) (day, events) =
+        let (daysum, newState) = foldl
+                (\(am, st) ev -> let (am', st') = genEventAmount st day ev in (am + am', st'))
+                (0, state) events
             from = if daysum <= 0 then investor else issuer
             to   = if daysum <= 0 then issuer else investor
             amount = abs daysum
-        in When [Case (Deposit acc from $ Constant amount)
-                    (Pay acc (Party to) (Constant acc) contract)]
-                (dayToSlot day) RefundAll
+        in (\contract -> f $ When [Case (Deposit acc from $ Constant amount)
+                    (Pay acc (Party to) (Constant amount) contract)]
+                (dayToSlot day) RefundAll, newState)

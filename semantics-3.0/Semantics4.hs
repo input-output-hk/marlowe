@@ -16,7 +16,6 @@ type NumAccount = Integer
 type Timeout = SlotNumber
 type Money = Integer
 type ChosenNum = Integer
-type ValueId = Integer
 
 data AccountId = AccountId NumAccount Party
   deriving (Eq,Ord,Show,Read)
@@ -27,6 +26,8 @@ accountOwner (AccountId _ party) = party
 data ChoiceId = ChoiceId NumChoice Party
   deriving (Eq,Ord,Show,Read)
 newtype OracleId = OracleId PubKey
+  deriving (Eq,Ord,Show,Read)
+newtype ValueId = ValueId Integer
   deriving (Eq,Ord,Show,Read)
 
 data Value = AvailableMoney AccountId

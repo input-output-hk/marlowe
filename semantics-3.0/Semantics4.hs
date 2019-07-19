@@ -16,6 +16,7 @@ type NumAccount = Integer
 type Timeout = SlotNumber
 type Money = Integer
 type ChosenNum = Integer
+type ValueId = Integer
 
 data AccountId = AccountId NumAccount Party
   deriving (Eq,Ord,Show,Read)
@@ -36,6 +37,7 @@ data Value = AvailableMoney AccountId
            | ChoiceValue ChoiceId Value
            | SlotIntervalStart
            | SlotIntervalEnd
+           | StoredValue ValueId
 --           | OracleValue OracleId Value
   deriving (Eq,Ord,Show,Read)
 
@@ -74,10 +76,12 @@ data Contract = RefundAll
               | Pay AccountId Payee Value Contract
               | If Observation Contract Contract
               | When [Case] Timeout Contract
+              | Store ValueId Value Contract
   deriving (Eq,Ord,Show,Read)
 
 data State = State { account :: Map AccountId Money
                    , choice  :: Map ChoiceId ChosenNum
+                   , storedValues :: Map ValueId Integer
                    , minSlot :: SlotNumber }
   deriving (Eq,Ord,Show,Read)
 
@@ -145,6 +149,7 @@ evalValue env state value = case value of
     ChoiceValue choId defVal -> M.findWithDefault (go defVal) choId $ choice state
     SlotIntervalStart        -> fst $ slotInterval env
     SlotIntervalEnd          -> snd $ slotInterval env
+    StoredValue valId        -> M.findWithDefault 0 valId $ storedValues state
   where go = evalValue env state
 
 -- Evaluate an observation
@@ -213,10 +218,13 @@ data ReduceWarning = ReduceNoWarning
                    | ReduceNonPositivePay AccountId Payee Money
                    | ReducePartialPay AccountId Payee Money Money
                                     -- ^ src    ^ dest ^ paid ^ expected
+                   | ReduceShadowing ValueId Integer Integer
+                                     -- oldVal ^  newVal ^
   deriving (Eq,Ord,Show,Read)
 
 data ReduceEffect = ReduceNoEffect
                   | ReduceNormalPay Party Money
+                  | ReduceStoredValue ValueId Integer 
   deriving (Eq,Ord,Show,Read)
 
 data ReduceError = ReduceAmbiguousSlotInterval
@@ -251,6 +259,16 @@ reduce env state (When _ timeout c)
   where
     startSlot = fst $ slotInterval env
     endSlot = snd $ slotInterval env
+reduce env state (Store valId val cont) =
+    Reduced warn (ReduceStoredValue valId evVal) ns cont
+  where
+    sv = storedValues $ state
+    evVal = evalValue env state val
+    nsv = M.insert valId evVal sv
+    ns = state { storedValues = nsv }
+    warn = case M.lookup valId sv of
+             Just oldVal -> ReduceShadowing valId oldVal evVal
+             Nothing -> ReduceNoWarning
 
 -- REDUCE ALL
 
@@ -397,3 +415,5 @@ contractLifespan contract = case contract of
     When cases timeout subContract -> let
         contractsLifespans = fmap (\(Case _ cont) -> contractLifespan cont) cases
         in maximum (timeout : contractLifespan subContract : contractsLifespans)
+    Store _ _ cont -> contractLifespan cont
+

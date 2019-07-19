@@ -3,6 +3,9 @@ module ZCBG2 where
 
 import Semantics4
 
+
+zeroCouponBondGuaranteed :: Party -> Party -> Party -> Integer -> Integer -> Timeout
+                         -> Timeout -> Contract
 zeroCouponBondGuaranteed issuer investor guarantor notional discount startDate maturityDate =
   When [ Case (Deposit guarantorAcc guarantor (Constant notional))
               (When [Case (Deposit investorAcc investor (Constant (notional - discount)))

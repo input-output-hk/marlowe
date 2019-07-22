@@ -56,7 +56,7 @@ data Observation = AndObs Observation Observation
 --                 | OracleValueProvided OracleId
   deriving (Eq,Ord,Show,Read)
 
-type Bound = (SlotNumber, SlotNumber)
+type Bound = (Integer, Integer)
 
 inBounds :: ChosenNum -> [Bound] -> Bool
 inBounds num = any (\(l, u) -> num >= l && num <= u)

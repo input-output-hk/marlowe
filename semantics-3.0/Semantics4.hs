@@ -66,11 +66,11 @@ data Action = Deposit AccountId Party Value
             | Notify Observation
   deriving (Eq,Ord,Show,Read)
 
-data Case = Case Action Contract
-  deriving (Eq,Ord,Show,Read)
-
 data Payee = Account AccountId
            | Party Party
+  deriving (Eq,Ord,Show,Read)
+
+data Case = Case Action Contract
   deriving (Eq,Ord,Show,Read)
 
 data Contract = RefundAll

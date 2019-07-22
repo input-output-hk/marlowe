@@ -139,4 +139,12 @@ theorem different_delete_lookup :
   apply simp
   by (metis different_delete_lookup_aux old.prod.exhaust)
 
+fun unionWith :: "('b \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> ('a \<times> 'b) list \<Rightarrow>
+                  ('a \<times> 'b) list \<Rightarrow> (('a::linorder) \<times> 'b) list" where
+"unionWith f (Cons (x, y) t) l =
+  (case lookup x l of
+     Some z \<Rightarrow> unionWith f t (insert x (f y z) l)
+   | None \<Rightarrow> unionWith f t (insert x y l))" |
+"unionWith f Nil l = l"
+
 end

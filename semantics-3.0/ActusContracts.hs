@@ -34,7 +34,7 @@ cb ied md notional rate = (emptyContractConfig ied)
 genPrincialAtMaturnityContract :: Party -> Party -> ContractConfig -> Contract
 genPrincialAtMaturnityContract investor issuer config@ContractConfig{..} = let
     (f, _) = foldl generator (id, state) schedule
-    in f RefundAll
+    in f Refund
   where
     acc = AccountId 1 investor
     maturityDay = fromJust maturityDate
@@ -56,13 +56,13 @@ genPrincialAtMaturnityContract investor issuer config@ContractConfig{..} = let
             amount = abs daysum
             cont = if amount == 0 then id
                    else \contract -> f $ When [Case (Deposit acc from $ Constant amount)
-                        (Pay acc (Party to) (Constant amount) contract)] (dayToSlot day) RefundAll
+                        (Pay acc (Party to) (Constant amount) contract)] (dayToSlot day) Refund
             in (cont, newState)
 
 genPrincialAtMaturnityGuaranteedContract :: Party -> Party -> Party ->  ContractConfig -> Contract
 genPrincialAtMaturnityGuaranteedContract investor issuer guarantor config@ContractConfig{..} = guaranteed
   where
-    cont = let (f, _) = foldl generator (id, state) schedule in f RefundAll
+    cont = let (f, _) = foldl generator (id, state) schedule in f Refund
     acc = AccountId 1 investor
     gacc = AccountId 2 guarantor
     maturityDay = fromJust maturityDate
@@ -80,7 +80,7 @@ genPrincialAtMaturnityGuaranteedContract investor issuer guarantor config@Contra
         in amount
 
     guaranteed = When [Case (Deposit acc guarantor $ Constant totalPayoff) cont]
-                startDate RefundAll
+                startDate Refund
 
     generator (f, state) (day, events) =
         let (daysum, newState) = foldl
@@ -96,5 +96,5 @@ genPrincialAtMaturnityGuaranteedContract investor issuer guarantor config@Contra
                         (Pay acc (Party to) (Constant amount)
                             (if from == investor then contract
                             else (Pay acc (Party guarantor) (Constant amount) contract)))]
-                        (dayToSlot day) RefundAll
+                        (dayToSlot day) Refund
             in (cont, newState)

@@ -115,7 +115,7 @@ datatype Payee = Account AccountId
                | Party Party
 
 codatatype Case = Case Action Contract
-and Contract = RefundAll
+and Contract = Refund
              | Pay AccountId Payee Value Contract
              | If Observation Contract Contract
              | When "Case list" Timeout Contract

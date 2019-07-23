@@ -57,55 +57,55 @@ couponBondFor6Month12Percent = When
                                                                         (When
                                                                             [ Case
                                                                                 (Deposit acc 2 (Constant 1010))
-                                                                                (Pay acc investor (Constant 1010) RefundAll)
+                                                                                (Pay acc investor (Constant 1010) Refund)
                                                                             ]
                                                                             1579305589
-                                                                            RefundAll
+                                                                            Refund
                                                                         )
                                                                     )
                                                                 ]
                                                                 1576627189
-                                                                RefundAll
+                                                                Refund
                                                             )
                                                         )
                                                     ]
                                                     1574035189
-                                                    RefundAll
+                                                    Refund
                                                 )
                                             )
                                         ]
                                         1571356789
-                                        RefundAll
+                                        Refund
                                     )
                                 )
                             ]
                             1568764789
-                            RefundAll
+                            Refund
                         )
                     )
                 ]
                 1566086389
-                RefundAll
+                Refund
             )
         )
     ]
     1563407989
-    RefundAll
+    Refund
 
 zeroCouponBond = When [ Case
         (Deposit acc 1 (Constant 850))
         (Pay acc (Party 2) (Constant 850)
             (When
                 [ Case (Deposit acc 2 (Constant 1000))
-                        (Pay acc (Party 1) (Constant 1000) RefundAll)
+                        (Pay acc (Party 1) (Constant 1000) Refund)
                 ]
                 1579305589
-                RefundAll
+                Refund
             )
         )
     ]
     1563407989
-    RefundAll
+    Refund
 
 couponBondGuaranteed = When [ Case
     (Deposit (AccountId 1 1) 3 (Constant 1060))
@@ -134,11 +134,11 @@ couponBondGuaranteed = When [ Case
                                                                     (When [Case
                                                                         (Deposit (AccountId 1 1) 2 (Constant 1010))
                                                                             (Pay (AccountId 1 1) (Party 1) (Constant 1010)
-                                                                            (Pay (AccountId 1 1) (Party 3) (Constant 1010) RefundAll))]
-                                                                    1579737589 RefundAll)))]
-                                                        1577059189 RefundAll)))]
-                                            1574467189 RefundAll)))]
-                                1571788789 RefundAll)))] 1569196789 RefundAll)))]
-                    1566518389 RefundAll))]
-        1563839989 RefundAll)]
-    1563839989 RefundAll
+                                                                            (Pay (AccountId 1 1) (Party 3) (Constant 1010) Refund))]
+                                                                    1579737589 Refund)))]
+                                                        1577059189 Refund)))]
+                                            1574467189 Refund)))]
+                                1571788789 Refund)))] 1569196789 Refund)))]
+                    1566518389 Refund))]
+        1563839989 Refund)]
+    1563839989 Refund

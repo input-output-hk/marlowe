@@ -73,7 +73,7 @@ data Payee = Account AccountId
 data Case = Case Action Contract
   deriving (Eq,Ord,Show,Read)
 
-data Contract = RefundAll
+data Contract = Refund
               | Pay AccountId Payee Value Contract
               | If Observation Contract Contract
               | When [Case] Timeout Contract
@@ -237,7 +237,7 @@ data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
 
 -- Carry a step of the contract with no inputs
 reduce :: Environment -> State -> Contract -> ReduceResult
-reduce _ state c@RefundAll = case refundOne $ account state of
+reduce _ state c@Refund = case refundOne $ account state of
     (Just ((party, money), newAccount)) ->
         let newState = state { account = newAccount }
         in  Reduced ReduceNoWarning (ReduceNormalPay party money) newState c
@@ -407,7 +407,7 @@ process tra sta c = case fixInterval (interval tra) sta of
 -- Calculates an upper bound for the maximum lifespan of a contract
 contractLifespan :: Contract -> Integer
 contractLifespan contract = case contract of
-    RefundAll -> 0
+    Refund -> 0
     Pay _ _ _ cont -> contractLifespan cont
     -- TODO simplify observation and check for always true/false cases
     If _ contract1 contract2 ->

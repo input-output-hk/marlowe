@@ -19,14 +19,14 @@ splitEverywhere xs =
 contract :: Contract
 contract = When [Case (Deposit aliceAcc alice price)
                       (whenNOutOfMChoose
-                         [ (refund, RefundAll)
-                         , (pay, Pay aliceAcc (Party bob) price RefundAll)]
+                         [ (refund, Refund)
+                         , (pay, Pay aliceAcc (Party bob) price Refund)]
                          2
                          everybody
                          100
-                         RefundAll)]
+                         Refund)]
                 10
-                RefundAll
+                Refund
 
 -- Continues as specified when N out of M have agreed on a choice,
 -- continue as defCont if N can no longer agree, or on timeout

@@ -24,7 +24,7 @@ main = do
     let td = utctDay now
     let couponBondFor6Month12PercentConfig = cb td (addGregorianMonthsClip 6 td) 1000 0.12
     let zcbConfig = zcb td (addGregorianMonthsClip 6 td) 1000 (-150)
-    print $ genPrincialAtMaturnityContract 1 2 couponBondFor6Month12PercentConfig
+    print $ genPrincialAtMaturnityGuaranteedContract 1 2 3 couponBondFor6Month12PercentConfig
     print $ genPrincialAtMaturnityContract 1 2 zcbConfig
 
 acc = AccountId 1 1
@@ -106,3 +106,39 @@ zeroCouponBond = When [ Case
     ]
     1563407989
     RefundAll
+
+couponBondGuaranteed = When [ Case
+    (Deposit (AccountId 1 1) 3 (Constant 1060))
+    (When [Case (Deposit (AccountId 1 1) 1 (Constant 1000))
+        (Pay (AccountId 1 1) (Party 2) (Constant 1000)
+        (When [Case
+            (Deposit (AccountId 1 1) 2 (Constant 10))
+                (Pay (AccountId 1 1) (Party 1) (Constant 10)
+                (Pay (AccountId 1 1) (Party 3) (Constant 10)
+                    (When [Case
+                        (Deposit (AccountId 1 1) 2 (Constant 10))
+                            (Pay (AccountId 1 1) (Party 1) (Constant 10)
+                            (Pay (AccountId 1 1) (Party 3) (Constant 10)
+                                (When [Case
+                                    (Deposit (AccountId 1 1) 2 (Constant 10))
+                                        (Pay (AccountId 1 1) (Party 1) (Constant 10)
+                                        (Pay (AccountId 1 1) (Party 3) (Constant 10)
+                                            (When [Case
+                                                (Deposit (AccountId 1 1) 2 (Constant 10))
+                                                    (Pay (AccountId 1 1) (Party 1) (Constant 10)
+                                                    (Pay (AccountId 1 1) (Party 3) (Constant 10)
+                                                        (When [Case
+                                                            (Deposit (AccountId 1 1) 2 (Constant 10))
+                                                                (Pay (AccountId 1 1) (Party 1) (Constant 10)
+                                                                (Pay (AccountId 1 1) (Party 3) (Constant 10)
+                                                                    (When [Case
+                                                                        (Deposit (AccountId 1 1) 2 (Constant 1010))
+                                                                            (Pay (AccountId 1 1) (Party 1) (Constant 1010)
+                                                                            (Pay (AccountId 1 1) (Party 3) (Constant 1010) RefundAll))]
+                                                                    1579737589 RefundAll)))]
+                                                        1577059189 RefundAll)))]
+                                            1574467189 RefundAll)))]
+                                1571788789 RefundAll)))] 1569196789 RefundAll)))]
+                    1566518389 RefundAll))]
+        1563839989 RefundAll)]
+    1563839989 RefundAll

@@ -320,6 +320,11 @@ eventScheduleByDay m = do
     Map.fromListWith (++) (reverse pairs)
 
 
+eventScheduleByDay1 :: Map ContractEvent Schedule -> [(Day, ContractEvent)]
+eventScheduleByDay1 m = let
+    eventDays = fmap schedule m
+    in [(v, k) | (k, vs) <- Map.toList eventDays, v <- vs]
+
 pamPayoffAndStateTransition :: ContractRole
     -> ContractConfig
     -> ContractEvent

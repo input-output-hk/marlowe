@@ -1,5 +1,5 @@
 theory MList
-imports Main
+imports Main Utils
 begin
 
 fun valid_map :: "('a::linorder \<times> 'b) list \<Rightarrow> bool" where
@@ -141,10 +141,115 @@ theorem different_delete_lookup :
 
 fun unionWith :: "('b \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> ('a \<times> 'b) list \<Rightarrow>
                   ('a \<times> 'b) list \<Rightarrow> (('a::linorder) \<times> 'b) list" where
-"unionWith f (Cons (x, y) t) l =
-  (case lookup x l of
-     Some z \<Rightarrow> unionWith f t (insert x (f y z) l)
-   | None \<Rightarrow> unionWith f t (insert x y l))" |
-"unionWith f Nil l = l"
+"unionWith f (Cons (x, y) t) (Cons (x2, y2) t2) =
+  (if x < x2
+   then Cons (x, y) (unionWith f t (Cons (x2, y2) t2))
+   else (if x > x2
+         then Cons (x2, y2) (unionWith f (Cons (x, y) t) t2)
+         else Cons (x, f y y2) (unionWith f t t2)))" |
+"unionWith f Nil l = l" |
+"unionWith f l Nil = l"
+
+lemma unionWithMonotonic1 :
+  "x < x2 \<Longrightarrow> fst ( hd ( unionWith f ((x, y) # t) ((x2, y2) # t2) ) ) = x"
+  by simp
+
+lemma insert_before :
+  "valid_map c \<Longrightarrow> x < fst ( hd ( c ) ) \<Longrightarrow> valid_map ((x, y) # c)"
+  by (metis insert.simps(1) insert_in_middle insert_valid list.exhaust list.sel(1) prod.collapse)
+
+lemma insert_before_union :
+  "x < x2 \<Longrightarrow>
+   valid_map ((x, y) # t) \<Longrightarrow>
+   valid_map ((x2, y2) # t2) \<Longrightarrow>
+   x < fst ( hd ( unionWith f t ((x2, y2) # t2) ) )"
+  apply (induction t)
+  apply auto[1]
+  by auto
+
+lemma insert_before_union2 :
+  "x2 < x \<Longrightarrow>
+   valid_map ((x, y) # t) \<Longrightarrow>
+   valid_map ((x2, y2) # t2) \<Longrightarrow>
+   x2 < fst ( hd ( unionWith f ((x, y) # t) t2 ) )"
+  apply (induction t2)
+  apply auto[1]
+  by force
+
+lemma insert_before_union3 :
+  "valid_map ((x, y) # t) \<Longrightarrow>
+   valid_map ((x, y2) # t2) \<Longrightarrow>
+   (t \<noteq> [] \<or> t2 \<noteq> []) \<Longrightarrow>
+   x < fst ( hd ( unionWith f t t2 ) )"
+  apply (induction t)
+  apply (metis list.collapse prod.collapse remove_from_middle unionWith.simps(2))
+  apply (induction t2)
+  apply auto[1]
+  by auto
+
+lemma unionWithValidLT_aux :
+  "x < x2 \<Longrightarrow>
+    (valid_map (unionWith f t ((x2, y2) # t2))) \<Longrightarrow>
+    valid_map ((x, y) # t) \<Longrightarrow>
+    valid_map ((x2, y2) # t2) \<Longrightarrow>
+    valid_map ((x, y) # unionWith f t ((x2, y2) # t2))"
+  by (meson insert_before insert_before_union)
+
+lemma unionWithValidLT :
+  "x < x2 \<Longrightarrow>
+   (valid_map t \<Longrightarrow>
+    valid_map ((x2, y2) # t2) \<Longrightarrow>
+    valid_map (unionWith f t ((x2, y2) # t2))) \<Longrightarrow>
+   valid_map ((x, y) # t) \<Longrightarrow>
+   valid_map ((x2, y2) # t2) \<Longrightarrow>
+   valid_map (unionWith f ((x, y) # t) ((x2, y2) # t2))"
+  apply (simp only:unionWith.simps sublist_valid)
+  by (meson unionWithValidLT_aux)
+
+lemma unionWithValidGT_aux :
+  "x2 < x \<Longrightarrow>
+   (valid_map (unionWith f ((x, y) # t) t2)) \<Longrightarrow>
+   valid_map ((x, y) # t) \<Longrightarrow>
+   valid_map ((x2, y2) # t2) \<Longrightarrow>
+   valid_map ((x2, y2) # unionWith f ((x, y) # t) t2)"
+  by (meson insert_before insert_before_union2)
+
+lemma unionWithValidGT :
+  "x2 < x \<Longrightarrow>
+   (valid_map ((x, y) # t) \<Longrightarrow>
+    valid_map t2 \<Longrightarrow> valid_map (unionWith f ((x, y) # t) t2)) \<Longrightarrow>
+   valid_map ((x, y) # t) \<Longrightarrow>
+   valid_map ((x2, y2) # t2) \<Longrightarrow>
+   valid_map (unionWith f ((x, y) # t) ((x2, y2) # t2))"
+  apply (simp only:unionWith.simps sublist_valid)
+  by (smt order.asym unionWithValidGT_aux)
+
+lemma unionWithValidEQ_aux :
+  "(valid_map (unionWith f t t2)) \<Longrightarrow>
+   valid_map ((x, y) # t) \<Longrightarrow>
+   valid_map ((x, y2) # t2) \<Longrightarrow>
+   valid_map ((x, f y y2) # unionWith f t t2)"
+  by (metis insert.simps(1) insert_before insert_before_union3 insert_valid unionWith.simps(2))
+
+lemma unionWithValidEQ :
+  "(valid_map t \<Longrightarrow> valid_map t2 \<Longrightarrow> valid_map (unionWith f t t2)) \<Longrightarrow>
+   valid_map ((x, y) # t) \<Longrightarrow>
+   valid_map ((x, y2) # t2) \<Longrightarrow>
+   valid_map (unionWith f ((x, y) # t) ((x, y2) # t2))"
+  apply (simp only:unionWith.simps sublist_valid)
+  by (smt order.asym unionWithValidEQ_aux)
+
+theorem unionWithValid : "valid_map a \<Longrightarrow> valid_map b \<Longrightarrow>
+                          valid_map (unionWith f a b)"
+  apply (induction f a b rule:unionWith.induct)
+  apply (metis less_linear unionWithValidEQ unionWithValidGT unionWithValidLT)
+  by auto
+
+theorem unionWithSym : "valid_map a \<Longrightarrow> valid_map b \<Longrightarrow>
+                        unionWith f a b = unionWith (flip f) b a"
+  apply (induction f a b rule:unionWith.induct)
+  apply auto[1]
+  apply (metis list.exhaust unionWith.simps(2) unionWith.simps(3))
+  by simp
 
 end

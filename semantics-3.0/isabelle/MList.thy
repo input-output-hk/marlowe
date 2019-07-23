@@ -252,4 +252,12 @@ theorem unionWithSym : "valid_map a \<Longrightarrow> valid_map b \<Longrightarr
   apply (metis list.exhaust unionWith.simps(2) unionWith.simps(3))
   by simp
 
+fun findWithDefault :: "'b \<Rightarrow> 'a \<Rightarrow> (('a::linorder) \<times> 'b) list \<Rightarrow> 'b" where
+"findWithDefault d k l = (case lookup k l of
+                            None \<Rightarrow> d
+                          | Some x \<Rightarrow> x)"
+
+fun member :: "'a \<Rightarrow> ((('a::linorder) \<times> 'b) list) \<Rightarrow> bool" where
+"member k d = (lookup k d \<noteq> None)"
+
 end

@@ -28,56 +28,36 @@ main = do
     print $ genPrincialAtMaturnityGuaranteedContract 1 2 3 couponBondFor3Month12PercentConfig
     print $ genPrincialAtMaturnityContract 1 2 zcbConfig
 
-acc = AccountId 1 1
-investor = Party 1
-issuer = Party 2
-couponBondFor3Month12Percent = When
-    [ Case
-          (Deposit (AccountId 1 1) 1 (Constant 1000))
-          (Pay
-              (AccountId 1 1)
-              (Party 2)
-              (Constant 1000)
-              (When
-                  [ Case
-                        (Deposit (AccountId 1 1) 2 (Constant 10))
-                        (Pay
-                            (AccountId 1 1)
-                            (Party 1)
-                            (Constant 10)
-                            (When
-                                [ Case
-                                      (Deposit (AccountId 1 1) 2 (Constant 10))
-                                      (Pay
-                                          (AccountId 1 1)
-                                          (Party 1)
-                                          (Constant 10)
-                                          (When
-                                              [ Case
-                                                    (Deposit (AccountId 1 1) 2 (Constant 1010))
-                                                    (Pay (AccountId 1 1)
-                                                         (Party 1)
-                                                         (Constant 1010)
-                                                         Refund
-                                                    )
-                                              ]
-                                              1571788789
-                                              Refund
-                                          )
-                                      )
-                                ]
-                                1569196789
-                                Refund
-                            )
-                        )
-                  ]
-                  1566518389
-                  Refund
-              )
-          )
-    ]
+
+couponBondFor3Month12Percent =
+    -- investor deposits 1000 Ada
+    When [ Case (Deposit acc investor (Constant 1000))
+        -- and pays it to the issuer
+        (Pay acc (Party issuer) (Constant 1000)
+            -- after a month expect to receive 10 Ada interest
+            (When [ Case (Deposit acc issuer (Constant 10))
+                -- and pay it to the investor
+                (Pay acc (Party investor) (Constant 10)
+                    -- same for 2nd month
+                    (When [ Case (Deposit acc issuer (Constant 10))
+                        (Pay acc (Party investor) (Constant 10)
+                            -- after maturity date investor
+                            -- expects to receive notional + interest payment
+                            (When [ Case (Deposit acc issuer (Constant 1010))
+                                (Pay acc (Party investor) (Constant 1010) Refund)]
+                            1571788789
+                            Refund))]
+                    1569196789
+                    Refund))]
+            1566518389
+            Refund))]
     1563839989
     Refund
+  where
+    acc = AccountId 1 1
+    investor = 1
+    issuer = 2
+
 
 zeroCouponBond = When [ Case
         (Deposit acc 1 (Constant 850))
@@ -93,25 +73,101 @@ zeroCouponBond = When [ Case
     ]
     1563407989
     Refund
+  where
+    acc = AccountId 1 1
+    investor = Party 1
+    issuer = Party 2
 
-couponBondGuaranteed = When [Case (Deposit (AccountId 1 1) 3 (Constant 1030))
-    (When [Case (Deposit (AccountId 1 1) 1 (Constant 1000))
-        (Pay (AccountId 1 1) (Party 2) (Constant 1000)
-            (When [Case (Deposit (AccountId 1 1) 2 (Constant 10))
-                (Pay (AccountId 1 1) (Party 1) (Constant 10)
-                (Pay (AccountId 1 1) (Party 3) (Constant 10)
-                    (When [Case (Deposit (AccountId 1 1) 2 (Constant 10))
-                        (Pay (AccountId 1 1) (Party 1) (Constant 10)
-                        (Pay (AccountId 1 1) (Party 3) (Constant 10)
-                            (When [Case (Deposit (AccountId 1 1) 2 (Constant 1010))
-                                (Pay (AccountId 1 1) (Party 1) (Constant 1010)
-                                (Pay (AccountId 1 1) (Party 3) (Constant 1010) Refund))]
+couponBondGuaranteed = When [Case (Deposit acc 3 (Constant 1030))
+    (When [Case (Deposit acc 1 (Constant 1000))
+        (Pay acc (Party 2) (Constant 1000)
+            (When [Case (Deposit acc 2 (Constant 10))
+                (Pay acc (Party 1) (Constant 10)
+                (Pay acc (Party 3) (Constant 10)
+                    (When [Case (Deposit acc 2 (Constant 10))
+                        (Pay acc (Party 1) (Constant 10)
+                        (Pay acc (Party 3) (Constant 10)
+                            (When [Case (Deposit acc 2 (Constant 1010))
+                                (Pay acc (Party 1) (Constant 1010)
+                                (Pay acc (Party 3) (Constant 1010) Refund))]
                             1571788789 Refund)))]
                     1569196789 Refund)))]
             1566518389 Refund))]
     1563839989 Refund)]
     1563839989 Refund
+  where
+    acc = AccountId 1 1
+    investor = Party 1
+    issuer = Party 2
 
+
+couponBondGuaranteedWithAccounts =
+    -- guarantor deposits a whole payoff amount including interest payments
+    When [Case (Deposit acc2 guarantor (Constant 1030))
+        -- then it's same as for simple coupon bond
+        (When [Case (Deposit acc1 party1 (Constant 1000))
+            (Pay acc1 (Party party2) (Constant 1000)
+                (When [Case (Deposit acc1 party2 (Constant 10))
+                    (Pay acc1 (Party party1) (Constant 10)
+                        (When [Case (Deposit acc1 party2 (Constant 10))
+                            (Pay acc1 (Party party1) (Constant 10)
+                                (When [Case (Deposit acc1 party2 (Constant 1010))
+                                    (Pay acc1 (Party party1) (Constant 1010) Refund)]
+                                1571788789
+                                -- if the issues fails to return notional
+                                -- guarantor pays from his account and refunds
+                                (Pay acc2 (Party party1) (Constant 1010) Refund))
+                            )]
+                        1569196789
+                        -- guarantor pays from his account and refunds
+                        (Pay acc2 (Party party1) (Constant 1020) Refund)))]
+                1566518389
+                -- guarantor pays from his account and refunds
+                (Pay acc2 (Party party1) (Constant 1030) Refund)))]
+        -- if partees do not proceed guarantor automatically gets his money back
+        1563839989 Refund)]
+    1563839989 Refund
+  where
+    party1 = 1
+    party2 = 2
+    guarantor = 3
+    acc1 = AccountId 1 party1
+    acc2 = AccountId 2 guarantor
+
+
+couponBondGuaranteedWithoutAccounts =
+    -- guarantor deposits a whole payoff amount including interest payments
+    When [Case (Deposit acc guarantor (Constant 1030))
+            -- investor deposits 1000 Ada
+        (When [Case (Deposit acc party1 (Constant 1000))
+            (Pay acc (Party party2) (Constant 1000)
+                (When [Case (Deposit acc party2 (Constant 10))
+                    (Pay acc (Party party1) (Constant 10)
+                        (When [Case (Deposit acc party2 (Constant 10))
+                            (Pay acc (Party party1) (Constant 10)
+                                (When [Case (Deposit acc party2 (Constant 1010))
+                                    (Pay acc (Party party1) (Constant 1010) Refund)]
+                                1571788789
+                                (Pay acc (Party party1) (Constant 1010)
+                                -- with single account we have to
+                                -- manually redistibute money to guarantor
+                                (Pay acc (Party guarantor) (Constant 20) Refund))))]
+                        1569196789
+                        (Pay acc (Party party1) (Constant 1020)
+                        -- in all the cases
+                        (Pay acc (Party guarantor) (Constant 10) Refund))))]
+                1566518389
+                -- here as well
+                (Pay acc (Party party1) (Constant 1030) Refund)))]
+        1563839989
+        -- and thes are only 3 payments
+        (Pay acc (Party guarantor) (Constant 1030) Refund))]
+    1563839989 Refund
+  where
+    party1 = 1
+    party2 = 2
+    guarantor = 3
+    acc = AccountId 1 party1
 
 {- Simply swap two payments between parties -}
 swapExample =

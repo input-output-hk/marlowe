@@ -21,6 +21,10 @@ fun insert :: "'a::linorder \<Rightarrow> 'b \<Rightarrow> ('a \<times> 'b) list
            then (Cons (x, y) (insert a b z))
            else (Cons (x, b) z)))"
 
+lemma insert_length : "length (insert a b c) \<le> (length c + 1)"
+  apply (induction c)
+  by auto
+
 lemma insert_in_middle : "x < a \<Longrightarrow> valid_map ((a, b) # z)
                             \<Longrightarrow> valid_map ((x, y) # (a, c) # z)"
   by auto
@@ -73,6 +77,10 @@ fun delete :: "'a::linorder \<Rightarrow> ('a \<times> 'b) list \<Rightarrow> ('
            then (Cons (x, y) (delete a z))
            else (Cons (x, y) z)))"
 
+lemma delete_length : "length (delete a b) \<le> length b"
+  apply (induction b)
+  by auto
+
 lemma delete_valid_aux :
   "valid_map (a # c) \<Longrightarrow> valid_map (a # delete b c)"
   apply (induction c arbitrary: a b)
@@ -99,6 +107,12 @@ fun lookup :: "'a::linorder \<Rightarrow> ('a \<times> 'b) list \<Rightarrow> 'b
      else (if a > x
            then lookup a z
            else None))"
+
+lemma insert_existing_length : "MList.lookup k l = Some a \<Longrightarrow>
+                                length (MList.insert k v l) = length l"
+  apply (induction l)
+  apply simp
+  using not_less_iff_gr_or_eq by fastforce
 
 lemma delete_lookup_None_aux :
   "valid_map ((c, d) # b) \<Longrightarrow> lookup c b = None"

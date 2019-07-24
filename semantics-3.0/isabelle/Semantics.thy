@@ -257,7 +257,7 @@ datatype Action = Deposit AccountId Party Value
 datatype Payee = Account AccountId
                | Party Party
 
-codatatype Case = Case Action Contract
+datatype Case = Case Action Contract
 and Contract = Refund
              | Pay AccountId Payee Value Contract
              | If Observation Contract Contract
@@ -351,5 +351,285 @@ fun evalObservation :: "Environment \<Rightarrow> State \<Rightarrow> Observatio
     (evalValue env state lhs = evalValue env state rhs)" |
 "evalObservation env state TrueObs = True" |
 "evalObservation env state FalseObs = False"
+
+fun refundOne :: "(AccountId \<times> Money) list \<Rightarrow>
+                  ((Party \<times> Money) \<times> ((AccountId \<times> Money) list)) option" where
+"refundOne ((accId, mon)#rest) =
+   (if mon > 0 then Some ((accountOwner accId, mon), rest) else refundOne rest)" |
+"refundOne [] = None"
+
+lemma refundOneShortens : "refundOne acc = Some (c, nacc) \<Longrightarrow>
+                           length nacc < length acc"
+  apply (induction acc)
+  apply simp
+  by (metis Pair_inject length_Cons less_Suc_eq list.distinct(1)
+            list.inject option.inject refundOne.elims)
+
+fun moneyInAccount :: "((AccountId \<times> Money) list) \<Rightarrow> AccountId \<Rightarrow> Money" where
+"moneyInAccount accs accId = findWithDefault 0 accId accs"
+
+fun updateMoneyInAccount :: "((AccountId \<times> Money) list) \<Rightarrow> AccountId \<Rightarrow>
+                             Money \<Rightarrow> ((AccountId \<times> Money) list)" where
+"updateMoneyInAccount accs accId mon =
+  (if mon \<le> 0
+   then MList.delete accId accs
+   else MList.insert accId mon accs)"
+
+fun withdrawMoneyFromAccount :: "((AccountId \<times> Money) list) \<Rightarrow> AccountId \<Rightarrow>
+                                 Money \<Rightarrow> (Money \<times> ((AccountId \<times> Money) list))" where
+"withdrawMoneyFromAccount accs accId mon =
+  (let avMoney = moneyInAccount accs accId in
+   case min avMoney mon of withdrawnMoney \<Rightarrow>
+   let newAvMoney = avMoney - withdrawnMoney in
+   let newAcc = updateMoneyInAccount accs accId newAvMoney in
+   (withdrawnMoney, newAcc))"
+
+fun addMoneyToAccount :: "((AccountId \<times> Money) list) \<Rightarrow> AccountId \<Rightarrow>
+                          Money \<Rightarrow> ((AccountId \<times> Money) list)" where
+"addMoneyToAccount accs accId mon =
+  (let avMoney = moneyInAccount accs accId in
+   let newAvMoney = avMoney + mon in
+   if mon \<le> 0
+   then accs
+   else updateMoneyInAccount accs accId newAvMoney)"
+
+datatype ReduceWarning = ReduceNoWarning
+                       | ReduceNonPositivePay AccountId Payee Money
+                       | ReducePartialPay AccountId Payee Money Money
+                       | ReduceShadowing ValueId int int
+
+datatype ReduceEffect = ReduceNoEffect
+                      | ReduceNormalPay Party Money
+
+datatype ReduceError = ReduceAmbiguousSlotInterval
+
+datatype ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
+                      | NotReduced
+                      | ReduceError ReduceError
+
+fun giveMoney :: "((AccountId \<times> Money) list) \<Rightarrow> Payee \<Rightarrow>
+                  Money \<Rightarrow> (ReduceEffect \<times> ((AccountId \<times> Money) list))" where
+"giveMoney accs (Party party) mon = (ReduceNormalPay party mon, accs)" |
+"giveMoney accs (Account accId) mon =
+  (let newAccs = addMoneyToAccount accs accId mon in
+    (ReduceNoEffect, newAccs))"
+
+lemma giveMoneyIncOne : "giveMoney a p m = (e, na) \<Longrightarrow> length na \<le> length a + 1"
+  apply (cases p)
+  apply (cases "m \<le> 0")
+  apply auto
+  by (smt Suc_eq_plus1 delete_length insert_length le_Suc_eq)
+
+fun reduce :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceResult" where
+"reduce _ state Refund =
+  (case refundOne (account state) of
+     Some ((party, money), newAccount) \<Rightarrow>
+       let newState = state \<lparr> account := newAccount \<rparr> in
+       Reduced ReduceNoWarning (ReduceNormalPay party money) newState Refund
+   | None \<Rightarrow> NotReduced)" |
+"reduce env state (Pay accId payee val nc) =
+  (case evalValue env state val of mon \<Rightarrow>
+   let (paidMon, newAccs) = withdrawMoneyFromAccount (account state) accId mon in
+   let noMonWarn = (if paidMon < mon
+                    then ReducePartialPay accId payee paidMon mon
+                    else ReduceNoWarning) in
+   let (payEffect, finalAccs) = giveMoney newAccs payee paidMon in
+   if mon \<le> 0
+   then Reduced (ReduceNonPositivePay accId payee mon) ReduceNoEffect state nc
+   else Reduced noMonWarn payEffect (state \<lparr> account := finalAccs \<rparr>) nc)" |
+"reduce env state (If obs cont1 cont2) =
+  (let nc = (if evalObservation env state obs
+             then cont1
+             else cont2) in
+   Reduced ReduceNoWarning ReduceNoEffect state nc)" |
+"reduce env state (When _ timeout c) =
+  (let (startSlot, endSlot) = slotInterval env in
+   if endSlot < timeout
+   then NotReduced
+   else (if startSlot \<ge> timeout
+         then Reduced ReduceNoWarning ReduceNoEffect state c
+         else ReduceError ReduceAmbiguousSlotInterval))" |
+"reduce env state (Let valId val cont) =
+  (let sv = boundValues state in
+   case evalValue env state val of evVal \<Rightarrow>
+   let nsv = MList.insert valId evVal sv in
+   let ns = state \<lparr> boundValues := nsv \<rparr> in
+   let warn = case lookup valId sv of
+                Some oldVal \<Rightarrow> ReduceShadowing valId oldVal evVal
+              | None \<Rightarrow> ReduceNoWarning in
+   Reduced warn ReduceNoEffect ns cont)"
+
+datatype ReduceAllResult = ReducedAll "ReduceWarning list" "ReduceEffect list"
+                                      State Contract
+                         | ReduceAllError ReduceError
+
+fun evalBound :: "State \<Rightarrow> Contract \<Rightarrow> nat" where
+"evalBound sta cont = length (account sta) + 2 * (size cont)"
+
+lemma reduceReducesSize_Refund_aux :
+  "refundOne (account sta) = Some ((party, money), newAccount) \<Longrightarrow>
+   length (account (sta\<lparr>account := newAccount\<rparr>)) < length (account sta)"
+  by (simp add: refundOneShortens)
+
+lemma reduceReducesSize_Refund_aux2 :
+  "Reduced ReduceNoWarning (ReduceNormalPay party money)
+          (sta\<lparr>account := newAccount\<rparr>) Refund =
+   Reduced twa tef nsta nc \<Longrightarrow>
+   c = Refund \<Longrightarrow>
+   refundOne (account sta) = Some ((party, money), newAccount) \<Longrightarrow>
+   length (account nsta) + 2 * size nc < length (account sta)"
+  apply simp
+  using reduceReducesSize_Refund_aux by blast
+
+lemma reduceReducesSize_Refund_aux3 :
+  "(case a of
+          ((party, money), newAccount) \<Rightarrow>
+            Reduced ReduceNoWarning (ReduceNormalPay party money)
+             (sta\<lparr>account := newAccount\<rparr>) Refund) =
+         Reduced twa tef nsta nc \<Longrightarrow>
+         c = Refund \<Longrightarrow>
+         refundOne (account sta) = Some a \<Longrightarrow>
+         length (account nsta) + 2 * size nc < length (account sta)"
+  apply (cases a)
+  apply simp
+  using reduceReducesSize_Refund_aux2 by fastforce
+
+lemma zeroMinIfGT : "x > 0 \<Longrightarrow> min 0 x = (0 :: int)"
+  by simp
+
+lemma reduceReducesSize_Pay_aux :
+  "length z \<le> length x \<Longrightarrow>
+   giveMoney z x22 a = (tef, y) \<Longrightarrow>
+   length y < Suc (Suc (length x))"
+  using giveMoneyIncOne by fastforce
+
+lemma reduceReducesSize_Pay_aux2 :
+  "giveMoney (MList.delete src x) dst a = (tef, y) \<Longrightarrow>
+   length y < Suc (Suc (length x))"
+  using delete_length reduceReducesSize_Pay_aux by blast
+
+lemma reduceReducesSize_Pay_aux3 :
+  "sta\<lparr>account := b\<rparr> = nsta \<Longrightarrow>
+   giveMoney (MList.delete src (account sta)) dst a = (tef, b) \<Longrightarrow>
+   length (account nsta) < Suc (Suc (length (account sta)))"
+  using reduceReducesSize_Pay_aux2 by auto
+
+lemma reduceReducesSize_Pay_aux4 :
+  "lookup k x = Some w \<Longrightarrow>
+   giveMoney (MList.insert k v x) dst a = (tef, y) \<Longrightarrow>
+   length y < Suc (Suc (length x))"
+  by (metis insert_existing_length le_refl reduceReducesSize_Pay_aux)
+
+lemma reduceReducesSize_Pay_aux5 :
+"sta\<lparr>account := ba\<rparr> = nsta \<Longrightarrow>
+ lookup src (account sta) = Some a \<Longrightarrow>
+ giveMoney (MList.insert src (a - evalValue env sta am) (account sta)) dst (evalValue env sta am) = (tef, ba) \<Longrightarrow>
+ length (account nsta) < Suc (Suc (length (account sta)))"
+  using reduceReducesSize_Pay_aux4 by auto
+
+lemma not_leq_min : "(\<not> (a \<le> x)) \<Longrightarrow> \<not> (min a (x::int) < x)"
+  by simp
+
+lemma not_leq_min2 : "(\<not> (a \<le> x)) \<Longrightarrow> (min a (x::int) = x)"
+  by auto
+
+lemma reduceReducesSize_Pay_aux6 :
+  "reduce env sta c = Reduced twa tef nsta nc \<Longrightarrow>
+   c = Pay src dst am y \<Longrightarrow>
+   lookup src (account sta) = Some a \<Longrightarrow>
+   evalBound nsta nc < evalBound sta c"
+  apply (cases "giveMoney (MList.delete src (account sta)) dst 0")
+  apply (cases "a \<le> evalValue env sta am")
+  apply (cases "a = evalValue env sta am")
+  apply (cases "giveMoney (MList.delete src (account sta)) dst
+                          (evalValue env sta am)")
+  apply (simp add:zeroMinIfGT)
+  apply (cases "evalValue env sta am \<le> 0")
+  apply simp
+  apply simp
+  using reduceReducesSize_Pay_aux3 apply blast
+  apply (simp add:min_absorb1)
+  apply (cases "giveMoney (MList.delete src (account sta)) dst
+                          a")
+  apply (cases "evalValue env sta am \<le> 0")
+  apply simp
+  apply simp
+  using reduceReducesSize_Pay_aux3 apply blast
+  apply (cases "evalValue env sta am \<le> 0")
+   apply (cases "giveMoney (MList.insert src (a - evalValue env sta am) (account sta)) dst
+                           (evalValue env sta am)")
+  apply (simp add:not_leq_min not_leq_min2)
+  apply (cases "giveMoney (MList.insert src (a - evalValue env sta am) (account sta)) dst
+                          (evalValue env sta am)")
+  apply (simp add:not_leq_min not_leq_min2)
+  using reduceReducesSize_Pay_aux5 by blast
+
+lemma reduceReducesSize_Pay_aux7 :
+  "reduce env sta c = Reduced twa tef nsta nc \<Longrightarrow>
+   c = Pay src dst am y \<Longrightarrow> evalBound nsta nc < evalBound sta c"
+  apply (cases "lookup src (account sta)")
+  apply (cases "evalValue env sta am > 0")
+  apply (cases "giveMoney (MList.delete src (account sta)) dst 0")
+  apply (simp add:zeroMinIfGT)
+  using reduceReducesSize_Pay_aux3 apply blast
+  apply (cases "evalValue env sta am > 0")
+  apply blast
+  apply auto[1]
+  by (metis reduceReducesSize_Pay_aux6)
+
+lemma reduceReducesSize_When_aux :
+  "reduce env sta c = Reduced twa tef nsta nc \<Longrightarrow>
+   c = When cases timeout cont \<Longrightarrow>
+   slotInterval env = (startSlot, endSlot) \<Longrightarrow>
+   evalBound nsta nc < evalBound sta c"
+  apply simp
+  apply (cases "endSlot < timeout")
+  apply simp
+  apply (cases "timeout \<le> startSlot")
+  by simp_all
+
+lemma reduceReducesSize_Let_aux :
+  "reduce env sta c = Reduced twa tef nsta nc \<Longrightarrow>
+   c = Contract.Let vId val cont \<Longrightarrow> evalBound nsta nc < evalBound sta c"
+  apply (cases "lookup vId (boundValues sta)")
+  by auto
+
+lemma reduceReducesSize :
+  "reduce env sta c = Reduced twa tef nsta nc \<Longrightarrow>
+     (evalBound nsta nc) < (evalBound sta c)"
+  apply (cases c)
+  apply (cases "refundOne (account sta)")
+  apply simp
+  apply simp
+  apply (simp add:reduceReducesSize_Refund_aux3)
+  using reduceReducesSize_Pay_aux7 apply blast
+  apply auto[1]
+  apply (meson eq_fst_iff reduceReducesSize_When_aux)
+  using reduceReducesSize_Let_aux by blast
+
+function (sequential) reduceAllAux :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceWarning list \<Rightarrow>
+                                       ReduceEffect list \<Rightarrow> ReduceAllResult" where
+"reduceAllAux env sta c wa ef =
+  (case reduce env sta c of
+     Reduced twa tef nsta nc \<Rightarrow>
+       let nwa = (if twa = ReduceNoWarning
+                  then wa
+                  else twa # wa) in
+       let nef = (if tef = ReduceNoEffect
+                  then ef
+                  else tef # ef) in
+       reduceAllAux env nsta nc nwa nef
+   | ReduceError err \<Rightarrow> ReduceAllError err
+   | NotReduced \<Rightarrow> ReducedAll (rev wa) (rev ef) sta c)"
+  by pat_completeness auto
+termination reduceAllAux
+  apply (relation "measure (\<lambda>(_, (st, (c, _))) . evalBound st c)")
+  apply blast
+  using reduceReducesSize by auto
+
+fun reduceAll :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceAllResult" where
+"reduceAll env sta c = reduceAllAux env sta c [] []"
+
+
 
 end

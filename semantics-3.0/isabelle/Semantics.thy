@@ -630,6 +630,43 @@ termination reduceAllAux
 fun reduceAll :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceAllResult" where
 "reduceAll env sta c = reduceAllAux env sta c [] []"
 
+datatype ApplyError = ApplyNoMatch
+
+datatype ApplyResult = Applied State Contract
+                     | ApplyError ApplyError
+
+fun applyCases :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightarrow> Case list \<Rightarrow> ApplyResult" where
+"applyCases env state (IDeposit accId1 party1 mon1)
+            (Cons (Case (Deposit accId2 party2 val2) nc) t) =
+  (case evalValue env state val2 of mon2 \<Rightarrow>
+   let accs = account state in
+   let newAccs = addMoneyToAccount accs accId1 mon1 in
+   let newState = state \<lparr> account := newAccs \<rparr> in
+   if (accId1 = accId2 \<and> party1 = party2 \<and> mon1 = mon2)
+   then Applied newState nc
+   else applyCases env state (IDeposit accId1 party1 mon1) t)" |
+"applyCases env state (IChoice choId1 cho1)
+            (Cons (Case (Choice choId2 bounds2) nc) t) =
+  (let newState = state \<lparr> choice := MList.insert choId1 cho1 (choice state) \<rparr> in
+   if (choId1 = choId2 \<and> inBounds cho1 bounds2)
+   then Applied newState nc
+   else applyCases env state (IChoice choId1 cho1) t)" |
+"applyCases env state INotify (Cons (Case (Notify obs) nc) t) =
+  (if evalObservation env state obs
+   then Applied state nc
+   else applyCases env state INotify t)" |
+"applyCases env state (IDeposit accId1 party1 mon1) (Cons h t) =
+  applyCases env state (IDeposit accId1 party1 mon1) t" |
+"applyCases env state (IChoice choId1 cho1) (Cons h t) =
+  applyCases env state (IChoice choId1 cho1) t" |
+"applyCases env state INotify (Cons h t) =
+  applyCases env state INotify t" |
+"applyCases env state acc Nil = ApplyError ApplyNoMatch"
+
+fun applyM :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightarrow> Contract \<Rightarrow> ApplyResult" where
+"applyM env state act (When cases t cont) = applyCases env state act cases" |
+"applyM env state act c = ApplyError ApplyNoMatch"
+
 
 
 end

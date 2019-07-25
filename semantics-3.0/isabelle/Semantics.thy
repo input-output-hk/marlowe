@@ -667,6 +667,89 @@ fun applyM :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightarrow>
 "applyM env state act (When cases t cont) = applyCases env state act cases" |
 "applyM env state act c = ApplyError ApplyNoMatch"
 
+datatype ApplyAllResult = AppliedAll "ReduceWarning list" "ReduceEffect list"
+                                     State Contract
+                        | AAApplyError ApplyError
+                        | AAReduceError ReduceError
 
+fun applyAllAux :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
+                    ReduceWarning list \<Rightarrow> ReduceEffect list \<Rightarrow>
+                    ApplyAllResult" where
+"applyAllAux env state c l wa ef =
+   (case reduceAll env state c of
+      ReduceAllError raerr \<Rightarrow> AAReduceError raerr
+    | ReducedAll twa tef tstate tc \<Rightarrow>
+       (case l of
+          Nil \<Rightarrow> AppliedAll (wa @ twa) (ef @ tef) tstate tc
+        | Cons h t \<Rightarrow>
+           (case applyM env tstate h tc of
+              Applied nst nc \<Rightarrow> applyAllAux env nst nc t (wa @ twa) (ef @ tef)
+            | ApplyError aeerr \<Rightarrow> AAApplyError aeerr)))"
+
+fun applyAll :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
+                 ApplyAllResult" where
+"applyAll env state c l = applyAllAux env state c l Nil Nil"
+
+type_synonym TransactionSignatures = "Party list"
+
+datatype ProcessError = PEReduceError ReduceError
+                      | PEApplyError ApplyError
+                      | PEIntervalError IntervalError
+                      | PEUselessTransaction
+
+type_synonym ProcessWarning = ReduceWarning
+type_synonym ProcessEffect = ReduceEffect
+
+datatype ProcessResult = Processed "ProcessWarning list"
+                                   "ProcessEffect list"
+                                   TransactionSignatures
+                                   TransactionOutcomes
+                                   State
+                                   Contract
+                       | ProcessError ProcessError
+
+record Transaction = interval :: SlotInterval
+                     inputs :: "Input list"
+
+fun addSig :: "Party list \<Rightarrow> Input \<Rightarrow> Party list" where
+"addSig acc (IDeposit _ p _) = SList.insert p acc" |
+"addSig acc (IChoice (ChoiceId _ p) _) = SList.insert p acc" |
+"addSig acc INotify = acc"
+
+fun getSignatures :: "Input list \<Rightarrow> TransactionSignatures" where
+"getSignatures l = foldl addSig SList.empty l"
+
+fun getPartiesFromReduceEffect :: "ReduceEffect list \<Rightarrow> (Party \<times> Money) list" where
+"getPartiesFromReduceEffect (Cons (ReduceNormalPay p m) t) =
+   Cons (p, m) (getPartiesFromReduceEffect t)" |
+"getPartiesFromReduceEffect (Cons x t) = getPartiesFromReduceEffect t" |
+"getPartiesFromReduceEffect Nil = Nil"
+
+fun getPartiesFromInput :: "Input list \<Rightarrow> (Party \<times> Money) list" where
+"getPartiesFromInput (Cons (IDeposit _ p m) t) =
+   Cons (p, m) (getPartiesFromInput t)" |
+"getPartiesFromInput (Cons x t) = getPartiesFromInput t" |
+"getPartiesFromInput Nil = Nil"
+
+fun getOutcomes :: "ReduceEffect list \<Rightarrow> Input list \<Rightarrow> TransactionOutcomes" where
+"getOutcomes eff inp =
+   foldl (\<lambda> acc (p, m) . addOutcome p m acc) emptyOutcome
+         ((getPartiesFromReduceEffect eff) @ (getPartiesFromInput inp))"
+
+fun process :: "Transaction \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ProcessResult" where
+"process tra sta c =
+  (let inps = inputs tra in
+   case fixInterval (interval tra) sta of
+     IntervalTrimmed env fixSta \<Rightarrow>
+       (case applyAll env fixSta c inps of
+          AppliedAll wa ef nsta ncon \<Rightarrow>
+            let sigs = getSignatures inps in
+            let outcomes = getOutcomes ef inps in
+            if c = ncon
+            then ProcessError PEUselessTransaction
+            else Processed wa ef sigs outcomes nsta ncon
+        | AAApplyError aperr \<Rightarrow> ProcessError (PEApplyError aperr)
+        | AAReduceError reerr \<Rightarrow> ProcessError (PEReduceError reerr))
+     | IntervalError intErr \<Rightarrow> ProcessError (PEIntervalError intErr))"
 
 end

@@ -3,7 +3,6 @@ module FSSet where
 
 import Data.SBV
 import Data.SBV.List as SL
-import Data.SBV.Trans (symbolicMerge)
 
 type FSSet a = SList a 
 

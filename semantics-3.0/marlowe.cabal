@@ -29,5 +29,7 @@ executable marlowe
                         ACTUS
                         ZCBG
                         ZCBG2
+                        FSSet
     hs-source-dirs:     .
+                        static_analysis
     main-is:            Main.hs

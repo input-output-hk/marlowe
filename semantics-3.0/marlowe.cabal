@@ -30,6 +30,7 @@ executable marlowe
                         ZCBG
                         ZCBG2
                         FSSet
+                        FSMap
     hs-source-dirs:     .
                         static_analysis
     main-is:            Main.hs

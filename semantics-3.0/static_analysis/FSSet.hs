@@ -6,7 +6,7 @@ import Data.SBV.List as SL
 
 type FSSet a = SList a 
 
-empty :: SymVal a => FSSet a
+empty :: Ord a => SymVal a => FSSet a
 empty = [] 
 
 insert :: Ord a => SymVal a => Integer -> SBV a -> FSSet a -> FSSet a

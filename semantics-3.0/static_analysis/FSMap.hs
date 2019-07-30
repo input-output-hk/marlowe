@@ -77,4 +77,34 @@ valid b s
                     sTrue
                     (valid_aux b (fst $ ST.untuple $ SL.head s) (SL.tail s))
 
+all :: Ord a => SymVal a => SymVal b => Integer -> (SBV b -> SBool) -> FSMap a b -> SBool
+all b f s
+  | b <= 0 = sFalse
+  | otherwise = ite (SL.null s)
+                    sTrue
+                    ((f h) .&& (FSMap.all (b - 1) f t))
+  where (_, h) = ST.untuple $ SL.head s
+        t = SL.tail s
+
+unionWith :: Ord a => SymVal a => SymVal b => Integer ->
+             (SBV b -> SBV b -> SBV b) -> FSMap a b -> FSMap a b -> FSMap a b
+unionWith b f m1 m2
+  | b <= 0 = []
+  | otherwise = ite (SL.null m1)
+                    (m2)
+                    (ite (SL.null m2)
+                         (m1)
+                         (ite (k1 .< k2)
+                              (h1 .: (unionWith (b - 1) f t1 m2))
+                              (ite (k1 .> k2)
+                                   (h2 .: (unionWith (b - 1) f m1 t2))
+                                   (nh .: (unionWith (b - 1) f t1 t2)))))
+  where h1 = SL.head m1
+        (k1, v1) = ST.untuple h1
+        t1 = SL.tail m1
+        h2 = SL.head m2
+        (k2, v2) = ST.untuple h2 
+        t2 = SL.tail m2
+        nh = ST.tuple $ (k1, f v1 v2)
+
 

@@ -31,6 +31,7 @@ executable marlowe
                         ZCBG2
                         FSSet
                         FSMap
+                        FSSemantics
     hs-source-dirs:     .
                         static_analysis
     main-is:            Main.hs

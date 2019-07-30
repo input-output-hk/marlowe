@@ -41,6 +41,20 @@ lookup b k s
   where (h, h2) = ST.untuple $ SL.head s
         t = SL.tail s
 
+findWithDefault :: Ord a => SymVal a => SymVal b => Integer ->
+          SBV b -> SBV a -> FSMap a b -> SBV b
+findWithDefault b def k s
+  | b <= 0 = def 
+  | otherwise = ite (SL.null s)
+                    def
+                    (ite (k .> h)
+                         (FSMap.findWithDefault (b - 1) def k t)
+                         (ite (k .== h)
+                              h2
+                              def))
+  where (h, h2) = ST.untuple $ SL.head s
+        t = SL.tail s
+
 size :: Ord a => SymVal a => SymVal b => FSMap a b -> SInteger
 size s = SL.length s
 

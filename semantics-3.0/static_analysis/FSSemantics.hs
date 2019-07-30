@@ -117,6 +117,18 @@ type State = ( [(AccountId, Money)]
              , [(ValueId, Integer)]
              , SlotNumber)
 
+account :: SState -> FSMap AccountId Money
+account st = ac
+  where (ac, _, _, _) = ST.untuple st
+
+choice :: SState -> FSMap ChoiceId ChosenNum
+choice st = cho
+  where (_, cho, _, _) = ST.untuple st
+
+boundValues :: SState -> FSMap ValueId Integer
+boundValues st = bv
+  where (_, _, bv, _) = ST.untuple st
+
 minSlot :: SState -> SSlotNumber
 minSlot st = ms
   where (_, _, _, ms) = ST.untuple st
@@ -144,6 +156,12 @@ data SInput = IDeposit AccountId Party Money
             | INotify
   deriving (Eq,Ord,Show,Read)
 
+data Bounds = Bounds { numParties :: Integer
+                     , numChoices :: Integer
+                     , numAccounts :: Integer
+                     , numLets :: Integer
+                     }
+
 -- TRANSACTION OUTCOMES
 
 type STransactionOutcomes = FSMap Party Money
@@ -151,19 +169,20 @@ type STransactionOutcomes = FSMap Party Money
 emptyOutcome :: STransactionOutcomes
 emptyOutcome = FSMap.empty
 
-isEmptyOutcome :: Integer -> STransactionOutcomes -> SBool
-isEmptyOutcome i trOut = FSMap.all i (.== 0) trOut
+isEmptyOutcome :: Bounds -> STransactionOutcomes -> SBool
+isEmptyOutcome bnds trOut = FSMap.all (numParties bnds) (.== 0) trOut
 
 -- Adds a value to the map of outcomes
-addOutcome :: Integer -> SParty -> SMoney -> STransactionOutcomes -> STransactionOutcomes
-addOutcome i party diffValue trOut = FSMap.insert i party newValue trOut
+addOutcome :: Bounds -> SParty -> SMoney -> STransactionOutcomes -> STransactionOutcomes
+addOutcome bnds party diffValue trOut =
+    FSMap.insert (numParties bnds) party newValue trOut
   where
-    newValue = (SM.fromMaybe 0 (FSMap.lookup i party trOut)) + diffValue
+    newValue = (SM.fromMaybe 0 (FSMap.lookup (numParties bnds) party trOut)) + diffValue
 
 -- Add two transaction outcomes together
-combineOutcomes :: Integer -> STransactionOutcomes -> STransactionOutcomes
+combineOutcomes :: Bounds -> STransactionOutcomes -> STransactionOutcomes
                 -> STransactionOutcomes
-combineOutcomes i = FSMap.unionWith (2 * i) (+)
+combineOutcomes bnds = FSMap.unionWith (numParties bnds) (+)
 
 -- INTERVALS
 
@@ -193,4 +212,28 @@ fixInterval i st =
     tInt = ST.tuple (nl, h) -- We know h is greater or equal than nl (prove)
     env = sEnvironment tInt
     nst = st `setMinSlot` nl
+
+
+-- EVALUATION
+
+-- Evaluate a value
+evalValue :: Bounds -> SEnvironment -> SState -> Value -> SInteger
+evalValue bnds env state value = case value of
+    AvailableMoney (a, p)    -> FSMap.findWithDefault (numAccounts bnds)
+                                                      0 (ST.tuple (literal a, literal p)) $
+                                                      account state
+    Constant integer         -> literal integer
+    NegValue val             -> go val
+    AddValue lhs rhs         -> go lhs + go rhs
+    SubValue lhs rhs         -> go lhs + go rhs
+    ChoiceValue (c, p) defVal -> FSMap.findWithDefault (numChoices bnds)
+                                                       (go defVal)
+                                                       (ST.tuple (literal c, literal p)) $
+                                                       choice state
+    SlotIntervalStart        -> inStart 
+    SlotIntervalEnd          -> inEnd
+    UseValue valId           -> FSMap.findWithDefault (numLets bnds)
+                                                      0 (literal valId) $ boundValues state
+  where go = evalValue bnds env state
+        (inStart, inEnd) = ST.untuple $ slotInterval env
 

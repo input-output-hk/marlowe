@@ -19,14 +19,18 @@ depositAmt, monthlyFee :: Money
 depositAmt = 200
 monthlyFee = 120
 
+depositTimeout, daysInAMonth :: Timeout
+depositTimeout = 10
+daysInAMonth = 30
+
 mkDeposit c = When [Case (Deposit depositAcc tenant (Constant depositAmt))
                          c]
-                   10
+                   depositTimeout
                    Refund
 
 payMonth m c = When [Case (Deposit monthlyAcc tenant (Constant monthlyFee))
                           (payAll monthlyAcc (Party landlord) c)]
-                    (10 + m * 30)
+                    (depositTimeout + m * daysInAMonth)
                     (payAll depositAcc (Party landlord) Refund)
 
 -- Pay all money into an account to a payee

@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module MkSymb where
 
+import Data.SBV
 import Data.List (foldl')
 import Language.Haskell.TH as TH
 import Data.Either (Either(..))
@@ -18,6 +19,18 @@ nestClauses list = appT (appT [t| Either |]
 mkNestedDec :: TH.Name -> [Con] -> TH.Q TH.Dec
 mkNestedDec nName clauses =
   tySynD nName [] $ nestClauses clauses
+
+mkSubSymDec :: TH.Name -> [Con] -> TH.Q TH.Dec
+mkSubSymDec ssName clauses =
+  dataD (return [])
+        ssName
+        [] Nothing [ normalC (let typeBaseName = nameBase name in
+                              mkName ('S':'S':typeBaseName))
+                             [ bangType (return pb)
+                                        [t| SBV $(return param) |]
+                              | (pb, param) <- params ]
+                    | NormalC name params <- clauses ]
+        []
 
 nestFunClauses :: [Con] -> (ExpQ -> ExpQ) -> [ClauseQ]
 nestFunClauses [] f = error "No constructors for type"
@@ -64,8 +77,10 @@ mkSymbolicDatatype typeName =
   do TyConI (DataD _ _ _ _ clauses _) <- reify typeName
      let typeBaseName = nameBase typeName
      let nName = mkName ('N':typeBaseName)
+     let ssName = mkName ('S':'S':typeBaseName)
      nestedDecl <- mkNestedDec nName clauses
+     subSymDecl <- mkSubSymDec ssName clauses 
      nestFunc <- mkNestFunc typeBaseName typeName nName clauses
      unNestFunc <- mkUnNestFunc typeBaseName typeName nName clauses
-     return (nestedDecl:(nestFunc ++ unNestFunc))
+     return (nestedDecl:subSymDecl:(nestFunc ++ unNestFunc))
 

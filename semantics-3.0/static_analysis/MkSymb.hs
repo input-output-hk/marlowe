@@ -20,6 +20,10 @@ mkNestedDec :: TH.Name -> [Con] -> TH.Q TH.Dec
 mkNestedDec nName clauses =
   tySynD nName [] $ nestClauses clauses
 
+mkSymDec :: TH.Name -> TH.Name -> TH.Q TH.Dec
+mkSymDec sName nName =
+  tySynD sName [] $ [t| SBV $(conT nName) |]
+
 mkSubSymDec :: TH.Name -> [Con] -> TH.Q TH.Dec
 mkSubSymDec ssName clauses =
   dataD (return [])
@@ -48,7 +52,7 @@ mkNestFunc typeBaseName typeName typeNName clauses =
   do let nestFunName = ("nest" ++ typeBaseName)
      let nfName = mkName nestFunName
      signature <- sigD nfName (appT (appT arrowT (conT typeName))
-                                         (conT typeNName))
+                                          (conT typeNName))
      declaration <- funD nfName $ nestFunClauses clauses id
      return [signature, declaration]
 
@@ -66,21 +70,34 @@ unNestFunClauses list f = (unNestFunClauses fHalf (f . (\x -> [p| Left $(x) |]))
 mkUnNestFunc :: String -> TH.Name -> TH.Name -> [Con] -> TH.Q [TH.Dec]
 mkUnNestFunc typeBaseName typeName typeNName clauses =
   do let unNestFunName = ("unNest" ++ typeBaseName)
-     let nfName = mkName unNestFunName
-     signature <- sigD nfName (appT (appT arrowT (conT typeNName))
-                                         (conT typeName))
-     declaration <- funD nfName $ unNestFunClauses clauses id
+     let unfName = mkName unNestFunName
+     signature <- sigD unfName (appT (appT arrowT (conT typeNName))
+                                           (conT typeName))
+     declaration <- funD unfName $ unNestFunClauses clauses id
+     return [signature, declaration]
+
+mkSymCase :: String -> TH.Name -> TH.Name -> [Con] -> TH.Q [TH.Dec]
+mkSymCase typeBaseName sName ssName clauses =
+  do let symCaseFunName = ("symCase" ++ typeBaseName)
+     let scName = mkName symCaseFunName
+     typeVar <- newName "a"
+     signature <- sigD scName $ [t| ($(conT ssName) -> SBV $(varT typeVar))
+                                 -> $(conT sName) -> SBV $(varT typeVar) |]
+     declaration <- funD scName $ [clause [] (normalB [e| $(varE scName) |]) []]
      return [signature, declaration]
 
 mkSymbolicDatatype :: TH.Name -> TH.Q [TH.Dec]
 mkSymbolicDatatype typeName =
   do TyConI (DataD _ _ _ _ clauses _) <- reify typeName
      let typeBaseName = nameBase typeName
+     let sName = mkName ('S':typeBaseName)
      let nName = mkName ('N':typeBaseName)
      let ssName = mkName ('S':'S':typeBaseName)
      nestedDecl <- mkNestedDec nName clauses
+     symDecl <- mkSymDec sName nName
      subSymDecl <- mkSubSymDec ssName clauses 
      nestFunc <- mkNestFunc typeBaseName typeName nName clauses
      unNestFunc <- mkUnNestFunc typeBaseName typeName nName clauses
-     return (nestedDecl:subSymDecl:(nestFunc ++ unNestFunc))
+     symCaseFunc <- mkSymCase typeBaseName sName ssName clauses
+     return (nestedDecl:symDecl:subSymDecl:(nestFunc ++ unNestFunc ++ symCaseFunc))
 

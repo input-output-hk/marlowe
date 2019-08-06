@@ -2,6 +2,8 @@
 module MkSymb where
 
 import Data.SBV
+import Data.SBV.Tuple
+import Data.SBV.Either as SE
 import Data.List (foldl')
 import Language.Haskell.TH as TH
 import Data.Either (Either(..))
@@ -76,14 +78,34 @@ mkUnNestFunc typeBaseName typeName typeNName clauses =
      declaration <- funD unfName $ unNestFunClauses clauses id
      return [signature, declaration]
 
+mkSymCaseRec :: Name -> [Con] -> ExpQ
+mkSymCaseRec func [] = error "No constructors for type"
+mkSymCaseRec func [NormalC name params] =
+  do paramNames <- mapM (\x -> newName ('p':(show x))) [1..(length params)]
+     let ssName = mkName ('S':'S':(nameBase name))
+     let wrapping = [e| (\ $(tupP $ map varP paramNames) ->
+                        $(varE func)
+                        ($(foldl' (appE) (conE ssName) $ map (varE) paramNames))) |]
+     if length params > 1
+     then [e| $(wrapping) . untuple |]
+     else wrapping
+mkSymCaseRec func list = [e| SE.either $(mkSymCaseRec func fHalf)
+                                       $(mkSymCaseRec func sHalf) |]
+  where ll = length list
+        (fHalf, sHalf) = splitAt (ll - (length list `div` 2)) list
+
 mkSymCase :: String -> TH.Name -> TH.Name -> [Con] -> TH.Q [TH.Dec]
 mkSymCase typeBaseName sName ssName clauses =
   do let symCaseFunName = ("symCase" ++ typeBaseName)
      let scName = mkName symCaseFunName
      typeVar <- newName "a"
-     signature <- sigD scName $ [t| ($(conT ssName) -> SBV $(varT typeVar))
+     func <- newName "f"
+     signature <- sigD scName $ [t| SymVal $(varT typeVar) =>
+                                    ($(conT ssName) -> SBV $(varT typeVar))
                                  -> $(conT sName) -> SBV $(varT typeVar) |]
-     declaration <- funD scName $ [clause [] (normalB [e| $(varE scName) |]) []]
+     declaration <- funD scName $
+                    [clause [varP func]
+                            (normalB (mkSymCaseRec func clauses)) []]
      return [signature, declaration]
 
 mkSymbolicDatatype :: TH.Name -> TH.Q [TH.Dec]

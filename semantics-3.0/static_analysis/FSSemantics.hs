@@ -36,24 +36,36 @@ type ChosenNum = Integer
 
 --data AccountId = AccountId NumAccount Party
 --  deriving (Eq,Ord,Show,Read)
-type AccountId = (NumAccount, Party)
+data AccountId = AccountId NumAccount Party
+  deriving (Eq,Ord,Show,Read)
+type NAccountId = (NumAccount, Party)
 type SAccountId = STuple NumAccount Party
 
+sAccountId :: NumAccount -> Party -> SAccountId
+sAccountId a p = ST.tuple (literal a, literal p)
+
 accountOwner :: AccountId -> Party
-accountOwner (_, party) = party
+accountOwner (AccountId _ party) = party
 
 --data ChoiceId = ChoiceId NumChoice Party
 --  deriving (Eq,Ord,Show,Read)
 
-type ChoiceId = (NumChoice, Party)
+data ChoiceId = ChoiceId NumChoice Party
+  deriving (Eq,Ord,Show,Read)
+type NChoiceId = (NumChoice, Party)
 type SChoiceId = STuple NumChoice Party
+
+sChoiceId :: NumChoice -> Party -> SChoiceId
+sChoiceId c p = ST.tuple (literal c, literal p)
 
 newtype OracleId = OracleId PubKey
   deriving (Eq,Ord,Show,Read)
 
 --newtype ValueId = ValueId Integer
 --  deriving (Eq,Ord,Show,Read)
-type ValueId = Integer
+newtype ValueId = ValueId Integer
+  deriving (Eq,Ord,Show,Read)
+type NValueId = Integer
 type SValueId = SInteger
 
 data Value = AvailableMoney AccountId
@@ -110,24 +122,24 @@ data Contract = Refund
 --                   , choice  :: Map ChoiceId ChosenNum
 --                   , boundValues :: Map ValueId Integer
 --                   , minSlot :: SSlotNumber }
-type SState = STuple4 [(AccountId, Money)]
-                      [(ChoiceId, ChosenNum)]
-                      [(ValueId, Integer)]
+type SState = STuple4 [(NAccountId, Money)]
+                      [(NChoiceId, ChosenNum)]
+                      [(NValueId, Integer)]
                       SlotNumber
-type State = ( [(AccountId, Money)]
-             , [(ChoiceId, ChosenNum)]
-             , [(ValueId, Integer)]
+type State = ( [(NAccountId, Money)]
+             , [(NChoiceId, ChosenNum)]
+             , [(NValueId, Integer)]
              , SlotNumber)
 
-account :: SState -> FSMap AccountId Money
+account :: SState -> FSMap NAccountId Money
 account st = ac
   where (ac, _, _, _) = ST.untuple st
 
-choice :: SState -> FSMap ChoiceId ChosenNum
+choice :: SState -> FSMap NChoiceId ChosenNum
 choice st = cho
   where (_, cho, _, _) = ST.untuple st
 
-boundValues :: SState -> FSMap ValueId Integer
+boundValues :: SState -> FSMap NValueId Integer
 boundValues st = bv
   where (_, _, bv, _) = ST.untuple st
 
@@ -220,22 +232,45 @@ fixInterval i st =
 
 -- Evaluate a value
 evalValue :: Bounds -> SEnvironment -> SState -> Value -> SInteger
-evalValue bnds env state value = case value of
-    AvailableMoney (a, p)    -> FSMap.findWithDefault (numAccounts bnds)
-                                                      0 (ST.tuple (literal a, literal p)) $
-                                                      account state
+evalValue bnds env state value =
+  case value of
+    AvailableMoney (AccountId a p) -> FSMap.findWithDefault (numAccounts bnds)
+                                                            0 (sAccountId a p) $
+                                                            account state
     Constant integer         -> literal integer
     NegValue val             -> go val
     AddValue lhs rhs         -> go lhs + go rhs
     SubValue lhs rhs         -> go lhs + go rhs
-    ChoiceValue (c, p) defVal -> FSMap.findWithDefault (numChoices bnds)
-                                                       (go defVal)
-                                                       (ST.tuple (literal c, literal p)) $
-                                                       choice state
+    ChoiceValue (ChoiceId c p) defVal -> FSMap.findWithDefault (numChoices bnds)
+                                                               (go defVal)
+                                                               (sChoiceId c p) $
+                                                               choice state
     SlotIntervalStart        -> inStart 
     SlotIntervalEnd          -> inEnd
-    UseValue valId           -> FSMap.findWithDefault (numLets bnds)
-                                                      0 (literal valId) $ boundValues state
+    UseValue (ValueId valId) -> FSMap.findWithDefault (numLets bnds)
+                                                      0 (literal valId) $
+                                                      boundValues state
   where go = evalValue bnds env state
         (inStart, inEnd) = ST.untuple $ slotInterval env
+
+-- Evaluate an observation
+evalObservation :: Bounds -> SEnvironment -> SState -> Observation -> SBool
+evalObservation bnds env state obs =
+  case obs of
+    AndObs lhs rhs       -> goObs lhs .&& goObs rhs
+    OrObs lhs rhs        -> goObs lhs .|| goObs rhs
+    NotObs subObs        -> sNot $ goObs subObs
+    ChoseSomething (ChoiceId c p) -> FSMap.member (numChoices bnds)
+                                                  (sChoiceId c p) $
+                                                  choice state
+    ValueGE lhs rhs      -> goVal lhs .>= goVal rhs
+    ValueGT lhs rhs      -> goVal lhs .> goVal rhs
+    ValueLT lhs rhs      -> goVal lhs .< goVal rhs
+    ValueLE lhs rhs      -> goVal lhs .<= goVal rhs
+    ValueEQ lhs rhs      -> goVal lhs .== goVal rhs
+    TrueObs              -> sTrue
+    FalseObs             -> sFalse
+  where
+    goObs = evalObservation bnds env state
+    goVal = evalValue bnds env state
 

@@ -41,6 +41,10 @@ lookup b k s
   where (h, h2) = ST.untuple $ SL.head s
         t = SL.tail s
 
+member :: Ord a => SymVal a => SymVal b => Integer ->
+          SBV a -> FSMap a b -> SBool
+member b k s = SM.isJust $ FSMap.lookup b k s
+
 findWithDefault :: Ord a => SymVal a => SymVal b => Integer ->
           SBV b -> SBV a -> FSMap a b -> SBV b
 findWithDefault b def k s

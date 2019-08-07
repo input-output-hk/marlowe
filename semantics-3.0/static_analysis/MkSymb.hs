@@ -2,9 +2,9 @@
 module MkSymb where
 
 import Data.SBV
-import Data.SBV.Tuple
+import Data.SBV.Tuple as ST
 import Data.SBV.Either as SE
-import Data.List (foldl')
+import Data.List (foldl', foldl1')
 import Language.Haskell.TH as TH
 import Data.Either (Either(..))
 
@@ -87,7 +87,7 @@ mkSymCaseRec func [NormalC name params] =
                         $(varE func)
                         ($(foldl' (appE) (conE ssName) $ map (varE) paramNames))) |]
      if length params > 1
-     then [e| $(wrapping) . untuple |]
+     then [e| $(wrapping) . ST.untuple |]
      else wrapping
 mkSymCaseRec func list = [e| SE.either $(mkSymCaseRec func fHalf)
                                        $(mkSymCaseRec func sHalf) |]
@@ -108,6 +108,29 @@ mkSymCase typeBaseName sName ssName clauses =
                             (normalB (mkSymCaseRec func clauses)) []]
      return [signature, declaration]
 
+mkSymConsts :: TH.Name -> [Con] -> (ExpQ -> ExpQ) -> TH.Q [TH.Dec]
+mkSymConsts _ [] f = error "No constructors for type"
+mkSymConsts sName [NormalC name params] f =
+  do let nestFunName = ("s" ++ (nameBase name))
+     let nfName = mkName nestFunName
+     signature <- sigD nfName (foldl1' (\x y -> appT (appT arrowT y) x)
+                                  ((conT sName):
+                                   (reverse [ [t| SBV $(return param) |]
+                                             | (_, param) <- params ])))
+     declaration <- funD nfName $
+       [do names <- mapM (\x -> newName ('p':(show x))) [1..(length params)]
+           clause [ varP n | n <- names ]
+                  (normalB (f (if length params > 1
+                               then [e| ST.tuple $(tupE (map varE names)) |]
+                               else tupE (map varE names)))) []]
+     return [signature, declaration]
+mkSymConsts sName list f =
+  do rfHalf <- (mkSymConsts sName fHalf (f . (\x -> [e| sLeft $(x) |])))
+     rsHalf <- (mkSymConsts sName sHalf (f . (\x -> [e| sRight $(x) |])))
+     return (rfHalf ++ rsHalf)
+  where ll = length list
+        (fHalf, sHalf) = splitAt (ll - (length list `div` 2)) list
+
 mkSymbolicDatatype :: TH.Name -> TH.Q [TH.Dec]
 mkSymbolicDatatype typeName =
   do TyConI (DataD _ _ _ _ clauses _) <- reify typeName
@@ -121,5 +144,7 @@ mkSymbolicDatatype typeName =
      nestFunc <- mkNestFunc typeBaseName typeName nName clauses
      unNestFunc <- mkUnNestFunc typeBaseName typeName nName clauses
      symCaseFunc <- mkSymCase typeBaseName sName ssName clauses
-     return (nestedDecl:symDecl:subSymDecl:(nestFunc ++ unNestFunc ++ symCaseFunc))
+     symConsts <- mkSymConsts sName clauses id
+     return (nestedDecl:symDecl:subSymDecl:
+             (nestFunc ++ unNestFunc ++ symCaseFunc ++ symConsts))
 

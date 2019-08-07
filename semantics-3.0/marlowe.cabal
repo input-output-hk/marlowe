@@ -19,7 +19,8 @@ executable marlowe
                         tasty,
                         tasty-hunit,
                         tasty-smallcheck,
-                        tasty-quickcheck
+                        tasty-quickcheck,
+                        template-haskell
     other-modules:
                         Semantics
                         Semantics2
@@ -32,6 +33,7 @@ executable marlowe
                         FSSet
                         FSMap
                         FSSemantics
+                        MkSymb
     hs-source-dirs:     .
                         static_analysis
     main-is:            Main.hs

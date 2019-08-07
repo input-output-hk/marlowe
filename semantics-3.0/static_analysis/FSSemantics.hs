@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE TemplateHaskell #-}
 module FSSemantics where
 
 import           Data.List       (foldl')
@@ -12,6 +13,7 @@ import qualified Data.SBV.Either as SE
 import qualified Data.SBV.Maybe as SM
 import qualified FSMap as FSMap
 import           FSMap(FSMap)
+import           MkSymb(mkSymbolicDatatype)
 
 type SlotNumber = Integer
 type SSlotNumber = SInteger
@@ -187,32 +189,32 @@ combineOutcomes bnds = FSMap.unionWith (numParties bnds) (+)
 -- INTERVALS
 
 -- Processing of slot interval
---data IntervalError = InvalidInterval SSlotInterval
---                   | IntervalInPastError SSlotNumber SSlotInterval
---  deriving (Eq,Show)
-type SIntervalError = SEither SlotInterval (SlotNumber, SlotInterval)
-type IntervalError = Either SlotInterval (SlotNumber, SlotInterval)
+data IntervalError = InvalidInterval SlotInterval
+                   | IntervalInPastError SlotNumber SlotInterval
+  deriving (Eq,Show)
 
---data IntervalResult = IntervalTrimmed SEnvironment SState
---                    | IntervalError IntervalError
---  deriving (Eq,Show)
-type SIntervalResult = SEither (Environment, State) IntervalError
+mkSymbolicDatatype ''IntervalError
+
+data IntervalResult = IntervalTrimmed Environment State
+                    | IntervalError NIntervalError
+  deriving (Eq,Show)
+
+mkSymbolicDatatype ''IntervalResult
 
 fixInterval :: SSlotInterval -> SState -> SIntervalResult
 fixInterval i st =
   ite (h .< l)
-      (SE.sRight $ SE.sLeft i)
+      (sIntervalError $ sInvalidInterval i)
       (ite (h .< minSlotV)
-           (SE.sRight $ SE.sRight (ST.tuple (minSlotV, i)))
-           (SE.sLeft $ (ST.tuple (env, nst))))
+           (sIntervalError $ sIntervalInPastError minSlotV i)
+           (sIntervalTrimmed env nst))
   where
-    minSlotV = minSlot st
     (l, h) = ST.untuple i
-    nl = smax l minSlotV -- nl is both new "l" and new "minSlot" (the lower bound for slotNum)
-    tInt = ST.tuple (nl, h) -- We know h is greater or equal than nl (prove)
+    minSlotV = minSlot st
+    nl = smax l minSlotV
+    tInt = ST.tuple (nl, h)
     env = sEnvironment tInt
     nst = st `setMinSlot` nl
-
 
 -- EVALUATION
 

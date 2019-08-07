@@ -47,9 +47,6 @@ sAccountId a p = ST.tuple (literal a, literal p)
 accountOwner :: AccountId -> Party
 accountOwner (AccountId _ party) = party
 
---data ChoiceId = ChoiceId NumChoice Party
---  deriving (Eq,Ord,Show,Read)
-
 data ChoiceId = ChoiceId NumChoice Party
   deriving (Eq,Ord,Show,Read)
 type NChoiceId = (NumChoice, Party)
@@ -61,8 +58,6 @@ sChoiceId c p = ST.tuple (literal c, literal p)
 newtype OracleId = OracleId PubKey
   deriving (Eq,Ord,Show,Read)
 
---newtype ValueId = ValueId Integer
---  deriving (Eq,Ord,Show,Read)
 newtype ValueId = ValueId Integer
   deriving (Eq,Ord,Show,Read)
 type NValueId = Integer

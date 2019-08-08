@@ -6,6 +6,7 @@ import Data.SBV.Tuple as ST
 import Data.SBV.List as SL
 import Data.SBV.Maybe as SM
 
+type NMap a b = [(a, b)]
 type FSMap a b = SList (a, b)
 
 empty :: Ord a => SymVal a => SymVal b => FSMap a b
@@ -125,4 +126,10 @@ unionWith b f m1 m2
         t2 = SL.tail m2
         nh = ST.tuple $ (k1, f v1 v2)
 
+minViewWithKey :: Ord a => SymVal a => SymVal b =>
+                  FSMap a b -> SMaybe ((a, b), NMap a b)
+minViewWithKey m =
+  ite (SL.null m)
+      SM.sNothing
+      (SM.sJust (ST.tuple (SL.head m, SL.tail m)))
 

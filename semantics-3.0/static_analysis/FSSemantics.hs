@@ -12,7 +12,7 @@ import qualified Data.SBV.Tuple as ST
 import qualified Data.SBV.Either as SE
 import qualified Data.SBV.Maybe as SM
 import qualified FSMap as FSMap
-import           FSMap(FSMap)
+import           FSMap(FSMap, NMap)
 import           MkSymb(mkSymbolicDatatype)
 
 type SlotNumber = Integer
@@ -46,6 +46,10 @@ sAccountId a p = ST.tuple (literal a, literal p)
 
 accountOwner :: AccountId -> Party
 accountOwner (AccountId _ party) = party
+
+symAccountOwner :: SAccountId -> SParty
+symAccountOwner x = party
+  where (numAcc, party) = ST.untuple x
 
 data ChoiceId = ChoiceId NumChoice Party
   deriving (Eq,Ord,Show,Read)
@@ -268,4 +272,20 @@ evalObservation bnds env state obs =
   where
     goObs = evalObservation bnds env state
     goVal = evalValue bnds env state
+
+-- Pick the first account with money in it
+refundOne :: Integer -> FSMap NAccountId Money
+          -> SMaybe ((Party, Money), NMap NAccountId Money)
+refundOne iters accounts
+  | iters > 0 =
+      SM.maybe SM.sNothing
+               (\ tup ->
+                    let (he, rest) = ST.untuple tup in
+                    let (accId, mon) = ST.untuple he in
+                    ite (mon .> (literal 0))
+                        (SM.sJust $ ST.tuple ( ST.tuple (symAccountOwner accId, mon)
+                                             , rest))
+                        (refundOne (iters - 1) rest))
+               (FSMap.minViewWithKey accounts)
+  | otherwise = SM.sNothing
 

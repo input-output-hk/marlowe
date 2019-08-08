@@ -88,7 +88,9 @@ mkSymCaseRec func [NormalC name params] =
                         ($(foldl' (appE) (conE ssName) $ map (varE) paramNames))) |]
      if length params > 1
      then [e| $(wrapping) . ST.untuple |]
-     else wrapping
+     else if (length params > 0)
+          then wrapping
+          else [e| $(wrapping) . (const ()) |]
 mkSymCaseRec func list = [e| SE.either $(mkSymCaseRec func fHalf)
                                        $(mkSymCaseRec func sHalf) |]
   where ll = length list
@@ -122,7 +124,9 @@ mkSymConsts sName [NormalC name params] f =
            clause [ varP n | n <- names ]
                   (normalB (f (if length params > 1
                                then [e| ST.tuple $(tupE (map varE names)) |]
-                               else tupE (map varE names)))) []]
+                               else if length params > 0
+                                    then tupE (map varE names)
+                                    else [e| literal () |]))) []]
      return [signature, declaration]
 mkSymConsts sName list f =
   do rfHalf <- (mkSymConsts sName fHalf (f . (\x -> [e| sLeft $(x) |])))

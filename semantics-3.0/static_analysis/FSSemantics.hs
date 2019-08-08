@@ -121,13 +121,13 @@ data Contract = Refund
 --                   , choice  :: Map ChoiceId ChosenNum
 --                   , boundValues :: Map ValueId Integer
 --                   , minSlot :: SSlotNumber }
-type SState = STuple4 [(NAccountId, Money)]
-                      [(NChoiceId, ChosenNum)]
-                      [(NValueId, Integer)]
+type SState = STuple4 (NMap NAccountId Money)
+                      (NMap NChoiceId ChosenNum)
+                      (NMap NValueId Integer)
                       SlotNumber
-type State = ( [(NAccountId, Money)]
-             , [(NChoiceId, ChosenNum)]
-             , [(NValueId, Integer)]
+type State = ( NMap NAccountId Money
+             , NMap NChoiceId ChosenNum
+             , NMap NValueId Integer
              , SlotNumber)
 
 account :: SState -> FSMap NAccountId Money
@@ -288,4 +288,16 @@ refundOne iters accounts
                         (refundOne (iters - 1) rest))
                (FSMap.minViewWithKey accounts)
   | otherwise = SM.sNothing
+
+-- Obtains the amount of money available an account
+moneyInAccount :: Integer -> FSMap NAccountId Money -> SAccountId -> SMoney
+moneyInAccount iters accs accId = FSMap.findWithDefault iters 0 accId accs
+
+-- Sets the amount of money available in an account
+updateMoneyInAccount :: Integer -> FSMap NAccountId Money -> SAccountId -> SMoney
+                     -> FSMap NAccountId Money
+updateMoneyInAccount iters accs accId mon =
+  ite (mon .<= 0)
+      (FSMap.delete iters accId accs)
+      (FSMap.insert iters accId mon accs)
 

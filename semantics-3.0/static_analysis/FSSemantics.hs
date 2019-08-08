@@ -44,6 +44,9 @@ type SAccountId = STuple NumAccount Party
 sAccountId :: NumAccount -> Party -> SAccountId
 sAccountId a p = ST.tuple (literal a, literal p)
 
+literalAccountId :: AccountId -> SAccountId
+literalAccountId (AccountId a p) = sAccountId a p
+
 accountOwner :: AccountId -> Party
 accountOwner (AccountId _ party) = party
 
@@ -300,4 +303,45 @@ updateMoneyInAccount iters accs accId mon =
   ite (mon .<= 0)
       (FSMap.delete iters accId accs)
       (FSMap.insert iters accId mon accs)
+
+-- Withdraw up to the given amount of money from an account
+-- Return the amount of money withdrawn
+withdrawMoneyFromAccount :: Bounds -> FSMap NAccountId Money -> SAccountId -> SMoney
+                         -> STuple Money (NMap NAccountId Money)
+withdrawMoneyFromAccount bnds accs accId mon = ST.tuple (withdrawnMoney, newAcc)
+  where
+    naccs = numAccounts bnds
+    avMoney = moneyInAccount naccs accs accId
+    withdrawnMoney = smin avMoney mon
+    newAvMoney = avMoney - withdrawnMoney
+    newAcc = updateMoneyInAccount naccs accs accId newAvMoney
+
+-- Add the given amount of money to an accoun (only if it is positive)
+-- Return the updated Map
+addMoneyToAccount :: Bounds -> FSMap NAccountId Money -> SAccountId -> SMoney
+                  -> FSMap NAccountId Money
+addMoneyToAccount bnds accs accId mon =
+  ite (mon .<= 0)
+      accs
+      (updateMoneyInAccount naccs accs accId newAvMoney)
+  where
+    naccs = numAccounts bnds
+    avMoney = moneyInAccount naccs accs accId
+    newAvMoney = avMoney + mon
+
+data ReduceEffect = ReduceNoEffect
+                  | ReduceNormalPay Party Money
+  deriving (Eq,Ord,Show,Read)
+
+mkSymbolicDatatype ''ReduceEffect
+
+-- Gives the given amount of money to the given payee
+-- Return the appropriate effect and updated Map
+giveMoney :: Bounds -> FSMap NAccountId Money -> Payee -> SMoney
+          -> STuple2 NReduceEffect (NMap NAccountId Money)
+giveMoney bnds accs (Party party) mon = ST.tuple ( sReduceNormalPay (literal party) mon
+                                                 , accs )
+giveMoney bnds accs (Account accId) mon = ST.tuple ( sReduceNoEffect
+                                                   , newAccs )
+    where newAccs = addMoneyToAccount bnds accs (literalAccountId accId) mon
 

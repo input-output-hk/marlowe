@@ -34,8 +34,6 @@ type SMoney = SInteger
 
 type ChosenNum = Integer
 
---data AccountId = AccountId NumAccount Party
---  deriving (Eq,Ord,Show,Read)
 data AccountId = AccountId NumAccount Party
   deriving (Eq,Ord,Show,Read)
 type NAccountId = (NumAccount, Party)
@@ -46,6 +44,9 @@ sAccountId a p = ST.tuple (literal a, literal p)
 
 literalAccountId :: AccountId -> SAccountId
 literalAccountId (AccountId a p) = sAccountId a p
+
+nestedToSAccountId :: NAccountId -> SAccountId
+nestedToSAccountId (a, p) = sAccountId a p
 
 accountOwner :: AccountId -> Party
 accountOwner (AccountId _ party) = party
@@ -106,9 +107,11 @@ data Action = Deposit AccountId Party Value
             | Notify Observation
   deriving (Eq,Ord,Show,Read)
 
-data Payee = Account AccountId
+data Payee = Account NAccountId
            | Party Party
   deriving (Eq,Ord,Show,Read)
+
+mkSymbolicDatatype ''Payee
 
 data Case = Case Action Contract
   deriving (Eq,Ord,Show,Read)
@@ -343,5 +346,30 @@ giveMoney bnds accs (Party party) mon = ST.tuple ( sReduceNormalPay (literal par
                                                  , accs )
 giveMoney bnds accs (Account accId) mon = ST.tuple ( sReduceNoEffect
                                                    , newAccs )
-    where newAccs = addMoneyToAccount bnds accs (literalAccountId accId) mon
+    where newAccs = addMoneyToAccount bnds accs (nestedToSAccountId accId) mon
+
+
+-- REDUCE
+
+data ReduceWarning = ReduceNoWarning
+                   | ReduceNonPositivePay NAccountId NPayee Money
+                   | ReducePartialPay NAccountId NPayee Money Money
+                                    -- ^ src    ^ dest ^ paid ^ expected
+                   | ReduceShadowing NValueId Integer Integer
+                                     -- oldVal ^  newVal ^
+  deriving (Eq,Ord,Show,Read)
+
+mkSymbolicDatatype ''ReduceWarning
+
+data ReduceError = ReduceAmbiguousSlotInterval
+  deriving (Eq,Ord,Show,Read)
+
+mkSymbolicDatatype ''ReduceError
+
+data ReduceResult = Reduced NReduceWarning NReduceEffect State
+                  | NotReduced
+                  | ReduceError NReduceError
+  deriving (Eq,Show)
+
+mkSymbolicDatatype ''ReduceResult
 

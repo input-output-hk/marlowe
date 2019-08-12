@@ -11,6 +11,7 @@ import           Data.SBV
 import qualified Data.SBV.Tuple as ST
 import qualified Data.SBV.Either as SE
 import qualified Data.SBV.Maybe as SM
+import qualified Data.SBV.List as SL
 import qualified FSMap as FSMap
 import           FSMap(FSMap, NMap)
 import           MkSymb(mkSymbolicDatatype)
@@ -389,6 +390,7 @@ data DetReduceResult = DRRContractOver
                      | DRRNoProgressNormal
                      | DRRNoProgressError
                      | DRRProgress Contract
+  deriving (Eq,Ord,Show,Read)
 
 -- Carry a step of the contract with no inputs
 reduce :: SymVal a => Bounds -> SEnvironment -> SState -> Contract
@@ -442,4 +444,65 @@ reduce bnds env state (Let valId val cont) f =
                     (\oldVal -> sReduceShadowing lValId oldVal evVal)
                     (FSMap.lookup (numLets bnds) lValId sv)
     lValId = literalValueId valId
+
+-- REDUCE ALL
+
+data ReduceAllResult = ReducedAll [NReduceWarning] [NReduceEffect] State
+                     | ReduceAllError NReduceError
+  deriving (Eq,Show)
+
+mkSymbolicDatatype ''ReduceAllResult
+
+data DetReduceAllResult = DRARContractOver
+                        | DRARError
+                        | DRARNormal Contract
+  deriving (Eq,Ord,Show,Read)
+
+-- Reduce until it cannot be reduced more
+ 
+splitReduceResultRefund :: SList NReduceWarning -> SList NReduceEffect -> SSReduceResult
+                        -> (SList NReduceWarning, SList NReduceEffect, SState)
+splitReduceResultRefund wa ef (SSReduced twa tef tsta) = (twa SL..: wa, tef SL..: ef, tsta)
+splitReduceResultRefund _ _ SSNotReduced = error "NotReduced in refund stage"
+splitReduceResultRefund _ _ (SSReduceError _) = error "ReduceError in refund stage"
+
+splitReduceResultReduce :: SList NReduceWarning -> SList NReduceEffect -> SSReduceResult
+                        -> (SList NReduceWarning, SList NReduceEffect, SState,
+                            SReduceError)
+splitReduceResultReduce wa ef (SSReduced twa tef tsta) = 
+  (twa SL..: wa, tef SL..: ef, tsta, error "Tried to read symbolic error on normal path")
+splitReduceResultReduce _ _ SSNotReduced =
+  error "Try to read symbolic info on not reduced path"
+splitReduceResultReduce _ _ (SSReduceError terr) = (err, err, err, terr)
+  where err = error "Tried to read symbolic info on error path"
+
+reduceAllAux :: SymVal a => Bounds -> Maybe Integer -> SEnvironment -> SState -> Contract
+             -> SList NReduceWarning -> SList NReduceEffect
+             -> (SReduceAllResult -> DetReduceAllResult -> SBV a) -> SBV a
+reduceAllAux bnds (Just x) env sta c wa ef f
+  | x > 0 = reduce bnds env sta c contFunc
+  | otherwise = f (sReducedAll wa ef sta) DRARContractOver
+  where contFunc sr dr =
+          (let (nwa, nef, nsta) =
+                 ST.untuple ((symCaseReduceResult
+                                (ST.tuple . (splitReduceResultRefund wa ef))) sr) in
+          case dr of
+            DRRContractOver -> f (sReducedAll wa ef sta) DRARContractOver
+            DRRRefundStage -> reduceAllAux bnds (Just (x - 1)) env nsta c nwa nef f
+            DRRNoProgressNormal -> error "No progress in refund stage" 
+            DRRNoProgressError -> error "Error in refund stage" 
+            DRRProgress _ -> error "Progress in refund stage")
+reduceAllAux bnds Nothing env sta c wa ef f =
+    reduce bnds env sta c contFunc
+  where contFunc sr dr =
+          (let (nwa, nef, nsta, err) =
+                 ST.untuple ((symCaseReduceResult
+                                (ST.tuple . (splitReduceResultReduce wa ef))) sr) in
+          case dr of
+            DRRContractOver -> f (sReducedAll wa ef sta) DRARContractOver
+            DRRRefundStage -> reduceAllAux bnds (Just $ numAccounts bnds)
+                                          env nsta c nwa nef f
+            DRRNoProgressNormal -> f (sReducedAll nwa nef nsta) $ DRARNormal c
+            DRRNoProgressError -> f (sReduceAllError err) DRARError
+            DRRProgress nc -> reduceAllAux bnds Nothing env nsta nc nwa nef f)
 

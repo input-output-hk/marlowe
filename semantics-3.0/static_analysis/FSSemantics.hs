@@ -71,6 +71,9 @@ newtype ValueId = ValueId Integer
 type NValueId = Integer
 type SValueId = SInteger
 
+literalValueId :: ValueId -> SValueId
+literalValueId (ValueId x) = literal x
+
 data Value = AvailableMoney AccountId
            | Constant Integer
            | NegValue Value
@@ -135,6 +138,14 @@ type State = ( NMap NAccountId Money
              , NMap NChoiceId ChosenNum
              , NMap NValueId Integer
              , SlotNumber)
+
+setAccount :: SState -> SBV [(NAccountId, Money)] -> SState
+setAccount t ac = let (_, ch, va, sl) = ST.untuple t in
+                  ST.tuple (ac, ch, va, sl)
+
+setBoundValues :: SState -> FSMap Integer Integer -> SState
+setBoundValues t va = let (ac, ch, _, sl) = ST.untuple t in
+                      ST.tuple (ac, ch, va, sl)
 
 account :: SState -> FSMap NAccountId Money
 account st = ac
@@ -372,4 +383,63 @@ data ReduceResult = Reduced NReduceWarning NReduceEffect State
   deriving (Eq,Show)
 
 mkSymbolicDatatype ''ReduceResult
+
+data DetReduceResult = DRRContractOver
+                     | DRRRefundStage
+                     | DRRNoProgressNormal
+                     | DRRNoProgressError
+                     | DRRProgress Contract
+
+-- Carry a step of the contract with no inputs
+reduce :: SymVal a => Bounds -> SEnvironment -> SState -> Contract
+       -> (SReduceResult -> DetReduceResult -> SBV a) -> SBV a
+reduce bnds _ state c@Refund f =
+  SM.maybe (f sNotReduced $ DRRContractOver)
+           (\justTup -> let (pm, newAccount) = ST.untuple justTup in
+                        let (party, money) = ST.untuple pm in
+                        let newState = state `setAccount` newAccount in
+                        (f (sReduced sReduceNoWarning
+                                     (sReduceNormalPay party money)
+                                     newState)
+                           DRRRefundStage))
+           (refundOne (numAccounts bnds) $ account state)
+reduce bnds env state c@(Pay accId payee val nc) f =
+  ite (mon .<= 0)
+      (f (sReduced (sReduceNonPositivePay (literalAccountId accId)
+                                          (literal $ nestPayee payee)
+                                          mon)
+                   sReduceNoEffect state)
+         (DRRProgress nc))
+      (f (sReduced noMonWarn payEffect (state `setAccount` finalAccs)) (DRRProgress nc))
+  where mon = evalValue bnds env state val
+        (paidMon, newAccs) = ST.untuple $
+                               withdrawMoneyFromAccount bnds (account state)
+                                                        (literalAccountId accId) mon
+        noMonWarn = ite (paidMon .< mon)
+                        (sReducePartialPay (literalAccountId accId)
+                                           (literal $ nestPayee payee) paidMon mon)
+                        (sReduceNoWarning)
+        (payEffect, finalAccs) = ST.untuple $ giveMoney bnds newAccs payee paidMon
+reduce bnds env state (If obs cont1 cont2) f =
+  ite (evalObservation bnds env state obs)
+      (f (sReduced sReduceNoWarning sReduceNoEffect state) (DRRProgress cont1))
+      (f (sReduced sReduceNoWarning sReduceNoEffect state) (DRRProgress cont2))
+reduce bnds env state (When _ timeout c) f =
+   ite (endSlot .< (literal timeout))
+       (f sNotReduced DRRNoProgressNormal)
+       (ite (startSlot .>= (literal timeout))
+            (f (sReduced sReduceNoWarning sReduceNoEffect state) $ DRRProgress c)
+            (f (sReduceError sReduceAmbiguousSlotInterval) $ DRRNoProgressError))
+  where (startSlot, endSlot) = ST.untuple $ slotInterval env
+reduce bnds env state (Let valId val cont) f =
+    f (sReduced warn sReduceNoEffect ns) (DRRProgress cont)
+  where
+    sv = boundValues state
+    evVal = evalValue bnds env state val
+    nsv = FSMap.insert (numLets bnds) lValId evVal sv
+    ns = state `setBoundValues` nsv
+    warn = SM.maybe (sReduceNoWarning)
+                    (\oldVal -> sReduceShadowing lValId oldVal evVal)
+                    (FSMap.lookup (numLets bnds) lValId sv)
+    lValId = literalValueId valId
 

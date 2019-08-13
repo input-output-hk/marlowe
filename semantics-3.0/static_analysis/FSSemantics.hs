@@ -34,6 +34,7 @@ type Money = Integer
 type SMoney = SInteger
 
 type ChosenNum = Integer
+type SChosenNum = SBV ChosenNum
 
 data AccountId = AccountId NumAccount Party
   deriving (Eq,Ord,Show,Read)
@@ -63,6 +64,9 @@ type SChoiceId = STuple NumChoice Party
 
 sChoiceId :: NumChoice -> Party -> SChoiceId
 sChoiceId c p = ST.tuple (literal c, literal p)
+
+literalChoiceId :: ChoiceId -> SChoiceId
+literalChoiceId (ChoiceId c p) = sChoiceId c p
 
 newtype OracleId = OracleId PubKey
   deriving (Eq,Ord,Show,Read)
@@ -103,8 +107,9 @@ data Observation = AndObs Observation Observation
 
 type Bound = (Integer, Integer)
 
-inBounds :: ChosenNum -> [Bound] -> Bool
-inBounds num = any (\(l, u) -> num >= l && num <= u)
+inBounds :: SChosenNum -> [Bound] -> SBool
+inBounds num = foldl' (\acc (l, u) -> acc .|| ((num .>= literal l) .&& (num .<= literal u)))
+                      sFalse
 
 data Action = Deposit AccountId Party Value
             | Choice ChoiceId [Bound]
@@ -144,7 +149,11 @@ setAccount :: SState -> SBV [(NAccountId, Money)] -> SState
 setAccount t ac = let (_, ch, va, sl) = ST.untuple t in
                   ST.tuple (ac, ch, va, sl)
 
-setBoundValues :: SState -> FSMap Integer Integer -> SState
+setChoice :: SState -> FSMap NChoiceId ChosenNum -> SState
+setChoice t ch = let (ac, _, va, sl) = ST.untuple t in
+                     ST.tuple (ac, ch, va, sl)
+
+setBoundValues :: SState -> FSMap NValueId Integer -> SState
 setBoundValues t va = let (ac, ch, _, sl) = ST.untuple t in
                       ST.tuple (ac, ch, va, sl)
 
@@ -182,10 +191,12 @@ sEnvironment :: SSlotInterval -> SEnvironment
 sEnvironment si = si
 
 --type SInput = SMaybe (SEither (AccountId, Party, Money) (ChoiceId, ChosenNum))
-data SInput = IDeposit AccountId Party Money
-            | IChoice ChoiceId ChosenNum
+data Input = IDeposit NAccountId Party Money
+            | IChoice NChoiceId ChosenNum
             | INotify
   deriving (Eq,Ord,Show,Read)
+
+mkSymbolicDatatype ''Input
 
 data Bounds = Bounds { numParties :: Integer
                      , numChoices :: Integer
@@ -505,4 +516,50 @@ reduceAllAux bnds Nothing env sta c wa ef f =
             DRRNoProgressNormal -> f (sReducedAll nwa nef nsta) $ DRARNormal c
             DRRNoProgressError -> f (sReduceAllError err) DRARError
             DRRProgress nc -> reduceAllAux bnds Nothing env nsta nc nwa nef f)
+
+reduceAll :: SymVal a => Bounds -> SEnvironment -> SState -> Contract
+          -> (SReduceAllResult -> DetReduceAllResult -> SBV a) -> SBV a
+reduceAll bnds env sta c f = reduceAllAux bnds Nothing env sta c [] [] f
+
+-- APPLY
+
+data ApplyError = ApplyNoMatch
+  deriving (Eq,Ord,Show,Read)
+
+mkSymbolicDatatype ''ApplyError
+
+data ApplyResult = Applied State
+                 | ApplyError NApplyError
+  deriving (Eq,Show)
+
+mkSymbolicDatatype ''ApplyResult
+
+data DetApplyResult = DACNormal Contract
+                    | DACError
+
+-- Apply a single Input to the contract (assumes the contract is reduced)
+applyCases :: SymVal a => Bounds -> SEnvironment -> SState -> SSInput -> [Case] ->
+              (SApplyResult -> DetApplyResult -> SBV a) -> SBV a
+applyCases bnds env state inp@(SSIDeposit accId1 party1 mon1)
+           ((Case (Deposit accId2 party2 val2) nc): t) f =
+  ite ((accId1 .== sAccId2) .&& (party1 .== sParty2) .&& (mon1 .== mon2))
+      (f (sApplied newState) (DACNormal nc))
+      (applyCases bnds env state inp t f)
+  where sAccId2 = literalAccountId accId2
+        sParty2 = literal party2
+        mon2 = evalValue bnds env state val2
+        accs = account state
+        newAccs = addMoneyToAccount bnds accs accId1 mon1
+        newState = state `setAccount` newAccs
+applyCases bnds env state inp@(SSIChoice choId1 cho1)
+           (Case (Choice choId2 bounds2) nc : t) f =
+  ite ((choId1 .== sChoId2) .&& (inBounds cho1 bounds2))
+      (f (sApplied newState) (DACNormal nc))
+      (applyCases bnds env state inp t f)
+  where newState = state `setChoice`
+                     (FSMap.insert (numChoices bnds) choId1 cho1 $ choice state)
+        sChoId2 = literalChoiceId choId2
+applyCases bnds env state SSINotify (Case (Notify obs) nc : t) f =
+  (f (sApplied state) (DACNormal nc))
+applyCases _ _ _ _ _ f = f (sApplyError sApplyNoMatch) DACError
 

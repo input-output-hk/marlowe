@@ -272,8 +272,11 @@ reduce env state@State{..} contract = case contract of
     If obs cont1 cont2 -> Reduced ReduceNoWarning ReduceNoEffect state cont
       where cont = if evalObservation env state obs then cont1 else cont2
     When _ timeout cont
+        -- if timeout in future – do not reduce
         | endSlot < timeout -> NotReduced
-        | startSlot >= timeout -> Reduced ReduceNoWarning ReduceNoEffect state cont
+        -- if timeout in the past – reduce to timeout continuation
+        | timeout <= startSlot -> Reduced ReduceNoWarning ReduceNoEffect state cont
+        -- if timeout in the slot range – issue an ambiguity error
         | otherwise -> ReduceError ReduceAmbiguousSlotInterval
       where
         startSlot = fst $ slotInterval env

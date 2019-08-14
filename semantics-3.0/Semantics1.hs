@@ -1,7 +1,7 @@
 {-# LANGUAGE StrictData     #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE NamedFieldPuns     #-}
-module Semantics where
+module Semantics1 where
 
 import Control.Monad
 import Data.List.NonEmpty (NonEmpty(..), (<|))

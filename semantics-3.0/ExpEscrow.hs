@@ -1,6 +1,6 @@
 module ExpEscrow where
 
-import Semantics4
+import Semantics
 
 contract :: Contract
 contract = When [Case (Deposit (AccountId 1 1) 1 (Constant 450))

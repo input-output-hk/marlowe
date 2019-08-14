@@ -1,363 +1,449 @@
-{-# LANGUAGE StrictData     #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Semantics where
 
-import Control.Monad
-import Data.List.NonEmpty (NonEmpty(..), (<|))
-import qualified Data.List.NonEmpty as NE
-import Data.List (find)
-import Data.Map (Map)
-import qualified Data.Map as M
-import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Maybe (fromMaybe)
-import Control.Monad ((>=>))
+import           Data.List       (foldl')
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Set        (Set)
+import qualified Data.Set        as Set
 
-data SetupContract = SetupContract {
-    setupBounds :: Bounds,
-    setupContract :: Contract
-}
-               deriving (Eq, Ord, Show, Read)
-
-data Bounds = Bounds {
-    oracleBounds :: Map OracleId Bound,
-    choiceBounds :: Map ChoiceId Bound
-}
-               deriving (Eq, Ord, Show, Read)
-
+type SlotNumber = Integer
+type SlotInterval = (SlotNumber, SlotNumber)
 type PubKey = Integer
 type Party = PubKey
 type NumChoice = Integer
-type Timeout = Integer
-type SlotNumber = Integer
-type ActionId = Integer
+type NumAccount = Integer
+type Timeout = SlotNumber
 type Money = Integer
+type ChosenNum = Integer
 
-data Contract =
-    Null |
-    Commit Party Value Timeout Contract Contract |
-    Pay Party Value |
-    All (NonEmpty (Value, Contract)) |
-    If Observation Contract Contract |
-    When (NonEmpty Case) Timeout Contract |
-    While Observation Timeout Contract Contract
---    Let LetLabel Contract Contract |
---    Use LetLabel
-               deriving (Eq, Ord, Show, Read)
+data AccountId = AccountId NumAccount Party
+  deriving (Eq,Ord,Show,Read)
 
-data Case = Case Observation Contract
-               deriving (Eq, Ord, Show, Read)
+accountOwner :: AccountId -> Party
+accountOwner (AccountId _ party) = party
 
 data ChoiceId = ChoiceId NumChoice Party
-               deriving (Eq, Ord, Show, Read)
+  deriving (Eq,Ord,Show,Read)
+newtype OracleId = OracleId PubKey
+  deriving (Eq,Ord,Show,Read)
+newtype ValueId = ValueId Integer
+  deriving (Eq,Ord,Show,Read)
 
-data OracleId = OracleId PubKey
-               deriving (Eq, Ord, Show, Read)
+data Value = AvailableMoney AccountId
+           | Constant Integer
+           | NegValue Value
+           | AddValue Value Value
+           | SubValue Value Value
+           | ChoiceValue ChoiceId Value
+           | SlotIntervalStart
+           | SlotIntervalEnd
+           | UseValue ValueId
+  deriving (Eq,Ord,Show,Read)
 
-type Bound = NonEmpty (Integer, Integer) -- lower/upper bounds are included
+data Observation = AndObs Observation Observation
+                 | OrObs Observation Observation
+                 | NotObs Observation
+                 | ChoseSomething ChoiceId
+                 | ValueGE Value Value
+                 | ValueGT Value Value
+                 | ValueLT Value Value
+                 | ValueLE Value Value
+                 | ValueEQ Value Value
+                 | TrueObs
+                 | FalseObs
+  deriving (Eq,Ord,Show,Read)
 
-data Value = Constant Integer |
-             AvailableMoney |
-             AddValue Value Value |
-             SubValue Value Value |
-             ChoiceValue ChoiceId Value |
-             OracleValue OracleId Value |
-             CurrentSlot -- ToDo: think about slot intervals
-               deriving (Eq, Ord, Show, Read)
+type Bound = (Integer, Integer)
 
-data Observation = AndObs Observation Observation |
-                   OrObs Observation Observation |
-                   NotObs Observation |
-                   ChoseSomething ChoiceId |
-                   OracleValueProvided OracleId |
-                   ValueGE Value Value |
-                   ValueGT Value Value |
-                   ValueLT Value Value |
-                   ValueLE Value Value |
-                   ValueEQ Value Value |
-                   TrueObs |
-                   FalseObs
-               deriving (Eq, Ord, Show, Read)
+inBounds :: ChosenNum -> [Bound] -> Bool
+inBounds num = any (\(l, u) -> num >= l && num <= u)
 
-data Input = Input { inputCommand :: InputCommand
-                   , inputOracleValues :: Map OracleId Integer
-                   , inputChoices :: Map ChoiceId Integer }
-               deriving (Eq, Ord, Show, Read)
+data Action = Deposit AccountId Party Value
+            | Choice ChoiceId [Bound]
+            | Notify Observation
+  deriving (Eq,Ord,Show,Read)
 
-data InputCommand = Perform (NonEmpty ActionId)
-                  | Evaluate
-               deriving (Eq, Ord, Show, Read)
+data Payee = Account AccountId
+           | Party Party
+  deriving (Eq,Ord,Show,Read)
 
+data Case = Case Action Contract
+  deriving (Eq,Ord,Show,Read)
 
-data State = State { stateChoices :: Map ChoiceId Integer
-                   , stateBounds :: Bounds
-                   , stateContracts :: [(Money, Contract)] }
-               deriving (Eq, Ord, Show, Read)
+data Contract = Refund
+              | Pay AccountId Payee Value Contract
+              | If Observation Contract Contract
+              | When [Case] Timeout Contract
+              | Let ValueId Value Contract
+  deriving (Eq,Ord,Show,Read)
 
-emptyBounds :: Bounds
-emptyBounds = Bounds { oracleBounds = M.empty
-                     , choiceBounds = M.empty }
+data State = State { accounts :: Map AccountId Money
+                   , choices  :: Map ChoiceId ChosenNum
+                   , boundValues :: Map ValueId Integer
+                   , minSlot :: SlotNumber }
+  deriving (Eq,Ord,Show,Read)
 
-initialiseState :: SetupContract -> State
-initialiseState (SetupContract { setupBounds = inpBounds
-                               , setupContract = inpContract }) =
-  State { stateChoices = M.empty
-        , stateBounds = inpBounds
-        , stateContracts = [(0, inpContract)] }
+data Environment = Environment { slotInterval :: SlotInterval }
+  deriving (Eq,Ord,Show,Read)
 
-data Environment =
-  Environment { envSlotNumber :: SlotNumber
-              , envChoices :: Map ChoiceId Integer
-              , envBounds :: Bounds
-              , envOracles :: Map OracleId Integer
-              , envAvailableMoney :: Money }
+data Input = IDeposit AccountId Party Money
+           | IChoice ChoiceId ChosenNum
+           | INotify
+  deriving (Eq,Ord,Show,Read)
 
-initEnvironment :: SlotNumber -> Input -> State -> (Maybe (Money -> Environment))
-initEnvironment slotNumber (Input { inputOracleValues = inOra
-                                  , inputChoices = inCho })
-                (State { stateChoices = staCho
-                       , stateBounds = staBou })
-  | M.null $ M.intersection inCho staCho = Just $
-       (\availMoney ->
-          Environment { envSlotNumber = slotNumber
-                      , envChoices = M.union inCho staCho
-                      , envBounds = staBou
-                      , envOracles = inOra
-                      , envAvailableMoney = availMoney })
-  | otherwise = Nothing
+-- TRANSACTION OUTCOMES
 
-intersperseAndWrap :: a -> [a] -> [a]
-intersperseAndWrap x [] = [x]
-intersperseAndWrap x (h:t) = (x:h:intersperseAndWrap x t)
+type TransactionOutcomes = Map Party Money
 
--- From monad-loops package
--- |Compose a list of monadic actions into one action.  Composes using
--- ('>=>') - that is, the output of each action is fed to the input of
--- the one after it in the list.
-concatM :: (Monad m) => [a -> m a] -> (a -> m a)
-concatM fs = foldr (>=>) return fs
-
--- ToDo: Check signatures for choices
-applyInput :: SlotNumber -> Signatoires -> Input -> State -> Maybe State
-applyInput sn s inp@(Input { inputCommand }) st =
-  do envF <- initEnvironment sn inp st
-     let reduceOnce = reduceState envF
-     let performOnce = applyCommandState s envF
-     case inputCommand of
-       Evaluate -> reduceOnce st
-       Perform actions -> let performList = map (performOnce) (NE.toList actions) in
-                          let reducePerformList = intersperseAndWrap reduceOnce performList in
-                          concatM reducePerformList st
-
-applyCommandState :: Signatoires -> (Money -> Environment) -> ActionId -> State -> Maybe State
-applyCommandState s envF aid (st@State { stateContracts }) =
-  do newStateContracts <- applyCommand s envF aid stateContracts
-     return $ st { stateContracts = newStateContracts }
-
-reduceState :: (Money -> Environment) -> State -> Maybe State
-reduceState envF st@(State { stateContracts }) =
-  do x <- traverse (\(m, c) -> reduce (envF m) c) stateContracts
-     return $ st { stateContracts = concat (map NE.toList x) }
-
--- How much everybody pays or receives in transaction
-type TransactionOutcomes = M.Map Party Integer
 
 emptyOutcome :: TransactionOutcomes
-emptyOutcome = M.empty
+emptyOutcome = Map.empty
+
 
 isEmptyOutcome :: TransactionOutcomes -> Bool
 isEmptyOutcome trOut = all (== 0) trOut
 
+
 -- Adds a value to the map of outcomes
-addOutcome :: Party -> Integer -> TransactionOutcomes -> TransactionOutcomes
-addOutcome party diffValue trOut = M.insert party newValue trOut
-  where newValue = case M.lookup party trOut of
-                     Just value -> value + diffValue
-                     Nothing -> diffValue
+addOutcome :: Party -> Money -> TransactionOutcomes -> TransactionOutcomes
+addOutcome party diffValue trOut = Map.insert party newValue trOut
+  where
+    newValue = case Map.lookup party trOut of
+        Just value -> value + diffValue
+        Nothing    -> diffValue
+
 
 -- Add two transaction outcomes together
 combineOutcomes :: TransactionOutcomes -> TransactionOutcomes -> TransactionOutcomes
-combineOutcomes = M.unionWith (+)
+combineOutcomes = Map.unionWith (+)
 
-reduce :: Environment -> Contract -> Maybe (NonEmpty (Money, Contract))
-reduce env contract = case contract of
-    Null -> Just $ (availableMoney, Null) :| []
-    Commit _ _ _ _ _ -> Just $ (availableMoney, contract) :| []
-    Pay _ _ -> Just $ (availableMoney, contract) :| []
-    All shares -> let
-        eshares = NE.map (\(v, sc) -> (evalValue env v, sc)) shares
-        total = foldr ((+) . fst) 0 eshares in
-        if total == availableMoney
-        then do
-            fl <- forM eshares $ \(sv, sc) -> reduce (env { envAvailableMoney = sv }) sc
-            return $ join fl
-        else Nothing
-    If obs cont1 cont2 ->
-        if evalObservation env obs then go cont1 else go cont2
-    When cases timeout timeoutCont ->
-        if isExpired slotNumber timeout
-        then go timeoutCont
-        else case find (\(Case obs _) -> evalObservation env obs) (NE.toList cases) of
-                Nothing -> Just $ (envAvailableMoney env, contract) :| []
-                Just (Case _ sc) -> go sc
-    While obs timeout contractWhile contractAfter ->
-        if (isExpired slotNumber timeout) || (not $ evalObservation env obs)
-        then go contractAfter
-        else do l <- go contractWhile
-                return $ NE.map (\(v, sc) -> (v, While obs timeout sc contractAfter)) l
-  where slotNumber = envSlotNumber env
-        availableMoney = envAvailableMoney env
-        go = reduce env
+-- INTERVALS
 
-type Signatoires = Set Party
+-- Processing of slot interval
+data IntervalError = InvalidInterval SlotInterval
+                   | IntervalInPastError SlotNumber SlotInterval
+  deriving (Eq,Ord,Show,Read)
 
-applyCommand :: Signatoires -> (Money -> Environment) -> ActionId -> [(Money, Contract)] -> Maybe [(Money, Contract)]
-applyCommand _ _ _ [] = Nothing
-applyCommand s f aid ((hm, hc):t)
-  | aid < 1 = Nothing
-  | aid == 1 = do x <- applyCommandRec s (f hm) hc
-                  return (x:t)
-  | otherwise = do x <- applyCommand s f (aid + 1) t
-                   return ((hm, hc):x)
+data IntervalResult = IntervalTrimmed Environment State
+                    | IntervalError IntervalError
+  deriving (Eq,Ord,Show,Read)
 
-applyCommandRec :: Signatoires -> Environment -> Contract -> Maybe (Money, Contract)
-applyCommandRec signatories env contract = case contract of
-    Null -> Nothing
-    Commit party v _ cont _
-        | party `S.member` signatories -> Just (availableMoney + evalValue env v, cont)
-        | otherwise -> Nothing
-    Pay party val
-        | party `S.member` signatories && availableMoney >= ev -> Just (availableMoney - ev, Null)
-        | otherwise -> Nothing
-        where ev = evalValue env val
-    All _ -> Nothing
-    If _ _ _ -> Nothing
-    When _ _ _ -> Nothing
-    While obs timeout contractWhile contractAfter -> do
-        (money, cont) <- applyCommandRec signatories env contractWhile
-        return (money, While obs timeout cont contractAfter)
-  where availableMoney = envAvailableMoney env
+
+fixInterval :: SlotInterval -> State -> IntervalResult
+fixInterval interval@(low, high) state@State{minSlot}
+    | high < low = IntervalError $ InvalidInterval interval
+    | high < minSlot = IntervalError $ IntervalInPastError minSlot interval
+    | otherwise = IntervalTrimmed env nst
+  where
+    -- newLow is both new "low" and new "minSlot" (the lower bound for slotNum)
+    newLow = max low minSlot
+    tInt = (newLow, high) -- We know high is greater or equal than newLow (prove)
+    env = Environment tInt
+    nst = state { minSlot = newLow }
+
+-- EVALUATION
 
 -- Evaluate a value
-evalValue :: Environment -> Value -> Integer
-evalValue env value = case value of
-    Constant i -> i
-    AvailableMoney -> envAvailableMoney env
-    AddValue lhs rhs -> go lhs + go rhs
-    SubValue lhs rhs -> go lhs - go rhs
-    ChoiceValue choiceId val ->
-        fromMaybe (go val) $ M.lookup choiceId (envChoices env)
-    OracleValue oracleId val ->
-        fromMaybe (go val) $ M.lookup oracleId (envOracles env)
-    CurrentSlot -> envSlotNumber env
-  where go = evalValue env
+evalValue :: Environment -> State -> Value -> Integer
+evalValue env state value = case value of
+    AvailableMoney accId     -> Map.findWithDefault 0 accId $ accounts state
+    Constant integer         -> integer
+    NegValue val             -> go val
+    AddValue lhs rhs         -> go lhs + go rhs
+    SubValue lhs rhs         -> go lhs + go rhs
+    ChoiceValue choiceId defVal -> Map.findWithDefault (go defVal) choiceId $ choices state
+    SlotIntervalStart        -> fst $ slotInterval env
+    SlotIntervalEnd          -> snd $ slotInterval env
+    UseValue valId           -> Map.findWithDefault 0 valId $ boundValues state
+  where go = evalValue env state
+
 
 -- Evaluate an observation
-evalObservation :: Environment -> Observation -> Bool
-evalObservation env obs = case obs of
-    AndObs lhs rhs -> go lhs && go rhs
-    OrObs lhs rhs -> go lhs || go rhs
-    NotObs o -> not (go o)
-    ChoseSomething choiceId -> choiceId `M.member` (envChoices env)
-    OracleValueProvided oracleId -> oracleId `M.member` (envOracles env)
-    ValueGE lhs rhs -> goValue lhs >= goValue rhs
-    ValueGT lhs rhs -> goValue lhs > goValue rhs
-    ValueLT lhs rhs -> goValue lhs < goValue rhs
-    ValueLE lhs rhs -> goValue lhs <= goValue rhs
-    ValueEQ lhs rhs -> goValue lhs == goValue rhs
-    TrueObs -> True
-    FalseObs -> False
-  where go = evalObservation env
-        goValue  = evalValue env
+evalObservation :: Environment -> State -> Observation -> Bool
+evalObservation env state obs = case obs of
+    AndObs lhs rhs       -> goObs lhs && goObs rhs
+    OrObs lhs rhs        -> goObs lhs || goObs rhs
+    NotObs subObs        -> not $ goObs subObs
+    ChoseSomething choiceId -> choiceId `Map.member` choices state
+    ValueGE lhs rhs      -> goVal lhs >= goVal rhs
+    ValueGT lhs rhs      -> goVal lhs > goVal rhs
+    ValueLT lhs rhs      -> goVal lhs < goVal rhs
+    ValueLE lhs rhs      -> goVal lhs <= goVal rhs
+    ValueEQ lhs rhs      -> goVal lhs == goVal rhs
+    TrueObs              -> True
+    FalseObs             -> False
+  where
+    goObs = evalObservation env state
+    goVal = evalValue env state
 
--- Decides whether something has expired
-isExpired :: SlotNumber -> SlotNumber -> Bool
-isExpired currSlotNumber expirationSlotNumber = currSlotNumber >= expirationSlotNumber
+
+-- | Pick the first account with money in it
+refundOne :: Map AccountId Money -> Maybe ((Party, Money), Map AccountId Money)
+refundOne accounts = do
+    ((accId, money), rest) <- Map.minViewWithKey accounts
+    if money > 0 then return ((accountOwner accId, money), rest) else refundOne rest
+
+
+-- | Obtains the amount of money available an account
+moneyInAccount :: AccountId -> Map AccountId Money -> Money
+moneyInAccount = Map.findWithDefault 0
+
+
+-- | Sets the amount of money available in an account
+updateMoneyInAccount :: AccountId -> Money -> Map AccountId Money -> Map AccountId Money
+updateMoneyInAccount accId money =
+    if money <= 0 then Map.delete accId else Map.insert accId money
+
+
+{-| Withdraw up to the given amount of money from an account
+    Return the amount of money withdrawn
+-}
+withdrawMoneyFromAccount
+  :: AccountId -> Money -> Map AccountId Money -> (Money, Map AccountId Money)
+withdrawMoneyFromAccount accId money accounts = (withdrawnMoney, newAcc)
+  where
+    avMoney        = moneyInAccount accId accounts
+    withdrawnMoney = min avMoney money
+    newAvMoney     = avMoney - withdrawnMoney
+    newAcc         = updateMoneyInAccount accId newAvMoney accounts
+
+
+{-| Add the given amount of money to an accoun (only if it is positive).
+    Return the updated Map
+-}
+addMoneyToAccount :: AccountId -> Money -> Map AccountId Money -> Map AccountId Money
+addMoneyToAccount accId money accounts =
+    if money <= 0 then accounts else updateMoneyInAccount accId newAvMoney accounts
+  where
+    avMoney = moneyInAccount accId accounts
+    newAvMoney = avMoney + money
+
+
+{-| Gives the given amount of money to the given payee.
+    Returns the appropriate effect and updated accounts
+-}
+giveMoney :: Payee -> Money -> Map AccountId Money -> (ReduceEffect, Map AccountId Money)
+giveMoney (Party   party) money accounts = (ReduceNormalPay party money, accounts)
+giveMoney (Account accId) money accounts = (ReduceNoEffect, newAccs)
+  where newAccs = addMoneyToAccount accId money accounts
+
+-- REDUCE
+
+data ReduceWarning = ReduceNoWarning
+                   | ReduceNonPositivePay AccountId Payee Money
+                   | ReducePartialPay AccountId Payee Money Money
+                                    -- ^ src    ^ dest ^ paid ^ expected
+                   | ReduceShadowing ValueId Integer Integer
+                                     -- oldVal ^  newVal ^
+  deriving (Eq,Ord,Show,Read)
+
+data ReduceEffect = ReduceNoEffect
+                  | ReduceNormalPay Party Money
+  deriving (Eq,Ord,Show,Read)
+
+data ReduceError = ReduceAmbiguousSlotInterval
+  deriving (Eq,Ord,Show,Read)
+
+data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
+                  | NotReduced
+                  | ReduceError ReduceError
+  deriving (Eq,Ord,Show,Read)
+
+
+-- | Carry a step of the contract with no inputs
+reduce :: Environment -> State -> Contract -> ReduceResult
+reduce env state contract = case contract of
+    Refund -> case refundOne $ accounts state of
+        Just ((party, money), newAccounts) ->
+            let newState = state { accounts = newAccounts }
+            in  Reduced ReduceNoWarning (ReduceNormalPay party money) newState Refund
+        Nothing -> NotReduced
+    Pay accId payee val cont -> if amountToPay <= 0
+        then Reduced (ReduceNonPositivePay accId payee amountToPay) ReduceNoEffect state cont
+        else let
+                (paidMoney, newAccs) = withdrawMoneyFromAccount accId amountToPay $ accounts state
+                paidAmount = paidMoney
+                warning = if paidAmount < amountToPay
+                          then ReducePartialPay accId payee paidAmount amountToPay
+                          else ReduceNoWarning
+                (payEffect, finalAccs) = giveMoney payee paidMoney newAccs
+            in Reduced warning payEffect (state { accounts = finalAccs }) cont
+      where amountToPay = evalValue env state val
+    If obs cont1 cont2 -> Reduced ReduceNoWarning ReduceNoEffect state cont
+      where cont = if evalObservation env state obs then cont1 else cont2
+    When _ timeout cont
+        -- if timeout in future – do not reduce
+        | endSlot < timeout -> NotReduced
+        -- if timeout in the past – reduce to timeout continuation
+        | timeout <= startSlot -> Reduced ReduceNoWarning ReduceNoEffect state cont
+        -- if timeout in the slot range – issue an ambiguity error
+        | otherwise -> ReduceError ReduceAmbiguousSlotInterval
+      where
+        startSlot = fst $ slotInterval env
+        endSlot   = snd $ slotInterval env
+    Let valId val cont -> Reduced warn ReduceNoEffect newState cont
+      where
+        evVal = evalValue env state val
+        boundVals = boundValues state
+        newState = state { boundValues = Map.insert valId evVal boundVals }
+        warn = case Map.lookup valId boundVals of
+              Just oldVal -> ReduceShadowing valId oldVal evVal
+              Nothing -> ReduceNoWarning
+
+
+-- REDUCE ALL
+
+data ReduceAllResult = ReducedAll [ReduceWarning] [ReduceEffect] State Contract
+                     | ReduceAllError ReduceError
+  deriving (Eq,Ord,Show,Read)
+
+-- Reduce until it cannot be reduced more
+reduceAllAux
+  :: Environment -> State -> Contract -> [ReduceWarning] -> [ReduceEffect] -> ReduceAllResult
+reduceAllAux env state contract warnings effects = case reduce env state contract of
+    Reduced warning effect newState cont -> let
+        newWarnings = if warning == ReduceNoWarning then warnings else warning : warnings
+        newEffects  = if effect  == ReduceNoEffect  then effects  else effect : effects
+        in  reduceAllAux env newState cont newWarnings newEffects
+    ReduceError err -> ReduceAllError err
+    NotReduced -> ReducedAll (reverse warnings) (reverse effects) state contract
+
+
+reduceAll :: Environment -> State -> Contract -> ReduceAllResult
+reduceAll env state contract = reduceAllAux env state contract [] []
+
+-- APPLY
+
+data ApplyError = ApplyNoMatch
+  deriving (Eq,Ord,Show,Read)
+
+data ApplyResult = Applied State Contract
+                 | ApplyError ApplyError
+  deriving (Eq,Ord,Show,Read)
+
+
+-- Apply a single Input to the contract (assumes the contract is reduced)
+applyCases :: Environment -> State -> Input -> [Case] -> ApplyResult
+applyCases env state input cases = case (input, cases) of
+    (IDeposit accId1 party1 money, Case (Deposit accId2 party2 val) cont : _)
+      | accId1 == accId2 && party1 == party2 && money == amount -> Applied newState cont
+      where
+        amount = evalValue env state val
+        newState = state { accounts = addMoneyToAccount accId1 money $ accounts state }
+    (IChoice choId1 choice, Case (Choice choId2 bounds) cont : _)
+      | choId1 == choId2 && inBounds choice bounds -> Applied newState cont
+      where newState = state { choices = Map.insert choId1 choice $ choices state }
+    (_, Case (Notify obs) cont : _) | evalObservation env state obs -> Applied state cont
+    (_, _ : rest) -> applyCases env state input rest
+    (_, []) -> ApplyError ApplyNoMatch
+
+
+apply :: Environment -> State -> Input -> Contract -> ApplyResult
+apply env state input (When cases _ _) = applyCases env state input cases
+apply _ _ _ _                          = ApplyError ApplyNoMatch
+
+-- APPLY ALL
+
+data ApplyAllResult = AppliedAll [ReduceWarning] [ReduceEffect] State Contract
+                    | AAApplyError ApplyError
+                    | AAReduceError ReduceError
+  deriving (Eq,Ord,Show,Read)
+
+
+-- Apply a list of Inputs to the contract
+applyAllAux
+    :: Environment
+    -> State
+    -> Contract
+    -> [Input]
+    -> [ReduceWarning]
+    -> [ReduceEffect]
+    -> ApplyAllResult
+applyAllAux env state contract inputs warnings effects = case reduceAll env state contract of
+    ReduceAllError error -> AAReduceError error
+    ReducedAll warns effs curState cont -> case inputs of
+        [] -> AppliedAll (warnings ++ warns) (effects ++ effs) curState cont
+        (input : rest) -> case apply env curState input cont of
+            Applied newState cont ->
+                applyAllAux env newState cont rest (warnings ++ warns) (effects ++ effs)
+            ApplyError error -> AAApplyError error
+
+
+applyAll :: Environment -> State -> Contract -> [Input] -> ApplyAllResult
+applyAll env state contract inputs = applyAllAux env state contract inputs [] []
+
+-- PROCESS
+
+-- List of signatures needed by a transaction
+type TransactionSignatures = Set Party
+
+data ProcessError = PEReduceError ReduceError
+                  | PEApplyError ApplyError
+                  | PEIntervalError IntervalError
+                  | PEUselessTransaction
+  deriving (Eq,Ord,Show,Read)
+
+type ProcessWarning = ReduceWarning
+type ProcessEffect = ReduceEffect
+
+data ProcessResult = Processed [ProcessWarning]
+                               [ProcessEffect]
+                               TransactionSignatures
+                               TransactionOutcomes
+                               State
+                               Contract
+                   | ProcessError ProcessError
+  deriving (Eq,Ord,Show,Read)
+
+data Transaction = Transaction { txInterval :: SlotInterval
+                               , txInputs   :: [Input] }
+  deriving (Eq,Ord,Show,Read)
+
+
+-- | Extract necessary signatures from transaction inputs
+getSignatures :: [Input] -> TransactionSignatures
+getSignatures = foldl' addSig Set.empty
+  where
+    addSig acc (IDeposit _ p _)           = Set.insert p acc
+    addSig acc (IChoice (ChoiceId _ p) _) = Set.insert p acc
+    addSig acc INotify                    = acc
+
+
+-- | Extract total outcomes from transaction inputs and outputs
+getOutcomes :: [ReduceEffect] -> [Input] -> TransactionOutcomes
+getOutcomes effect input =
+  foldl' (\acc (p, m) -> addOutcome p m acc) emptyOutcome (incomes ++ outcomes)
+  where
+    incomes = [ (p, m) | ReduceNormalPay p m <- effect ]
+    outcomes = [ (p, m) | IDeposit _ p m <- input ]
+
+
+-- | Try to process a transaction
+processTransaction :: Transaction -> State -> Contract -> ProcessResult
+processTransaction tx state contract = case fixInterval (txInterval tx) state of
+    IntervalTrimmed env fixState -> case applyAll env fixState contract inputs of
+        AppliedAll warnings effects newState cont ->
+            let sigs = getSignatures inputs
+            in  let outcomes = getOutcomes effects inputs
+                in  if contract == cont
+                    then ProcessError PEUselessTransaction
+                    else Processed warnings effects sigs outcomes newState cont
+        AAApplyError error -> ProcessError $ PEApplyError error
+        AAReduceError error -> ProcessError $ PEReduceError error
+    IntervalError error -> ProcessError $ PEIntervalError error
+  where inputs = txInputs tx
+
 
 -- Calculates an upper bound for the maximum lifespan of a contract
 contractLifespan :: Contract -> Integer
 contractLifespan contract = case contract of
-    Null -> 0
-    Commit _ _ timeout contract1 contract2 ->
-        maximum [timeout, contractLifespan contract1, contractLifespan contract2]
-    Pay _ _ -> 0
-    All shares ->   let contractsLifespans = fmap (contractLifespan . snd) shares
-                    in maximum contractsLifespans
+    Refund -> 0
+    Pay _ _ _ cont -> contractLifespan cont
     -- TODO simplify observation and check for always true/false cases
     If _ contract1 contract2 ->
         max (contractLifespan contract1) (contractLifespan contract2)
     When cases timeout subContract -> let
         contractsLifespans = fmap (\(Case _ cont) -> contractLifespan cont) cases
-        in maximum (timeout <| contractLifespan subContract <| contractsLifespans)
-    While _ timeout contract1 contract2 ->
-        maximum [timeout, contractLifespan contract1, contractLifespan contract2]
-
-expireContract :: SlotNumber -> Contract -> Contract
-expireContract slotNumber contract = case contract of
-    Null -> Null
-    Commit _ _ timeout _ cont2 ->
-        if isExpired slotNumber timeout then go cont2 else contract
-    Pay _ _ -> contract
-    All shares -> All $ fmap (\(v, c) -> (v, go c)) shares
-    If obs cont1 cont2 -> If obs (go cont1) (go cont2)
-    When cases timeout timeoutCont -> let
-        reducedTimeoutCont = go timeoutCont
-        updatedCases = fmap (\(Case obs cont) -> Case obs $ go cont) cases
-        in if isExpired slotNumber timeout
-           then reducedTimeoutCont
-           else When updatedCases timeout reducedTimeoutCont
-
-    While obs timeout contractWhile contractAfter ->
-        if isExpired slotNumber timeout
-            then go contractAfter
-            else While obs timeout (go contractWhile) (go contractAfter)
-  where go = expireContract slotNumber
-
-inferActions :: Contract -> [Contract]
-inferActions contract = let
-    inner = case contract of
-        Null -> []
-        Commit _ _ _ _ _ -> [contract]
-        Pay _ _ -> [contract]
-        All shares -> foldMap (\(_, c) -> inferActions c) (NE.toList shares)
-        If _ _ _ -> [contract]
-        When _ _ _ -> []
-        While _ _ contractWhile _ -> inferActions contractWhile
-    in inner
-
-alice, bob, carol :: Party
-alice = 1
-bob = 2
-carol = 3
-
-(|||) :: Observation -> Observation -> Observation
-(|||) = OrObs
-
-(&&&) :: Observation -> Observation -> Observation
-(&&&) = AndObs
-
-(===) :: Value -> Value -> Observation
-(===) = ValueEQ
-
-choseThis :: NumChoice -> ChoiceId -> Observation
-choseThis choice choiceId  = (ChoiceValue choiceId (Constant 0) === Constant choice)
-
-majority :: NumChoice -> Observation
-majority choice = (chose (ChoiceId 1 alice) &&& (chose (ChoiceId 2 bob) ||| chose (ChoiceId 3 carol)))
-    ||| (chose (ChoiceId 2 bob) &&& chose (ChoiceId 3 carol))
-  where chose = choseThis choice
-
--- party1 and (party2 or party3) or (party2 and party3)
-majorityAgrees :: Observation
-majorityAgrees = majority 1
-
-majorityDisagrees :: Observation
-majorityDisagrees = majority 2
-
-escrow :: Contract
-escrow = Commit alice (Constant 450) 10
-    (When (Case majorityAgrees (Pay bob AvailableMoney) :|
-           [Case majorityDisagrees (Pay alice AvailableMoney)])
-        90 (Pay alice AvailableMoney))
-    Null
+        in maximum (timeout : contractLifespan subContract : contractsLifespans)
+    Let _ _ cont -> contractLifespan cont

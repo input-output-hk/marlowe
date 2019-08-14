@@ -1,7 +1,7 @@
 
 module ZCBG2 where
 
-import Semantics4
+import Semantics
 
 
 zeroCouponBondGuaranteed :: Party -> Party -> Party -> Integer -> Integer -> Timeout

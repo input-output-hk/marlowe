@@ -1,6 +1,6 @@
 module Escrow where
 
-import           Semantics4
+import           Semantics
 
 import Data.List (maximumBy, genericLength, inits, tails)
 import Data.Ord (comparing)

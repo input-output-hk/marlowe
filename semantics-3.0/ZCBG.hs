@@ -1,6 +1,6 @@
 module ZCBG where
 
-import Semantics4
+import Semantics
 import Data.List (inits, tails)
 
 splitEverywhere :: [a] -> [([a], a, [a])]
@@ -13,7 +13,7 @@ splitEverywhere xs =
       (init (zip (inits xs) (tails xs)))
 
 allActions :: [Action] -> Timeout -> Contract -> Contract -> Contract
-allActions [] _ cont _ = cont 
+allActions [] _ cont _ = cont
 allActions l timeout cont timeoutCont =
   When [Case t $ allActions (b ++ a) timeout cont timeoutCont
         | (b, t, a) <- splitEverywhere l]

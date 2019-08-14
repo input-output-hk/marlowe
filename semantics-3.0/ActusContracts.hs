@@ -16,7 +16,7 @@ import Data.Time.Clock.System
 import Debug.Trace
 
 import ACTUS
-import Semantics4
+import Semantics
 
 zcb ied md notional discount = (emptyContractConfig ied)
     { maturityDate = Just md

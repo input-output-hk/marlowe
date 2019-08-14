@@ -1,6 +1,6 @@
 module CrowdFunding where
 
-import           Semantics4
+import           Semantics
 
 import Data.List (genericLength, genericSplitAt, inits, tails)
 

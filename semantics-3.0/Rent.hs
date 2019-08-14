@@ -1,6 +1,6 @@
 module Rent where
 
-import Semantics4
+import Semantics
 
 utility :: Contract
 utility = mkDeposit $ payMonth 1 $ payMonth 2 $ payMonth 3 $ Refund

@@ -202,6 +202,7 @@ data Bounds = Bounds { numParties :: Integer
                      , numChoices :: Integer
                      , numAccounts :: Integer
                      , numLets :: Integer
+                     , numActions :: Integer
                      }
 
 -- TRANSACTION OUTCOMES
@@ -521,6 +522,18 @@ reduceAll :: SymVal a => Bounds -> SEnvironment -> SState -> Contract
           -> (SReduceAllResult -> DetReduceAllResult -> SBV a) -> SBV a
 reduceAll bnds env sta c f = reduceAllAux bnds Nothing env sta c [] [] f
 
+splitReduceAllResult :: SList NReduceWarning -> SList NReduceEffect -> SSReduceAllResult
+                     -> SBV ([NReduceWarning], [NReduceEffect], State, NReduceError)
+splitReduceAllResult wa ef (SSReducedAll twa tef tsta) = ST.tuple $
+  (twa SL..++ wa, tef SL..++ ef, tsta, error "Tried to read symbolic error on normal path")
+splitReduceAllResult _ _ (SSReduceAllError terr) = ST.tuple $ (err, err, err, terr)
+  where err = error "Tried to read symbolic info on error path"
+
+splitReduceAllResultWrap :: SList NReduceWarning -> SList NReduceEffect -> SReduceAllResult
+                         -> SBV ([NReduceWarning], [NReduceEffect], State, NReduceError)
+splitReduceAllResultWrap wa ef sr = symCaseReduceAllResult (splitReduceAllResult wa ef) sr
+
+
 -- APPLY
 
 data ApplyError = ApplyNoMatch
@@ -534,8 +547,8 @@ data ApplyResult = Applied State
 
 mkSymbolicDatatype ''ApplyResult
 
-data DetApplyResult = DACNormal Contract
-                    | DACError
+data DetApplyResult = DARNormal Contract
+                    | DARError
 
 -- Apply a single Input to the contract (assumes the contract is reduced)
 applyCases :: SymVal a => Bounds -> SEnvironment -> SState -> SSInput -> [Case] ->
@@ -543,7 +556,7 @@ applyCases :: SymVal a => Bounds -> SEnvironment -> SState -> SSInput -> [Case] 
 applyCases bnds env state inp@(SSIDeposit accId1 party1 mon1)
            ((Case (Deposit accId2 party2 val2) nc): t) f =
   ite ((accId1 .== sAccId2) .&& (party1 .== sParty2) .&& (mon1 .== mon2))
-      (f (sApplied newState) (DACNormal nc))
+      (f (sApplied newState) (DARNormal nc))
       (applyCases bnds env state inp t f)
   where sAccId2 = literalAccountId accId2
         sParty2 = literal party2
@@ -554,12 +567,64 @@ applyCases bnds env state inp@(SSIDeposit accId1 party1 mon1)
 applyCases bnds env state inp@(SSIChoice choId1 cho1)
            (Case (Choice choId2 bounds2) nc : t) f =
   ite ((choId1 .== sChoId2) .&& (inBounds cho1 bounds2))
-      (f (sApplied newState) (DACNormal nc))
+      (f (sApplied newState) (DARNormal nc))
       (applyCases bnds env state inp t f)
   where newState = state `setChoice`
                      (FSMap.insert (numChoices bnds) choId1 cho1 $ choice state)
         sChoId2 = literalChoiceId choId2
 applyCases bnds env state SSINotify (Case (Notify obs) nc : t) f =
-  (f (sApplied state) (DACNormal nc))
-applyCases _ _ _ _ _ f = f (sApplyError sApplyNoMatch) DACError
+  (f (sApplied state) (DARNormal nc))
+applyCases _ _ _ _ _ f = f (sApplyError sApplyNoMatch) DARError
+
+apply :: SymVal a => Bounds -> SEnvironment -> SState -> SInput -> Contract ->
+         (SApplyResult -> DetApplyResult -> SBV a) -> SBV a
+apply bnds env state act (When cases _ _ ) f =
+  symCaseInput (\x -> applyCases bnds env state x cases f) act
+apply _ _ _ _ _ f = f (sApplyError sApplyNoMatch) DARError
+
+-- APPLY ALL
+
+data ApplyAllResult = AppliedAll [NReduceWarning] [NReduceEffect] State
+                    | AAApplyError NApplyError
+                    | AAReduceError NReduceError
+  deriving (Eq,Show)
+
+mkSymbolicDatatype ''ApplyAllResult
+
+data DetApplyAllResult = DAARNormal Contract
+                       | DAARError
+
+-- Apply a list of Inputs to the contract
+applyAllAux :: SymVal a => Integer
+            -> Bounds -> SEnvironment -> SState -> Contract -> SList NInput
+            -> SList NReduceWarning -> SList NReduceEffect
+            -> (SApplyAllResult -> DetApplyAllResult -> SBV a) -> SBV a
+applyAllAux n bnds env state c l wa ef f
+  | n >= 0 = reduceAll bnds env state c contFunReduce
+  | otherwise = error "Input list too long in applyAll" 
+  where contFunReduce sr DRARError =
+          let (_, _, _, err) = ST.untuple $ splitReduceAllResultWrap wa ef sr in
+          (f (sAAApplyError err) DAARError)
+        contFunReduce sr DRARContractOver =
+          let (nwa, nef, nstate, _) = ST.untuple $ splitReduceAllResultWrap wa ef sr in
+          ite (SL.null l)
+              (f (sAppliedAll nwa nef nstate) $ DAARNormal Refund)
+              (f (sAAApplyError sApplyNoMatch) DAARError)
+        contFunReduce sr (DRARNormal nc) =
+          let (nwa, nef, nstate, _) = ST.untuple $ splitReduceAllResultWrap wa ef sr in
+          ite (SL.null l)
+              (f (sAppliedAll nwa nef nstate) $ DAARNormal nc)
+              (apply bnds env nstate (SL.head l) nc (contFunApply (SL.tail l) nwa nef))
+        contFunApply t nwa nef sr DARError =
+          f (symCaseApplyResult
+               (\x -> case x of
+                        SSApplied _ -> error "Tried to read error on normal applyAll"
+                        SSApplyError err -> sAAApplyError err) sr)
+            DAARError
+        contFunApply t nwa nef sr (DARNormal nc) =
+          (symCaseApplyResult
+             (\x -> case x of
+                      SSApplied nst -> applyAllAux (n - 1) bnds env nst nc t 
+                                                   nwa nef f
+                      SSApplyError err -> error "Tried to read data on error applyAll") sr)
 

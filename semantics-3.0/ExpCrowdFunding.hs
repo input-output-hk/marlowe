@@ -1,6 +1,6 @@
 module ExpCrowdFunding where
 
-import           Semantics4
+import           Semantics
 
 contract :: Contract
 contract = crowdfunding 1000 100

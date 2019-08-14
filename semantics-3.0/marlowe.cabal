@@ -23,9 +23,9 @@ executable marlowe
                         template-haskell
     other-modules:
                         Semantics
+                        Semantics1
                         Semantics2
                         Semantics3
-                        Semantics4
                         ActusContracts
                         ACTUS
                         ZCBG

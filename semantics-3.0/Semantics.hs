@@ -1,5 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
-module Semantics4 where
+module Semantics where
 
 import           Data.List       (foldl')
 import           Data.Map.Strict (Map)

@@ -1,6 +1,6 @@
 module ExpRent where
 
-import Semantics4
+import Semantics
 
 expanded =
   When [

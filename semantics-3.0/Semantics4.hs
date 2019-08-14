@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RecordWildCards #-}
 module Semantics4 where
 
 import           Data.List       (foldl')
@@ -132,14 +131,16 @@ data IntervalResult = IntervalTrimmed Environment State
 
 
 fixInterval :: SlotInterval -> State -> IntervalResult
-fixInterval i@(l, h) st@State{minSlot} | h < l = IntervalError $ InvalidInterval i
-                                       | h < minSlot = IntervalError $ IntervalInPastError minSlot i
-                                       | otherwise = IntervalTrimmed env nst
+fixInterval interval@(low, high) state@State{minSlot}
+    | high < low = IntervalError $ InvalidInterval interval
+    | high < minSlot = IntervalError $ IntervalInPastError minSlot interval
+    | otherwise = IntervalTrimmed env nst
   where
-    nl = max l minSlot -- nl is both new "l" and new "minSlot" (the lower bound for slotNum)
-    tInt = (nl, h) -- We know h is greater or equal than nl (prove)
+    -- newLow is both new "low" and new "minSlot" (the lower bound for slotNum)
+    newLow = max low minSlot
+    tInt = (newLow, high) -- We know high is greater or equal than newLow (prove)
     env = Environment tInt
-    nst = st { minSlot = nl }
+    nst = state { minSlot = newLow }
 
 -- EVALUATION
 
@@ -191,8 +192,8 @@ moneyInAccount = Map.findWithDefault 0
 
 -- | Sets the amount of money available in an account
 updateMoneyInAccount :: AccountId -> Money -> Map AccountId Money -> Map AccountId Money
-updateMoneyInAccount accId money | money <= 0 = Map.delete accId
-                                 | otherwise = Map.insert accId money
+updateMoneyInAccount accId money =
+    if money <= 0 then Map.delete accId else Map.insert accId money
 
 
 {-| Withdraw up to the given amount of money from an account
@@ -202,18 +203,18 @@ withdrawMoneyFromAccount
   :: AccountId -> Money -> Map AccountId Money -> (Money, Map AccountId Money)
 withdrawMoneyFromAccount accId money accounts = (withdrawnMoney, newAcc)
   where
-  avMoney        = moneyInAccount accId accounts
-  withdrawnMoney = min avMoney money
-  newAvMoney     = avMoney - withdrawnMoney
-  newAcc         = updateMoneyInAccount accId newAvMoney accounts
+    avMoney        = moneyInAccount accId accounts
+    withdrawnMoney = min avMoney money
+    newAvMoney     = avMoney - withdrawnMoney
+    newAcc         = updateMoneyInAccount accId newAvMoney accounts
 
 
 {-| Add the given amount of money to an accoun (only if it is positive).
     Return the updated Map
 -}
 addMoneyToAccount :: AccountId -> Money -> Map AccountId Money -> Map AccountId Money
-addMoneyToAccount accId money accounts | money <= 0  = accounts
-                                       | otherwise = updateMoneyInAccount accId newAvMoney accounts
+addMoneyToAccount accId money accounts =
+    if money <= 0 then accounts else updateMoneyInAccount accId newAvMoney accounts
   where
     avMoney = moneyInAccount accId accounts
     newAvMoney = avMoney + money
@@ -252,8 +253,8 @@ data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
 
 -- | Carry a step of the contract with no inputs
 reduce :: Environment -> State -> Contract -> ReduceResult
-reduce env state@State{..} contract = case contract of
-    Refund -> case refundOne accounts of
+reduce env state contract = case contract of
+    Refund -> case refundOne $ accounts state of
         Just ((party, money), newAccounts) ->
             let newState = state { accounts = newAccounts }
             in  Reduced ReduceNoWarning (ReduceNormalPay party money) newState Refund
@@ -261,7 +262,7 @@ reduce env state@State{..} contract = case contract of
     Pay accId payee val cont -> if amountToPay <= 0
         then Reduced (ReduceNonPositivePay accId payee amountToPay) ReduceNoEffect state cont
         else let
-                (paidMoney, newAccs) = withdrawMoneyFromAccount accId amountToPay accounts
+                (paidMoney, newAccs) = withdrawMoneyFromAccount accId amountToPay $ accounts state
                 paidAmount = paidMoney
                 warning = if paidAmount < amountToPay
                           then ReducePartialPay accId payee paidAmount amountToPay
@@ -284,8 +285,9 @@ reduce env state@State{..} contract = case contract of
     Let valId val cont -> Reduced warn ReduceNoEffect newState cont
       where
         evVal = evalValue env state val
-        newState = state { boundValues = Map.insert valId evVal boundValues }
-        warn = case Map.lookup valId boundValues of
+        boundVals = boundValues state
+        newState = state { boundValues = Map.insert valId evVal boundVals }
+        warn = case Map.lookup valId boundVals of
               Just oldVal -> ReduceShadowing valId oldVal evVal
               Nothing -> ReduceNoWarning
 
@@ -297,7 +299,8 @@ data ReduceAllResult = ReducedAll [ReduceWarning] [ReduceEffect] State Contract
   deriving (Eq,Ord,Show,Read)
 
 -- Reduce until it cannot be reduced more
-reduceAllAux :: Environment -> State -> Contract -> [ReduceWarning] -> [ReduceEffect] -> ReduceAllResult
+reduceAllAux
+  :: Environment -> State -> Contract -> [ReduceWarning] -> [ReduceEffect] -> ReduceAllResult
 reduceAllAux env state contract warnings effects = case reduce env state contract of
     Reduced warning effect newState cont -> let
         newWarnings = if warning == ReduceNoWarning then warnings else warning : warnings
@@ -322,15 +325,15 @@ data ApplyResult = Applied State Contract
 
 -- Apply a single Input to the contract (assumes the contract is reduced)
 applyCases :: Environment -> State -> Input -> [Case] -> ApplyResult
-applyCases env state@State{..} input cases = case (input, cases) of
+applyCases env state input cases = case (input, cases) of
     (IDeposit accId1 party1 money, Case (Deposit accId2 party2 val) cont : _)
       | accId1 == accId2 && party1 == party2 && money == amount -> Applied newState cont
       where
         amount = evalValue env state val
-        newState = state { accounts = addMoneyToAccount accId1 money accounts }
+        newState = state { accounts = addMoneyToAccount accId1 money $ accounts state }
     (IChoice choId1 choice, Case (Choice choId2 bounds) cont : _)
       | choId1 == choId2 && inBounds choice bounds -> Applied newState cont
-      where newState = state { choices = Map.insert choId1 choice choices }
+      where newState = state { choices = Map.insert choId1 choice $ choices state }
     (_, Case (Notify obs) cont : _) | evalObservation env state obs -> Applied state cont
     (_, _ : rest) -> applyCases env state input rest
     (_, []) -> ApplyError ApplyNoMatch
@@ -409,7 +412,8 @@ getSignatures = foldl' addSig Set.empty
 
 -- | Extract total outcomes from transaction inputs and outputs
 getOutcomes :: [ReduceEffect] -> [Input] -> TransactionOutcomes
-getOutcomes effect input = foldl' (\acc (p, m) -> addOutcome p m acc) emptyOutcome (incomes ++ outcomes)
+getOutcomes effect input =
+  foldl' (\acc (p, m) -> addOutcome p m acc) emptyOutcome (incomes ++ outcomes)
   where
     incomes = [ (p, m) | ReduceNormalPay p m <- effect ]
     outcomes = [ (p, m) | IDeposit _ p m <- input ]

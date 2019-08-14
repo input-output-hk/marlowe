@@ -59,10 +59,10 @@ in [`ZCBG.hs`](https://github.com/input-output-hk/marlowe/blob/master/semantics-
 To single step, you can work in `ghci` like this, using the facility to make local bindings:
 
 ```haskell
-*ZCBG Semantics4> Processed warns1 effs1 sigs1 outs1 st1 c1 = process (Transaction (li1, hi1) inps1) st c
-*ZCBG Semantics4> Processed warns2 effs2 sigs2 outs2 st2 c2 = process (Transaction (li2, hi2) inps2) st1 c1
-*ZCBG Semantics4> Processed warns3 effs3 sigs3 outs3 st3 c3 = process (Transaction (li3, hi3) inps3) st2 c2
-*ZCBG Semantics4> ...
+*ZCBG Semantics> Processed warns1 effs1 sigs1 outs1 st1 c1 = process (Transaction (li1, hi1) inps1) st c
+*ZCBG Semantics> Processed warns2 effs2 sigs2 outs2 st2 c2 = process (Transaction (li2, hi2) inps2) st1 c1
+*ZCBG Semantics> Processed warns3 effs3 sigs3 outs3 st3 c3 = process (Transaction (li3, hi3) inps3) st2 c2
+*ZCBG Semantics> ...
 ```
 
 Where `inps`s are lists of inputs that may include any number of inputs depending on the context, the numbers `li`s and
@@ -116,13 +116,13 @@ Together these represent the successful execution of the Zero Coupon Bond Guaran
 it will issue a series of payments in response, by looking at `effs` and at `outs`.
 
 ```haskell
-*ZCBG Semantics4> let c = zeroCouponBondGuaranteed 1 2 3 1000 200 10 20
-*ZCBG Semantics4> let st = emptyState 0
-*ZCBG Semantics4> Processed warns1 effs1 sigs1 outs1 st1 c1 = process (Transaction (0, 9) [IDeposit (AccountId 1 3) 3 1000]) st c
-*ZCBG Semantics4> Processed warns2 effs2 sigs2 outs2 st2 c2 = process (Transaction (3, 9) [IDeposit (AccountId 2 2) 2 800]) st1 c1
-*ZCBG Semantics4> Processed warns3 effs3 sigs3 outs3 st3 c3 = process (Transaction (10, 12) []) st2 c2
-*ZCBG Semantics4> Processed warns4 effs4 sigs4 outs4 st4 c4 = process (Transaction (17, 19) [IDeposit (AccountId 2 2) 1 1000]) st3 c3
-*ZCBG Semantics4> ...
+*ZCBG Semantics> let c = zeroCouponBondGuaranteed 1 2 3 1000 200 10 20
+*ZCBG Semantics> let st = emptyState 0
+*ZCBG Semantics> Processed warns1 effs1 sigs1 outs1 st1 c1 = process (Transaction (0, 9) [IDeposit (AccountId 1 3) 3 1000]) st c
+*ZCBG Semantics> Processed warns2 effs2 sigs2 outs2 st2 c2 = process (Transaction (3, 9) [IDeposit (AccountId 2 2) 2 800]) st1 c1
+*ZCBG Semantics> Processed warns3 effs3 sigs3 outs3 st3 c3 = process (Transaction (10, 12) []) st2 c2
+*ZCBG Semantics> Processed warns4 effs4 sigs4 outs4 st4 c4 = process (Transaction (17, 19) [IDeposit (AccountId 2 2) 1 1000]) st3 c3
+*ZCBG Semantics> ...
 ```
 
 Why is single stepping useful? It is the equivalent of debugging, and we are able to see the internal state of the contract

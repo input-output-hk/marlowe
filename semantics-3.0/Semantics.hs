@@ -103,11 +103,11 @@ isEmptyOutcome trOut = all (== 0) trOut
 
 -- Adds a value to the map of outcomes
 addOutcome :: Party -> Money -> TransactionOutcomes -> TransactionOutcomes
-addOutcome party diffValue trOut = Map.insert party newValue trOut
-  where
+addOutcome party diffValue trOut = let
     newValue = case Map.lookup party trOut of
         Just value -> value + diffValue
         Nothing    -> diffValue
+    in Map.insert party newValue trOut
 
 
 -- INTERVALS
@@ -324,14 +324,17 @@ data ApplyResult = Applied State Contract
 -- Apply a single Input to the contract (assumes the contract is reduced)
 applyCases :: Environment -> State -> Input -> [Case] -> ApplyResult
 applyCases env state input cases = case (input, cases) of
-    (IDeposit accId1 party1 money, Case (Deposit accId2 party2 val) cont : _)
-      | accId1 == accId2 && party1 == party2 && money == amount -> Applied newState cont
-      where
+    (IDeposit accId1 party1 money, Case (Deposit accId2 party2 val) cont : rest) -> let
         amount = evalValue env state val
         newState = state { accounts = addMoneyToAccount accId1 money (accounts state) }
-    (IChoice choId1 choice, Case (Choice choId2 bounds) cont : _)
-      | choId1 == choId2 && inBounds choice bounds -> Applied newState cont
-      where newState = state { choices = Map.insert choId1 choice (choices state) }
+        in if accId1 == accId2 && party1 == party2 && money == amount
+        then Applied newState cont
+        else applyCases env state input rest
+    (IChoice choId1 choice, Case (Choice choId2 bounds) cont : rest) -> let
+        newState = state { choices = Map.insert choId1 choice (choices state) }
+        in if choId1 == choId2 && inBounds choice bounds
+        then Applied newState cont
+        else applyCases env state input rest
     (_, Case (Notify obs) cont : _) | evalObservation env state obs -> Applied state cont
     (_, _ : rest) -> applyCases env state input rest
     (_, []) -> ApplyNoMatchError
@@ -405,17 +408,18 @@ getOutcomes effect input = let
 
 -- | Try to process a transaction
 processTransaction :: Transaction -> State -> Contract -> ProcessResult
-processTransaction tx state contract = case fixInterval (txInterval tx) state of
-    IntervalTrimmed env fixState -> case applyAllInputs env fixState contract inputs of
-        ApplyAllSuccess warnings effects newState cont -> let
-            outcomes = getOutcomes effects inputs
-            in  if contract == cont
-                then ProcessError PEUselessTransaction
-                else Processed warnings effects outcomes newState cont
-        ApplyAllNoMatchError -> ProcessError PEApplyNoMatchError
-        ApplyAllAmbiguousSlotIntervalError -> ProcessError PEAmbiguousSlotIntervalError
-    IntervalError error -> ProcessError (PEIntervalError error)
-  where inputs = txInputs tx
+processTransaction tx state contract = let
+    inputs = txInputs tx
+    in case fixInterval (txInterval tx) state of
+        IntervalTrimmed env fixState -> case applyAllInputs env fixState contract inputs of
+            ApplyAllSuccess warnings effects newState cont -> let
+                outcomes = getOutcomes effects inputs
+                in  if contract == cont
+                    then ProcessError PEUselessTransaction
+                    else Processed warnings effects outcomes newState cont
+            ApplyAllNoMatchError -> ProcessError PEApplyNoMatchError
+            ApplyAllAmbiguousSlotIntervalError -> ProcessError PEAmbiguousSlotIntervalError
+        IntervalError error -> ProcessError (PEIntervalError error)
 
 
 -- | Calculates an upper bound for the maximum lifespan of a contract

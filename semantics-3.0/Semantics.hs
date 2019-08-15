@@ -253,68 +253,74 @@ data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
 
 
 -- | Carry a step of the contract with no inputs
-reduce :: Environment -> State -> Contract -> ReduceResult
-reduce env state contract = case contract of
+reduceContractStep :: Environment -> State -> Contract -> ReduceResult
+reduceContractStep env state contract = case contract of
+
     Refund -> case refundOne (accounts state) of
-        Just ((party, money), newAccounts) ->
-            let newState = state { accounts = newAccounts }
-            in  Reduced ReduceNoWarning (ReduceNormalPay party money) newState Refund
+        Just ((party, money), newAccounts) -> let
+            newState = state { accounts = newAccounts }
+            in Reduced ReduceNoWarning (ReduceNormalPay party money) newState Refund
         Nothing -> NotReduced
-    Pay accId payee val cont -> if amountToPay <= 0
-        then Reduced (ReduceNonPositivePay accId payee amountToPay) ReduceNoEffect state cont
-        else let
+
+    Pay accId payee val cont -> let
+        amountToPay = evalValue env state val
+        in  if amountToPay <= 0
+            then Reduced (ReduceNonPositivePay accId payee amountToPay) ReduceNoEffect state cont
+            else let
                 (paidMoney, newAccs) = withdrawMoneyFromAccount accId amountToPay (accounts state)
                 paidAmount = paidMoney
                 warning = if paidAmount < amountToPay
                           then ReducePartialPay accId payee paidAmount amountToPay
                           else ReduceNoWarning
                 (payEffect, finalAccs) = giveMoney payee paidMoney newAccs
-            in Reduced warning payEffect (state { accounts = finalAccs }) cont
-      where amountToPay = evalValue env state val
-    If obs cont1 cont2 -> Reduced ReduceNoWarning ReduceNoEffect state cont
-      where cont = if evalObservation env state obs then cont1 else cont2
-    When _ timeout cont
-        -- if timeout in future – do not reduce
-        | endSlot < timeout -> NotReduced
-        -- if timeout in the past – reduce to timeout continuation
-        | timeout <= startSlot -> Reduced ReduceNoWarning ReduceNoEffect state cont
-        -- if timeout in the slot range – issue an ambiguity error
-        | otherwise -> ReduceError ReduceAmbiguousSlotInterval
-      where
+                in Reduced warning payEffect (state { accounts = finalAccs }) cont
+
+    If obs cont1 cont2 -> let
+        cont = if evalObservation env state obs then cont1 else cont2
+        in Reduced ReduceNoWarning ReduceNoEffect state cont
+
+    When _ timeout cont -> let
         startSlot = fst (slotInterval env)
         endSlot   = snd (slotInterval env)
-    Let valId val cont -> Reduced warn ReduceNoEffect newState cont
-      where
-        evVal = evalValue env state val
+        -- if timeout in future – do not reduce
+        in if endSlot < timeout then NotReduced
+          -- if timeout in the past – reduce to timeout continuation
+          else if timeout <= startSlot then Reduced ReduceNoWarning ReduceNoEffect state cont
+          -- if timeout in the slot range – issue an ambiguity error
+          else ReduceError ReduceAmbiguousSlotInterval
+
+    Let valId val cont -> let
+        evaluatedValue = evalValue env state val
         boundVals = boundValues state
-        newState = state { boundValues = Map.insert valId evVal boundVals }
+        newState = state { boundValues = Map.insert valId evaluatedValue boundVals }
         warn = case Map.lookup valId boundVals of
-              Just oldVal -> ReduceShadowing valId oldVal evVal
+              Just oldVal -> ReduceShadowing valId oldVal evaluatedValue
               Nothing -> ReduceNoWarning
+        in Reduced warn ReduceNoEffect newState cont
 
-
--- REDUCE ALL
 
 data ReduceAllResult = ReducedAll [ReduceWarning] [ReduceEffect] State Contract
                      | ReduceAllError ReduceError
   deriving (Eq,Ord,Show)
 
--- Reduce until it cannot be reduced more
-reduceAllAux
-  :: Environment -> State -> Contract -> [ReduceWarning] -> [ReduceEffect] -> ReduceAllResult
-reduceAllAux env state contract warnings effects = case reduce env state contract of
-    Reduced warning effect newState cont -> let
-        newWarnings = if warning == ReduceNoWarning then warnings else warning : warnings
-        newEffects  = if effect  == ReduceNoEffect  then effects  else effect : effects
-        in  reduceAllAux env newState cont newWarnings newEffects
-    ReduceError err -> ReduceAllError err
-    NotReduced -> ReducedAll (reverse warnings) (reverse effects) state contract
+-- | Reduce a contract until it cannot be reduced more
+reduceContractUntilQuiescent :: Environment -> State -> Contract -> ReduceAllResult
+reduceContractUntilQuiescent env state contract = let
+    reduceAllAux
+      :: Environment -> State -> Contract -> [ReduceWarning] -> [ReduceEffect] -> ReduceAllResult
+    reduceAllAux env state contract warnings effects =
+        case reduceContractStep env state contract of
+            Reduced warning effect newState cont -> let
+                newWarnings = if warning == ReduceNoWarning then warnings
+                              else warning : warnings
+                newEffects  = if effect == ReduceNoEffect then effects
+                              else effect : effects
+                in reduceAllAux env newState cont newWarnings newEffects
+            ReduceError err -> ReduceAllError err
+            NotReduced -> ReducedAll (reverse warnings) (reverse effects) state contract
 
+    in reduceAllAux env state contract [] []
 
-reduceAll :: Environment -> State -> Contract -> ReduceAllResult
-reduceAll env state contract = reduceAllAux env state contract [] []
-
--- APPLY
 
 data ApplyError = ApplyNoMatch
   deriving (Eq,Ord,Show)
@@ -361,7 +367,7 @@ applyAllAux
     -> [ReduceWarning]
     -> [ReduceEffect]
     -> ApplyAllResult
-applyAllAux env state contract inputs warnings effects = case reduceAll env state contract of
+applyAllAux env state contract inputs warnings effects = case reduceContractUntilQuiescent env state contract of
     ReduceAllError error -> AAReduceError error
     ReducedAll warns effs curState cont -> case inputs of
         [] -> AppliedAll (warnings ++ warns) (effects ++ effs) curState cont

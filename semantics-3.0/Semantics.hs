@@ -380,11 +380,9 @@ data ProcessError = PEAmbiguousSlotIntervalError
                   | PEUselessTransaction
   deriving (Eq,Ord,Show)
 
-type ProcessWarning = ReduceWarning
-type ProcessEffect = Payment
 
-data ProcessResult = Processed [ProcessWarning]
-                               [ProcessEffect]
+data ProcessResult = Processed [ReduceWarning]
+                               [Payment]
                                TransactionOutcomes
                                State
                                Contract

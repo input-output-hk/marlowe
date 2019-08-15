@@ -478,9 +478,3 @@ pamStateTransition role conf event currTime state =
 
 cardanoEpochStart :: Integer
 cardanoEpochStart = 1506203091
-
-
-dayToSlot :: Day -> Integer
-dayToSlot d = let
-    (MkSystemTime secs _) = utcToSystemTime (UTCTime d 0)
-    in fromIntegral secs - cardanoEpochStart `mod` 20

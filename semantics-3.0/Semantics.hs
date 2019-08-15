@@ -3,13 +3,13 @@ module Semantics where
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
-type SlotNumber = Integer
-type SlotInterval = (SlotNumber, SlotNumber)
+newtype Slot = Slot { getSlot :: Integer } deriving (Eq,Ord,Show)
+
 type PubKey = Integer
 type Party = PubKey
 type NumChoice = Integer
 type NumAccount = Integer
-type Timeout = SlotNumber
+type Timeout = Slot
 type Money = Integer
 type ChosenNum = Integer
 
@@ -50,10 +50,15 @@ data Observation = AndObs Observation Observation
                  | FalseObs
   deriving (Eq,Ord,Show)
 
-type Bound = (Integer, Integer)
+-- |Interval of [ivFrom, ivTo], both bounds are included
+data Interval a = Interval { ivFrom :: a, ivTo :: a }
+  deriving (Eq,Ord,Show)
+
+type SlotInterval = Interval Slot
+type Bound = Interval Integer
 
 inBounds :: ChosenNum -> [Bound] -> Bool
-inBounds num = any (\(l, u) -> num >= l && num <= u)
+inBounds num = any (\(Interval l u) -> num >= l && num <= u)
 
 data Action = Deposit AccountId Party Value
             | Choice ChoiceId [Bound]
@@ -77,7 +82,7 @@ data Contract = Refund
 data State = State { accounts :: Map AccountId Money
                    , choices  :: Map ChoiceId ChosenNum
                    , boundValues :: Map ValueId Integer
-                   , minSlot :: SlotNumber }
+                   , minSlot :: Slot }
   deriving (Eq,Ord,Show)
 
 data Environment = Environment { slotInterval :: SlotInterval }
@@ -89,31 +94,9 @@ data Input = IDeposit AccountId Party Money
   deriving (Eq,Ord,Show)
 
 
-type TransactionOutcomes = Map Party Money
-
-
-emptyOutcome :: TransactionOutcomes
-emptyOutcome = Map.empty
-
-
-isEmptyOutcome :: TransactionOutcomes -> Bool
-isEmptyOutcome trOut = all (== 0) trOut
-
-
--- Adds a value to the map of outcomes
-addOutcome :: Party -> Money -> TransactionOutcomes -> TransactionOutcomes
-addOutcome party diffValue trOut = let
-    newValue = case Map.lookup party trOut of
-        Just value -> value + diffValue
-        Nothing    -> diffValue
-    in Map.insert party newValue trOut
-
-
--- INTERVALS
-
 -- Processing of slot interval
 data IntervalError = InvalidInterval SlotInterval
-                   | IntervalInPastError SlotNumber SlotInterval
+                   | IntervalInPastError Slot SlotInterval
   deriving (Eq,Ord,Show)
 
 data IntervalResult = IntervalTrimmed Environment State
@@ -123,11 +106,11 @@ data IntervalResult = IntervalTrimmed Environment State
 
 fixInterval :: SlotInterval -> State -> IntervalResult
 fixInterval interval state = let
-    (low, high) = interval
+    (Interval low high) = interval
     curMinSlot = minSlot state
     -- newLow is both new "low" and new "minSlot" (the lower bound for slotNum)
     newLow = max low curMinSlot
-    curInterval = (newLow, high) -- We know high is greater or equal than newLow (prove)
+    curInterval = Interval newLow high -- We know high is greater or equal than newLow (prove)
     env = Environment curInterval
     newState = state { minSlot = newLow }
     in if high < low then IntervalError (InvalidInterval interval)
@@ -148,8 +131,8 @@ evalValue env state value = let
         SubValue lhs rhs     -> eval lhs + eval rhs
         ChoiceValue choiceId defVal ->
             Map.findWithDefault (eval defVal) choiceId (choices state)
-        SlotIntervalStart    -> fst (slotInterval env)
-        SlotIntervalEnd      -> snd (slotInterval env)
+        SlotIntervalStart    -> (getSlot . ivFrom . slotInterval) env
+        SlotIntervalEnd      -> (getSlot . ivTo . slotInterval) env
         UseValue valId       -> Map.findWithDefault 0 valId (boundValues state)
 
 
@@ -272,8 +255,8 @@ reduceContractStep env state contract = case contract of
         in Reduced ReduceNoWarning Nothing state cont
 
     When _ timeout cont -> let
-        startSlot = fst (slotInterval env)
-        endSlot   = snd (slotInterval env)
+        startSlot = ivFrom (slotInterval env)
+        endSlot   = ivTo (slotInterval env)
         -- if timeout in future – do not reduce
         in if endSlot < timeout then NotReduced
         -- if timeout in the past – reduce to timeout continuation
@@ -396,6 +379,26 @@ data Transaction = Transaction { txInterval :: SlotInterval
                                , txInputs   :: [Input] }
   deriving (Eq,Ord,Show)
 
+type TransactionOutcomes = Map Party Money
+
+
+emptyOutcome :: TransactionOutcomes
+emptyOutcome = Map.empty
+
+
+isEmptyOutcome :: TransactionOutcomes -> Bool
+isEmptyOutcome trOut = all (== 0) trOut
+
+
+-- Adds a value to the map of outcomes
+addOutcome :: Party -> Money -> TransactionOutcomes -> TransactionOutcomes
+addOutcome party diffValue trOut = let
+    newValue = case Map.lookup party trOut of
+        Just value -> value + diffValue
+        Nothing    -> diffValue
+    in Map.insert party newValue trOut
+
+
 
 -- | Extract total outcomes from transaction inputs and outputs
 getOutcomes :: [Payment] -> [Input] -> TransactionOutcomes
@@ -433,5 +436,5 @@ contractLifespan contract = case contract of
         max (contractLifespan contract1) (contractLifespan contract2)
     When cases timeout subContract -> let
         contractsLifespans = fmap (\(Case _ cont) -> contractLifespan cont) cases
-        in maximum (timeout : contractLifespan subContract : contractsLifespans)
+        in maximum (getSlot timeout : contractLifespan subContract : contractsLifespans)
     Let _ _ cont -> contractLifespan cont

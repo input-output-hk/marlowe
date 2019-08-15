@@ -18,6 +18,11 @@ import Debug.Trace
 import ACTUS
 import Semantics
 
+dayToSlot :: Day -> Slot
+dayToSlot d = let
+    (MkSystemTime secs _) = utcToSystemTime (UTCTime d 0)
+    in Slot (fromIntegral secs - cardanoEpochStart `mod` 20)
+
 zcb ied md notional discount = (emptyContractConfig ied)
     { maturityDate = Just md
     , notional = notional

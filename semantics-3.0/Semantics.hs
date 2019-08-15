@@ -299,21 +299,21 @@ data ReduceAllResult = ReduceAllSuccess [ReduceWarning] [Payment] State Contract
 -- | Reduce a contract until it cannot be reduced more
 reduceContractUntilQuiescent :: Environment -> State -> Contract -> ReduceAllResult
 reduceContractUntilQuiescent env state contract = let
-    reduceAllAux
+    reduceAll
       :: Environment -> State -> Contract -> [ReduceWarning] -> [Payment] -> ReduceAllResult
-    reduceAllAux env state contract warnings effects =
+    reduceAll env state contract warnings effects =
         case reduceContractStep env state contract of
             Reduced warning effect newState cont -> let
 
                 newWarnings = if warning == ReduceNoWarning then warnings
                               else warning : warnings
                 newEffects  = maybe effects (: effects) effect
-                in reduceAllAux env newState cont newWarnings newEffects
+                in reduceAll env newState cont newWarnings newEffects
             AmbiguousSlotIntervalError -> ReduceAllAmbiguousSlotIntervalError
             -- this is the last invocation of reduceAllAux, so we can reverse lists
             NotReduced -> ReduceAllSuccess (reverse warnings) (reverse effects) state contract
 
-    in reduceAllAux env state contract [] []
+    in reduceAll env state contract [] []
 
 
 data ApplyResult = Applied State Contract
@@ -337,9 +337,9 @@ applyCases env state input cases = case (input, cases) of
     (_, []) -> ApplyNoMatchError
 
 
-apply :: Environment -> State -> Input -> Contract -> ApplyResult
-apply env state input (When cases _ _) = applyCases env state input cases
-apply _ _ _ _                          = ApplyNoMatchError
+applyInput :: Environment -> State -> Input -> Contract -> ApplyResult
+applyInput env state input (When cases _ _) = applyCases env state input cases
+applyInput _ _ _ _                          = ApplyNoMatchError
 
 -- APPLY ALL
 
@@ -349,28 +349,27 @@ data ApplyAllResult = ApplyAllSuccess [ReduceWarning] [Payment] State Contract
   deriving (Eq,Ord,Show)
 
 
--- Apply a list of Inputs to the contract
-applyAllAux
-    :: Environment
-    -> State
-    -> Contract
-    -> [Input]
-    -> [ReduceWarning]
-    -> [Payment]
-    -> ApplyAllResult
-applyAllAux env state contract inputs warnings effects =
-    case reduceContractUntilQuiescent env state contract of
-        ReduceAllAmbiguousSlotIntervalError -> ApplyAllAmbiguousSlotIntervalError
-        ReduceAllSuccess warns effs curState cont -> case inputs of
-            [] -> ApplyAllSuccess (warnings ++ warns) (effects ++ effs) curState cont
-            (input : rest) -> case apply env curState input cont of
-                Applied newState cont ->
-                    applyAllAux env newState cont rest (warnings ++ warns) (effects ++ effs)
-                ApplyNoMatchError -> ApplyAllNoMatchError
-
-
-applyAll :: Environment -> State -> Contract -> [Input] -> ApplyAllResult
-applyAll env state contract inputs = applyAllAux env state contract inputs [] []
+-- | Apply a list of Inputs to the contract
+applyAllInputs :: Environment -> State -> Contract -> [Input] -> ApplyAllResult
+applyAllInputs env state contract inputs = let
+    applyAllAux
+        :: Environment
+        -> State
+        -> Contract
+        -> [Input]
+        -> [ReduceWarning]
+        -> [Payment]
+        -> ApplyAllResult
+    applyAllAux env state contract inputs warnings effects =
+        case reduceContractUntilQuiescent env state contract of
+            ReduceAllAmbiguousSlotIntervalError -> ApplyAllAmbiguousSlotIntervalError
+            ReduceAllSuccess warns effs curState cont -> case inputs of
+                [] -> ApplyAllSuccess (warnings ++ warns) (effects ++ effs) curState cont
+                (input : rest) -> case applyInput env curState input cont of
+                    Applied newState cont ->
+                        applyAllAux env newState cont rest (warnings ++ warns) (effects ++ effs)
+                    ApplyNoMatchError -> ApplyAllNoMatchError
+    in applyAllAux env state contract inputs [] []
 
 -- PROCESS
 
@@ -407,7 +406,7 @@ getOutcomes effect input = let
 -- | Try to process a transaction
 processTransaction :: Transaction -> State -> Contract -> ProcessResult
 processTransaction tx state contract = case fixInterval (txInterval tx) state of
-    IntervalTrimmed env fixState -> case applyAll env fixState contract inputs of
+    IntervalTrimmed env fixState -> case applyAllInputs env fixState contract inputs of
         ApplyAllSuccess warnings effects newState cont -> let
             outcomes = getOutcomes effects inputs
             in  if contract == cont
@@ -419,7 +418,7 @@ processTransaction tx state contract = case fixInterval (txInterval tx) state of
   where inputs = txInputs tx
 
 
--- Calculates an upper bound for the maximum lifespan of a contract
+-- | Calculates an upper bound for the maximum lifespan of a contract
 contractLifespan :: Contract -> Integer
 contractLifespan contract = case contract of
     Refund -> 0

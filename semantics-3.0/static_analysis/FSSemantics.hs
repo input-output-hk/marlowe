@@ -14,6 +14,8 @@ import qualified Data.SBV.Maybe as SM
 import qualified Data.SBV.List as SL
 import qualified FSMap as FSMap
 import           FSMap(FSMap, NMap)
+import qualified FSSet as FSSet
+import           FSSet(FSSet, NSet)
 import           MkSymb(mkSymbolicDatatype)
 
 type SlotNumber = Integer
@@ -208,6 +210,7 @@ data Bounds = Bounds { numParties :: Integer
 -- TRANSACTION OUTCOMES
 
 type STransactionOutcomes = FSMap Party Money
+type NTransactionOutcomes = NMap Party Money
 
 emptyOutcome :: STransactionOutcomes
 emptyOutcome = FSMap.empty
@@ -594,6 +597,7 @@ mkSymbolicDatatype ''ApplyAllResult
 data DetApplyAllResult = DAARNormal Contract
                        | DAARError
 
+
 -- Apply a list of Inputs to the contract
 applyAllAux :: SymVal a => Integer
             -> Bounds -> SEnvironment -> SState -> Contract -> SList NInput
@@ -627,4 +631,70 @@ applyAllAux n bnds env state c l wa ef f
                       SSApplied nst -> applyAllAux (n - 1) bnds env nst nc t 
                                                    nwa nef f
                       SSApplyError err -> error "Tried to read data on error applyAll") sr)
+
+applyAll :: SymVal a => Bounds
+         -> SEnvironment -> SState -> Contract -> SList NInput
+         -> (SApplyAllResult -> DetApplyAllResult -> SBV a) -> SBV a
+applyAll bnds env state c l f =
+  applyAllAux (numActions bnds) bnds env state c l [] [] f
+
+-- PROCESS
+
+-- List of signatures needed by a transaction
+type STransactionSignatures = FSSet Party
+type NTransactionSignatures = NSet Party
+
+data ProcessError = PEReduceError NReduceError
+                  | PEApplyError NApplyError
+                  | PEIntervalError NIntervalError
+                  | PEUselessTransaction
+  deriving (Eq,Show)
+
+mkSymbolicDatatype ''ProcessError
+
+type ProcessWarning = ReduceWarning
+type NProcessWarning = NReduceWarning
+type SProcessWarning = SReduceWarning
+type SSProcessWarning = SSReduceWarning
+
+type ProcessEffect = ReduceEffect
+type NProcessEffect = NReduceEffect
+type SProcessEffect = SReduceEffect
+type SSProcessEffect = SSReduceEffect
+
+data ProcessResult = Processed [NProcessWarning]
+                               [NProcessEffect]
+                               NTransactionSignatures
+                               NTransactionOutcomes
+                               State
+                   | ProcessError NProcessError
+  deriving (Eq,Show)
+
+mkSymbolicDatatype ''ProcessResult
+
+--data Transaction = Transaction { interval :: SSlotInterval
+--                               , inputs   :: [SInput] }
+--  deriving (Eq,Show)
+
+data STransaction = STuple SlotInterval [NInput]
+  deriving (Eq,Show)
+
+-- Extract necessary signatures from transaction inputs
+
+sFoldl :: SymVal a => SymVal b => Integer
+       -> (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
+sFoldl inte f acc list
+  | inte > 0 = ite (SL.null list)
+                   acc
+                   (sFoldl (inte - 1) f (f acc (SL.head list)) (SL.tail list))
+  | otherwise = error "List is longer than bound"
+
+getSignatures :: Bounds -> SList NInput -> STransactionSignatures
+getSignatures bnds =
+  sFoldl (numActions bnds) (\x y -> symCaseInput (addSig x) y) FSSet.empty 
+  where
+    addSig acc (SSIDeposit _ p _) = FSSet.insert (numParties bnds) p acc
+    addSig acc (SSIChoice t _) = let (_, p) = ST.untuple t in
+                                 FSSet.insert (numParties bnds) p acc
+    addSig acc SSINotify = acc
 

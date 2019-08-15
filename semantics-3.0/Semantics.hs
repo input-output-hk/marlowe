@@ -1,11 +1,7 @@
-{-# LANGUAGE NamedFieldPuns #-}
 module Semantics where
 
-import           Data.List       (foldl')
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Set        (Set)
-import qualified Data.Set        as Set
 
 type SlotNumber = Integer
 type SlotInterval = (SlotNumber, SlotNumber)
@@ -320,11 +316,8 @@ reduceContractUntilQuiescent env state contract = let
     in reduceAllAux env state contract [] []
 
 
-data ApplyError = ApplyNoMatch
-  deriving (Eq,Ord,Show)
-
 data ApplyResult = Applied State Contract
-                 | ApplyError ApplyError
+                 | ApplyNoMatchError
   deriving (Eq,Ord,Show)
 
 
@@ -341,18 +334,18 @@ applyCases env state input cases = case (input, cases) of
       where newState = state { choices = Map.insert choId1 choice (choices state) }
     (_, Case (Notify obs) cont : _) | evalObservation env state obs -> Applied state cont
     (_, _ : rest) -> applyCases env state input rest
-    (_, []) -> ApplyError ApplyNoMatch
+    (_, []) -> ApplyNoMatchError
 
 
 apply :: Environment -> State -> Input -> Contract -> ApplyResult
 apply env state input (When cases _ _) = applyCases env state input cases
-apply _ _ _ _                          = ApplyError ApplyNoMatch
+apply _ _ _ _                          = ApplyNoMatchError
 
 -- APPLY ALL
 
-data ApplyAllResult = AppliedAll [ReduceWarning] [Payment] State Contract
-                    | AAApplyError ApplyError
-                    | AAReduceError
+data ApplyAllResult = ApplyAllSuccess [ReduceWarning] [Payment] State Contract
+                    | ApplyAllNoMatchError
+                    | ApplyAllAmbiguousSlotIntervalError
   deriving (Eq,Ord,Show)
 
 
@@ -367,13 +360,13 @@ applyAllAux
     -> ApplyAllResult
 applyAllAux env state contract inputs warnings effects =
     case reduceContractUntilQuiescent env state contract of
-        ReduceAllAmbiguousSlotIntervalError -> AAReduceError
+        ReduceAllAmbiguousSlotIntervalError -> ApplyAllAmbiguousSlotIntervalError
         ReduceAllSuccess warns effs curState cont -> case inputs of
-            [] -> AppliedAll (warnings ++ warns) (effects ++ effs) curState cont
+            [] -> ApplyAllSuccess (warnings ++ warns) (effects ++ effs) curState cont
             (input : rest) -> case apply env curState input cont of
                 Applied newState cont ->
                     applyAllAux env newState cont rest (warnings ++ warns) (effects ++ effs)
-                ApplyError error -> AAApplyError error
+                ApplyNoMatchError -> ApplyAllNoMatchError
 
 
 applyAll :: Environment -> State -> Contract -> [Input] -> ApplyAllResult
@@ -381,11 +374,8 @@ applyAll env state contract inputs = applyAllAux env state contract inputs [] []
 
 -- PROCESS
 
--- List of signatures needed by a transaction
-type TransactionSignatures = Set Party
-
-data ProcessError = PEReduceError
-                  | PEApplyError ApplyError
+data ProcessError = PEAmbiguousSlotIntervalError
+                  | PEApplyNoMatchError
                   | PEIntervalError IntervalError
                   | PEUselessTransaction
   deriving (Eq,Ord,Show)
@@ -420,13 +410,13 @@ getOutcomes effect input = let
 processTransaction :: Transaction -> State -> Contract -> ProcessResult
 processTransaction tx state contract = case fixInterval (txInterval tx) state of
     IntervalTrimmed env fixState -> case applyAll env fixState contract inputs of
-        AppliedAll warnings effects newState cont -> let
+        ApplyAllSuccess warnings effects newState cont -> let
             outcomes = getOutcomes effects inputs
             in  if contract == cont
                 then ProcessError PEUselessTransaction
                 else Processed warnings effects outcomes newState cont
-        AAApplyError error -> ProcessError (PEApplyError error)
-        AAReduceError -> ProcessError PEReduceError
+        ApplyAllNoMatchError -> ProcessError PEApplyNoMatchError
+        ApplyAllAmbiguousSlotIntervalError -> ProcessError PEAmbiguousSlotIntervalError
     IntervalError error -> ProcessError (PEIntervalError error)
   where inputs = txInputs tx
 

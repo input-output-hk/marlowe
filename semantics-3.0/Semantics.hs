@@ -244,12 +244,9 @@ data Payment = Payment Party Money
 
 type ReduceEffect = Maybe Payment
 
-data ReduceError = ReduceAmbiguousSlotInterval
-  deriving (Eq,Ord,Show)
-
 data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
                   | NotReduced
-                  | ReduceError ReduceError
+                  | AmbiguousSlotIntervalError
   deriving (Eq,Ord,Show)
 
 
@@ -287,7 +284,7 @@ reduceContractStep env state contract = case contract of
           -- if timeout in the past – reduce to timeout continuation
           else if timeout <= startSlot then Reduced ReduceNoWarning Nothing state cont
           -- if timeout in the slot range – issue an ambiguity error
-          else ReduceError ReduceAmbiguousSlotInterval
+          else AmbiguousSlotIntervalError
 
     Let valId val cont -> let
         evaluatedValue = evalValue env state val
@@ -300,7 +297,7 @@ reduceContractStep env state contract = case contract of
 
 
 data ReduceAllResult = ReduceAllSuccess [ReduceWarning] [Payment] State Contract
-                     | ReduceAllError ReduceError
+                     | ReduceAllAmbiguousSlotIntervalError
   deriving (Eq,Ord,Show)
 
 -- | Reduce a contract until it cannot be reduced more
@@ -316,7 +313,7 @@ reduceContractUntilQuiescent env state contract = let
                               else warning : warnings
                 newEffects  = maybe effects (: effects) effect
                 in reduceAllAux env newState cont newWarnings newEffects
-            ReduceError err -> ReduceAllError err
+            AmbiguousSlotIntervalError -> ReduceAllAmbiguousSlotIntervalError
             -- this is the last invocation of reduceAllAux, so we can reverse lists
             NotReduced -> ReduceAllSuccess (reverse warnings) (reverse effects) state contract
 
@@ -355,7 +352,7 @@ apply _ _ _ _                          = ApplyError ApplyNoMatch
 
 data ApplyAllResult = AppliedAll [ReduceWarning] [Payment] State Contract
                     | AAApplyError ApplyError
-                    | AAReduceError ReduceError
+                    | AAReduceError
   deriving (Eq,Ord,Show)
 
 
@@ -370,7 +367,7 @@ applyAllAux
     -> ApplyAllResult
 applyAllAux env state contract inputs warnings effects =
     case reduceContractUntilQuiescent env state contract of
-        ReduceAllError error -> AAReduceError error
+        ReduceAllAmbiguousSlotIntervalError -> AAReduceError
         ReduceAllSuccess warns effs curState cont -> case inputs of
             [] -> AppliedAll (warnings ++ warns) (effects ++ effs) curState cont
             (input : rest) -> case apply env curState input cont of
@@ -387,7 +384,7 @@ applyAll env state contract inputs = applyAllAux env state contract inputs [] []
 -- List of signatures needed by a transaction
 type TransactionSignatures = Set Party
 
-data ProcessError = PEReduceError ReduceError
+data ProcessError = PEReduceError
                   | PEApplyError ApplyError
                   | PEIntervalError IntervalError
                   | PEUselessTransaction
@@ -429,7 +426,7 @@ processTransaction tx state contract = case fixInterval (txInterval tx) state of
                 then ProcessError PEUselessTransaction
                 else Processed warnings effects outcomes newState cont
         AAApplyError error -> ProcessError (PEApplyError error)
-        AAReduceError error -> ProcessError (PEReduceError error)
+        AAReduceError -> ProcessError PEReduceError
     IntervalError error -> ProcessError (PEIntervalError error)
   where inputs = txInputs tx
 

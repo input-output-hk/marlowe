@@ -114,10 +114,6 @@ addOutcome party diffValue trOut = Map.insert party newValue trOut
         Nothing    -> diffValue
 
 
--- Add two transaction outcomes together
-combineOutcomes :: TransactionOutcomes -> TransactionOutcomes -> TransactionOutcomes
-combineOutcomes = Map.unionWith (+)
-
 -- INTERVALS
 
 -- Processing of slot interval
@@ -131,51 +127,54 @@ data IntervalResult = IntervalTrimmed Environment State
 
 
 fixInterval :: SlotInterval -> State -> IntervalResult
-fixInterval interval@(low, high) state@State{minSlot}
-    | high < low = IntervalError $ InvalidInterval interval
-    | high < minSlot = IntervalError $ IntervalInPastError minSlot interval
-    | otherwise = IntervalTrimmed env nst
-  where
+fixInterval interval state = let
+    (low, high) = interval
+    curMinSlot = minSlot state
     -- newLow is both new "low" and new "minSlot" (the lower bound for slotNum)
-    newLow = max low minSlot
-    tInt = (newLow, high) -- We know high is greater or equal than newLow (prove)
-    env = Environment tInt
-    nst = state { minSlot = newLow }
+    newLow = max low curMinSlot
+    curInterval = (newLow, high) -- We know high is greater or equal than newLow (prove)
+    env = Environment curInterval
+    newState = state { minSlot = newLow }
+    in if high < low then IntervalError (InvalidInterval interval)
+       else if high < curMinSlot then IntervalError (IntervalInPastError curMinSlot interval)
+       else IntervalTrimmed env newState
 
 -- EVALUATION
 
--- Evaluate a value
+-- | Evaluate a @Value@ to Integer
 evalValue :: Environment -> State -> Value -> Integer
-evalValue env state value = case value of
-    AvailableMoney accId     -> Map.findWithDefault 0 accId $ accounts state
-    Constant integer         -> integer
-    NegValue val             -> go val
-    AddValue lhs rhs         -> go lhs + go rhs
-    SubValue lhs rhs         -> go lhs + go rhs
-    ChoiceValue choiceId defVal -> Map.findWithDefault (go defVal) choiceId $ choices state
-    SlotIntervalStart        -> fst $ slotInterval env
-    SlotIntervalEnd          -> snd $ slotInterval env
-    UseValue valId           -> Map.findWithDefault 0 valId $ boundValues state
-  where go = evalValue env state
+evalValue env state value = let
+    eval = evalValue env state
+    in case value of
+        AvailableMoney accId -> Map.findWithDefault 0 accId (accounts state)
+        Constant integer     -> integer
+        NegValue val         -> eval val
+        AddValue lhs rhs     -> eval lhs + eval rhs
+        SubValue lhs rhs     -> eval lhs + eval rhs
+        ChoiceValue choiceId defVal ->
+            Map.findWithDefault (eval defVal) choiceId (choices state)
+        SlotIntervalStart    -> fst (slotInterval env)
+        SlotIntervalEnd      -> snd (slotInterval env)
+        UseValue valId       -> Map.findWithDefault 0 valId (boundValues state)
 
 
--- Evaluate an observation
+-- | Evaluate an @Observation@ to Bool
 evalObservation :: Environment -> State -> Observation -> Bool
-evalObservation env state obs = case obs of
-    AndObs lhs rhs       -> goObs lhs && goObs rhs
-    OrObs lhs rhs        -> goObs lhs || goObs rhs
-    NotObs subObs        -> not $ goObs subObs
-    ChoseSomething choiceId -> choiceId `Map.member` choices state
-    ValueGE lhs rhs      -> goVal lhs >= goVal rhs
-    ValueGT lhs rhs      -> goVal lhs > goVal rhs
-    ValueLT lhs rhs      -> goVal lhs < goVal rhs
-    ValueLE lhs rhs      -> goVal lhs <= goVal rhs
-    ValueEQ lhs rhs      -> goVal lhs == goVal rhs
-    TrueObs              -> True
-    FalseObs             -> False
-  where
+evalObservation env state obs = let
     goObs = evalObservation env state
     goVal = evalValue env state
+    in case obs of
+        AndObs lhs rhs       -> goObs lhs && goObs rhs
+        OrObs lhs rhs        -> goObs lhs || goObs rhs
+        NotObs subObs        -> not (goObs subObs)
+        ChoseSomething choiceId -> choiceId `Map.member` choices state
+        ValueGE lhs rhs      -> goVal lhs >= goVal rhs
+        ValueGT lhs rhs      -> goVal lhs > goVal rhs
+        ValueLT lhs rhs      -> goVal lhs < goVal rhs
+        ValueLE lhs rhs      -> goVal lhs <= goVal rhs
+        ValueEQ lhs rhs      -> goVal lhs == goVal rhs
+        TrueObs              -> True
+        FalseObs             -> False
 
 
 -- | Pick the first account with money in it
@@ -201,32 +200,34 @@ updateMoneyInAccount accId money =
 -}
 withdrawMoneyFromAccount
   :: AccountId -> Money -> Map AccountId Money -> (Money, Map AccountId Money)
-withdrawMoneyFromAccount accId money accounts = (withdrawnMoney, newAcc)
-  where
-    avMoney        = moneyInAccount accId accounts
-    withdrawnMoney = min avMoney money
-    newAvMoney     = avMoney - withdrawnMoney
-    newAcc         = updateMoneyInAccount accId newAvMoney accounts
+withdrawMoneyFromAccount accId money accounts = let
+    balance        = moneyInAccount accId accounts
+    withdrawnMoney = min balance money
+    newBalance     = balance - withdrawnMoney
+    newAcc         = updateMoneyInAccount accId newBalance accounts
+    in (withdrawnMoney, newAcc)
 
 
-{-| Add the given amount of money to an accoun (only if it is positive).
+{-| Add the given amount of money to an account (only if it is positive).
     Return the updated Map
 -}
 addMoneyToAccount :: AccountId -> Money -> Map AccountId Money -> Map AccountId Money
-addMoneyToAccount accId money accounts =
-    if money <= 0 then accounts else updateMoneyInAccount accId newAvMoney accounts
-  where
-    avMoney = moneyInAccount accId accounts
-    newAvMoney = avMoney + money
+addMoneyToAccount accId money accounts = let
+    balance = moneyInAccount accId accounts
+    newBalance = balance + money
+    in if money <= 0 then accounts
+       else updateMoneyInAccount accId newBalance accounts
 
 
 {-| Gives the given amount of money to the given payee.
     Returns the appropriate effect and updated accounts
 -}
 giveMoney :: Payee -> Money -> Map AccountId Money -> (ReduceEffect, Map AccountId Money)
-giveMoney (Party   party) money accounts = (ReduceNormalPay party money, accounts)
-giveMoney (Account accId) money accounts = (ReduceNoEffect, newAccs)
-  where newAccs = addMoneyToAccount accId money accounts
+giveMoney payee money accounts = case payee of
+    Party party   -> (ReduceNormalPay party money, accounts)
+    Account accId -> let
+        newAccs = addMoneyToAccount accId money accounts
+        in (ReduceNoEffect, newAccs)
 
 -- REDUCE
 
@@ -254,7 +255,7 @@ data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
 -- | Carry a step of the contract with no inputs
 reduce :: Environment -> State -> Contract -> ReduceResult
 reduce env state contract = case contract of
-    Refund -> case refundOne $ accounts state of
+    Refund -> case refundOne (accounts state) of
         Just ((party, money), newAccounts) ->
             let newState = state { accounts = newAccounts }
             in  Reduced ReduceNoWarning (ReduceNormalPay party money) newState Refund
@@ -262,7 +263,7 @@ reduce env state contract = case contract of
     Pay accId payee val cont -> if amountToPay <= 0
         then Reduced (ReduceNonPositivePay accId payee amountToPay) ReduceNoEffect state cont
         else let
-                (paidMoney, newAccs) = withdrawMoneyFromAccount accId amountToPay $ accounts state
+                (paidMoney, newAccs) = withdrawMoneyFromAccount accId amountToPay (accounts state)
                 paidAmount = paidMoney
                 warning = if paidAmount < amountToPay
                           then ReducePartialPay accId payee paidAmount amountToPay
@@ -280,8 +281,8 @@ reduce env state contract = case contract of
         -- if timeout in the slot range – issue an ambiguity error
         | otherwise -> ReduceError ReduceAmbiguousSlotInterval
       where
-        startSlot = fst $ slotInterval env
-        endSlot   = snd $ slotInterval env
+        startSlot = fst (slotInterval env)
+        endSlot   = snd (slotInterval env)
     Let valId val cont -> Reduced warn ReduceNoEffect newState cont
       where
         evVal = evalValue env state val
@@ -330,10 +331,10 @@ applyCases env state input cases = case (input, cases) of
       | accId1 == accId2 && party1 == party2 && money == amount -> Applied newState cont
       where
         amount = evalValue env state val
-        newState = state { accounts = addMoneyToAccount accId1 money $ accounts state }
+        newState = state { accounts = addMoneyToAccount accId1 money (accounts state) }
     (IChoice choId1 choice, Case (Choice choId2 bounds) cont : _)
       | choId1 == choId2 && inBounds choice bounds -> Applied newState cont
-      where newState = state { choices = Map.insert choId1 choice $ choices state }
+      where newState = state { choices = Map.insert choId1 choice (choices state) }
     (_, Case (Notify obs) cont : _) | evalObservation env state obs -> Applied state cont
     (_, _ : rest) -> applyCases env state input rest
     (_, []) -> ApplyError ApplyNoMatch
@@ -429,9 +430,9 @@ processTransaction tx state contract = case fixInterval (txInterval tx) state of
                 in  if contract == cont
                     then ProcessError PEUselessTransaction
                     else Processed warnings effects sigs outcomes newState cont
-        AAApplyError error -> ProcessError $ PEApplyError error
-        AAReduceError error -> ProcessError $ PEReduceError error
-    IntervalError error -> ProcessError $ PEIntervalError error
+        AAApplyError error -> ProcessError (PEApplyError error)
+        AAReduceError error -> ProcessError (PEReduceError error)
+    IntervalError error -> ProcessError (PEIntervalError error)
   where inputs = txInputs tx
 
 

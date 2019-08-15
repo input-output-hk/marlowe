@@ -18,17 +18,17 @@ type Money = Integer
 type ChosenNum = Integer
 
 data AccountId = AccountId NumAccount Party
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 accountOwner :: AccountId -> Party
 accountOwner (AccountId _ party) = party
 
 data ChoiceId = ChoiceId NumChoice Party
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 newtype OracleId = OracleId PubKey
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 newtype ValueId = ValueId Integer
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data Value = AvailableMoney AccountId
            | Constant Integer
@@ -39,7 +39,7 @@ data Value = AvailableMoney AccountId
            | SlotIntervalStart
            | SlotIntervalEnd
            | UseValue ValueId
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data Observation = AndObs Observation Observation
                  | OrObs Observation Observation
@@ -52,7 +52,7 @@ data Observation = AndObs Observation Observation
                  | ValueEQ Value Value
                  | TrueObs
                  | FalseObs
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 type Bound = (Integer, Integer)
 
@@ -62,35 +62,35 @@ inBounds num = any (\(l, u) -> num >= l && num <= u)
 data Action = Deposit AccountId Party Value
             | Choice ChoiceId [Bound]
             | Notify Observation
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data Payee = Account AccountId
            | Party Party
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data Case = Case Action Contract
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data Contract = Refund
               | Pay AccountId Payee Value Contract
               | If Observation Contract Contract
               | When [Case] Timeout Contract
               | Let ValueId Value Contract
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data State = State { accounts :: Map AccountId Money
                    , choices  :: Map ChoiceId ChosenNum
                    , boundValues :: Map ValueId Integer
                    , minSlot :: SlotNumber }
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data Environment = Environment { slotInterval :: SlotInterval }
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data Input = IDeposit AccountId Party Money
            | IChoice ChoiceId ChosenNum
            | INotify
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 -- TRANSACTION OUTCOMES
 
@@ -123,11 +123,11 @@ combineOutcomes = Map.unionWith (+)
 -- Processing of slot interval
 data IntervalError = InvalidInterval SlotInterval
                    | IntervalInPastError SlotNumber SlotInterval
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data IntervalResult = IntervalTrimmed Environment State
                     | IntervalError IntervalError
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 
 fixInterval :: SlotInterval -> State -> IntervalResult
@@ -236,19 +236,19 @@ data ReduceWarning = ReduceNoWarning
                                     -- ^ src    ^ dest ^ paid ^ expected
                    | ReduceShadowing ValueId Integer Integer
                                      -- oldVal ^  newVal ^
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data ReduceEffect = ReduceNoEffect
                   | ReduceNormalPay Party Money
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data ReduceError = ReduceAmbiguousSlotInterval
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
                   | NotReduced
                   | ReduceError ReduceError
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 
 -- | Carry a step of the contract with no inputs
@@ -296,7 +296,7 @@ reduce env state contract = case contract of
 
 data ReduceAllResult = ReducedAll [ReduceWarning] [ReduceEffect] State Contract
                      | ReduceAllError ReduceError
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 -- Reduce until it cannot be reduced more
 reduceAllAux
@@ -316,11 +316,11 @@ reduceAll env state contract = reduceAllAux env state contract [] []
 -- APPLY
 
 data ApplyError = ApplyNoMatch
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data ApplyResult = Applied State Contract
                  | ApplyError ApplyError
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 
 -- Apply a single Input to the contract (assumes the contract is reduced)
@@ -348,7 +348,7 @@ apply _ _ _ _                          = ApplyError ApplyNoMatch
 data ApplyAllResult = AppliedAll [ReduceWarning] [ReduceEffect] State Contract
                     | AAApplyError ApplyError
                     | AAReduceError ReduceError
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 
 -- Apply a list of Inputs to the contract
@@ -382,7 +382,7 @@ data ProcessError = PEReduceError ReduceError
                   | PEApplyError ApplyError
                   | PEIntervalError IntervalError
                   | PEUselessTransaction
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 type ProcessWarning = ReduceWarning
 type ProcessEffect = ReduceEffect
@@ -394,11 +394,11 @@ data ProcessResult = Processed [ProcessWarning]
                                State
                                Contract
                    | ProcessError ProcessError
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 data Transaction = Transaction { txInterval :: SlotInterval
                                , txInputs   :: [Input] }
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show)
 
 
 -- | Extract necessary signatures from transaction inputs

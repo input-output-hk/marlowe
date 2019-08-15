@@ -88,7 +88,6 @@ data Input = IDeposit AccountId Party Money
            | INotify
   deriving (Eq,Ord,Show)
 
--- TRANSACTION OUTCOMES
 
 type TransactionOutcomes = Map Party Money
 
@@ -132,8 +131,8 @@ fixInterval interval state = let
     env = Environment curInterval
     newState = state { minSlot = newLow }
     in if high < low then IntervalError (InvalidInterval interval)
-       else if high < curMinSlot then IntervalError (IntervalInPastError curMinSlot interval)
-       else IntervalTrimmed env newState
+    else if high < curMinSlot then IntervalError (IntervalInPastError curMinSlot interval)
+    else IntervalTrimmed env newState
 
 -- EVALUATION
 
@@ -212,7 +211,7 @@ addMoneyToAccount accId money accounts = let
     balance = moneyInAccount accId accounts
     newBalance = balance + money
     in if money <= 0 then accounts
-       else updateMoneyInAccount accId newBalance accounts
+    else updateMoneyInAccount accId newBalance accounts
 
 
 {-| Gives the given amount of money to the given payee.
@@ -277,10 +276,10 @@ reduceContractStep env state contract = case contract of
         endSlot   = snd (slotInterval env)
         -- if timeout in future – do not reduce
         in if endSlot < timeout then NotReduced
-          -- if timeout in the past – reduce to timeout continuation
-          else if timeout <= startSlot then Reduced ReduceNoWarning Nothing state cont
-          -- if timeout in the slot range – issue an ambiguity error
-          else AmbiguousSlotIntervalError
+        -- if timeout in the past – reduce to timeout continuation
+        else if timeout <= startSlot then Reduced ReduceNoWarning Nothing state cont
+        -- if timeout in the slot range – issue an ambiguity error
+        else AmbiguousSlotIntervalError
 
     Let valId val cont -> let
         evaluatedValue = evalValue env state val
@@ -307,7 +306,9 @@ reduceContractUntilQuiescent env state contract = let
 
                 newWarnings = if warning == ReduceNoWarning then warnings
                               else warning : warnings
-                newEffects  = maybe effects (: effects) effect
+                newEffects  = case effect of
+                    Just eff -> eff : effects
+                    Nothing  -> effects
                 in reduceAll env newState cont newWarnings newEffects
             AmbiguousSlotIntervalError -> ReduceAllAmbiguousSlotIntervalError
             -- this is the last invocation of reduceAllAux, so we can reverse lists

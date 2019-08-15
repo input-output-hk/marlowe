@@ -224,10 +224,10 @@ addMoneyToAccount accId money accounts = let
 -}
 giveMoney :: Payee -> Money -> Map AccountId Money -> (ReduceEffect, Map AccountId Money)
 giveMoney payee money accounts = case payee of
-    Party party   -> (ReduceNormalPay party money, accounts)
+    Party party   -> (Just (Payment party money), accounts)
     Account accId -> let
         newAccs = addMoneyToAccount accId money accounts
-        in (ReduceNoEffect, newAccs)
+        in (Nothing, newAccs)
 
 -- REDUCE
 
@@ -239,9 +239,10 @@ data ReduceWarning = ReduceNoWarning
                                      -- oldVal ^  newVal ^
   deriving (Eq,Ord,Show)
 
-data ReduceEffect = ReduceNoEffect
-                  | ReduceNormalPay Party Money
+data Payment = Payment Party Money
   deriving (Eq,Ord,Show)
+
+type ReduceEffect = Maybe Payment
 
 data ReduceError = ReduceAmbiguousSlotInterval
   deriving (Eq,Ord,Show)
@@ -259,13 +260,13 @@ reduceContractStep env state contract = case contract of
     Refund -> case refundOne (accounts state) of
         Just ((party, money), newAccounts) -> let
             newState = state { accounts = newAccounts }
-            in Reduced ReduceNoWarning (ReduceNormalPay party money) newState Refund
+            in Reduced ReduceNoWarning (Just (Payment party money)) newState Refund
         Nothing -> NotReduced
 
     Pay accId payee val cont -> let
         amountToPay = evalValue env state val
         in  if amountToPay <= 0
-            then Reduced (ReduceNonPositivePay accId payee amountToPay) ReduceNoEffect state cont
+            then Reduced (ReduceNonPositivePay accId payee amountToPay) Nothing state cont
             else let
                 (paidMoney, newAccs) = withdrawMoneyFromAccount accId amountToPay (accounts state)
                 paidAmount = paidMoney
@@ -277,7 +278,7 @@ reduceContractStep env state contract = case contract of
 
     If obs cont1 cont2 -> let
         cont = if evalObservation env state obs then cont1 else cont2
-        in Reduced ReduceNoWarning ReduceNoEffect state cont
+        in Reduced ReduceNoWarning Nothing state cont
 
     When _ timeout cont -> let
         startSlot = fst (slotInterval env)
@@ -285,7 +286,7 @@ reduceContractStep env state contract = case contract of
         -- if timeout in future – do not reduce
         in if endSlot < timeout then NotReduced
           -- if timeout in the past – reduce to timeout continuation
-          else if timeout <= startSlot then Reduced ReduceNoWarning ReduceNoEffect state cont
+          else if timeout <= startSlot then Reduced ReduceNoWarning Nothing state cont
           -- if timeout in the slot range – issue an ambiguity error
           else ReduceError ReduceAmbiguousSlotInterval
 
@@ -296,10 +297,10 @@ reduceContractStep env state contract = case contract of
         warn = case Map.lookup valId boundVals of
               Just oldVal -> ReduceShadowing valId oldVal evaluatedValue
               Nothing -> ReduceNoWarning
-        in Reduced warn ReduceNoEffect newState cont
+        in Reduced warn Nothing newState cont
 
 
-data ReduceAllResult = ReducedAll [ReduceWarning] [ReduceEffect] State Contract
+data ReduceAllResult = ReducedAll [ReduceWarning] [Payment] State Contract
                      | ReduceAllError ReduceError
   deriving (Eq,Ord,Show)
 
@@ -307,16 +308,17 @@ data ReduceAllResult = ReducedAll [ReduceWarning] [ReduceEffect] State Contract
 reduceContractUntilQuiescent :: Environment -> State -> Contract -> ReduceAllResult
 reduceContractUntilQuiescent env state contract = let
     reduceAllAux
-      :: Environment -> State -> Contract -> [ReduceWarning] -> [ReduceEffect] -> ReduceAllResult
+      :: Environment -> State -> Contract -> [ReduceWarning] -> [Payment] -> ReduceAllResult
     reduceAllAux env state contract warnings effects =
         case reduceContractStep env state contract of
             Reduced warning effect newState cont -> let
+
                 newWarnings = if warning == ReduceNoWarning then warnings
                               else warning : warnings
-                newEffects  = if effect == ReduceNoEffect then effects
-                              else effect : effects
+                newEffects  = maybe effects (: effects) effect
                 in reduceAllAux env newState cont newWarnings newEffects
             ReduceError err -> ReduceAllError err
+            -- this is the last invocation of reduceAllAux, so we can reverse lists
             NotReduced -> ReducedAll (reverse warnings) (reverse effects) state contract
 
     in reduceAllAux env state contract [] []
@@ -352,7 +354,7 @@ apply _ _ _ _                          = ApplyError ApplyNoMatch
 
 -- APPLY ALL
 
-data ApplyAllResult = AppliedAll [ReduceWarning] [ReduceEffect] State Contract
+data ApplyAllResult = AppliedAll [ReduceWarning] [Payment] State Contract
                     | AAApplyError ApplyError
                     | AAReduceError ReduceError
   deriving (Eq,Ord,Show)
@@ -365,16 +367,17 @@ applyAllAux
     -> Contract
     -> [Input]
     -> [ReduceWarning]
-    -> [ReduceEffect]
+    -> [Payment]
     -> ApplyAllResult
-applyAllAux env state contract inputs warnings effects = case reduceContractUntilQuiescent env state contract of
-    ReduceAllError error -> AAReduceError error
-    ReducedAll warns effs curState cont -> case inputs of
-        [] -> AppliedAll (warnings ++ warns) (effects ++ effs) curState cont
-        (input : rest) -> case apply env curState input cont of
-            Applied newState cont ->
-                applyAllAux env newState cont rest (warnings ++ warns) (effects ++ effs)
-            ApplyError error -> AAApplyError error
+applyAllAux env state contract inputs warnings effects =
+    case reduceContractUntilQuiescent env state contract of
+        ReduceAllError error -> AAReduceError error
+        ReducedAll warns effs curState cont -> case inputs of
+            [] -> AppliedAll (warnings ++ warns) (effects ++ effs) curState cont
+            (input : rest) -> case apply env curState input cont of
+                Applied newState cont ->
+                    applyAllAux env newState cont rest (warnings ++ warns) (effects ++ effs)
+                ApplyError error -> AAApplyError error
 
 
 applyAll :: Environment -> State -> Contract -> [Input] -> ApplyAllResult
@@ -392,11 +395,10 @@ data ProcessError = PEReduceError ReduceError
   deriving (Eq,Ord,Show)
 
 type ProcessWarning = ReduceWarning
-type ProcessEffect = ReduceEffect
+type ProcessEffect = Payment
 
 data ProcessResult = Processed [ProcessWarning]
                                [ProcessEffect]
-                               TransactionSignatures
                                TransactionOutcomes
                                State
                                Contract
@@ -408,34 +410,25 @@ data Transaction = Transaction { txInterval :: SlotInterval
   deriving (Eq,Ord,Show)
 
 
--- | Extract necessary signatures from transaction inputs
-getSignatures :: [Input] -> TransactionSignatures
-getSignatures = foldl' addSig Set.empty
-  where
-    addSig acc (IDeposit _ p _)           = Set.insert p acc
-    addSig acc (IChoice (ChoiceId _ p) _) = Set.insert p acc
-    addSig acc INotify                    = acc
-
-
 -- | Extract total outcomes from transaction inputs and outputs
-getOutcomes :: [ReduceEffect] -> [Input] -> TransactionOutcomes
-getOutcomes effect input =
-  foldl' (\acc (p, m) -> addOutcome p m acc) emptyOutcome (incomes ++ outcomes)
-  where
-    incomes = [ (p, m) | ReduceNormalPay p m <- effect ]
-    outcomes = [ (p, m) | IDeposit _ p m <- input ]
+getOutcomes :: [Payment] -> [Input] -> TransactionOutcomes
+getOutcomes effect input = let
+    outcomes = [ (party, money) | Payment party money <- effect ]
+    incomes  = [ (party, money) | IDeposit _ party money <- input ]
+    in foldl (\acc (party, money) -> addOutcome party money acc)
+        emptyOutcome
+        (outcomes ++ incomes)
 
 
 -- | Try to process a transaction
 processTransaction :: Transaction -> State -> Contract -> ProcessResult
 processTransaction tx state contract = case fixInterval (txInterval tx) state of
     IntervalTrimmed env fixState -> case applyAll env fixState contract inputs of
-        AppliedAll warnings effects newState cont ->
-            let sigs = getSignatures inputs
-            in  let outcomes = getOutcomes effects inputs
-                in  if contract == cont
-                    then ProcessError PEUselessTransaction
-                    else Processed warnings effects sigs outcomes newState cont
+        AppliedAll warnings effects newState cont -> let
+            outcomes = getOutcomes effects inputs
+            in  if contract == cont
+                then ProcessError PEUselessTransaction
+                else Processed warnings effects outcomes newState cont
         AAApplyError error -> ProcessError (PEApplyError error)
         AAReduceError error -> ProcessError (PEReduceError error)
     IntervalError error -> ProcessError (PEIntervalError error)

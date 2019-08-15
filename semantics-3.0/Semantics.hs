@@ -269,9 +269,8 @@ reduceContractStep env state contract = case contract of
             then Reduced (ReduceNonPositivePay accId payee amountToPay) Nothing state cont
             else let
                 (paidMoney, newAccs) = withdrawMoneyFromAccount accId amountToPay (accounts state)
-                paidAmount = paidMoney
-                warning = if paidAmount < amountToPay
-                          then ReducePartialPay accId payee paidAmount amountToPay
+                warning = if paidMoney < amountToPay
+                          then ReducePartialPay accId payee paidMoney amountToPay
                           else ReduceNoWarning
                 (payEffect, finalAccs) = giveMoney payee paidMoney newAccs
                 in Reduced warning payEffect (state { accounts = finalAccs }) cont
@@ -300,7 +299,7 @@ reduceContractStep env state contract = case contract of
         in Reduced warn Nothing newState cont
 
 
-data ReduceAllResult = ReducedAll [ReduceWarning] [Payment] State Contract
+data ReduceAllResult = ReduceAllSuccess [ReduceWarning] [Payment] State Contract
                      | ReduceAllError ReduceError
   deriving (Eq,Ord,Show)
 
@@ -319,7 +318,7 @@ reduceContractUntilQuiescent env state contract = let
                 in reduceAllAux env newState cont newWarnings newEffects
             ReduceError err -> ReduceAllError err
             -- this is the last invocation of reduceAllAux, so we can reverse lists
-            NotReduced -> ReducedAll (reverse warnings) (reverse effects) state contract
+            NotReduced -> ReduceAllSuccess (reverse warnings) (reverse effects) state contract
 
     in reduceAllAux env state contract [] []
 
@@ -372,7 +371,7 @@ applyAllAux
 applyAllAux env state contract inputs warnings effects =
     case reduceContractUntilQuiescent env state contract of
         ReduceAllError error -> AAReduceError error
-        ReducedAll warns effs curState cont -> case inputs of
+        ReduceAllSuccess warns effs curState cont -> case inputs of
             [] -> AppliedAll (warnings ++ warns) (effects ++ effs) curState cont
             (input : rest) -> case apply env curState input cont of
                 Applied newState cont ->

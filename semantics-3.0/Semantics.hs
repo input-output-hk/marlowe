@@ -139,18 +139,18 @@ evalValue env state value = let
 -- | Evaluate an @Observation@ to Bool
 evalObservation :: Environment -> State -> Observation -> Bool
 evalObservation env state obs = let
-    goObs = evalObservation env state
-    goVal = evalValue env state
+    evalObs = evalObservation env state
+    evalVal = evalValue env state
     in case obs of
-        AndObs lhs rhs       -> goObs lhs && goObs rhs
-        OrObs lhs rhs        -> goObs lhs || goObs rhs
-        NotObs subObs        -> not (goObs subObs)
+        AndObs lhs rhs       -> evalObs lhs && evalObs rhs
+        OrObs lhs rhs        -> evalObs lhs || evalObs rhs
+        NotObs subObs        -> not (evalObs subObs)
         ChoseSomething choiceId -> choiceId `Map.member` choices state
-        ValueGE lhs rhs      -> goVal lhs >= goVal rhs
-        ValueGT lhs rhs      -> goVal lhs > goVal rhs
-        ValueLT lhs rhs      -> goVal lhs < goVal rhs
-        ValueLE lhs rhs      -> goVal lhs <= goVal rhs
-        ValueEQ lhs rhs      -> goVal lhs == goVal rhs
+        ValueGE lhs rhs      -> evalVal lhs >= evalVal rhs
+        ValueGT lhs rhs      -> evalVal lhs > evalVal rhs
+        ValueLT lhs rhs      -> evalVal lhs < evalVal rhs
+        ValueLE lhs rhs      -> evalVal lhs <= evalVal rhs
+        ValueEQ lhs rhs      -> evalVal lhs == evalVal rhs
         TrueObs              -> True
         FalseObs             -> False
 

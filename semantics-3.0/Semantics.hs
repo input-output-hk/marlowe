@@ -3,14 +3,22 @@ module Semantics where
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
-newtype Slot = Slot { getSlot :: Integer } deriving (Eq,Ord,Show)
+newtype Slot = Slot { getSlot :: Integer } deriving (Eq,Ord)
+
+instance Show Slot where
+    show (Slot n) = "(Slot " ++ show n ++ ")"
+
+newtype Ada = Lovelace { getLovelace :: Integer } deriving (Eq,Ord)
+
+instance Show Ada where
+    show (Lovelace n) = "(Lovelace " ++ show n ++ ")"
 
 type PubKey = Integer
 type Party = PubKey
 type NumChoice = Integer
 type NumAccount = Integer
 type Timeout = Slot
-type Money = Integer
+type Money = Ada
 type ChosenNum = Integer
 
 data AccountId = AccountId NumAccount Party
@@ -85,7 +93,7 @@ data State = State { accounts :: Map AccountId Money
                    , minSlot :: Slot }
   deriving (Eq,Ord,Show)
 
-data Environment = Environment { slotInterval :: SlotInterval }
+newtype Environment = Environment { slotInterval :: SlotInterval }
   deriving (Eq,Ord,Show)
 
 data Input = IDeposit AccountId Party Money
@@ -124,7 +132,9 @@ evalValue :: Environment -> State -> Value -> Integer
 evalValue env state value = let
     eval = evalValue env state
     in case value of
-        AvailableMoney accId -> Map.findWithDefault 0 accId (accounts state)
+        AvailableMoney accId -> let
+            balance = Map.findWithDefault (Lovelace 0) accId (accounts state)
+            in getLovelace balance
         Constant integer     -> integer
         NegValue val         -> eval val
         AddValue lhs rhs     -> eval lhs + eval rhs
@@ -159,18 +169,20 @@ evalObservation env state obs = let
 refundOne :: Map AccountId Money -> Maybe ((Party, Money), Map AccountId Money)
 refundOne accounts = do
     ((accId, money), rest) <- Map.minViewWithKey accounts
-    if money > 0 then return ((accountOwner accId, money), rest) else refundOne rest
+    if getLovelace money > 0
+    then return ((accountOwner accId, money), rest)
+    else refundOne rest
 
 
 -- | Obtains the amount of money available an account
 moneyInAccount :: AccountId -> Map AccountId Money -> Money
-moneyInAccount = Map.findWithDefault 0
+moneyInAccount = Map.findWithDefault (Lovelace 0)
 
 
 -- | Sets the amount of money available in an account
 updateMoneyInAccount :: AccountId -> Money -> Map AccountId Money -> Map AccountId Money
 updateMoneyInAccount accId money =
-    if money <= 0 then Map.delete accId else Map.insert accId money
+    if getLovelace money <= 0 then Map.delete accId else Map.insert accId money
 
 
 {-| Withdraw up to the given amount of money from an account
@@ -181,7 +193,7 @@ withdrawMoneyFromAccount
 withdrawMoneyFromAccount accId money accounts = let
     balance        = moneyInAccount accId accounts
     withdrawnMoney = min balance money
-    newBalance     = balance - withdrawnMoney
+    newBalance     = Lovelace (getLovelace balance - getLovelace withdrawnMoney)
     newAcc         = updateMoneyInAccount accId newBalance accounts
     in (withdrawnMoney, newAcc)
 
@@ -192,8 +204,8 @@ withdrawMoneyFromAccount accId money accounts = let
 addMoneyToAccount :: AccountId -> Money -> Map AccountId Money -> Map AccountId Money
 addMoneyToAccount accId money accounts = let
     balance = moneyInAccount accId accounts
-    newBalance = balance + money
-    in if money <= 0 then accounts
+    newBalance = Lovelace (getLovelace balance + getLovelace money)
+    in if getLovelace money <= 0 then accounts
     else updateMoneyInAccount accId newBalance accounts
 
 
@@ -240,12 +252,13 @@ reduceContractStep env state contract = case contract of
 
     Pay accId payee val cont -> let
         amountToPay = evalValue env state val
+        moneyToPay  = Lovelace amountToPay
         in  if amountToPay <= 0
-            then Reduced (ReduceNonPositivePay accId payee amountToPay) Nothing state cont
+            then Reduced (ReduceNonPositivePay accId payee moneyToPay) Nothing state cont
             else let
-                (paidMoney, newAccs) = withdrawMoneyFromAccount accId amountToPay (accounts state)
-                warning = if paidMoney < amountToPay
-                          then ReducePartialPay accId payee paidMoney amountToPay
+                (paidMoney, newAccs) = withdrawMoneyFromAccount accId moneyToPay (accounts state)
+                warning = if paidMoney < moneyToPay
+                          then ReducePartialPay accId payee paidMoney moneyToPay
                           else ReduceNoWarning
                 (payEffect, finalAccs) = giveMoney payee paidMoney newAccs
                 in Reduced warning payEffect (state { accounts = finalAccs }) cont
@@ -311,7 +324,7 @@ applyCases env state input cases = case (input, cases) of
     (IDeposit accId1 party1 money, Case (Deposit accId2 party2 val) cont : rest) -> let
         amount = evalValue env state val
         newState = state { accounts = addMoneyToAccount accId1 money (accounts state) }
-        in if accId1 == accId2 && party1 == party2 && money == amount
+        in if accId1 == accId2 && party1 == party2 && getLovelace money == amount
         then Applied newState cont
         else applyCases env state input rest
     (IChoice choId1 choice, Case (Choice choId2 bounds) cont : rest) -> let
@@ -387,14 +400,14 @@ emptyOutcome = Map.empty
 
 
 isEmptyOutcome :: TransactionOutcomes -> Bool
-isEmptyOutcome trOut = all (== 0) trOut
+isEmptyOutcome trOut = all (== Lovelace 0) trOut
 
 
 -- Adds a value to the map of outcomes
 addOutcome :: Party -> Money -> TransactionOutcomes -> TransactionOutcomes
 addOutcome party diffValue trOut = let
     newValue = case Map.lookup party trOut of
-        Just value -> value + diffValue
+        Just value -> Lovelace (getLovelace value + getLovelace diffValue)
         Nothing    -> diffValue
     in Map.insert party newValue trOut
 

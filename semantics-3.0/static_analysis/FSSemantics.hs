@@ -195,8 +195,8 @@ sEnvironment si = si
 
 --type SInput = SMaybe (SEither (AccountId, Party, Money) (ChoiceId, ChosenNum))
 data Input = IDeposit NAccountId Party Money
-            | IChoice NChoiceId ChosenNum
-            | INotify
+           | IChoice NChoiceId ChosenNum
+           | INotify
   deriving (Eq,Ord,Show,Read)
 
 mkSymbolicDatatype ''Input
@@ -703,4 +703,38 @@ getSignatures bnds =
     addSig acc (SSIChoice t _) = let (_, p) = ST.untuple t in
                                  FSSet.insert (numParties bnds) p acc
     addSig acc SSINotify = acc
+
+addIfPay :: Bounds -> SSReduceEffect -> STransactionOutcomes -> STransactionOutcomes 
+addIfPay bnds (SSReduceNormalPay p m) to = addOutcome bnds p m to
+addIfPay _ _ to = to
+
+addIfDep :: Bounds -> SSInput -> STransactionOutcomes -> STransactionOutcomes 
+addIfDep bnds (SSIDeposit _ p m) to = addOutcome bnds p m to
+addIfDep _ _ to = to
+
+-- Extract total outcomes from transaction inputs and outputs
+getOutcomesAux :: Bounds -> Integer -> Integer -> SList NReduceEffect -> SList NInput
+               -> STransactionOutcomes -> STransactionOutcomes
+getOutcomesAux bnds numPays numInps eff inp to
+  | numPays > 0 = ite (SL.null eff)
+                      (getOutcomesAux bnds 0 numInps [] inp to)
+                      (getOutcomesAux bnds (numPays - 1) numInps
+                                      (SL.tail eff) inp
+                                      (symCaseReduceEffect
+                                         (\oneEff -> addIfPay bnds oneEff to)
+                                         (SL.head eff)))
+  | numInps > 0 = ite (SL.null inp)
+                      (getOutcomesAux bnds 0 numInps eff inp to)
+                      (getOutcomesAux bnds 0 (numInps - 1)
+                                      [] (SL.tail inp)
+                                      (symCaseInput
+                                         (\oneInp -> addIfDep bnds oneInp to)
+                                         (SL.head inp)))
+                                      
+  | otherwise = error "Bounds are not enough for outcome lists"
+
+getOutcomes :: Bounds -> Integer -> Integer -> SList NReduceEffect -> SList NInput
+            -> STransactionOutcomes
+getOutcomes bnds numPays numInps eff inp =
+  getOutcomesAux bnds numPays numInps eff inp emptyOutcome 
 

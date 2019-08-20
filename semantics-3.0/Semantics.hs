@@ -417,9 +417,14 @@ addOutcome party diffValue trOut = let
 
 -- | Extract total outcomes from transaction inputs and outputs
 getOutcomes :: [Payment] -> [Input] -> TransactionOutcomes
-getOutcomes effect input = let
-    outcomes = [ (party, money) | Payment party money <- effect ]
-    incomes  = [ (party, money) | IDeposit _ party money <- input ]
+getOutcomes payments input = let
+    outcomes = map (\(Payment party money) -> (party, money)) payments
+
+    deposits (IDeposit _ party money) acc = (party, money) : acc
+    deposits _ acc = acc
+
+    incomes = foldr deposits [] input
+
     in foldl (\acc (party, money) -> addOutcome party money acc)
         emptyOutcome
         (outcomes ++ incomes)

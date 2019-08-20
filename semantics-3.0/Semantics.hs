@@ -232,10 +232,10 @@ addMoneyToAccount accId money accounts = let
 -}
 giveMoney :: Payee -> Money -> Map AccountId Money -> (ReduceEffect, Map AccountId Money)
 giveMoney payee money accounts = case payee of
-    Party party   -> (Just (Payment party money), accounts)
+    Party party   -> (ReduceWithPayment (Payment party money), accounts)
     Account accId -> let
         newAccs = addMoneyToAccount accId money accounts
-        in (Nothing, newAccs)
+        in (ReduceNoPayment, newAccs)
 
 -- REDUCE
 
@@ -250,9 +250,9 @@ data ReduceWarning = ReduceNoWarning
 data Payment = Payment Party Money
   deriving (Eq,Ord,Show)
 
-type ReduceEffect = Maybe Payment
-noPayment :: ReduceEffect
-noPayment = Nothing
+data ReduceEffect = ReduceWithPayment Payment
+                  | ReduceNoPayment
+  deriving (Eq,Ord,Show)
 
 data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
                   | NotReduced
@@ -267,14 +267,14 @@ reduceContractStep env state contract = case contract of
     Refund -> case refundOne (accounts state) of
         Just ((party, money), newAccounts) -> let
             newState = state { accounts = newAccounts }
-            in Reduced ReduceNoWarning (Just (Payment party money)) newState Refund
+            in Reduced ReduceNoWarning (ReduceWithPayment (Payment party money)) newState Refund
         Nothing -> NotReduced
 
     Pay accId payee val cont -> let
         amountToPay = evalValue env state val
         moneyToPay  = Lovelace amountToPay
         in  if amountToPay <= 0
-            then Reduced (ReduceNonPositivePay accId payee moneyToPay) Nothing state cont
+            then Reduced (ReduceNonPositivePay accId payee moneyToPay) ReduceNoPayment state cont
             else let
                 (paidMoney, newAccs) = withdrawMoneyFromAccount accId moneyToPay (accounts state)
                 warning = if paidMoney < moneyToPay
@@ -285,7 +285,7 @@ reduceContractStep env state contract = case contract of
 
     If obs cont1 cont2 -> let
         cont = if evalObservation env state obs then cont1 else cont2
-        in Reduced ReduceNoWarning noPayment state cont
+        in Reduced ReduceNoWarning ReduceNoPayment state cont
 
     When _ timeout cont -> let
         startSlot = ivFrom (slotInterval env)
@@ -293,7 +293,7 @@ reduceContractStep env state contract = case contract of
         -- if timeout in future – do not reduce
         in if endSlot < timeout then NotReduced
         -- if timeout in the past – reduce to timeout continuation
-        else if timeout <= startSlot then Reduced ReduceNoWarning noPayment state cont
+        else if timeout <= startSlot then Reduced ReduceNoWarning ReduceNoPayment state cont
         -- if timeout in the slot range – issue an ambiguity error
         else AmbiguousSlotIntervalReductionError
 
@@ -304,7 +304,7 @@ reduceContractStep env state contract = case contract of
         warn = case Map.lookup valId boundVals of
               Just oldVal -> ReduceShadowing valId oldVal evaluatedValue
               Nothing -> ReduceNoWarning
-        in Reduced warn noPayment newState cont
+        in Reduced warn ReduceNoPayment newState cont
 
 
 data QuiescenceResult = ContractQuiescent [ReduceWarning] [Payment] State Contract
@@ -316,19 +316,18 @@ reduceContractUntilQuiescent :: Environment -> State -> Contract -> QuiescenceRe
 reduceContractUntilQuiescent env state contract = let
     reductionLoop
       :: Environment -> State -> Contract -> [ReduceWarning] -> [Payment] -> QuiescenceResult
-    reductionLoop env state contract warnings effects =
+    reductionLoop env state contract warnings payments =
         case reduceContractStep env state contract of
             Reduced warning effect newState cont -> let
-
                 newWarnings = if warning == ReduceNoWarning then warnings
                               else warning : warnings
-                newEffects  = case effect of
-                    Just eff -> eff : effects
-                    Nothing  -> effects
-                in reductionLoop env newState cont newWarnings newEffects
+                newPayments  = case effect of
+                    ReduceWithPayment payment -> payment : payments
+                    ReduceNoPayment -> payments
+                in reductionLoop env newState cont newWarnings newPayments
             AmbiguousSlotIntervalReductionError -> QRAmbiguousSlotIntervalError
-            -- this is the last invocation of reduceAllAux, so we can reverse lists
-            NotReduced -> ContractQuiescent (reverse warnings) (reverse effects) state contract
+            -- this is the last invocation of reductionLoop, so we can reverse lists
+            NotReduced -> ContractQuiescent (reverse warnings) (reverse payments) state contract
 
     in reductionLoop env state contract [] []
 
@@ -380,14 +379,14 @@ applyAllInputs env state contract inputs = let
         -> [ReduceWarning]
         -> [Payment]
         -> ApplyAllResult
-    applyAllLoop env state contract inputs warnings effects =
+    applyAllLoop env state contract inputs warnings payments =
         case reduceContractUntilQuiescent env state contract of
             QRAmbiguousSlotIntervalError -> ApplyAllAmbiguousSlotIntervalError
-            ContractQuiescent warns effs curState cont -> case inputs of
-                [] -> ApplyAllSuccess (warnings ++ warns) (effects ++ effs) curState cont
+            ContractQuiescent warns pays curState cont -> case inputs of
+                [] -> ApplyAllSuccess (warnings ++ warns) (payments ++ pays) curState cont
                 (input : rest) -> case applyInput env curState input cont of
                     Applied newState cont ->
-                        applyAllLoop env newState cont rest (warnings ++ warns) (effects ++ effs)
+                        applyAllLoop env newState cont rest (warnings ++ warns) (payments ++ pays)
                     ApplyNoMatchError -> ApplyAllNoMatchError
     in applyAllLoop env state contract inputs [] []
 

@@ -233,6 +233,8 @@ data Payment = Payment Party Money
   deriving (Eq,Ord,Show)
 
 type ReduceEffect = Maybe Payment
+noPayment :: ReduceEffect
+noPayment = Nothing
 
 data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
                   | NotReduced
@@ -260,12 +262,12 @@ reduceContractStep env state contract = case contract of
                 warning = if paidMoney < moneyToPay
                           then ReducePartialPay accId payee paidMoney moneyToPay
                           else ReduceNoWarning
-                (payEffect, finalAccs) = giveMoney payee paidMoney newAccs
-                in Reduced warning payEffect (state { accounts = finalAccs }) cont
+                (payment, finalAccs) = giveMoney payee paidMoney newAccs
+                in Reduced warning payment (state { accounts = finalAccs }) cont
 
     If obs cont1 cont2 -> let
         cont = if evalObservation env state obs then cont1 else cont2
-        in Reduced ReduceNoWarning Nothing state cont
+        in Reduced ReduceNoWarning noPayment state cont
 
     When _ timeout cont -> let
         startSlot = ivFrom (slotInterval env)
@@ -273,7 +275,7 @@ reduceContractStep env state contract = case contract of
         -- if timeout in future – do not reduce
         in if endSlot < timeout then NotReduced
         -- if timeout in the past – reduce to timeout continuation
-        else if timeout <= startSlot then Reduced ReduceNoWarning Nothing state cont
+        else if timeout <= startSlot then Reduced ReduceNoWarning noPayment state cont
         -- if timeout in the slot range – issue an ambiguity error
         else AmbiguousSlotIntervalError
 
@@ -284,7 +286,7 @@ reduceContractStep env state contract = case contract of
         warn = case Map.lookup valId boundVals of
               Just oldVal -> ReduceShadowing valId oldVal evaluatedValue
               Nothing -> ReduceNoWarning
-        in Reduced warn Nothing newState cont
+        in Reduced warn noPayment newState cont
 
 
 data ReduceAllResult = ReduceAllSuccess [ReduceWarning] [Payment] State Contract

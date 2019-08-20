@@ -10,6 +10,14 @@ instance Show Slot where
 
 newtype Ada = Lovelace { getLovelace :: Integer } deriving (Eq,Ord)
 
+instance Num Ada where
+    Lovelace l + Lovelace r = Lovelace (l + r)
+    Lovelace l * Lovelace r = Lovelace (l * r)
+    abs (Lovelace l) = Lovelace (abs l)
+    signum (Lovelace l) = Lovelace (signum l)
+    fromInteger = Lovelace
+    negate (Lovelace l) = Lovelace (negate l)
+
 instance Show Ada where
     show (Lovelace n) = "(Lovelace " ++ show n ++ ")"
 
@@ -194,7 +202,7 @@ withdrawMoneyFromAccount
 withdrawMoneyFromAccount accId money accounts = let
     balance        = moneyInAccount accId accounts
     withdrawnMoney = min balance money
-    newBalance     = Lovelace (getLovelace balance - getLovelace withdrawnMoney)
+    newBalance     = balance - withdrawnMoney
     newAcc         = updateMoneyInAccount accId newBalance accounts
     in (withdrawnMoney, newAcc)
 
@@ -205,7 +213,7 @@ withdrawMoneyFromAccount accId money accounts = let
 addMoneyToAccount :: AccountId -> Money -> Map AccountId Money -> Map AccountId Money
 addMoneyToAccount accId money accounts = let
     balance = moneyInAccount accId accounts
-    newBalance = Lovelace (getLovelace balance + getLovelace money)
+    newBalance = balance + money
     in if getLovelace money <= 0 then accounts
     else updateMoneyInAccount accId newBalance accounts
 
@@ -409,7 +417,7 @@ isEmptyOutcome trOut = all (== Lovelace 0) trOut
 addOutcome :: Party -> Money -> TransactionOutcomes -> TransactionOutcomes
 addOutcome party diffValue trOut = let
     newValue = case Map.lookup party trOut of
-        Just value -> Lovelace (getLovelace value + getLovelace diffValue)
+        Just value -> value + diffValue
         Nothing    -> diffValue
     in Map.insert party newValue trOut
 

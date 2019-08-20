@@ -239,7 +239,7 @@ noPayment = Nothing
 
 data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
                   | NotReduced
-                  | AmbiguousSlotIntervalError
+                  | AmbiguousSlotIntervalReductionError
   deriving (Eq,Ord,Show)
 
 
@@ -278,7 +278,7 @@ reduceContractStep env state contract = case contract of
         -- if timeout in the past – reduce to timeout continuation
         else if timeout <= startSlot then Reduced ReduceNoWarning noPayment state cont
         -- if timeout in the slot range – issue an ambiguity error
-        else AmbiguousSlotIntervalError
+        else AmbiguousSlotIntervalReductionError
 
     Let valId val cont -> let
         evaluatedValue = evalValue env state val
@@ -290,16 +290,16 @@ reduceContractStep env state contract = case contract of
         in Reduced warn noPayment newState cont
 
 
-data ReduceAllResult = ReduceAllSuccess [ReduceWarning] [Payment] State Contract
-                     | ReduceAllAmbiguousSlotIntervalError
+data QuiescenceResult = ContractQuiescent [ReduceWarning] [Payment] State Contract
+                      | QRAmbiguousSlotIntervalError
   deriving (Eq,Ord,Show)
 
 -- | Reduce a contract until it cannot be reduced more
-reduceContractUntilQuiescent :: Environment -> State -> Contract -> ReduceAllResult
+reduceContractUntilQuiescent :: Environment -> State -> Contract -> QuiescenceResult
 reduceContractUntilQuiescent env state contract = let
-    reduceAll
-      :: Environment -> State -> Contract -> [ReduceWarning] -> [Payment] -> ReduceAllResult
-    reduceAll env state contract warnings effects =
+    reductionLoop
+      :: Environment -> State -> Contract -> [ReduceWarning] -> [Payment] -> QuiescenceResult
+    reductionLoop env state contract warnings effects =
         case reduceContractStep env state contract of
             Reduced warning effect newState cont -> let
 
@@ -308,12 +308,12 @@ reduceContractUntilQuiescent env state contract = let
                 newEffects  = case effect of
                     Just eff -> eff : effects
                     Nothing  -> effects
-                in reduceAll env newState cont newWarnings newEffects
-            AmbiguousSlotIntervalError -> ReduceAllAmbiguousSlotIntervalError
+                in reductionLoop env newState cont newWarnings newEffects
+            AmbiguousSlotIntervalReductionError -> QRAmbiguousSlotIntervalError
             -- this is the last invocation of reduceAllAux, so we can reverse lists
-            NotReduced -> ReduceAllSuccess (reverse warnings) (reverse effects) state contract
+            NotReduced -> ContractQuiescent (reverse warnings) (reverse effects) state contract
 
-    in reduceAll env state contract [] []
+    in reductionLoop env state contract [] []
 
 
 data ApplyResult = Applied State Contract
@@ -365,8 +365,8 @@ applyAllInputs env state contract inputs = let
         -> ApplyAllResult
     applyAllAux env state contract inputs warnings effects =
         case reduceContractUntilQuiescent env state contract of
-            ReduceAllAmbiguousSlotIntervalError -> ApplyAllAmbiguousSlotIntervalError
-            ReduceAllSuccess warns effs curState cont -> case inputs of
+            QRAmbiguousSlotIntervalError -> ApplyAllAmbiguousSlotIntervalError
+            ContractQuiescent warns effs curState cont -> case inputs of
                 [] -> ApplyAllSuccess (warnings ++ warns) (effects ++ effs) curState cont
                 (input : rest) -> case applyInput env curState input cont of
                     Applied newState cont ->
@@ -374,7 +374,6 @@ applyAllInputs env state contract inputs = let
                     ApplyNoMatchError -> ApplyAllNoMatchError
     in applyAllAux env state contract inputs [] []
 
--- PROCESS
 
 data ProcessError = PEAmbiguousSlotIntervalError
                   | PEApplyNoMatchError

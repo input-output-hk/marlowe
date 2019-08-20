@@ -8,7 +8,18 @@ newtype Slot = Slot { getSlot :: Integer } deriving (Eq,Ord)
 instance Show Slot where
     show (Slot n) = "(Slot " ++ show n ++ ")"
 
+instance Num Slot where
+    Slot l + Slot r = Slot (l + r)
+    Slot l * Slot r = Slot (l * r)
+    abs (Slot l) = Slot (abs l)
+    signum (Slot l) = Slot (signum l)
+    fromInteger = Slot
+    negate (Slot l) = Slot (negate l)
+
 newtype Ada = Lovelace { getLovelace :: Integer } deriving (Eq,Ord)
+
+instance Show Ada where
+    show (Lovelace n) = "(Lovelace " ++ show n ++ ")"
 
 instance Num Ada where
     Lovelace l + Lovelace r = Lovelace (l + r)
@@ -18,8 +29,6 @@ instance Num Ada where
     fromInteger = Lovelace
     negate (Lovelace l) = Lovelace (negate l)
 
-instance Show Ada where
-    show (Lovelace n) = "(Lovelace " ++ show n ++ ")"
 
 type PubKey = Integer
 type Party = PubKey

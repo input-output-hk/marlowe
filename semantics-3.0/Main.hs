@@ -176,7 +176,7 @@ swapExample =
             (When [ Case (Deposit acc2 party2 (Constant 300))
                 (Pay acc1 (Party party2) (Constant 500)
                 (Pay acc2 (Party party1) (Constant 300) Refund))
-                ] (Slot date1)
+                ] date1
             -- if a party dosn't commit, simply Refund to the owner
             Refund)
           , Case (Deposit acc2 party2 (Constant 300))
@@ -184,15 +184,15 @@ swapExample =
             (When [ Case (Deposit acc1 party1 (Constant 500))
                 -- we can just pay a diff between account and refund
                 (Pay acc1 (Account acc2) (Constant 200) Refund)
-            ] (Slot date1)
+            ] date1
             -- if a party dosn't commit, simply Refund to the owner
             Refund)
-        ] (Slot (date1 - gracePeriod)) Refund
+        ] (date1 - gracePeriod) Refund
   where
     party1 = 1
     party2 = 2
-    gracePeriod = 3*60*24 -- 24 hours
-    date1 = 1563839989
+    gracePeriod = Slot 3*60*24 -- 24 hours
+    date1 = Slot 1563839989
     acc1 = AccountId 1 party1
     acc2 = AccountId 2 party2
 
@@ -229,26 +229,26 @@ swapGuaranteedExample =
                 (When [ Case (Deposit acc2 party2 (Constant 300))
                     (Pay acc1 (Party party2) (Constant 500)
                     (Pay acc2 (Party party1) (Constant 300) Refund))
-                    ] (Slot date1)
+                    ] date1
                     -- just transfer from guarantor account to party1 and refund to owner
                     (Pay acc3 (Account acc1) (Constant 300) Refund))
             , Case (Deposit acc2 party2 (Constant 300))
                 (When [ Case (Deposit acc2 party2 (Constant 500))
                     (Pay acc1 (Party party2) (Constant 500)
                     (Pay acc2 (Party party1) (Constant 300) Refund))
-                    ] (Slot date1)
+                    ] date1
                     -- just transfer from guarantor account to party1 and refund to owner
                     (Pay acc3 (Account acc2) (Constant 500) Refund))
-            ] (Slot (date1 - gracePeriod))
+            ] (date1 - gracePeriod)
             -- automatically refund to guarantor if parties don't proceed
             Refund)
-        ] (Slot (date1 - 2 * gracePeriod)) Refund
+        ] (date1 - 2 * gracePeriod) Refund
   where
     party1 = 1
     party2 = 2
     guarantor = 3
-    gracePeriod = 3*60*24 -- 24 hours
-    date1 = 1563839989
+    gracePeriod = Slot 3*60*24 -- 24 hours
+    date1 = Slot 1563839989
     acc1 = AccountId 1 party1
     acc2 = AccountId 2 party2
     acc3 = AccountId 3 guarantor
@@ -264,7 +264,7 @@ swapSingleAccountGuaranteedExample =
                     (Pay acc1 (Party party2) (Constant 500)
                     (Pay acc1 (Party party1) (Constant 300)
                     (Pay acc1 (Party guarantor) (Constant 800) Refund)))
-                    ] (Slot date1)
+                    ] date1
                     -- with single account all payments must be duplicated
                     (Pay acc1 (Party party2) (Constant 500)
                     (Pay acc1 (Party party1) (Constant 300)
@@ -275,22 +275,22 @@ swapSingleAccountGuaranteedExample =
                     (Pay acc1 (Party party2) (Constant 500)
                     (Pay acc1 (Party party1) (Constant 300)
                     (Pay acc1 (Party guarantor) (Constant 800) Refund)))
-                    ] (Slot date1)
+                    ] date1
                     -- with single account all payments must be duplicated
                     (Pay acc1 (Party party2) (Constant 500)
                     (Pay acc1 (Party party1) (Constant 300)
                     (Pay acc1 (Party guarantor) (Constant 00) Refund)))
                 )
-            ] (Slot (date1 - gracePeriod))
+            ] (date1 - gracePeriod)
             -- manually refund to guarantor if parties don't proceed
             (Pay acc1 (Party guarantor) (Constant 800) Refund))
-        ] (Slot (date1 - 2 * gracePeriod)) Refund
+        ] (date1 - 2 * gracePeriod) Refund
     where
     party1 = 1
     party2 = 2
     guarantor = 3
-    gracePeriod = 3*60*24 -- 24 hours
-    date1 = 1563839989
+    gracePeriod = Slot 3*60*24 -- 24 hours
+    date1 = Slot 1563839989
     acc1 = AccountId 1 party1
     acc2 = AccountId 2 party2
     acc3 = AccountId 3 guarantor

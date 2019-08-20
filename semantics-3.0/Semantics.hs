@@ -192,6 +192,14 @@ refundOne accounts = do
     else refundOne rest
 
 
+data Payment = Payment Party Money
+  deriving (Eq,Ord,Show)
+
+data ReduceEffect = ReduceWithPayment Payment
+                  | ReduceNoPayment
+  deriving (Eq,Ord,Show)
+
+
 -- | Obtains the amount of money available an account
 moneyInAccount :: AccountId -> Map AccountId Money -> Money
 moneyInAccount = Map.findWithDefault (Lovelace 0)
@@ -247,12 +255,6 @@ data ReduceWarning = ReduceNoWarning
                                      -- oldVal ^  newVal ^
   deriving (Eq,Ord,Show)
 
-data Payment = Payment Party Money
-  deriving (Eq,Ord,Show)
-
-data ReduceEffect = ReduceWithPayment Payment
-                  | ReduceNoPayment
-  deriving (Eq,Ord,Show)
 
 data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
                   | NotReduced

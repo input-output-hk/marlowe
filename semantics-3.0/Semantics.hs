@@ -114,12 +114,13 @@ data IntervalResult = IntervalTrimmed Environment State
 
 fixInterval :: SlotInterval -> State -> IntervalResult
 fixInterval interval state = let
-    (Interval low high) = interval
+    Interval { ivFrom = low, ivTo = high } = interval
     curMinSlot = minSlot state
     -- newLow is both new "low" and new "minSlot" (the lower bound for slotNum)
     newLow = max low curMinSlot
-    curInterval = Interval newLow high -- We know high is greater or equal than newLow (prove)
-    env = Environment curInterval
+    -- We know high is greater or equal than newLow (prove)
+    curInterval = Interval { ivFrom = newLow, ivTo = high }
+    env = Environment { slotInterval = curInterval }
     newState = state { minSlot = newLow }
     in if high < low then IntervalError (InvalidInterval interval)
     else if high < curMinSlot then IntervalError (IntervalInPastError curMinSlot interval)

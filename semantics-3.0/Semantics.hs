@@ -372,7 +372,7 @@ data ApplyAllResult = ApplyAllSuccess [ReduceWarning] [Payment] State Contract
 -- | Apply a list of Inputs to the contract
 applyAllInputs :: Environment -> State -> Contract -> [Input] -> ApplyAllResult
 applyAllInputs env state contract inputs = let
-    applyAllAux
+    applyAllLoop
         :: Environment
         -> State
         -> Contract
@@ -380,16 +380,16 @@ applyAllInputs env state contract inputs = let
         -> [ReduceWarning]
         -> [Payment]
         -> ApplyAllResult
-    applyAllAux env state contract inputs warnings effects =
+    applyAllLoop env state contract inputs warnings effects =
         case reduceContractUntilQuiescent env state contract of
             QRAmbiguousSlotIntervalError -> ApplyAllAmbiguousSlotIntervalError
             ContractQuiescent warns effs curState cont -> case inputs of
                 [] -> ApplyAllSuccess (warnings ++ warns) (effects ++ effs) curState cont
                 (input : rest) -> case applyInput env curState input cont of
                     Applied newState cont ->
-                        applyAllAux env newState cont rest (warnings ++ warns) (effects ++ effs)
+                        applyAllLoop env newState cont rest (warnings ++ warns) (effects ++ effs)
                     ApplyNoMatchError -> ApplyAllNoMatchError
-    in applyAllAux env state contract inputs [] []
+    in applyAllLoop env state contract inputs [] []
 
 
 data ProcessError = PEAmbiguousSlotIntervalError

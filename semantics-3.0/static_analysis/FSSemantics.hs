@@ -668,22 +668,17 @@ type NProcessEffect = NReduceEffect
 type SProcessEffect = SReduceEffect
 type SSProcessEffect = SSReduceEffect
 
-data ProcessResult = Processed [NProcessWarning]
-                               [NProcessEffect]
-                               NTransactionSignatures
-                               NTransactionOutcomes
-                               State
-                   | ProcessError NProcessError
-  deriving (Eq,Show)
-
-mkSymbolicDatatype ''ProcessResult
-
 --data Transaction = Transaction { interval :: SSlotInterval
 --                               , inputs   :: [SInput] }
 --  deriving (Eq,Show)
 
-data STransaction = STuple SlotInterval [NInput]
-  deriving (Eq,Show)
+type STransaction = STuple SlotInterval [NInput]
+
+interval :: STransaction -> SSlotInterval
+interval x = let (si, _) = ST.untuple x in si
+
+inputs :: STransaction -> SList NInput
+inputs x = let (_, inps) = ST.untuple x in inps
 
 -- Extract necessary signatures from transaction inputs
 
@@ -695,9 +690,9 @@ sFoldl inte f acc list
                    (sFoldl (inte - 1) f (f acc (SL.head list)) (SL.tail list))
   | otherwise = error "List is longer than bound"
 
-getSignatures :: Bounds -> SList NInput -> STransactionSignatures
-getSignatures bnds =
-  sFoldl (numActions bnds) (\x y -> symCaseInput (addSig x) y) FSSet.empty 
+getSignatures :: Bounds -> Integer -> SList NInput -> STransactionSignatures
+getSignatures bnds numInps =
+  sFoldl numInps (\x y -> symCaseInput (addSig x) y) FSSet.empty 
   where
     addSig acc (SSIDeposit _ p _) = FSSet.insert (numParties bnds) p acc
     addSig acc (SSIChoice t _) = let (_, p) = ST.untuple t in
@@ -737,4 +732,73 @@ getOutcomes :: Bounds -> Integer -> Integer -> SList NReduceEffect -> SList NInp
             -> STransactionOutcomes
 getOutcomes bnds numPays numInps eff inp =
   getOutcomesAux bnds numPays numInps eff inp emptyOutcome 
+
+data ProcessResult = Processed [NProcessWarning]
+                               [NProcessEffect]
+                               NTransactionSignatures
+                               NTransactionOutcomes
+                               State
+                   | ProcessError NProcessError
+  deriving (Eq,Show)
+
+mkSymbolicDatatype ''ProcessResult
+
+
+data DetProcessResult = DPProcessed Contract
+                      | DPError
+
+extractAppliedAll :: SymVal a => SSApplyAllResult
+   -> (SBV [NProcessWarning] -> SBV [NProcessEffect] -> SBV State -> SBV a)
+   -> SBV a
+extractAppliedAll (SSAppliedAll wa ef nsta) f = f wa ef nsta 
+extractAppliedAll (SSAAApplyError _) _ =
+  error "Trying to read result of applyAll on apply error"
+extractAppliedAll (SSAAReduceError _) _ =
+  error "Trying to read result of applyAll on reduce error"
+
+convertProcessError :: SymVal a => SSApplyAllResult
+                    -> (SProcessResult -> DetProcessResult -> SBV a) -> SBV a
+convertProcessError (SSAppliedAll _ _ _) f =
+  error "Trying to read error of applyAll on normal apply"
+convertProcessError (SSAAApplyError aperr) f =
+  f (sProcessError $ sPEApplyError aperr) DPError
+convertProcessError (SSAAReduceError reerr) f =
+  f (sProcessError $ sPEReduceError reerr) DPError
+
+-- Try to process a transaction
+processApplyResult :: SymVal a => Bounds -> STransaction -> Contract
+                   -> (SProcessResult -> DetProcessResult -> SBV a)
+                   -> SApplyAllResult -> DetApplyAllResult 
+                   -> SBV a
+processApplyResult bnds tra c f saar (DAARNormal ncon numPays numInps) =
+  symCaseApplyAllResult
+    (\aar ->
+     extractAppliedAll aar
+       (\wa ef nsta ->
+        let sigs = getSignatures bnds numInps inps in
+        let outcomes = getOutcomes bnds numPays numInps ef inps in
+        if c == ncon
+        then f (sProcessError sPEUselessTransaction) DPError
+        else f (sProcessed wa ef sigs outcomes nsta) (DPProcessed ncon)))
+    saar
+  where inps = inputs tra
+processApplyResult bnds tra c f saar DAARError =
+  symCaseApplyAllResult
+    (\aar -> convertProcessError aar f)
+    saar
+
+processAux :: SymVal a => Bounds -> STransaction -> SState -> Contract
+           -> (SProcessResult -> DetProcessResult -> SBV a)
+           -> SSIntervalResult -> SBV a
+processAux bnds tra sta c f (SSIntervalTrimmed env fixSta) =
+  applyAll bnds env fixSta c (inputs tra)
+           (\sym det -> processApplyResult bnds tra c f sym det)
+processAux bnds tra sta c f (SSIntervalError intErr) =
+  f (sProcessError $ sPEIntervalError intErr) DPError
+
+process :: SymVal a => Bounds -> STransaction -> SState -> Contract
+        -> (SProcessResult -> DetProcessResult -> SBV a) -> SBV a
+process bnds tra sta c f =
+  symCaseIntervalResult (\interv -> processAux bnds tra sta c f interv)
+                        (fixInterval (interval tra) sta)
 

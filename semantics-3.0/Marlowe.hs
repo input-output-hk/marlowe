@@ -1,11 +1,46 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Marlowe
     ( module Semantics
     )
 where
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.String
+import           Data.Text (Text)
+import qualified Data.Text as T
 
 import           Semantics
+
+instance IsString PubKey where
+    fromString s = PubKey (T.pack s)
+
+instance IsString AccountId where
+    fromString s = AccountId 0 (PubKey (T.pack s))
+
+alicePubKey :: PubKey
+alicePubKey = PubKey "Alice"
+
+aliceAcc :: AccountId
+aliceAcc = AccountId 0 alicePubKey
+
+bobPubKey :: PubKey
+bobPubKey = PubKey "Bob"
+
+bobAcc :: AccountId
+bobAcc = AccountId 0 bobPubKey
+
+charliePubKey :: PubKey
+charliePubKey = PubKey "Charlie"
+
+charlieAcc :: AccountId
+charlieAcc = AccountId 0 charliePubKey
+
+evePubKey :: PubKey
+evePubKey = PubKey "Eve"
+
+eveAcc :: AccountId
+eveAcc = AccountId 0 evePubKey
+
 
 type AccountsDiff = Map Party Money
 

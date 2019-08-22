@@ -13,6 +13,7 @@ executable marlowe
     build-depends:      base >=4.9,
                         mtl,
                         containers,
+                        text,
                         sbv,
                         time,
                         QuickCheck,

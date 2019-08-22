@@ -2,6 +2,7 @@ module Semantics where
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Text (Text)
 
 newtype Slot = Slot { getSlot :: Integer } deriving (Eq,Ord)
 
@@ -30,7 +31,9 @@ instance Num Ada where
     negate (Lovelace l) = Lovelace (negate l)
 
 
-type PubKey = Integer
+newtype PubKey = PubKey Text
+  deriving (Eq,Ord,Show)
+
 type Party = PubKey
 type NumChoice = Integer
 type NumAccount = Integer

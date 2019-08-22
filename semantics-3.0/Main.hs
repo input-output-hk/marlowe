@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import           Data.Map.Strict                ( Map )
@@ -20,14 +21,17 @@ import           ActusContracts
 main :: IO ()
 main = do
     print $ contractLifespanUpperBound $
-        zeroCouponBondGuaranteed 1 2 3 1000 200 (Slot 10) (Slot 20)
+        zeroCouponBondGuaranteed "investor" "issuer" "guarantor" 1000 200 (Slot 10) (Slot 20)
     now <- getCurrentTime
     let td = utctDay now
     let couponBondFor3Month12PercentConfig = cb td (addGregorianMonthsClip 3 td) 1000 0.12
     let zcbConfig = zcb td (addGregorianMonthsClip 6 td) 1000 (-150)
-    print $ genPrincialAtMaturnityContract 1 2 couponBondFor3Month12PercentConfig
-    print $ genPrincialAtMaturnityGuaranteedContract 1 2 3 couponBondFor3Month12PercentConfig
-    print $ genPrincialAtMaturnityContract 1 2 zcbConfig
+    print $ genPrincialAtMaturnityContract
+                "investor" "issuer" couponBondFor3Month12PercentConfig
+    print $ genPrincialAtMaturnityGuaranteedContract
+                "investor" "issuer" "guarantor" couponBondFor3Month12PercentConfig
+    print $ genPrincialAtMaturnityContract
+                "investor" "issuer" zcbConfig
 
 
 couponBondFor3Month12Percent =
@@ -55,17 +59,17 @@ couponBondFor3Month12Percent =
     (Slot 1563839989)
     Refund
   where
-    acc = AccountId 1 1
-    investor = 1
-    issuer = 2
+    acc = AccountId 1 investor
+    investor = PubKey "investor"
+    issuer = PubKey "issuer"
 
 
 zeroCouponBond = When [ Case
-        (Deposit acc 1 (Constant 850))
-        (Pay acc (Party 2) (Constant 850)
+        (Deposit acc investor (Constant 850))
+        (Pay acc (Party issuer) (Constant 850)
             (When
-                [ Case (Deposit acc 2 (Constant 1000))
-                        (Pay acc (Party 1) (Constant 1000) Refund)
+                [ Case (Deposit acc issuer (Constant 1000))
+                        (Pay acc (Party investor) (Constant 1000) Refund)
                 ]
                 (Slot 1579305589)
                 Refund
@@ -75,31 +79,32 @@ zeroCouponBond = When [ Case
     (Slot 1563407989)
     Refund
   where
-    acc = AccountId 1 1
-    investor = Party 1
-    issuer = Party 2
+    acc = AccountId 1 investor
+    investor = PubKey "investor"
+    issuer = PubKey "issuer"
 
-couponBondGuaranteed = When [Case (Deposit acc 3 (Constant 1030))
-    (When [Case (Deposit acc 1 (Constant 1000))
-        (Pay acc (Party 2) (Constant 1000)
-            (When [Case (Deposit acc 2 (Constant 10))
-                (Pay acc (Party 1) (Constant 10)
-                (Pay acc (Party 3) (Constant 10)
-                    (When [Case (Deposit acc 2 (Constant 10))
-                        (Pay acc (Party 1) (Constant 10)
-                        (Pay acc (Party 3) (Constant 10)
-                            (When [Case (Deposit acc 2 (Constant 1010))
-                                (Pay acc (Party 1) (Constant 1010)
-                                (Pay acc (Party 3) (Constant 1010) Refund))]
+couponBondGuaranteed = When [Case (Deposit acc guarantor (Constant 1030))
+    (When [Case (Deposit acc investor (Constant 1000))
+        (Pay acc (Party issuer) (Constant 1000)
+            (When [Case (Deposit acc issuer (Constant 10))
+                (Pay acc (Party investor) (Constant 10)
+                (Pay acc (Party guarantor) (Constant 10)
+                    (When [Case (Deposit acc issuer (Constant 10))
+                        (Pay acc (Party investor) (Constant 10)
+                        (Pay acc (Party guarantor) (Constant 10)
+                            (When [Case (Deposit acc issuer (Constant 1010))
+                                (Pay acc (Party investor) (Constant 1010)
+                                (Pay acc (Party guarantor) (Constant 1010) Refund))]
                             (Slot 1571788789) Refund)))]
                     (Slot 1569196789) Refund)))]
             (Slot 1566518389) Refund))]
     (Slot 1563839989) Refund)]
     (Slot 1563839989) Refund
   where
-    acc = AccountId 1 1
-    investor = Party 1
-    issuer = Party 2
+    acc = AccountId 1 investor
+    investor = PubKey "investor"
+    issuer = PubKey "issuer"
+    guarantor = PubKey "guarantor"
 
 
 couponBondGuaranteedWithAccounts =
@@ -129,9 +134,9 @@ couponBondGuaranteedWithAccounts =
         (Slot 1563839989) Refund)]
     (Slot 1563839989) Refund
   where
-    party1 = 1
-    party2 = 2
-    guarantor = 3
+    party1 = PubKey "party1"
+    party2 = PubKey "party2"
+    guarantor = PubKey "guarantor"
     acc1 = AccountId 1 party1
     acc2 = AccountId 2 guarantor
 
@@ -165,9 +170,9 @@ couponBondGuaranteedWithoutAccounts =
         (Pay acc (Party guarantor) (Constant 1030) Refund))]
     (Slot 1563839989) Refund
   where
-    party1 = 1
-    party2 = 2
-    guarantor = 3
+    party1 = PubKey "party1"
+    party2 = PubKey "party2"
+    guarantor = PubKey "guarantor"
     acc = AccountId 1 party1
 
 {- Simply swap two payments between parties -}
@@ -190,8 +195,8 @@ swapExample =
             Refund)
         ] (date1 - gracePeriod) Refund
   where
-    party1 = 1
-    party2 = 2
+    party1 = PubKey "party1"
+    party2 = PubKey "party2"
     gracePeriod = Slot 3*60*24 -- 24 hours
     date1 = Slot 1563839989
     acc1 = AccountId 1 party1
@@ -215,8 +220,8 @@ swapSingleAccount =
             (Pay acc1 (Party party2) (Constant 300) Refund))
         ] (Slot (date1 - gracePeriod)) Refund
   where
-    party1 = 1
-    party2 = 2
+    party1 = PubKey "1"
+    party2 = PubKey "2"
     gracePeriod = 3*60*24 -- 24 hours
     date1 = 1563839989
     acc1 = AccountId 1 party1
@@ -245,9 +250,9 @@ swapGuaranteedExample =
             Refund)
         ] (date1 - 2 * gracePeriod) Refund
   where
-    party1 = 1
-    party2 = 2
-    guarantor = 3
+    party1 = PubKey "1"
+    party2 = PubKey "2"
+    guarantor = PubKey "3"
     gracePeriod = Slot 3*60*24 -- 24 hours
     date1 = Slot 1563839989
     acc1 = AccountId 1 party1
@@ -287,9 +292,9 @@ swapSingleAccountGuaranteedExample =
             (Pay acc1 (Party guarantor) (Constant 800) Refund))
         ] (date1 - 2 * gracePeriod) Refund
     where
-    party1 = 1
-    party2 = 2
-    guarantor = 3
+    party1 = PubKey "1"
+    party2 = PubKey "2"
+    guarantor = PubKey "3"
     gracePeriod = Slot 3*60*24 -- 24 hours
     date1 = Slot 1563839989
     acc1 = AccountId 1 party1

@@ -392,12 +392,13 @@ data TransactionError = TEAmbiguousSlotIntervalError
   deriving (Eq,Ord,Show)
 
 
-data ProcessResult = Processed [ReduceWarning]
-                               [Payment]
-                               TransactionOutcomes
-                               State
-                               Contract
-                   | ProcessError TransactionError
+data TransactionOutput =
+    TransactionOutput
+        { txOutWarnings :: [ReduceWarning]
+        , txOutPayments :: [Payment]
+        , txOutState    :: State
+        , txOutContract :: Contract }
+    | Error TransactionError
   deriving (Eq,Ord,Show)
 
 data TransactionInput = TransactionInput
@@ -441,7 +442,7 @@ getOutcomes payments input = let
 
 
 -- | Try to process a transaction
-processTransaction :: TransactionInput -> State -> Contract -> ProcessResult
+processTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
 processTransaction tx state contract = let
     inputs = txInputs tx
     in case fixInterval (txInterval tx) state of
@@ -449,11 +450,14 @@ processTransaction tx state contract = let
             ApplyAllSuccess warnings payments newState cont -> let
                 outcomes = getOutcomes payments inputs
                 in  if contract == cont
-                    then ProcessError TEUselessTransaction
-                    else Processed warnings payments outcomes newState cont
-            ApplyAllNoMatchError -> ProcessError TEApplyNoMatchError
-            ApplyAllAmbiguousSlotIntervalError -> ProcessError TEAmbiguousSlotIntervalError
-        IntervalError error -> ProcessError (TEIntervalError error)
+                    then Error TEUselessTransaction
+                    else TransactionOutput { txOutWarnings = warnings
+                                           , txOutPayments = payments
+                                           , txOutState = newState
+                                           , txOutContract = cont }
+            ApplyAllNoMatchError -> Error TEApplyNoMatchError
+            ApplyAllAmbiguousSlotIntervalError -> Error TEAmbiguousSlotIntervalError
+        IntervalError error -> Error (TEIntervalError error)
 
 
 -- | Calculates an upper bound for the maximum lifespan of a contract

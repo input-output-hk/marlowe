@@ -345,7 +345,7 @@ applyCases env state input cases = case (input, cases) of
         in if choId1 == choId2 && inBounds choice bounds
         then Applied newState cont
         else applyCases env state input rest
-    (_, Case (Notify obs) cont : _) | evalObservation env state obs -> Applied state cont
+    (INotify, Case (Notify obs) cont : _) | evalObservation env state obs -> Applied state cont
     (_, _ : rest) -> applyCases env state input rest
     (_, []) -> ApplyNoMatchError
 

@@ -46,8 +46,10 @@ accountOwner (AccountId _ party) = party
 
 data ChoiceId = ChoiceId NumChoice Party
   deriving (Eq,Ord,Show)
-newtype OracleId = OracleId PubKey
-  deriving (Eq,Ord,Show)
+
+{- newtype OracleId = OracleId PubKey
+  deriving (Eq,Ord,Show) -}
+
 newtype ValueId = ValueId Integer
   deriving (Eq,Ord,Show)
 
@@ -430,7 +432,6 @@ addOutcome party diffValue trOut = let
         Just value -> value + diffValue
         Nothing    -> diffValue
     in Map.insert party newValue trOut
-
 
 
 -- | Extract total outcomes from transaction inputs and outputs

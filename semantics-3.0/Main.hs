@@ -300,3 +300,6 @@ swapSingleAccountGuaranteedExample =
     acc1 = AccountId 1 party1
     acc2 = AccountId 2 party2
     acc3 = AccountId 3 guarantor
+
+choiceIdExample :: ChoiceId
+choiceIdExample = ChoiceId "RockPaperScissors" "Alice"

@@ -35,7 +35,7 @@ newtype PubKey = PubKey Text
   deriving (Eq,Ord,Show)
 
 type Party = PubKey
-type NumChoice = Integer
+type ChoiceName = Text
 type NumAccount = Integer
 type Timeout = Slot
 type Money = Ada
@@ -47,7 +47,7 @@ data AccountId = AccountId NumAccount Party
 accountOwner :: AccountId -> Party
 accountOwner (AccountId _ party) = party
 
-data ChoiceId = ChoiceId NumChoice Party
+data ChoiceId = ChoiceId ChoiceName Party
   deriving (Eq,Ord,Show)
 
 {- newtype OracleId = OracleId PubKey

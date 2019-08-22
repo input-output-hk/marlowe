@@ -445,11 +445,11 @@ processTransaction tx state contract = let
     inputs = txInputs tx
     in case fixInterval (txInterval tx) state of
         IntervalTrimmed env fixState -> case applyAllInputs env fixState contract inputs of
-            ApplyAllSuccess warnings effects newState cont -> let
-                outcomes = getOutcomes effects inputs
+            ApplyAllSuccess warnings payments newState cont -> let
+                outcomes = getOutcomes payments inputs
                 in  if contract == cont
                     then ProcessError PEUselessTransaction
-                    else Processed warnings effects outcomes newState cont
+                    else Processed warnings payments outcomes newState cont
             ApplyAllNoMatchError -> ProcessError PEApplyNoMatchError
             ApplyAllAmbiguousSlotIntervalError -> ProcessError PEAmbiguousSlotIntervalError
         IntervalError error -> ProcessError (PEIntervalError error)

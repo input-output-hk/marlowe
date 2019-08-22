@@ -258,14 +258,14 @@ data ReduceWarning = ReduceNoWarning
   deriving (Eq,Ord,Show)
 
 
-data ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
-                  | NotReduced
-                  | AmbiguousSlotIntervalReductionError
+data ReduceStepResult = Reduced ReduceWarning ReduceEffect State Contract
+                      | NotReduced
+                      | AmbiguousSlotIntervalReductionError
   deriving (Eq,Ord,Show)
 
 
 -- | Carry a step of the contract with no inputs
-reduceContractStep :: Environment -> State -> Contract -> ReduceResult
+reduceContractStep :: Environment -> State -> Contract -> ReduceStepResult
 reduceContractStep env state contract = case contract of
 
     Refund -> case refundOne (accounts state) of
@@ -311,15 +311,15 @@ reduceContractStep env state contract = case contract of
         in Reduced warn ReduceNoPayment newState cont
 
 
-data QuiescenceResult = ContractQuiescent [ReduceWarning] [Payment] State Contract
-                      | QRAmbiguousSlotIntervalError
+data ReduceResult = ContractQuiescent [ReduceWarning] [Payment] State Contract
+                  | RRAmbiguousSlotIntervalError
   deriving (Eq,Ord,Show)
 
 -- | Reduce a contract until it cannot be reduced more
-reduceContractUntilQuiescent :: Environment -> State -> Contract -> QuiescenceResult
+reduceContractUntilQuiescent :: Environment -> State -> Contract -> ReduceResult
 reduceContractUntilQuiescent env state contract = let
     reductionLoop
-      :: Environment -> State -> Contract -> [ReduceWarning] -> [Payment] -> QuiescenceResult
+      :: Environment -> State -> Contract -> [ReduceWarning] -> [Payment] -> ReduceResult
     reductionLoop env state contract warnings payments =
         case reduceContractStep env state contract of
             Reduced warning effect newState cont -> let
@@ -329,7 +329,7 @@ reduceContractUntilQuiescent env state contract = let
                     ReduceWithPayment payment -> payment : payments
                     ReduceNoPayment -> payments
                 in reductionLoop env newState cont newWarnings newPayments
-            AmbiguousSlotIntervalReductionError -> QRAmbiguousSlotIntervalError
+            AmbiguousSlotIntervalReductionError -> RRAmbiguousSlotIntervalError
             -- this is the last invocation of reductionLoop, so we can reverse lists
             NotReduced -> ContractQuiescent (reverse warnings) (reverse payments) state contract
 
@@ -385,7 +385,7 @@ applyAllInputs env state contract inputs = let
         -> ApplyAllResult
     applyAllLoop env state contract inputs warnings payments =
         case reduceContractUntilQuiescent env state contract of
-            QRAmbiguousSlotIntervalError -> ApplyAllAmbiguousSlotIntervalError
+            RRAmbiguousSlotIntervalError -> ApplyAllAmbiguousSlotIntervalError
             ContractQuiescent warns pays curState cont -> case inputs of
                 [] -> ApplyAllSuccess (warnings ++ warns) (payments ++ pays) curState cont
                 (input : rest) -> case applyInput env curState input cont of

@@ -461,14 +461,13 @@ processTransaction tx state contract = let
 
 
 -- | Calculates an upper bound for the maximum lifespan of a contract
-contractLifespan :: Contract -> Integer
-contractLifespan contract = case contract of
+contractLafespanUpperBound :: Contract -> Integer
+contractLafespanUpperBound contract = case contract of
     Refund -> 0
-    Pay _ _ _ cont -> contractLifespan cont
-    -- TODO simplify observation and check for always true/false cases
+    Pay _ _ _ cont -> contractLafespanUpperBound cont
     If _ contract1 contract2 ->
-        max (contractLifespan contract1) (contractLifespan contract2)
+        max (contractLafespanUpperBound contract1) (contractLafespanUpperBound contract2)
     When cases timeout subContract -> let
-        contractsLifespans = fmap (\(Case _ cont) -> contractLifespan cont) cases
-        in maximum (getSlot timeout : contractLifespan subContract : contractsLifespans)
-    Let _ _ cont -> contractLifespan cont
+        contractsLifespans = fmap (\(Case _ cont) -> contractLafespanUpperBound cont) cases
+        in maximum (getSlot timeout : contractLafespanUpperBound subContract : contractsLifespans)
+    Let _ _ cont -> contractLafespanUpperBound cont

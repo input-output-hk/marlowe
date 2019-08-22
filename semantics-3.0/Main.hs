@@ -19,7 +19,8 @@ import           ActusContracts
 
 main :: IO ()
 main = do
-    print $ contractLifespan $ zeroCouponBondGuaranteed 1 2 3 1000 200 (Slot 10) (Slot 20)
+    print $ contractLafespanUpperBound $
+        zeroCouponBondGuaranteed 1 2 3 1000 200 (Slot 10) (Slot 20)
     now <- getCurrentTime
     let td = utctDay now
     let couponBondFor3Month12PercentConfig = cb td (addGregorianMonthsClip 3 td) 1000 0.12

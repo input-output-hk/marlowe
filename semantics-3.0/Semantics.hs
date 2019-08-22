@@ -406,40 +406,6 @@ data TransactionInput = TransactionInput
     , txInputs   :: [Input] }
   deriving (Eq,Ord,Show)
 
-type TransactionOutcomes = Map Party Money
-
-
-emptyOutcome :: TransactionOutcomes
-emptyOutcome = Map.empty
-
-
-isEmptyOutcome :: TransactionOutcomes -> Bool
-isEmptyOutcome trOut = all (== Lovelace 0) trOut
-
-
--- Adds a value to the map of outcomes
-addOutcome :: Party -> Money -> TransactionOutcomes -> TransactionOutcomes
-addOutcome party diffValue trOut = let
-    newValue = case Map.lookup party trOut of
-        Just value -> value + diffValue
-        Nothing    -> diffValue
-    in Map.insert party newValue trOut
-
-
--- | Extract total outcomes from transaction inputs and outputs
-getOutcomes :: [Payment] -> [Input] -> TransactionOutcomes
-getOutcomes payments input = let
-    outcomes = map (\(Payment party money) -> (party, money)) payments
-
-    deposits (IDeposit _ party money) acc = (party, money) : acc
-    deposits _ acc = acc
-
-    incomes = foldr deposits [] input
-
-    in foldl (\acc (party, money) -> addOutcome party money acc)
-        emptyOutcome
-        (outcomes ++ incomes)
-
 
 -- | Try to compute outputs of a transaction give its input
 computeTransaction :: TransactionInput -> State -> Contract -> TransactionOutput

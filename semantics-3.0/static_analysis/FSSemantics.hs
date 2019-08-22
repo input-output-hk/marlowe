@@ -148,6 +148,9 @@ type State = ( NMap NAccountId Money
              , NMap NValueId Integer
              , SlotNumber)
 
+emptySState :: SSlotNumber -> SState
+emptySState sn = ST.tuple (FSMap.empty, FSMap.empty, FSMap.empty, sn)
+
 setAccount :: SState -> SBV [(NAccountId, Money)] -> SState
 setAccount t ac = let (_, ch, va, sl) = ST.untuple t in
                   ST.tuple (ac, ch, va, sl)
@@ -673,6 +676,7 @@ type SSProcessEffect = SSReduceEffect
 --  deriving (Eq,Show)
 
 type STransaction = STuple SlotInterval [NInput]
+type NTransaction = (SlotInterval, [NInput])
 
 interval :: STransaction -> SSlotInterval
 interval x = let (si, _) = ST.untuple x in si
@@ -741,6 +745,7 @@ data ProcessResult = Processed [NProcessWarning]
                    | ProcessError NProcessError
   deriving (Eq,Show)
 
+
 mkSymbolicDatatype ''ProcessResult
 
 
@@ -801,4 +806,34 @@ process :: SymVal a => Bounds -> STransaction -> SState -> Contract
 process bnds tra sta c f =
   symCaseIntervalResult (\interv -> processAux bnds tra sta c f interv)
                         (fixInterval (interval tra) sta)
+
+extractProcessResult :: SProcessResult -> ( SList NProcessWarning
+                                          , SList NProcessEffect
+                                          , STransactionSignatures
+                                          , STransactionOutcomes
+                                          , SState)
+extractProcessResult spr =
+  ST.untuple (symCaseProcessResult prCases spr)
+  where prCases (SSProcessed wa ef ts to nst) = ST.tuple (wa, ef, ts, to, nst)
+        prCases (SSProcessError _) = error "Accessing result of process on error"
+
+warningsTraceWBAux :: Integer -> Bounds -> SState -> SList NTransaction -> Contract
+                   -> (SList NProcessWarning)
+warningsTraceWBAux inte bnds st transList con
+  | inte > 0 = process bnds (SL.head transList) st con cont
+  | otherwise = error "Bound for number of actions too low"
+  where cont spr (DPProcessed ncon) = let (wa, _, _, _, nst) = extractProcessResult spr in
+                                      ite (SL.null $ wa)
+                                          (warningsTraceWBAux (inte - 1) bnds nst
+                                                              (SL.tail transList) ncon)
+                                          wa
+        cont spr DPError = []
+
+
+warningsTraceWB :: Bounds -> SSlotNumber -> SList NTransaction -> Contract
+                -> (SList NProcessWarning)
+warningsTraceWB bnds sn transList con =
+  warningsTraceWBAux (numActions bnds) bnds (emptySState sn) transList con
+
+
 

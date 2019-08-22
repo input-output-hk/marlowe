@@ -84,6 +84,12 @@ data State = State { accounts :: Map AccountId Money
                    , minSlot :: SlotNumber }
   deriving (Eq,Ord,Show,Read)
 
+emptyState :: SlotNumber -> State
+emptyState sn = State { accounts = Map.empty
+                      , choices = Map.empty
+                      , boundValues = Map.empty
+                      , minSlot = sn }
+
 data Environment = Environment { slotInterval :: SlotInterval }
   deriving (Eq,Ord,Show,Read)
 

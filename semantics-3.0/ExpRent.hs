@@ -1,6 +1,6 @@
 module ExpRent where
 
-import Semantics
+import Marlowe
 
 expanded =
   When [

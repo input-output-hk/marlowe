@@ -1,6 +1,6 @@
 module ExpCrowdFunding where
 
-import           Semantics
+import           Marlowe
 
 contract :: Contract
 contract = crowdfunding 1000 100

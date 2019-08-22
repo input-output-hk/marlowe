@@ -1,4 +1,5 @@
 module Marlowe
-    (module Semantics)
-    where
-import Semantics
+    ( module Semantics
+    )
+where
+import           Semantics

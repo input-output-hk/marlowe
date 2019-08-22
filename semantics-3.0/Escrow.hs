@@ -1,6 +1,6 @@
 module Escrow where
 
-import           Semantics
+import           Marlowe
 
 import Data.List (maximumBy, genericLength, inits, tails)
 import Data.Ord (comparing)

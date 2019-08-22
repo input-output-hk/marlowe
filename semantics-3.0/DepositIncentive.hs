@@ -1,6 +1,6 @@
 module DepositIncentive where
 
-import Semantics
+import Marlowe
 
 payAll :: AccountId -> Payee -> Contract -> Contract
 payAll acId payee cont =

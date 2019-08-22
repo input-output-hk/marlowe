@@ -16,7 +16,7 @@ import Data.Time.Clock.System
 import Debug.Trace
 
 import ACTUS
-import Semantics
+import Marlowe
 
 dayToSlot :: Day -> Slot
 dayToSlot d = let

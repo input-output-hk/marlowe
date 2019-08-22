@@ -22,6 +22,7 @@ executable marlowe
                         tasty-quickcheck,
                         template-haskell
     other-modules:
+                        Marlowe
                         Semantics
                         ActusContracts
                         ACTUS

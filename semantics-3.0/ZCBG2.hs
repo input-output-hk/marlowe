@@ -1,7 +1,7 @@
 
 module ZCBG2 where
 
-import Semantics
+import Marlowe
 
 
 zeroCouponBondGuaranteed :: Party -> Party -> Party -> Integer -> Integer -> Timeout

@@ -1,6 +1,6 @@
 module ZCBG where
 
-import Semantics
+import Marlowe
 import Data.List (inits, tails)
 
 splitEverywhere :: [a] -> [([a], a, [a])]

@@ -1,6 +1,6 @@
 module Rent where
 
-import Semantics
+import Marlowe
 
 utility :: Contract
 utility = mkDeposit $ payMonth 1 $ payMonth 2 $ payMonth 3 $ Refund

@@ -1,6 +1,6 @@
 module CrowdFunding where
 
-import           Semantics
+import           Marlowe
 
 import Data.List (genericLength, genericSplitAt, inits, tails)
 

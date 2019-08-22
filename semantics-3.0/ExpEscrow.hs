@@ -1,6 +1,6 @@
 module ExpEscrow where
 
-import Semantics
+import Marlowe
 
 contract :: Contract
 contract = When [Case (Deposit (AccountId 1 1) 1 (Constant 450))

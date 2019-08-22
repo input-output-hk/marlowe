@@ -13,7 +13,7 @@ import           Test.Tasty.HUnit
 import           Debug.Trace
 import Data.Time
 
-import           Semantics
+import           Marlowe
 import           ZCBG2
 import           ActusContracts
 

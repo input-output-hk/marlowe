@@ -385,10 +385,10 @@ applyAllInputs env state contract inputs = let
     in applyAllLoop env state contract inputs [] []
 
 
-data ProcessError = PEAmbiguousSlotIntervalError
-                  | PEApplyNoMatchError
-                  | PEIntervalError IntervalError
-                  | PEUselessTransaction
+data TransactionError = TEAmbiguousSlotIntervalError
+                      | TEApplyNoMatchError
+                      | TEIntervalError IntervalError
+                      | TEUselessTransaction
   deriving (Eq,Ord,Show)
 
 
@@ -397,7 +397,7 @@ data ProcessResult = Processed [ReduceWarning]
                                TransactionOutcomes
                                State
                                Contract
-                   | ProcessError ProcessError
+                   | ProcessError TransactionError
   deriving (Eq,Ord,Show)
 
 data TransactionInput = TransactionInput
@@ -449,11 +449,11 @@ processTransaction tx state contract = let
             ApplyAllSuccess warnings payments newState cont -> let
                 outcomes = getOutcomes payments inputs
                 in  if contract == cont
-                    then ProcessError PEUselessTransaction
+                    then ProcessError TEUselessTransaction
                     else Processed warnings payments outcomes newState cont
-            ApplyAllNoMatchError -> ProcessError PEApplyNoMatchError
-            ApplyAllAmbiguousSlotIntervalError -> ProcessError PEAmbiguousSlotIntervalError
-        IntervalError error -> ProcessError (PEIntervalError error)
+            ApplyAllNoMatchError -> ProcessError TEApplyNoMatchError
+            ApplyAllAmbiguousSlotIntervalError -> ProcessError TEAmbiguousSlotIntervalError
+        IntervalError error -> ProcessError (TEIntervalError error)
 
 
 -- | Calculates an upper bound for the maximum lifespan of a contract

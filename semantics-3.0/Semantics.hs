@@ -441,14 +441,13 @@ getOutcomes payments input = let
         (outcomes ++ incomes)
 
 
--- | Try to process a transaction
-processTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
-processTransaction tx state contract = let
+-- | Try to compute outputs of a transaction give its input
+computeTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
+computeTransaction tx state contract = let
     inputs = txInputs tx
     in case fixInterval (txInterval tx) state of
         IntervalTrimmed env fixState -> case applyAllInputs env fixState contract inputs of
             ApplyAllSuccess warnings payments newState cont -> let
-                outcomes = getOutcomes payments inputs
                 in  if contract == cont
                     then Error TEUselessTransaction
                     else TransactionOutput { txOutWarnings = warnings

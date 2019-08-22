@@ -400,8 +400,9 @@ data ProcessResult = Processed [ReduceWarning]
                    | ProcessError ProcessError
   deriving (Eq,Ord,Show)
 
-data Transaction = Transaction { txInterval :: SlotInterval
-                               , txInputs   :: [Input] }
+data TransactionInput = TransactionInput
+    { txInterval :: SlotInterval
+    , txInputs   :: [Input] }
   deriving (Eq,Ord,Show)
 
 type TransactionOutcomes = Map Party Money
@@ -440,7 +441,7 @@ getOutcomes payments input = let
 
 
 -- | Try to process a transaction
-processTransaction :: Transaction -> State -> Contract -> ProcessResult
+processTransaction :: TransactionInput -> State -> Contract -> ProcessResult
 processTransaction tx state contract = let
     inputs = txInputs tx
     in case fixInterval (txInterval tx) state of

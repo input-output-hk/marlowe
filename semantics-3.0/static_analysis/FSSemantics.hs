@@ -491,7 +491,7 @@ splitReduceResultReduce :: SList NReduceWarning -> SList NReduceEffect -> SSRedu
 splitReduceResultReduce wa ef (SSReduced twa tef tsta) = 
   (twa SL..: wa, tef SL..: ef, tsta, error "Tried to read symbolic error on normal path")
 splitReduceResultReduce _ _ SSNotReduced =
-  error "Try to read symbolic info on not reduced path"
+  error "Tried to read symbolic info on not reduced path"
 splitReduceResultReduce _ _ (SSReduceError terr) = (err, err, err, terr)
   where err = error "Tried to read symbolic info on error path"
 

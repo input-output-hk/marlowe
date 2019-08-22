@@ -30,6 +30,7 @@ executable marlowe
                         FSSet
                         FSMap
                         FSSemantics
+                        FSDepositIncentive
                         MkSymb
     hs-source-dirs:     .
                         static_analysis

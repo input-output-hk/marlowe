@@ -421,7 +421,7 @@ getOutcomes :: [ReduceEffect] -> [Input] -> TransactionOutcomes
 getOutcomes effect input =
   foldl' (\acc (p, m) -> addOutcome p m acc) emptyOutcome (incomes ++ outcomes)
   where
-    incomes = [ (p, m) | ReduceNormalPay p m <- effect ]
+    incomes = [ (p, -m) | ReduceNormalPay p m <- effect ]
     outcomes = [ (p, m) | IDeposit _ p m <- input ]
 
 

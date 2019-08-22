@@ -704,7 +704,7 @@ getSignatures bnds numInps =
     addSig acc SSINotify = acc
 
 addIfPay :: Bounds -> SSReduceEffect -> STransactionOutcomes -> STransactionOutcomes 
-addIfPay bnds (SSReduceNormalPay p m) to = addOutcome bnds p m to
+addIfPay bnds (SSReduceNormalPay p m) to = addOutcome bnds p (-m) to
 addIfPay _ _ to = to
 
 addIfDep :: Bounds -> SSInput -> STransactionOutcomes -> STransactionOutcomes 

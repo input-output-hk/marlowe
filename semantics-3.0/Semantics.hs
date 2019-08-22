@@ -213,19 +213,6 @@ updateMoneyInAccount accId money =
     if getLovelace money <= 0 then Map.delete accId else Map.insert accId money
 
 
-{-| Withdraw up to the given amount of money from an account
-    Return the amount of money withdrawn
--}
-withdrawMoneyFromAccount
-  :: AccountId -> Money -> Map AccountId Money -> (Money, Map AccountId Money)
-withdrawMoneyFromAccount accId money accounts = let
-    balance        = moneyInAccount accId accounts
-    withdrawnMoney = min balance money
-    newBalance     = balance - withdrawnMoney
-    newAcc         = updateMoneyInAccount accId newBalance accounts
-    in (withdrawnMoney, newAcc)
-
-
 {-| Add the given amount of money to an account (only if it is positive).
     Return the updated Map
 -}
@@ -250,7 +237,7 @@ giveMoney payee money accounts = case payee of
 -- REDUCE
 
 data ReduceWarning = ReduceNoWarning
-                   | ReduceNonPositivePay AccountId Payee Money
+                   | ReduceNonPositivePay AccountId Payee Integer
                    | ReducePartialPay AccountId Payee Money Money
                                     -- ^ src    ^ dest ^ paid ^ expected
                    | ReduceShadowing ValueId Integer Integer
@@ -276,11 +263,14 @@ reduceContractStep env state contract = case contract of
 
     Pay accId payee val cont -> let
         amountToPay = evalValue env state val
-        moneyToPay  = Lovelace amountToPay
         in  if amountToPay <= 0
-            then Reduced (ReduceNonPositivePay accId payee moneyToPay) ReduceNoPayment state cont
+            then Reduced (ReduceNonPositivePay accId payee amountToPay) ReduceNoPayment state cont
             else let
-                (paidMoney, newAccs) = withdrawMoneyFromAccount accId moneyToPay (accounts state)
+                balance    = moneyInAccount accId (accounts state) -- always positive
+                moneyToPay = Lovelace amountToPay -- always positive
+                paidMoney  = min balance moneyToPay -- always positive
+                newBalance = balance - paidMoney -- always positive
+                newAccs    = updateMoneyInAccount accId newBalance (accounts state)
                 warning = if paidMoney < moneyToPay
                           then ReducePartialPay accId payee paidMoney moneyToPay
                           else ReduceNoWarning

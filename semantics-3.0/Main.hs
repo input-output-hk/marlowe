@@ -19,7 +19,7 @@ import           ActusContracts
 
 main :: IO ()
 main = do
-    print $ contractLafespanUpperBound $
+    print $ contractLifespanUpperBound $
         zeroCouponBondGuaranteed 1 2 3 1000 200 (Slot 10) (Slot 20)
     now <- getCurrentTime
     let td = utctDay now

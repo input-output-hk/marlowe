@@ -489,7 +489,7 @@ splitReduceResultReduce :: SList NReduceWarning -> SList NReduceEffect -> SSRedu
                         -> (SList NReduceWarning, SList NReduceEffect, SState,
                             SReduceError)
 splitReduceResultReduce wa ef (SSReduced twa tef tsta) = 
-  (twa SL..: wa, tef SL..: ef, tsta, error "Tried to read symbolic error on normal path")
+  (twa SL..: wa, tef SL..: ef, tsta, error "Tried to read symbolic error on normal path (simpleReduce)")
 splitReduceResultReduce _ _ SSNotReduced =
   error "Tried to read symbolic info on not reduced path"
 splitReduceResultReduce _ _ (SSReduceError terr) = (err, err, err, terr)
@@ -522,7 +522,7 @@ reduceAllAux bnds payNum Nothing env sta c wa ef f =
             DRRContractOver -> f (sReducedAll wa ef sta) DRARContractOver
             DRRRefundStage -> reduceAllAux bnds (payNum + 1) (Just $ numAccounts bnds)
                                            env nsta c nwa nef f
-            DRRNoProgressNormal -> f (sReducedAll nwa nef nsta) $ DRARNormal c 0
+            DRRNoProgressNormal -> f (sReducedAll wa ef sta) $ DRARNormal c 0
             DRRNoProgressError -> f (sReduceAllError err) DRARError
             DRRProgress nc p -> reduceAllAux bnds (payNum + p) Nothing env nsta nc nwa nef f)
 
@@ -533,7 +533,7 @@ reduceAll bnds env sta c f = reduceAllAux bnds 0 Nothing env sta c [] [] f
 splitReduceAllResult :: SList NReduceWarning -> SList NReduceEffect -> SSReduceAllResult
                      -> SBV ([NReduceWarning], [NReduceEffect], State, NReduceError)
 splitReduceAllResult wa ef (SSReducedAll twa tef tsta) = ST.tuple $
-  (twa SL..++ wa, tef SL..++ ef, tsta, error "Tried to read symbolic error on normal path")
+  (twa SL..++ wa, tef SL..++ ef, tsta, error "Tried to read symbolic error on normal path (reduceAll)")
 splitReduceAllResult _ _ (SSReduceAllError terr) = ST.tuple $ (err, err, err, terr)
   where err = error "Tried to read symbolic info on error path"
 

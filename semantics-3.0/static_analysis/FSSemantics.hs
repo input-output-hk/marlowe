@@ -482,18 +482,17 @@ data DetReduceAllResult = DRARContractOver
 splitReduceResultRefund :: SList NReduceWarning -> SList NReduceEffect -> SSReduceResult
                         -> (SList NReduceWarning, SList NReduceEffect, SState)
 splitReduceResultRefund wa ef (SSReduced twa tef tsta) = (twa SL..: wa, tef SL..: ef, tsta)
-splitReduceResultRefund _ _ SSNotReduced = error "NotReduced in refund stage"
-splitReduceResultRefund _ _ (SSReduceError _) = error "ReduceError in refund stage"
+splitReduceResultRefund _ _ SSNotReduced = ([], [], emptySState 0) -- SNH
+splitReduceResultRefund _ _ (SSReduceError _) = ([], [], emptySState 0) -- SNH 
 
 splitReduceResultReduce :: SList NReduceWarning -> SList NReduceEffect -> SSReduceResult
                         -> (SList NReduceWarning, SList NReduceEffect, SState,
                             SReduceError)
 splitReduceResultReduce wa ef (SSReduced twa tef tsta) = 
-  (twa SL..: wa, tef SL..: ef, tsta, error "Tried to read symbolic error on normal path (simpleReduce)")
+  (twa SL..: wa, tef SL..: ef, tsta, sReduceAmbiguousSlotInterval {- SNH -}) 
 splitReduceResultReduce _ _ SSNotReduced =
-  error "Tried to read symbolic info on not reduced path"
-splitReduceResultReduce _ _ (SSReduceError terr) = (err, err, err, terr)
-  where err = error "Tried to read symbolic info on error path"
+  ([] {- SNH -}, [] {- SNH -}, emptySState 0 {- SNH -}, sReduceAmbiguousSlotInterval {- SNH -})
+splitReduceResultReduce _ _ (SSReduceError terr) = ([] {- SNH -}, [] {- SNH -}, emptySState 0{- SNH -}, terr)
 
 reduceAllAux :: SymVal a => Bounds -> Integer -> Maybe Integer -> SEnvironment
              -> SState -> Contract -> SList NReduceWarning -> SList NReduceEffect
@@ -533,9 +532,9 @@ reduceAll bnds env sta c f = reduceAllAux bnds 0 Nothing env sta c [] [] f
 splitReduceAllResult :: SList NReduceWarning -> SList NReduceEffect -> SSReduceAllResult
                      -> SBV ([NReduceWarning], [NReduceEffect], State, NReduceError)
 splitReduceAllResult wa ef (SSReducedAll twa tef tsta) = ST.tuple $
-  (twa SL..++ wa, tef SL..++ ef, tsta, error "Tried to read symbolic error on normal path (reduceAll)")
-splitReduceAllResult _ _ (SSReduceAllError terr) = ST.tuple $ (err, err, err, terr)
-  where err = error "Tried to read symbolic info on error path"
+  (twa SL..++ wa, tef SL..++ ef, tsta, sReduceAmbiguousSlotInterval {- SNH -}) 
+splitReduceAllResult _ _ (SSReduceAllError terr) =
+   ST.tuple $ ([] {- SNH -}, [] {- SNH -}, emptySState 0{- SNH -}, terr)
 
 splitReduceAllResultWrap :: SList NReduceWarning -> SList NReduceEffect -> SReduceAllResult
                          -> SBV ([NReduceWarning], [NReduceEffect], State, NReduceError)
@@ -692,7 +691,7 @@ sFoldl inte f acc list
   | inte > 0 = ite (SL.null list)
                    acc
                    (sFoldl (inte - 1) f (f acc (SL.head list)) (SL.tail list))
-  | otherwise = error "List is longer than bound"
+  | otherwise = acc 
 
 getSignatures :: Bounds -> Integer -> SList NInput -> STransactionSignatures
 getSignatures bnds numInps =
@@ -756,15 +755,13 @@ extractAppliedAll :: SymVal a => SSApplyAllResult
    -> (SBV [NProcessWarning] -> SBV [NProcessEffect] -> SBV State -> SBV a)
    -> SBV a
 extractAppliedAll (SSAppliedAll wa ef nsta) f = f wa ef nsta 
-extractAppliedAll (SSAAApplyError _) _ =
-  error "Trying to read result of applyAll on apply error"
-extractAppliedAll (SSAAReduceError _) _ =
-  error "Trying to read result of applyAll on reduce error"
+extractAppliedAll (SSAAApplyError _) f = f [] [] (emptySState 0) -- SNH
+extractAppliedAll (SSAAReduceError _) f = f [] [] (emptySState 0) -- SNH
 
 convertProcessError :: SymVal a => SSApplyAllResult
                     -> (SProcessResult -> DetProcessResult -> SBV a) -> SBV a
 convertProcessError (SSAppliedAll _ _ _) f =
-  error "Trying to read error of applyAll on normal apply"
+  f (sProcessError $ sPEReduceError $ sReduceAmbiguousSlotInterval) DPError -- SNH
 convertProcessError (SSAAApplyError aperr) f =
   f (sProcessError $ sPEApplyError aperr) DPError
 convertProcessError (SSAAReduceError reerr) f =

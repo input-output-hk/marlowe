@@ -507,9 +507,9 @@ reduceAllAux bnds payNum (Just x) env sta c wa ef f
             DRRContractOver -> f (sReducedAll wa ef sta) DRARContractOver
             DRRRefundStage -> reduceAllAux bnds (payNum + 1) (Just (x - 1))
                                              env nsta c nwa nef f
-            DRRNoProgressNormal -> error "No progress in refund stage" 
-            DRRNoProgressError -> error "Error in refund stage" 
-            DRRProgress _ _ -> error "Progress in refund stage")
+            DRRNoProgressNormal -> f (sReduceAllError sReduceAmbiguousSlotInterval) DRARError -- SNH 
+            DRRNoProgressError -> f (sReduceAllError sReduceAmbiguousSlotInterval) DRARError --SNH
+            DRRProgress _ _ -> f (sReduceAllError sReduceAmbiguousSlotInterval) DRARError) --SNH 
 reduceAllAux bnds payNum Nothing env sta c wa ef f =
     reduce bnds env sta c contFunc
   where contFunc sr dr =
@@ -612,7 +612,7 @@ applyAllAux :: SymVal a => Integer
             -> (SApplyAllResult -> DetApplyAllResult -> SBV a) -> SBV a
 applyAllAux n bnds numPays numInps env state c l wa ef f
   | n >= 0 = reduceAll bnds env state c contFunReduce
-  | otherwise = error "Input list too long in applyAll"
+  | otherwise = f (sAAReduceError sReduceAmbiguousSlotInterval) DAARError -- SNH
   where contFunReduce sr DRARError =
           let (_, _, _, err) = ST.untuple $ splitReduceAllResultWrap wa ef sr in
           (f (sAAApplyError err) DAARError)
@@ -629,7 +629,7 @@ applyAllAux n bnds numPays numInps env state c l wa ef f
         contFunApply t nwa nef np sr DARError =
           f (symCaseApplyResult
                (\x -> case x of
-                        SSApplied _ -> error "Tried to read error on normal applyAll"
+                        SSApplied _ -> sAAReduceError sReduceAmbiguousSlotInterval -- SNH 
                         SSApplyError err -> sAAApplyError err) sr)
             DAARError
         contFunApply t nwa nef np sr (DARNormal nc ni) =
@@ -637,7 +637,7 @@ applyAllAux n bnds numPays numInps env state c l wa ef f
              (\x -> case x of
                       SSApplied nst -> applyAllAux (n - 1) bnds (numPays + np) (numInps + ni)
                                                    env nst nc t nwa nef f
-                      SSApplyError err -> error "Tried to read data on error applyAll") sr)
+                      SSApplyError err -> f (sAAApplyError err) DAARError {- SNH -}) sr)
 
 applyAll :: SymVal a => Bounds
          -> SEnvironment -> SState -> Contract -> SList NInput
@@ -721,14 +721,14 @@ getOutcomesAux bnds numPays numInps eff inp to
                                          (\oneEff -> addIfPay bnds oneEff to)
                                          (SL.head eff)))
   | numInps > 0 = ite (SL.null inp)
-                      (getOutcomesAux bnds 0 numInps eff inp to)
+                      to 
                       (getOutcomesAux bnds 0 (numInps - 1)
                                       [] (SL.tail inp)
                                       (symCaseInput
                                          (\oneInp -> addIfDep bnds oneInp to)
                                          (SL.head inp)))
                                       
-  | otherwise = error "Bounds are not enough for outcome lists"
+  | otherwise = to -- SNH 
 
 getOutcomes :: Bounds -> Integer -> Integer -> SList NReduceEffect -> SList NInput
             -> STransactionOutcomes
@@ -811,13 +811,13 @@ extractProcessResult :: SProcessResult -> ( SList NProcessWarning
 extractProcessResult spr =
   ST.untuple (symCaseProcessResult prCases spr)
   where prCases (SSProcessed wa ef ts to nst) = ST.tuple (wa, ef, ts, to, nst)
-        prCases (SSProcessError _) = error "Accessing result of process on error"
+        prCases (SSProcessError _) = ST.tuple ([], [], [], [], emptySState 0) -- SNH 
 
 warningsTraceWBAux :: Integer -> Bounds -> SState -> SList NTransaction -> Contract
                    -> (SList NProcessWarning)
 warningsTraceWBAux inte bnds st transList con
   | inte > 0 = process bnds (SL.head transList) st con cont
-  | otherwise = error "Bound for number of actions too low"
+  | otherwise = [] -- SNH 
   where cont spr (DPProcessed ncon) = let (wa, _, _, _, nst) = extractProcessResult spr in
                                       ite (SL.null $ wa)
                                           (warningsTraceWBAux (inte - 1) bnds nst

@@ -721,7 +721,7 @@ fun getSignatures :: "Input list \<Rightarrow> TransactionSignatures" where
 
 fun getPartiesFromReduceEffect :: "ReduceEffect list \<Rightarrow> (Party \<times> Money) list" where
 "getPartiesFromReduceEffect (Cons (ReduceNormalPay p m) t) =
-   Cons (p, m) (getPartiesFromReduceEffect t)" |
+   Cons (p, -m) (getPartiesFromReduceEffect t)" |
 "getPartiesFromReduceEffect (Cons x t) = getPartiesFromReduceEffect t" |
 "getPartiesFromReduceEffect Nil = Nil"
 

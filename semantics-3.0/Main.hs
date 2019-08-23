@@ -36,20 +36,20 @@ main = do
 
 couponBondFor3Month12Percent =
     -- investor deposits 1000 Ada
-    When [ Case (Deposit acc investor (Constant 1000))
+    When [ Case (Deposit "investor" investor (Constant 1000))
         -- and pays it to the issuer
-        (Pay acc (Party issuer) (Constant 1000)
+        (Pay "investor" (Party issuer) (Constant 1000)
             -- after a month expect to receive 10 Ada interest
-            (When [ Case (Deposit acc issuer (Constant 10))
+            (When [ Case (Deposit "investor" issuer (Constant 10))
                 -- and pay it to the investor
-                (Pay acc (Party investor) (Constant 10)
+                (Pay "investor" (Party investor) (Constant 10)
                     -- same for 2nd month
-                    (When [ Case (Deposit acc issuer (Constant 10))
-                        (Pay acc (Party investor) (Constant 10)
+                    (When [ Case (Deposit "investor" issuer (Constant 10))
+                        (Pay "investor" (Party investor) (Constant 10)
                             -- after maturity date investor
                             -- expects to receive notional + interest payment
-                            (When [ Case (Deposit acc issuer (Constant 1010))
-                                (Pay acc (Party investor) (Constant 1010) Refund)]
+                            (When [ Case (Deposit "investor" issuer (Constant 1010))
+                                (Pay "investor" (Party investor) (Constant 1010) Refund)]
                             (Slot 1571788789)
                             Refund))]
                     (Slot 1569196789)
@@ -59,17 +59,16 @@ couponBondFor3Month12Percent =
     (Slot 1563839989)
     Refund
   where
-    acc = AccountId 1 investor
     investor = PubKey "investor"
     issuer = PubKey "issuer"
 
 
 zeroCouponBond = When [ Case
-        (Deposit acc investor (Constant 850))
-        (Pay acc (Party issuer) (Constant 850)
+        (Deposit "investor" investor (Constant 850))
+        (Pay "investor" (Party issuer) (Constant 850)
             (When
-                [ Case (Deposit acc issuer (Constant 1000))
-                        (Pay acc (Party investor) (Constant 1000) Refund)
+                [ Case (Deposit "investor" issuer (Constant 1000))
+                        (Pay "investor" (Party investor) (Constant 1000) Refund)
                 ]
                 (Slot 1579305589)
                 Refund
@@ -79,29 +78,27 @@ zeroCouponBond = When [ Case
     (Slot 1563407989)
     Refund
   where
-    acc = AccountId 1 investor
     investor = PubKey "investor"
     issuer = PubKey "issuer"
 
-couponBondGuaranteed = When [Case (Deposit acc guarantor (Constant 1030))
-    (When [Case (Deposit acc investor (Constant 1000))
-        (Pay acc (Party issuer) (Constant 1000)
-            (When [Case (Deposit acc issuer (Constant 10))
-                (Pay acc (Party investor) (Constant 10)
-                (Pay acc (Party guarantor) (Constant 10)
-                    (When [Case (Deposit acc issuer (Constant 10))
-                        (Pay acc (Party investor) (Constant 10)
-                        (Pay acc (Party guarantor) (Constant 10)
-                            (When [Case (Deposit acc issuer (Constant 1010))
-                                (Pay acc (Party investor) (Constant 1010)
-                                (Pay acc (Party guarantor) (Constant 1010) Refund))]
+couponBondGuaranteed = When [Case (Deposit "investor" guarantor (Constant 1030))
+    (When [Case (Deposit "investor" investor (Constant 1000))
+        (Pay "investor" (Party issuer) (Constant 1000)
+            (When [Case (Deposit "investor" issuer (Constant 10))
+                (Pay "investor" (Party investor) (Constant 10)
+                (Pay "investor" (Party guarantor) (Constant 10)
+                    (When [Case (Deposit "investor" issuer (Constant 10))
+                        (Pay "investor" (Party investor) (Constant 10)
+                        (Pay "investor" (Party guarantor) (Constant 10)
+                            (When [Case (Deposit "investor" issuer (Constant 1010))
+                                (Pay "investor" (Party investor) (Constant 1010)
+                                (Pay "investor" (Party guarantor) (Constant 1010) Refund))]
                             (Slot 1571788789) Refund)))]
                     (Slot 1569196789) Refund)))]
             (Slot 1566518389) Refund))]
     (Slot 1563839989) Refund)]
     (Slot 1563839989) Refund
   where
-    acc = AccountId 1 investor
     investor = PubKey "investor"
     issuer = PubKey "issuer"
     guarantor = PubKey "guarantor"
@@ -109,27 +106,27 @@ couponBondGuaranteed = When [Case (Deposit acc guarantor (Constant 1030))
 
 couponBondGuaranteedWithAccounts =
     -- guarantor deposits a whole payoff amount including interest payments
-    When [Case (Deposit acc2 guarantor (Constant 1030))
+    When [Case (Deposit "party2" guarantor (Constant 1030))
         -- then it's same as for simple coupon bond
-        (When [Case (Deposit acc1 party1 (Constant 1000))
-            (Pay acc1 (Party party2) (Constant 1000)
-                (When [Case (Deposit acc1 party2 (Constant 10))
-                    (Pay acc1 (Party party1) (Constant 10)
-                        (When [Case (Deposit acc1 party2 (Constant 10))
-                            (Pay acc1 (Party party1) (Constant 10)
-                                (When [Case (Deposit acc1 party2 (Constant 1010))
-                                    (Pay acc1 (Party party1) (Constant 1010) Refund)]
+        (When [Case (Deposit "party1" party1 (Constant 1000))
+            (Pay "party1" (Party party2) (Constant 1000)
+                (When [Case (Deposit "party1" party2 (Constant 10))
+                    (Pay "party1" (Party party1) (Constant 10)
+                        (When [Case (Deposit "party1" party2 (Constant 10))
+                            (Pay "party1" (Party party1) (Constant 10)
+                                (When [Case (Deposit "party1" party2 (Constant 1010))
+                                    (Pay "party1" (Party party1) (Constant 1010) Refund)]
                                 (Slot 1571788789)
                                 -- if the issues fails to return notional
                                 -- guarantor pays from his account and refunds
-                                (Pay acc2 (Party party1) (Constant 1010) Refund))
+                                (Pay "party2" (Party party1) (Constant 1010) Refund))
                             )]
                         (Slot 1569196789)
                         -- guarantor pays from his account and refunds
-                        (Pay acc2 (Party party1) (Constant 1020) Refund)))]
+                        (Pay "party2" (Party party1) (Constant 1020) Refund)))]
                 (Slot 1566518389)
                 -- guarantor pays from his account and refunds
-                (Pay acc2 (Party party1) (Constant 1030) Refund)))]
+                (Pay "party2" (Party party1) (Constant 1030) Refund)))]
         -- if partees do not proceed guarantor automatically gets his money back
         (Slot 1563839989) Refund)]
     (Slot 1563839989) Refund
@@ -137,43 +134,40 @@ couponBondGuaranteedWithAccounts =
     party1 = PubKey "party1"
     party2 = PubKey "party2"
     guarantor = PubKey "guarantor"
-    acc1 = AccountId 1 party1
-    acc2 = AccountId 2 guarantor
 
 
 couponBondGuaranteedWithoutAccounts =
     -- guarantor deposits a whole payoff amount including interest payments
-    When [Case (Deposit acc guarantor (Constant 1030))
+    When [Case (Deposit "party1" guarantor (Constant 1030))
             -- investor deposits 1000 Ada
-        (When [Case (Deposit acc party1 (Constant 1000))
-            (Pay acc (Party party2) (Constant 1000)
-                (When [Case (Deposit acc party2 (Constant 10))
-                    (Pay acc (Party party1) (Constant 10)
-                        (When [Case (Deposit acc party2 (Constant 10))
-                            (Pay acc (Party party1) (Constant 10)
-                                (When [Case (Deposit acc party2 (Constant 1010))
-                                    (Pay acc (Party party1) (Constant 1010) Refund)]
+        (When [Case (Deposit "party1" party1 (Constant 1000))
+            (Pay "party1" (Party party2) (Constant 1000)
+                (When [Case (Deposit "party1" party2 (Constant 10))
+                    (Pay "party1" (Party party1) (Constant 10)
+                        (When [Case (Deposit "party1" party2 (Constant 10))
+                            (Pay "party1" (Party party1) (Constant 10)
+                                (When [Case (Deposit "party1" party2 (Constant 1010))
+                                    (Pay "party1" (Party party1) (Constant 1010) Refund)]
                                 (Slot 1571788789)
-                                (Pay acc (Party party1) (Constant 1010)
+                                (Pay "party1" (Party party1) (Constant 1010)
                                 -- with single account we have to
                                 -- manually redistibute money to guarantor
-                                (Pay acc (Party guarantor) (Constant 20) Refund))))]
+                                (Pay "party1" (Party guarantor) (Constant 20) Refund))))]
                         (Slot 1569196789)
-                        (Pay acc (Party party1) (Constant 1020)
+                        (Pay "party1" (Party party1) (Constant 1020)
                         -- in all the cases
-                        (Pay acc (Party guarantor) (Constant 10) Refund))))]
+                        (Pay "party1" (Party guarantor) (Constant 10) Refund))))]
                 (Slot 1566518389)
                 -- here as well
-                (Pay acc (Party party1) (Constant 1030) Refund)))]
+                (Pay "party1" (Party party1) (Constant 1030) Refund)))]
         (Slot 1563839989)
         -- and thes are only 3 payments
-        (Pay acc (Party guarantor) (Constant 1030) Refund))]
+        (Pay "party1" (Party guarantor) (Constant 1030) Refund))]
     (Slot 1563839989) Refund
   where
     party1 = PubKey "party1"
     party2 = PubKey "party2"
     guarantor = PubKey "guarantor"
-    acc = AccountId 1 party1
 
 {- Simply swap two payments between parties -}
 swapExample =

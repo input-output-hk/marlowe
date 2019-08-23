@@ -1,6 +1,7 @@
-module CrowdFunding where
+{-# LANGUAGE OverloadedStrings #-}
+module Language.Marlowe.Examples.CrowdFunding where
 
-import           Semantics
+import           Language.Marlowe
 
 import Data.List (genericLength, genericSplitAt, inits, tails)
 
@@ -14,10 +15,10 @@ splitEverywhere xs =
       (init (zip (inits xs) (tails xs)))
 
 contract :: Contract
-contract = crowdfunding 1000 10000 100 1 [2..5]
+contract = crowdfunding 1000 10000 100 "1" ["2", "3", "4", "5"]
 
 -- Limited crowdfunding example using embedding
-crowdfunding :: Money -> Money -> Timeout -> Party -> [Party] -> Contract
+crowdfunding :: Integer -> Integer -> Timeout -> Party -> [Party] -> Contract
 crowdfunding target maxContrib tim p lp =
   multiState (transitionFunction maxContrib) [(cp, False) | cp <- lp] cont tim cont
   where cont = If (ValueGE (addAll srcAvail) (Constant target))
@@ -50,13 +51,13 @@ payAllAccsTo (h:t) p c = payAll h p (payAllAccsTo t p c)
 -- (party, True) - Has chosen the amount and is ready to make the deposit
 type ContributionState = (Party, Bool)
 
-transitionFunction :: Money -> ContributionState -> (Maybe ContributionState, Action)
+transitionFunction :: Integer -> ContributionState -> (Maybe ContributionState, Action)
 transitionFunction _ (party, True) =
   (Nothing,
-   Deposit (AccountId 1 party) party (ChoiceValue (ChoiceId 1 party) (Constant 0)))
+   Deposit (AccountId 1 party) party (ChoiceValue (ChoiceId "1" party) (Constant 0)))
 transitionFunction maxContrib (party, False) =
   (Just (party, True),
-   Choice (ChoiceId 1 party) [(0, maxContrib)])
+   Choice (ChoiceId "1" party) [Interval 0 maxContrib])
 
 -- Interleaves a list of state machines defined by "f" transition function
 -- and "l" list of initial states. If all state machines terminate continues

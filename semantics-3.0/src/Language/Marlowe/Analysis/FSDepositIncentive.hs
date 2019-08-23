@@ -1,6 +1,6 @@
-module FSDepositIncentive where
+module Language.Marlowe.Analysis.FSDepositIncentive where
 
-import FSSemantics
+import Language.Marlowe.Analysis.FSSemantics
 
 payAll :: AccountId -> Payee -> Contract -> Contract
 payAll acId payee cont =

@@ -1,7 +1,7 @@
 
-module ZCBG2 where
+module Language.Marlowe.Examples.ZCBG2 where
 
-import Semantics
+import Language.Marlowe
 
 
 zeroCouponBondGuaranteed :: Party -> Party -> Party -> Integer -> Integer -> Timeout

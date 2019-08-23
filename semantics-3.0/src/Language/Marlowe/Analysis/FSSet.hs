@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedLists #-}
-module FSSet where
+module Language.Marlowe.Analysis.FSSet where
 
 import Data.SBV
 import Data.SBV.List as SL
@@ -8,7 +8,7 @@ type NSet a = [a]
 type FSSet a = SList a 
 
 empty :: Ord a => SymVal a => FSSet a
-empty = [] 
+empty = []
 
 insert :: Ord a => SymVal a => Integer -> SBV a -> FSSet a -> FSSet a
 insert b v s
@@ -29,7 +29,7 @@ elem b v s
   | otherwise = ite (SL.null s)
                     sFalse
                     (ite (v .> h)
-                         (FSSet.elem (b - 1) v t)
+                         (Language.Marlowe.Analysis.FSSet.elem (b - 1) v t)
                          (v .== h))
   where h = SL.head s
         t = SL.tail s
@@ -41,7 +41,7 @@ delete :: Ord a => SymVal a => Integer -> SBV a -> FSSet a -> FSSet a
 delete b v s
   | b <= 0 = s
   | otherwise = ite (SL.null s)
-                    [] 
+                    []
                     (ite (v .< h)
                          s
                          (ite (v .== h)

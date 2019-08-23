@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TemplateHaskell #-}
-module FSSemantics where
+module Language.Marlowe.Analysis.FSSemantics where
 
 import           Data.List       (foldl')
 import           Data.Map.Strict (Map)
@@ -12,12 +12,11 @@ import qualified Data.SBV.Tuple as ST
 import qualified Data.SBV.Either as SE
 import qualified Data.SBV.Maybe as SM
 import qualified Data.SBV.List as SL
-import qualified Data.SBV.Tools.BoundedList as BL
-import qualified FSMap as FSMap
-import           FSMap(FSMap, NMap)
-import qualified FSSet as FSSet
-import           FSSet(FSSet, NSet)
-import           MkSymb(mkSymbolicDatatype)
+import qualified Language.Marlowe.Analysis.FSMap as FSMap
+import           Language.Marlowe.Analysis.FSMap(FSMap, NMap)
+import qualified Language.Marlowe.Analysis.FSSet as FSSet
+import           Language.Marlowe.Analysis.FSSet(FSSet, NSet)
+import           Language.Marlowe.Analysis.MkSymb(mkSymbolicDatatype)
 
 type SlotNumber = Integer
 type SSlotNumber = SInteger
@@ -281,7 +280,7 @@ evalValue bnds env state value =
                                                                (go defVal)
                                                                (sChoiceId c p) $
                                                                choice state
-    SlotIntervalStart        -> inStart 
+    SlotIntervalStart        -> inStart
     SlotIntervalEnd          -> inEnd
     UseValue (ValueId valId) -> FSMap.findWithDefault (numLets bnds)
                                                       0 (literal valId) $
@@ -478,7 +477,7 @@ data DetReduceAllResult = DRARContractOver
   deriving (Eq,Ord,Show,Read)
 
 -- Reduce until it cannot be reduced more
- 
+
 splitReduceResultRefund :: SList NReduceWarning -> SList NReduceEffect -> SSReduceResult
                         -> (SList NReduceWarning, SList NReduceEffect, SState)
 splitReduceResultRefund wa ef (SSReduced twa tef tsta) = (twa SL..: wa, tef SL..: ef, tsta)
@@ -613,7 +612,7 @@ applyAllAux :: SymVal a => Integer
             -> (SApplyAllResult -> DetApplyAllResult -> SBV a) -> SBV a
 applyAllAux n bnds numPays numInps env state c l wa ef f
   | n >= 0 = reduceAll bnds env state c contFunReduce
-  | otherwise = error "Input list too long in applyAll" 
+  | otherwise = error "Input list too long in applyAll"
   where contFunReduce sr DRARError =
           let (_, _, _, err) = ST.untuple $ splitReduceAllResultWrap wa ef sr in
           (f (sAAApplyError err) DAARError)

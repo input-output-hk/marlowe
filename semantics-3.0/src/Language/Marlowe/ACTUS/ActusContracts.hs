@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module ActusContracts where
+module Language.Marlowe.ACTUS.ActusContracts where
 
 
 import Data.Maybe
@@ -15,8 +15,13 @@ import Data.Time.Clock.POSIX
 import Data.Time.Clock.System
 import Debug.Trace
 
-import ACTUS
-import Semantics
+import Language.Marlowe.ACTUS
+import Language.Marlowe
+
+dayToSlot :: Day -> Slot
+dayToSlot d = let
+    (MkSystemTime secs _) = utcToSystemTime (UTCTime d 0)
+    in Slot (fromIntegral secs - cardanoEpochStart `mod` 20)
 
 zcb ied md notional discount = (emptyContractConfig ied)
     { maturityDate = Just md

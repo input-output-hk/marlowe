@@ -1,13 +1,14 @@
-module Rent where
+{-# LANGUAGE OverloadedStrings #-}
+module Language.Marlowe.Examples.Rent where
 
-import Semantics
+import Language.Marlowe
 
 utility :: Contract
 utility = mkDeposit $ payMonth 1 $ payMonth 2 $ payMonth 3 $ Refund
 
 tenant, landlord :: Party
-tenant = 1
-landlord = 2
+tenant = "tenant"
+landlord = "landlord"
 
 depositAcc :: AccountId
 depositAcc = AccountId 1 tenant
@@ -15,7 +16,7 @@ depositAcc = AccountId 1 tenant
 monthlyAcc :: AccountId
 monthlyAcc = AccountId 2 tenant
 
-depositAmt, monthlyFee :: Money
+depositAmt, monthlyFee :: Integer
 depositAmt = 200
 monthlyFee = 120
 

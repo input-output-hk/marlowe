@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedLists #-}
-module FSMap where
+module Language.Marlowe.Analysis.FSMap where
 
+import Prelude hiding (all, lookup)
 import Data.SBV
 import Data.SBV.Tuple as ST
 import Data.SBV.List as SL
@@ -10,12 +11,12 @@ type NMap a b = [(a, b)]
 type FSMap a b = SList (a, b)
 
 empty :: Ord a => SymVal a => SymVal b => FSMap a b
-empty = [] 
+empty = []
 
 insert :: Ord a => SymVal a => SymVal b => Integer ->
-          SBV a -> SBV b -> FSMap a b -> FSMap a b 
+          SBV a -> SBV b -> FSMap a b -> FSMap a b
 insert b k v s
-  | b <= 0 = [] 
+  | b <= 0 = []
   | otherwise = ite (SL.null s)
                     (SL.singleton nh)
                     (ite (k .> h)
@@ -35,7 +36,7 @@ lookup b k s
   | otherwise = ite (SL.null s)
                     SM.sNothing
                     (ite (k .> h)
-                         (FSMap.lookup (b - 1) k t)
+                         (lookup (b - 1) k t)
                          (ite (k .== h)
                               (SM.sJust h2)
                               (SM.sNothing)))
@@ -44,16 +45,16 @@ lookup b k s
 
 member :: Ord a => SymVal a => SymVal b => Integer ->
           SBV a -> FSMap a b -> SBool
-member b k s = SM.isJust $ FSMap.lookup b k s
+member b k s = SM.isJust $ lookup b k s
 
 findWithDefault :: Ord a => SymVal a => SymVal b => Integer ->
           SBV b -> SBV a -> FSMap a b -> SBV b
 findWithDefault b def k s
-  | b <= 0 = def 
+  | b <= 0 = def
   | otherwise = ite (SL.null s)
                     def
                     (ite (k .> h)
-                         (FSMap.findWithDefault (b - 1) def k t)
+                         (findWithDefault (b - 1) def k t)
                          (ite (k .== h)
                               h2
                               def))
@@ -68,7 +69,7 @@ delete :: Ord a => SymVal a => SymVal b => Integer ->
 delete b v s
   | b <= 0 = s
   | otherwise = ite (SL.null s)
-                    [] 
+                    []
                     (ite (v .< h1)
                          s
                          (ite (v .== h1)
@@ -101,7 +102,7 @@ all b f s
   | b <= 0 = sFalse
   | otherwise = ite (SL.null s)
                     sTrue
-                    ((f h) .&& (FSMap.all (b - 1) f t))
+                    ((f h) .&& (all (b - 1) f t))
   where (_, h) = ST.untuple $ SL.head s
         t = SL.tail s
 
@@ -122,7 +123,7 @@ unionWith b f m1 m2
         (k1, v1) = ST.untuple h1
         t1 = SL.tail m1
         h2 = SL.head m2
-        (k2, v2) = ST.untuple h2 
+        (k2, v2) = ST.untuple h2
         t2 = SL.tail m2
         nh = ST.tuple $ (k1, f v1 v2)
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module ACTUS where
+module Language.Marlowe.ACTUS where
 
 import Data.Maybe
 import qualified Data.List as List

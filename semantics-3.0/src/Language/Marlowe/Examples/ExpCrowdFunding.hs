@@ -1,6 +1,6 @@
-module ExpCrowdFunding where
+module Language.Marlowe.Examples.ExpCrowdFunding where
 
-import           Marlowe
+import           Language.Marlowe
 
 contract :: Contract
 contract = crowdfunding 1000 100

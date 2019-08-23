@@ -1,6 +1,7 @@
-module Escrow where
+{-# LANGUAGE OverloadedStrings #-}
+module Language.Marlowe.Examples.Escrow where
 
-import           Marlowe
+import           Language.Marlowe
 
 import Data.List (maximumBy, genericLength, inits, tails)
 import Data.Ord (comparing)
@@ -17,10 +18,10 @@ splitEverywhere xs =
 -- Escrow example using embedding
 
 contract :: Contract
-contract = When [Case (Deposit aliceAcc alice price)
+contract = When [Case (Deposit aliceAcc alicePubKey price)
                       (whenNOutOfMChoose
                          [ (refund, Refund)
-                         , (pay, Pay aliceAcc (Party bob) price Refund)]
+                         , (pay, Pay aliceAcc (Party bobPubKey) price Refund)]
                          2
                          everybody
                          100
@@ -31,14 +32,14 @@ contract = When [Case (Deposit aliceAcc alice price)
 -- Continues as specified when N out of M have agreed on a choice,
 -- continue as defCont if N can no longer agree, or on timeout
 
-whenNOutOfMChoose :: [(ChosenNum, Contract)] -> Integer -> [Party] -> Integer -> Contract
+whenNOutOfMChoose :: [(ChosenNum, Contract)] -> Integer -> [Party] -> Slot -> Contract
                   -> Contract
 whenNOutOfMChoose ops n m timeout defCont =
   whenNOutOfMChooseAux eops n m timeout defCont
   where eops = [(0, ch, co) | (ch, co) <- ops]
 
 whenNOutOfMChooseAux :: [(Integer, ChosenNum, Contract)] -> Integer ->
-                        [Party] -> Integer -> Contract
+                        [Party] -> Slot -> Contract
                      -> Contract
 whenNOutOfMChooseAux [] _ _ _ defCont = defCont
 whenNOutOfMChooseAux ops n partiesLeft timeout defCont
@@ -48,7 +49,7 @@ whenNOutOfMChooseAux ops n partiesLeft timeout defCont
   where
     (winnerVotes, _, winnerCont) = maximumBy (comparing (\(x, _, _) -> x)) ops
     votesLeft = genericLength partiesLeft
-    cases = [ Case (Choice (ChoiceId 1 p) [(cchoice, cchoice)]) $
+    cases = [ Case (Choice (ChoiceId "OK" p) [Interval cchoice cchoice]) $
                    whenNOutOfMChooseAux (bo ++ (votes + 1, cchoice, cont) : bc)
                                         n (bp ++ ap) timeout defCont
              | (bp, p, ap) <- splitEverywhere partiesLeft
@@ -60,19 +61,10 @@ whenNOutOfMChooseAux ops n partiesLeft timeout defCont
 price :: Value
 price = Constant 450
 
--- Alice's account
-aliceAcc :: AccountId
-aliceAcc = AccountId 1 alice
-
 -- Participants
 
-alice, bob, carol :: Party
-alice = 1
-bob = 2
-carol = 3
-
 everybody :: [Party]
-everybody = [alice, bob, carol]
+everybody = [alicePubKey, bobPubKey, carolPubKey]
 
 -- Possible votes
 refund, pay :: ChosenNum

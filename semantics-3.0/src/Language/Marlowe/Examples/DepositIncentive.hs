@@ -1,6 +1,7 @@
-module DepositIncentive where
+{-# LANGUAGE OverloadedStrings #-}
+module Language.Marlowe.Examples.DepositIncentive where
 
-import Marlowe
+import Language.Marlowe
 
 payAll :: AccountId -> Payee -> Contract -> Contract
 payAll acId payee cont =
@@ -10,7 +11,7 @@ contract :: Contract
 contract =
   When [ Case (Deposit incentiveAcc incentiviser (incentiveAmt))
               (When [ Case (Deposit depositAcc depositer (depositAmt))
-                           (When [ Case (Choice (ChoiceId 1 depositer) [(1,1)])
+                           (When [ Case (Choice (ChoiceId "refund" depositer) [Interval 1 1])
                                         Refund
                                  ]
                                  200
@@ -32,6 +33,6 @@ depositAcc = AccountId 1 depositer
 incentiveAcc = AccountId 1 incentiviser
 
 depositer, incentiviser :: Party
-depositer = 1
-incentiviser = 2
+depositer = "depositer"
+incentiviser = "incentiviser"
 

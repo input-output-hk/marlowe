@@ -1,15 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Marlowe
-    ( module Semantics
-    )
-where
+module Language.Marlowe.Util where
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as T
 
-import           Semantics
+import           Language.Marlowe.Semantics
 
 instance IsString PubKey where
     fromString s = PubKey (T.pack s)
@@ -28,6 +25,12 @@ bobPubKey = PubKey "Bob"
 
 bobAcc :: AccountId
 bobAcc = AccountId 0 bobPubKey
+
+carolPubKey :: PubKey
+carolPubKey = PubKey "Carol"
+
+carolAcc :: AccountId
+carolAcc = AccountId 0 carolPubKey
 
 charliePubKey :: PubKey
 charliePubKey = PubKey "Charlie"

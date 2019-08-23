@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module MkSymb where
+module Language.Marlowe.Analysis.MkSymb where
 
 import Data.SBV
 import Data.SBV.Tuple as ST
@@ -9,7 +9,7 @@ import Language.Haskell.TH as TH
 import Data.Either (Either(..))
 
 nestClauses :: [Con] -> TypeQ
-nestClauses [] = error "No constructors for type" 
+nestClauses [] = error "No constructors for type"
 nestClauses [NormalC _ params] =
   foldl' (appT) (tupleT (length params)) [return t | (_, t) <- params]
 nestClauses list = appT (appT [t| Either |]
@@ -163,7 +163,7 @@ mkSymbolicDatatype typeName =
      let ssName = mkName ('S':'S':typeBaseName)
      nestedDecl <- mkNestedDec tvs nName clauses
      symDecl <- mkSymDec tvs sName nName
-     subSymDecl <- mkSubSymDec tvs ssName clauses 
+     subSymDecl <- mkSubSymDec tvs ssName clauses
      nestFunc <- mkNestFunc tvs typeBaseName typeName nName clauses
      unNestFunc <- mkUnNestFunc tvs typeBaseName typeName nName clauses
      symCaseFunc <- mkSymCase tvs typeBaseName sName ssName clauses

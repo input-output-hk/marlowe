@@ -23,16 +23,23 @@ executable marlowe
                         tasty-quickcheck,
                         template-haskell
     other-modules:
-                        Marlowe
-                        Semantics
-                        ActusContracts
-                        ACTUS
-                        ZCBG
-                        ZCBG2
-                        FSSet
-                        FSMap
-                        FSSemantics
-                        MkSymb
-    hs-source-dirs:     .
-                        static_analysis
+                        Language.Marlowe
+                        Language.Marlowe.Semantics
+                        Language.Marlowe.Util
+                        Language.Marlowe.ACTUS
+                        Language.Marlowe.ACTUS.ActusContracts
+                        Language.Marlowe.Examples.CrowdFunding
+                        Language.Marlowe.Examples.DepositIncentive
+                        Language.Marlowe.Examples.Escrow
+                        -- Language.Marlowe.Examples.ExpCrowdFunding
+                        -- Language.Marlowe.Examples.ExpEscrow
+                        -- Language.Marlowe.Examples.ExpRent
+                        Language.Marlowe.Examples.Rent
+                        Language.Marlowe.Examples.ZCBG
+                        Language.Marlowe.Examples.ZCBG2
+                        Language.Marlowe.Analysis.FSSet
+                        Language.Marlowe.Analysis.FSMap
+                        Language.Marlowe.Analysis.FSSemantics
+                        Language.Marlowe.Analysis.MkSymb
+    hs-source-dirs:     src
     main-is:            Main.hs

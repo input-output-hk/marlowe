@@ -14,9 +14,9 @@ import           Test.Tasty.HUnit
 import           Debug.Trace
 import Data.Time
 
-import           Marlowe
-import           ZCBG2
-import           ActusContracts
+import           Language.Marlowe
+import           Language.Marlowe.Examples.ZCBG2
+import           Language.Marlowe.ACTUS.ActusContracts
 
 main :: IO ()
 main = do

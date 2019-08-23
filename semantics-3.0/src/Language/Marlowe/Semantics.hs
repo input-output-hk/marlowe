@@ -1,4 +1,4 @@
-module Semantics where
+module Language.Marlowe.Semantics where
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

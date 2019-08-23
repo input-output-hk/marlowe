@@ -31,9 +31,9 @@ executable marlowe
                         Language.Marlowe.Examples.CrowdFunding
                         Language.Marlowe.Examples.DepositIncentive
                         Language.Marlowe.Examples.Escrow
-                        -- Language.Marlowe.Examples.ExpCrowdFunding
-                        -- Language.Marlowe.Examples.ExpEscrow
-                        -- Language.Marlowe.Examples.ExpRent
+                        Language.Marlowe.Examples.ExpCrowdFunding
+                        Language.Marlowe.Examples.ExpEscrow
+                        Language.Marlowe.Examples.ExpRent
                         Language.Marlowe.Examples.Rent
                         Language.Marlowe.Examples.ZCBG
                         Language.Marlowe.Examples.ZCBG2

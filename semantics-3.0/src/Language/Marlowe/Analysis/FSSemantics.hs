@@ -480,7 +480,16 @@ data DetReduceAllResult = DRARContractOver
 
 splitReduceResultRefund :: SList NReduceWarning -> SList NReduceEffect -> SSReduceResult
                         -> (SList NReduceWarning, SList NReduceEffect, SState)
-splitReduceResultRefund wa ef (SSReduced twa tef tsta) = (twa SL..: wa, tef SL..: ef, tsta)
+splitReduceResultRefund wa ef (SSReduced twa tef tsta) =
+  ( symCaseReduceWarning
+     (\x -> case x of -- Do not add if ReduceNoWarning
+              SSReduceNoWarning -> wa
+              _ -> twa SL..: wa) twa
+  , symCaseReduceEffect
+     (\x -> case x of -- Do not add if ReduceNoEffect
+              SSReduceNoEffect -> ef
+              _ -> tef SL..: ef) tef
+  , tsta)
 splitReduceResultRefund _ _ SSNotReduced = ([], [], emptySState 0) -- SNH
 splitReduceResultRefund _ _ (SSReduceError _) = ([], [], emptySState 0) -- SNH 
 
@@ -488,7 +497,16 @@ splitReduceResultReduce :: SList NReduceWarning -> SList NReduceEffect -> SSRedu
                         -> (SList NReduceWarning, SList NReduceEffect, SState,
                             SReduceError)
 splitReduceResultReduce wa ef (SSReduced twa tef tsta) = 
-  (twa SL..: wa, tef SL..: ef, tsta, sReduceAmbiguousSlotInterval {- SNH -}) 
+  ( symCaseReduceWarning
+       (\x -> case x of -- Do not add if ReduceNoWarning
+                SSReduceNoWarning -> wa
+                _ -> twa SL..: wa) twa
+  , symCaseReduceEffect
+       (\x -> case x of -- Do not add if ReduceNoEffect
+                SSReduceNoEffect -> ef
+                _ -> tef SL..: ef) tef
+  , tsta
+  , sReduceAmbiguousSlotInterval {- SNH -}) 
 splitReduceResultReduce _ _ SSNotReduced =
   ([] {- SNH -}, [] {- SNH -}, emptySState 0 {- SNH -}, sReduceAmbiguousSlotInterval {- SNH -})
 splitReduceResultReduce _ _ (SSReduceError terr) = ([] {- SNH -}, [] {- SNH -}, emptySState 0{- SNH -}, terr)

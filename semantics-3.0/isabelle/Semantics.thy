@@ -413,18 +413,18 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
        Reduced ReduceNoWarning (ReduceWithPayment (Payment party money)) newState Refund
    | None \<Rightarrow> NotReduced)" |
 "reduceContractStep env state (Pay accId payee val nc) =
-  (case evalValue env state val of money \<Rightarrow>
-   let balance = moneyInAccount accId (account state) in
-  (case min balance money of withdrawnMoney \<Rightarrow>
-   let newBalance = balance - withdrawnMoney in
-   let newAccs = updateMoneyInAccount accId newBalance (account state) in
-   let noMonWarn = (if withdrawnMoney < money
-                    then ReducePartialPay accId payee withdrawnMoney money
-                    else ReduceNoWarning) in
-   let (payEffect, finalAccs) = giveMoney payee withdrawnMoney newAccs in
-   if money \<le> 0
-   then Reduced (ReduceNonPositivePay accId payee money) ReduceNoPayment state nc
-   else Reduced noMonWarn payEffect (state \<lparr> account := finalAccs \<rparr>) nc))" |
+  (case evalValue env state val of moneyToPay \<Rightarrow>
+   if moneyToPay \<le> 0
+   then Reduced (ReduceNonPositivePay accId payee moneyToPay) ReduceNoPayment state nc
+   else (let balance = moneyInAccount accId (account state) in
+        (case min balance moneyToPay of withdrawnMoney \<Rightarrow>
+         let newBalance = balance - withdrawnMoney in
+         let newAccs = updateMoneyInAccount accId newBalance (account state) in
+         let noMonWarn = (if withdrawnMoney < moneyToPay
+                         then ReducePartialPay accId payee withdrawnMoney moneyToPay
+                         else ReduceNoWarning) in
+         let (payEffect, finalAccs) = giveMoney payee withdrawnMoney newAccs in
+         Reduced noMonWarn payEffect (state \<lparr> account := finalAccs \<rparr>) nc)))" |
 "reduceContractStep env state (If obs cont1 cont2) =
   (let nc = (if evalObservation env state obs
              then cont1
@@ -516,54 +516,37 @@ lemma reduceContractStepReducesSize_Pay_aux5 :
  length (account nsta) < Suc (Suc (length (account sta)))"
   using reduceContractStepReducesSize_Pay_aux4 by auto
 
-lemma not_leq_min : "(\<not> (a \<le> x)) \<Longrightarrow> \<not> (min a (x::int) < x)"
-  by simp
-
-lemma not_leq_min2 : "(\<not> (a \<le> x)) \<Longrightarrow> (min a (x::int) = x)"
-  by auto
 
 lemma reduceContractStepReducesSize_Pay_aux6 :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
    c = Pay src dst am y \<Longrightarrow>
+   evalValue env sta am > 0 \<Longrightarrow>
    lookup src (account sta) = Some a \<Longrightarrow>
    evalBound nsta nc < evalBound sta c"
-  apply (cases "giveMoney dst 0 (MList.delete src (account sta))")
-  apply (cases "a \<le> evalValue env sta am")
-  apply (cases "a = evalValue env sta am")
-  apply (cases "giveMoney dst (evalValue env sta am)
-                          (MList.delete src (account sta))")
-  apply (simp add:zeroMinIfGT)
-  apply (cases "evalValue env sta am \<le> 0")
-  apply simp
-  apply simp
-  using reduceContractStepReducesSize_Pay_aux3 apply blast
+  apply (cases "a < evalValue env sta am")
   apply (simp add:min_absorb1)
   apply (cases "giveMoney dst a (MList.delete src (account sta))")
-  apply (cases "evalValue env sta am \<le> 0")
-  apply simp
-  apply simp
+  using reduceContractStepReducesSize_Pay_aux3 apply fastforce
+  apply (cases "a = evalValue env sta am")
+  apply (cases "giveMoney dst (evalValue env sta am) (MList.delete src (account sta))")
+  apply (simp add:min_absorb2)
   using reduceContractStepReducesSize_Pay_aux3 apply blast
-  apply (cases "evalValue env sta am \<le> 0")
-  apply (cases "giveMoney dst (evalValue env sta am)
-                          (MList.insert src (a - evalValue env sta am) (account sta))")
-  apply (simp add:not_leq_min not_leq_min2)
-  apply (cases "giveMoney dst (evalValue env sta am)
-                          (MList.insert src (a - evalValue env sta am) (account sta))")
-  apply (simp add:not_leq_min not_leq_min2)
+  apply (cases "giveMoney dst (evalValue env sta am) (MList.insert src (a - evalValue env sta am) (account sta))")
+  apply (simp add:min_absorb2)
   using reduceContractStepReducesSize_Pay_aux5 by blast
 
-lemma reduceContractStepReducesSize_Pay_aux7 :
+lemma reduceContractStepReducesSize_Pay :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
    c = Pay src dst am y \<Longrightarrow> evalBound nsta nc < evalBound sta c"
+  apply (cases "evalValue env sta am \<le> 0")
+  apply auto[1]
   apply (cases "lookup src (account sta)")
   apply (cases "evalValue env sta am > 0")
   apply (cases "giveMoney dst 0 (MList.delete src (account sta))")
   apply (simp add:zeroMinIfGT)
   using reduceContractStepReducesSize_Pay_aux3 apply blast
-  apply (cases "evalValue env sta am > 0")
-  apply blast
-  apply auto[1]
-  by (metis reduceContractStepReducesSize_Pay_aux6)
+  apply simp
+  using reduceContractStepReducesSize_Pay_aux6 by auto
 
 lemma reduceContractStepReducesSize_When_aux :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
@@ -590,7 +573,7 @@ lemma reduceContractStepReducesSize :
   apply simp
   apply simp
   apply (simp add:reduceContractStepReducesSize_Refund_aux3)
-  using reduceContractStepReducesSize_Pay_aux7 apply blast
+  using reduceContractStepReducesSize_Pay apply blast
   apply auto[1]
   apply (meson eq_fst_iff reduceContractStepReducesSize_When_aux)
   using reduceContractStepReducesSize_Let_aux by blast

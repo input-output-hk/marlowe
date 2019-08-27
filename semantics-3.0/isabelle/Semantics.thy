@@ -412,34 +412,34 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
        let newState = state \<lparr> account := newAccount \<rparr> in
        Reduced ReduceNoWarning (ReduceWithPayment (Payment party money)) newState Refund
    | None \<Rightarrow> NotReduced)" |
-"reduceContractStep env state (Pay accId payee val nc) =
-  (case evalValue env state val of moneyToPay \<Rightarrow>
+"reduceContractStep env state (Pay accId payee val cont) =
+  (let moneyToPay = evalValue env state val in
    if moneyToPay \<le> 0
-   then Reduced (ReduceNonPositivePay accId payee moneyToPay) ReduceNoPayment state nc
+   then Reduced (ReduceNonPositivePay accId payee moneyToPay) ReduceNoPayment state cont
    else (let balance = moneyInAccount accId (account state) in
-        (case min balance moneyToPay of withdrawnMoney \<Rightarrow>
-         let newBalance = balance - withdrawnMoney in
+        (let paidMoney = min balance moneyToPay in
+         let newBalance = balance - paidMoney in
          let newAccs = updateMoneyInAccount accId newBalance (account state) in
-         let noMonWarn = (if withdrawnMoney < moneyToPay
-                         then ReducePartialPay accId payee withdrawnMoney moneyToPay
-                         else ReduceNoWarning) in
-         let (payEffect, finalAccs) = giveMoney payee withdrawnMoney newAccs in
-         Reduced noMonWarn payEffect (state \<lparr> account := finalAccs \<rparr>) nc)))" |
+         let warning = (if paidMoney < moneyToPay
+                        then ReducePartialPay accId payee paidMoney moneyToPay
+                        else ReduceNoWarning) in
+         let (payment, finalAccs) = giveMoney payee paidMoney newAccs in
+         Reduced warning payment (state \<lparr> account := finalAccs \<rparr>) cont)))" |
 "reduceContractStep env state (If obs cont1 cont2) =
-  (let nc = (if evalObservation env state obs
-             then cont1
-             else cont2) in
-   Reduced ReduceNoWarning ReduceNoPayment state nc)" |
-"reduceContractStep env state (When _ timeout c) =
+  (let cont = (if evalObservation env state obs
+               then cont1
+               else cont2) in
+   Reduced ReduceNoWarning ReduceNoPayment state cont)" |
+"reduceContractStep env state (When _ timeout cont) =
   (let (startSlot, endSlot) = slotInterval env in
    if endSlot < timeout
    then NotReduced
    else (if startSlot \<ge> timeout
-         then Reduced ReduceNoWarning ReduceNoPayment state c
+         then Reduced ReduceNoWarning ReduceNoPayment state cont
          else AmbiguousSlotIntervalReductionError))" |
 "reduceContractStep env state (Let valId val cont) =
-  (let sv = boundValues state in
-   case evalValue env state val of evVal \<Rightarrow>
+  (let evVal = evalValue env state val in
+   let sv = boundValues state in
    let nsv = MList.insert valId evVal sv in
    let ns = state \<lparr> boundValues := nsv \<rparr> in
    let warn = case lookup valId sv of
@@ -560,10 +560,20 @@ lemma reduceContractStepReducesSize_When_aux :
   by simp_all
 
 lemma reduceContractStepReducesSize_Let_aux :
+  "Reduced (ReduceShadowing vId a (evalValue env sta val)) ReduceNoPayment
+         (sta\<lparr>boundValues := MList.insert vId (evalValue env sta val) (boundValues sta)\<rparr>) cont =
+    Reduced twa tef nsta nc \<Longrightarrow>
+   c = Contract.Let vId val cont \<Longrightarrow>
+   lookup vId (boundValues sta) = Some a \<Longrightarrow>
+   evalBound nsta nc < evalBound sta c"
+  by auto  
+
+lemma reduceContractStepReducesSize_Let :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
    c = Contract.Let vId val cont \<Longrightarrow> evalBound nsta nc < evalBound sta c"
   apply (cases "lookup vId (boundValues sta)")
-  by auto
+  apply auto[1]
+  by (metis ReduceResult.inject reduceContractStep.simps(5) reduceContractStepReducesSize_Let_aux)
 
 lemma reduceContractStepReducesSize :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
@@ -576,7 +586,7 @@ lemma reduceContractStepReducesSize :
   using reduceContractStepReducesSize_Pay apply blast
   apply auto[1]
   apply (meson eq_fst_iff reduceContractStepReducesSize_When_aux)
-  using reduceContractStepReducesSize_Let_aux by blast
+  using reduceContractStepReducesSize_Let by blast
 
 function (sequential) reduceAllAux :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceWarning list \<Rightarrow>
                                        ReduceEffect list \<Rightarrow> ReduceAllResult" where

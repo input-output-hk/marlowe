@@ -2,14 +2,17 @@ theory Semantics
 imports Main MList SList ListTools
 begin
 
-type_synonym SlotNumber = int
-type_synonym SlotInterval = "SlotNumber \<times> SlotNumber"
+type_synonym Slot = int
+
 type_synonym PubKey = int
+
+type_synonym Ada = int
+
 type_synonym Party = PubKey
-type_synonym NumChoice = int
+type_synonym ChoiceName = int
 type_synonym NumAccount = int
-type_synonym Timeout = SlotNumber
-type_synonym Money = int
+type_synonym Timeout = Slot
+type_synonym Money = Ada
 type_synonym ChosenNum = int
 
 datatype AccountId = AccountId NumAccount Party
@@ -68,7 +71,7 @@ end
 fun accountOwner :: "AccountId \<Rightarrow> Party" where
 "accountOwner (AccountId _ party) = party"
 
-datatype ChoiceId = ChoiceId NumChoice Party
+datatype ChoiceId = ChoiceId ChoiceName Party
 
 (* BEGIN Proof of linorder for ChoiceId *)
 fun less_eq_ChoId :: "ChoiceId \<Rightarrow> ChoiceId \<Rightarrow> bool" where
@@ -121,7 +124,7 @@ qed
 end
 (* END Proof of linorder for ChoiceId *)
 
-datatype OracleId = OracleId PubKey
+(* datatype OracleId = OracleId PubKey
 
 (* BEGIN Proof of linorder for OracleId *)
 fun less_eq_OraId :: "OracleId \<Rightarrow> OracleId \<Rightarrow> bool" where
@@ -171,6 +174,7 @@ next
 qed
 end
 (* END Proof of linorder for OracleId *)
+*)
 
 datatype ValueId = ValueId int
 
@@ -245,6 +249,7 @@ datatype Observation = AndObs Observation Observation
                      | TrueObs
                      | FalseObs
 
+type_synonym SlotInterval = "Slot \<times> Slot"
 type_synonym Bound = "int \<times> int"
 
 fun inBounds :: "ChosenNum \<Rightarrow> Bound list \<Rightarrow> bool" where
@@ -267,7 +272,7 @@ and Contract = Refund
 record State = account :: "(AccountId \<times> Money) list"
                choice :: "(ChoiceId \<times> ChosenNum) list"
                boundValues :: "(ValueId \<times> int) list"
-               minSlot :: SlotNumber
+               minSlot :: Slot
 
 record Environment = slotInterval :: SlotInterval
 
@@ -275,44 +280,27 @@ datatype Input = IDeposit AccountId Party Money
                | IChoice ChoiceId ChosenNum
                | INotify
 
-type_synonym TransactionOutcomes = "(Party \<times> Money) list"
-
-definition "emptyOutcome = (MList.empty :: TransactionOutcomes)"
-
-lemma emptyOutcomeValid : "valid_map emptyOutcome"
-  using MList.valid_empty emptyOutcome_def by auto
-
-fun isEmptyOutcome :: "TransactionOutcomes \<Rightarrow> bool" where
-"isEmptyOutcome trOut = all (\<lambda> (x, y) \<Rightarrow> y = 0) trOut"
-
-fun addOutcome :: "Party \<Rightarrow> Money \<Rightarrow> TransactionOutcomes \<Rightarrow> TransactionOutcomes" where
-"addOutcome party diffValue trOut =
-   (let newValue = case MList.lookup party trOut of
-                     Some value \<Rightarrow> value + diffValue
-                   | None \<Rightarrow> diffValue in
-    MList.insert party newValue trOut)"
-
-fun combineOutcomes :: "TransactionOutcomes \<Rightarrow> TransactionOutcomes \<Rightarrow> TransactionOutcomes" where
-"combineOutcomes x y = MList.unionWith plus x y"
-
+(* Processing of slot interval *)
 datatype IntervalError = InvalidInterval SlotInterval
-                       | IntervalInPastError SlotNumber SlotInterval
+                       | IntervalInPastError Slot SlotInterval
 
 datatype IntervalResult = IntervalTrimmed Environment State
                         | IntervalError IntervalError
 
 fun fixInterval :: "SlotInterval \<Rightarrow> State \<Rightarrow> IntervalResult" where
-"fixInterval (l, h) st =
-   (let minSlot = minSlot st in
-    let nl = max l minSlot in
-    let tInt = (nl, h) in
-    let env = \<lparr> slotInterval = tInt \<rparr> in
-    let nst = st \<lparr> minSlot := nl \<rparr> in
-    (if (h < l)
-     then IntervalError (InvalidInterval (l, h))
-     else (if (h < minSlot)
-           then IntervalError (IntervalInPastError minSlot (l, h))
-           else IntervalTrimmed env nst)))"
+"fixInterval (low, high) state =
+   (let curMinSlot = minSlot state in
+    let newLow = max low curMinSlot in
+    let curInterval = (newLow, high) in
+    let env = \<lparr> slotInterval = curInterval \<rparr> in
+    let newState = state \<lparr> minSlot := newLow \<rparr> in
+    (if (high < low)
+     then IntervalError (InvalidInterval (low, high))
+     else (if (high < curMinSlot)
+           then IntervalError (IntervalInPastError curMinSlot (low, high))
+           else IntervalTrimmed env newState)))"
+
+(* EVALUATION *)
 
 fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarrow> int" where
 "evalValue env state (AvailableMoney accId) =
@@ -354,8 +342,8 @@ fun evalObservation :: "Environment \<Rightarrow> State \<Rightarrow> Observatio
 
 fun refundOne :: "(AccountId \<times> Money) list \<Rightarrow>
                   ((Party \<times> Money) \<times> ((AccountId \<times> Money) list)) option" where
-"refundOne ((accId, mon)#rest) =
-   (if mon > 0 then Some ((accountOwner accId, mon), rest) else refundOne rest)" |
+"refundOne ((accId, money)#rest) =
+   (if money > 0 then Some ((accountOwner accId, money), rest) else refundOne rest)" |
 "refundOne [] = None"
 
 lemma refundOneShortens : "refundOne acc = Some (c, nacc) \<Longrightarrow>
@@ -365,91 +353,91 @@ lemma refundOneShortens : "refundOne acc = Some (c, nacc) \<Longrightarrow>
   by (metis Pair_inject length_Cons less_Suc_eq list.distinct(1)
             list.inject option.inject refundOne.elims)
 
-fun moneyInAccount :: "((AccountId \<times> Money) list) \<Rightarrow> AccountId \<Rightarrow> Money" where
-"moneyInAccount accs accId = findWithDefault 0 accId accs"
+datatype Payment = Payment Party Money
 
-fun updateMoneyInAccount :: "((AccountId \<times> Money) list) \<Rightarrow> AccountId \<Rightarrow>
-                             Money \<Rightarrow> ((AccountId \<times> Money) list)" where
-"updateMoneyInAccount accs accId mon =
-  (if mon \<le> 0
-   then MList.delete accId accs
-   else MList.insert accId mon accs)"
+datatype ReduceEffect = ReduceNoPayment
+                      | ReduceWithPayment Payment
 
-fun withdrawMoneyFromAccount :: "((AccountId \<times> Money) list) \<Rightarrow> AccountId \<Rightarrow>
-                                 Money \<Rightarrow> (Money \<times> ((AccountId \<times> Money) list))" where
-"withdrawMoneyFromAccount accs accId mon =
-  (let avMoney = moneyInAccount accs accId in
-   case min avMoney mon of withdrawnMoney \<Rightarrow>
-   let newAvMoney = avMoney - withdrawnMoney in
-   let newAcc = updateMoneyInAccount accs accId newAvMoney in
-   (withdrawnMoney, newAcc))"
+fun moneyInAccount :: "AccountId \<Rightarrow> ((AccountId \<times> Money) list) \<Rightarrow> Money" where
+"moneyInAccount accId accounts = findWithDefault 0 accId accounts"
 
-fun addMoneyToAccount :: "((AccountId \<times> Money) list) \<Rightarrow> AccountId \<Rightarrow>
-                          Money \<Rightarrow> ((AccountId \<times> Money) list)" where
-"addMoneyToAccount accs accId mon =
-  (let avMoney = moneyInAccount accs accId in
-   let newAvMoney = avMoney + mon in
-   if mon \<le> 0
-   then accs
-   else updateMoneyInAccount accs accId newAvMoney)"
+fun updateMoneyInAccount :: "AccountId \<Rightarrow> Money \<Rightarrow>
+                             ((AccountId \<times> Money) list) \<Rightarrow>
+                             ((AccountId \<times> Money) list)" where
+"updateMoneyInAccount accId money accounts =
+  (if money \<le> 0
+   then MList.delete accId accounts
+   else MList.insert accId money accounts)"
+
+fun addMoneyToAccount :: "AccountId \<Rightarrow> Money \<Rightarrow>
+                          ((AccountId \<times> Money) list) \<Rightarrow>
+                          ((AccountId \<times> Money) list)" where
+"addMoneyToAccount accId money accounts =
+  (let balance = moneyInAccount accId accounts in
+   let newBalance = balance + money in
+   if money \<le> 0
+   then accounts
+   else updateMoneyInAccount accId newBalance accounts)"
+
+fun giveMoney :: "Payee \<Rightarrow> Money \<Rightarrow>
+                  ((AccountId \<times> Money) list) \<Rightarrow>
+                  (ReduceEffect \<times> ((AccountId \<times> Money) list))" where
+"giveMoney (Party party) money accounts =
+  (ReduceWithPayment (Payment party money), accounts)" |
+"giveMoney (Account accId) money accounts =
+  (let newAccs = addMoneyToAccount accId money accounts in
+    (ReduceNoPayment, newAccs))"
+
+lemma giveMoneyIncOne : "giveMoney p m a = (e, na) \<Longrightarrow> length na \<le> length a + 1"
+  apply (cases p)
+  apply (cases "m \<le> 0")
+  apply auto
+  by (smt Suc_eq_plus1 delete_length insert_length le_Suc_eq)
+
+(* REDUCE *)
 
 datatype ReduceWarning = ReduceNoWarning
                        | ReduceNonPositivePay AccountId Payee Money
                        | ReducePartialPay AccountId Payee Money Money
                        | ReduceShadowing ValueId int int
 
-datatype ReduceEffect = ReduceNoEffect
-                      | ReduceNormalPay Party Money
-
-datatype ReduceError = ReduceAmbiguousSlotInterval
-
 datatype ReduceResult = Reduced ReduceWarning ReduceEffect State Contract
                       | NotReduced
-                      | ReduceError ReduceError
+                      | AmbiguousSlotIntervalReductionError
 
-fun giveMoney :: "((AccountId \<times> Money) list) \<Rightarrow> Payee \<Rightarrow>
-                  Money \<Rightarrow> (ReduceEffect \<times> ((AccountId \<times> Money) list))" where
-"giveMoney accs (Party party) mon = (ReduceNormalPay party mon, accs)" |
-"giveMoney accs (Account accId) mon =
-  (let newAccs = addMoneyToAccount accs accId mon in
-    (ReduceNoEffect, newAccs))"
-
-lemma giveMoneyIncOne : "giveMoney a p m = (e, na) \<Longrightarrow> length na \<le> length a + 1"
-  apply (cases p)
-  apply (cases "m \<le> 0")
-  apply auto
-  by (smt Suc_eq_plus1 delete_length insert_length le_Suc_eq)
-
-fun reduce :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceResult" where
-"reduce _ state Refund =
+fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceResult" where
+"reduceContractStep _ state Refund =
   (case refundOne (account state) of
      Some ((party, money), newAccount) \<Rightarrow>
        let newState = state \<lparr> account := newAccount \<rparr> in
-       Reduced ReduceNoWarning (ReduceNormalPay party money) newState Refund
+       Reduced ReduceNoWarning (ReduceWithPayment (Payment party money)) newState Refund
    | None \<Rightarrow> NotReduced)" |
-"reduce env state (Pay accId payee val nc) =
-  (case evalValue env state val of mon \<Rightarrow>
-   let (paidMon, newAccs) = withdrawMoneyFromAccount (account state) accId mon in
-   let noMonWarn = (if paidMon < mon
-                    then ReducePartialPay accId payee paidMon mon
+"reduceContractStep env state (Pay accId payee val nc) =
+  (case evalValue env state val of money \<Rightarrow>
+   let balance = moneyInAccount accId (account state) in
+  (case min balance money of withdrawnMoney \<Rightarrow>
+   let newBalance = balance - withdrawnMoney in
+   let newAccs = updateMoneyInAccount accId newBalance (account state) in
+   let noMonWarn = (if withdrawnMoney < money
+                    then ReducePartialPay accId payee withdrawnMoney money
                     else ReduceNoWarning) in
-   let (payEffect, finalAccs) = giveMoney newAccs payee paidMon in
-   if mon \<le> 0
-   then Reduced (ReduceNonPositivePay accId payee mon) ReduceNoEffect state nc
-   else Reduced noMonWarn payEffect (state \<lparr> account := finalAccs \<rparr>) nc)" |
-"reduce env state (If obs cont1 cont2) =
+   let (payEffect, finalAccs) = giveMoney payee withdrawnMoney newAccs in
+   if money \<le> 0
+   then Reduced (ReduceNonPositivePay accId payee money) ReduceNoPayment state nc
+   else Reduced noMonWarn payEffect (state \<lparr> account := finalAccs \<rparr>) nc))" |
+"reduceContractStep env state (If obs cont1 cont2) =
   (let nc = (if evalObservation env state obs
              then cont1
              else cont2) in
-   Reduced ReduceNoWarning ReduceNoEffect state nc)" |
-"reduce env state (When _ timeout c) =
+   Reduced ReduceNoWarning ReduceNoPayment state nc)" |
+"reduceContractStep env state (When _ timeout c) =
   (let (startSlot, endSlot) = slotInterval env in
    if endSlot < timeout
    then NotReduced
    else (if startSlot \<ge> timeout
-         then Reduced ReduceNoWarning ReduceNoEffect state c
-         else ReduceError ReduceAmbiguousSlotInterval))" |
-"reduce env state (Let valId val cont) =
+         then Reduced ReduceNoWarning ReduceNoPayment state c
+         else AmbiguousSlotIntervalReductionError))" |
+"reduceContractStep env state (Let valId val cont) =
   (let sv = boundValues state in
    case evalValue env state val of evVal \<Rightarrow>
    let nsv = MList.insert valId evVal sv in
@@ -457,34 +445,35 @@ fun reduce :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarr
    let warn = case lookup valId sv of
                 Some oldVal \<Rightarrow> ReduceShadowing valId oldVal evVal
               | None \<Rightarrow> ReduceNoWarning in
-   Reduced warn ReduceNoEffect ns cont)"
+   Reduced warn ReduceNoPayment ns cont)"
+
 
 datatype ReduceAllResult = ReducedAll "ReduceWarning list" "ReduceEffect list"
                                       State Contract
-                         | ReduceAllError ReduceError
+                         | RRAmbiguousSlotIntervalError
 
 fun evalBound :: "State \<Rightarrow> Contract \<Rightarrow> nat" where
 "evalBound sta cont = length (account sta) + 2 * (size cont)"
 
-lemma reduceReducesSize_Refund_aux :
+lemma reduceContractStepReducesSize_Refund_aux :
   "refundOne (account sta) = Some ((party, money), newAccount) \<Longrightarrow>
    length (account (sta\<lparr>account := newAccount\<rparr>)) < length (account sta)"
   by (simp add: refundOneShortens)
 
-lemma reduceReducesSize_Refund_aux2 :
-  "Reduced ReduceNoWarning (ReduceNormalPay party money)
+lemma reduceContractStepReducesSize_Refund_aux2 :
+  "Reduced ReduceNoWarning (ReduceWithPayment (Payment party money))
           (sta\<lparr>account := newAccount\<rparr>) Refund =
    Reduced twa tef nsta nc \<Longrightarrow>
    c = Refund \<Longrightarrow>
    refundOne (account sta) = Some ((party, money), newAccount) \<Longrightarrow>
    length (account nsta) + 2 * size nc < length (account sta)"
   apply simp
-  using reduceReducesSize_Refund_aux by blast
+  using reduceContractStepReducesSize_Refund_aux by blast
 
-lemma reduceReducesSize_Refund_aux3 :
+lemma reduceContractStepReducesSize_Refund_aux3 :
   "(case a of
           ((party, money), newAccount) \<Rightarrow>
-            Reduced ReduceNoWarning (ReduceNormalPay party money)
+            Reduced ReduceNoWarning (ReduceWithPayment (Payment party money))
              (sta\<lparr>account := newAccount\<rparr>) Refund) =
          Reduced twa tef nsta nc \<Longrightarrow>
          c = Refund \<Longrightarrow>
@@ -492,40 +481,40 @@ lemma reduceReducesSize_Refund_aux3 :
          length (account nsta) + 2 * size nc < length (account sta)"
   apply (cases a)
   apply simp
-  using reduceReducesSize_Refund_aux2 by fastforce
+  using reduceContractStepReducesSize_Refund_aux2 by fastforce
 
 lemma zeroMinIfGT : "x > 0 \<Longrightarrow> min 0 x = (0 :: int)"
   by simp
 
-lemma reduceReducesSize_Pay_aux :
+lemma reduceContractStepReducesSize_Pay_aux :
   "length z \<le> length x \<Longrightarrow>
-   giveMoney z x22 a = (tef, y) \<Longrightarrow>
+   giveMoney x22 a z = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
   using giveMoneyIncOne by fastforce
 
-lemma reduceReducesSize_Pay_aux2 :
-  "giveMoney (MList.delete src x) dst a = (tef, y) \<Longrightarrow>
+lemma reduceContractStepReducesSize_Pay_aux2 :
+  "giveMoney dst a (MList.delete src x)  = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
-  using delete_length reduceReducesSize_Pay_aux by blast
+  using delete_length reduceContractStepReducesSize_Pay_aux by blast
 
-lemma reduceReducesSize_Pay_aux3 :
+lemma reduceContractStepReducesSize_Pay_aux3 :
   "sta\<lparr>account := b\<rparr> = nsta \<Longrightarrow>
-   giveMoney (MList.delete src (account sta)) dst a = (tef, b) \<Longrightarrow>
+   giveMoney dst a (MList.delete src (account sta)) = (tef, b) \<Longrightarrow>
    length (account nsta) < Suc (Suc (length (account sta)))"
-  using reduceReducesSize_Pay_aux2 by auto
+  using reduceContractStepReducesSize_Pay_aux2 by auto
 
-lemma reduceReducesSize_Pay_aux4 :
+lemma reduceContractStepReducesSize_Pay_aux4 :
   "lookup k x = Some w \<Longrightarrow>
-   giveMoney (MList.insert k v x) dst a = (tef, y) \<Longrightarrow>
+   giveMoney dst a (MList.insert k v x) = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
-  by (metis insert_existing_length le_refl reduceReducesSize_Pay_aux)
+  by (metis insert_existing_length le_refl reduceContractStepReducesSize_Pay_aux)
 
-lemma reduceReducesSize_Pay_aux5 :
+lemma reduceContractStepReducesSize_Pay_aux5 :
 "sta\<lparr>account := ba\<rparr> = nsta \<Longrightarrow>
  lookup src (account sta) = Some a \<Longrightarrow>
- giveMoney (MList.insert src (a - evalValue env sta am) (account sta)) dst (evalValue env sta am) = (tef, ba) \<Longrightarrow>
+ giveMoney dst (evalValue env sta am) (MList.insert src (a - evalValue env sta am) (account sta)) = (tef, ba) \<Longrightarrow>
  length (account nsta) < Suc (Suc (length (account sta)))"
-  using reduceReducesSize_Pay_aux4 by auto
+  using reduceContractStepReducesSize_Pay_aux4 by auto
 
 lemma not_leq_min : "(\<not> (a \<le> x)) \<Longrightarrow> \<not> (min a (x::int) < x)"
   by simp
@@ -533,52 +522,51 @@ lemma not_leq_min : "(\<not> (a \<le> x)) \<Longrightarrow> \<not> (min a (x::in
 lemma not_leq_min2 : "(\<not> (a \<le> x)) \<Longrightarrow> (min a (x::int) = x)"
   by auto
 
-lemma reduceReducesSize_Pay_aux6 :
-  "reduce env sta c = Reduced twa tef nsta nc \<Longrightarrow>
+lemma reduceContractStepReducesSize_Pay_aux6 :
+  "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
    c = Pay src dst am y \<Longrightarrow>
    lookup src (account sta) = Some a \<Longrightarrow>
    evalBound nsta nc < evalBound sta c"
-  apply (cases "giveMoney (MList.delete src (account sta)) dst 0")
+  apply (cases "giveMoney dst 0 (MList.delete src (account sta))")
   apply (cases "a \<le> evalValue env sta am")
   apply (cases "a = evalValue env sta am")
-  apply (cases "giveMoney (MList.delete src (account sta)) dst
-                          (evalValue env sta am)")
+  apply (cases "giveMoney dst (evalValue env sta am)
+                          (MList.delete src (account sta))")
   apply (simp add:zeroMinIfGT)
   apply (cases "evalValue env sta am \<le> 0")
   apply simp
   apply simp
-  using reduceReducesSize_Pay_aux3 apply blast
+  using reduceContractStepReducesSize_Pay_aux3 apply blast
   apply (simp add:min_absorb1)
-  apply (cases "giveMoney (MList.delete src (account sta)) dst
-                          a")
+  apply (cases "giveMoney dst a (MList.delete src (account sta))")
   apply (cases "evalValue env sta am \<le> 0")
   apply simp
   apply simp
-  using reduceReducesSize_Pay_aux3 apply blast
+  using reduceContractStepReducesSize_Pay_aux3 apply blast
   apply (cases "evalValue env sta am \<le> 0")
-   apply (cases "giveMoney (MList.insert src (a - evalValue env sta am) (account sta)) dst
-                           (evalValue env sta am)")
+  apply (cases "giveMoney dst (evalValue env sta am)
+                          (MList.insert src (a - evalValue env sta am) (account sta))")
   apply (simp add:not_leq_min not_leq_min2)
-  apply (cases "giveMoney (MList.insert src (a - evalValue env sta am) (account sta)) dst
-                          (evalValue env sta am)")
+  apply (cases "giveMoney dst (evalValue env sta am)
+                          (MList.insert src (a - evalValue env sta am) (account sta))")
   apply (simp add:not_leq_min not_leq_min2)
-  using reduceReducesSize_Pay_aux5 by blast
+  using reduceContractStepReducesSize_Pay_aux5 by blast
 
-lemma reduceReducesSize_Pay_aux7 :
-  "reduce env sta c = Reduced twa tef nsta nc \<Longrightarrow>
+lemma reduceContractStepReducesSize_Pay_aux7 :
+  "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
    c = Pay src dst am y \<Longrightarrow> evalBound nsta nc < evalBound sta c"
   apply (cases "lookup src (account sta)")
   apply (cases "evalValue env sta am > 0")
-  apply (cases "giveMoney (MList.delete src (account sta)) dst 0")
+  apply (cases "giveMoney dst 0 (MList.delete src (account sta))")
   apply (simp add:zeroMinIfGT)
-  using reduceReducesSize_Pay_aux3 apply blast
+  using reduceContractStepReducesSize_Pay_aux3 apply blast
   apply (cases "evalValue env sta am > 0")
   apply blast
   apply auto[1]
-  by (metis reduceReducesSize_Pay_aux6)
+  by (metis reduceContractStepReducesSize_Pay_aux6)
 
-lemma reduceReducesSize_When_aux :
-  "reduce env sta c = Reduced twa tef nsta nc \<Longrightarrow>
+lemma reduceContractStepReducesSize_When_aux :
+  "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
    c = When cases timeout cont \<Longrightarrow>
    slotInterval env = (startSlot, endSlot) \<Longrightarrow>
    evalBound nsta nc < evalBound sta c"
@@ -588,63 +576,61 @@ lemma reduceReducesSize_When_aux :
   apply (cases "timeout \<le> startSlot")
   by simp_all
 
-lemma reduceReducesSize_Let_aux :
-  "reduce env sta c = Reduced twa tef nsta nc \<Longrightarrow>
+lemma reduceContractStepReducesSize_Let_aux :
+  "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
    c = Contract.Let vId val cont \<Longrightarrow> evalBound nsta nc < evalBound sta c"
   apply (cases "lookup vId (boundValues sta)")
   by auto
 
-lemma reduceReducesSize :
-  "reduce env sta c = Reduced twa tef nsta nc \<Longrightarrow>
+lemma reduceContractStepReducesSize :
+  "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
      (evalBound nsta nc) < (evalBound sta c)"
   apply (cases c)
   apply (cases "refundOne (account sta)")
   apply simp
   apply simp
-  apply (simp add:reduceReducesSize_Refund_aux3)
-  using reduceReducesSize_Pay_aux7 apply blast
+  apply (simp add:reduceContractStepReducesSize_Refund_aux3)
+  using reduceContractStepReducesSize_Pay_aux7 apply blast
   apply auto[1]
-  apply (meson eq_fst_iff reduceReducesSize_When_aux)
-  using reduceReducesSize_Let_aux by blast
+  apply (meson eq_fst_iff reduceContractStepReducesSize_When_aux)
+  using reduceContractStepReducesSize_Let_aux by blast
 
 function (sequential) reduceAllAux :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceWarning list \<Rightarrow>
                                        ReduceEffect list \<Rightarrow> ReduceAllResult" where
 "reduceAllAux env sta c wa ef =
-  (case reduce env sta c of
+  (case reduceContractStep env sta c of
      Reduced twa tef nsta nc \<Rightarrow>
        let nwa = (if twa = ReduceNoWarning
                   then wa
                   else twa # wa) in
-       let nef = (if tef = ReduceNoEffect
+       let nef = (if tef = ReduceNoPayment
                   then ef
                   else tef # ef) in
        reduceAllAux env nsta nc nwa nef
-   | ReduceError err \<Rightarrow> ReduceAllError err
+   | AmbiguousSlotIntervalReductionError \<Rightarrow> RRAmbiguousSlotIntervalError
    | NotReduced \<Rightarrow> ReducedAll (rev wa) (rev ef) sta c)"
   by pat_completeness auto
 termination reduceAllAux
   apply (relation "measure (\<lambda>(_, (st, (c, _))) . evalBound st c)")
   apply blast
-  using reduceReducesSize by auto
+  using reduceContractStepReducesSize by auto
 
 fun reduceAll :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceAllResult" where
 "reduceAll env sta c = reduceAllAux env sta c [] []"
 
-datatype ApplyError = ApplyNoMatch
-
 datatype ApplyResult = Applied State Contract
-                     | ApplyError ApplyError
+                     | ApplyNoMatchError
 
 fun applyCases :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightarrow> Case list \<Rightarrow> ApplyResult" where
-"applyCases env state (IDeposit accId1 party1 mon1)
+"applyCases env state (IDeposit accId1 party1 money1)
             (Cons (Case (Deposit accId2 party2 val2) nc) t) =
-  (case evalValue env state val2 of mon2 \<Rightarrow>
-   let accs = account state in
-   let newAccs = addMoneyToAccount accs accId1 mon1 in
+  (case evalValue env state val2 of money2 \<Rightarrow>
+   let accounts = account state in
+   let newAccs = addMoneyToAccount accId1 money1 accounts in
    let newState = state \<lparr> account := newAccs \<rparr> in
-   if (accId1 = accId2 \<and> party1 = party2 \<and> mon1 = mon2)
+   if (accId1 = accId2 \<and> party1 = party2 \<and> money1 = money2)
    then Applied newState nc
-   else applyCases env state (IDeposit accId1 party1 mon1) t)" |
+   else applyCases env state (IDeposit accId1 party1 money1) t)" |
 "applyCases env state (IChoice choId1 cho1)
             (Cons (Case (Choice choId2 bounds2) nc) t) =
   (let newState = state \<lparr> choice := MList.insert choId1 cho1 (choice state) \<rparr> in
@@ -655,36 +641,36 @@ fun applyCases :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightar
   (if evalObservation env state obs
    then Applied state nc
    else applyCases env state INotify t)" |
-"applyCases env state (IDeposit accId1 party1 mon1) (Cons h t) =
-  applyCases env state (IDeposit accId1 party1 mon1) t" |
+"applyCases env state (IDeposit accId1 party1 money1) (Cons h t) =
+  applyCases env state (IDeposit accId1 party1 money1) t" |
 "applyCases env state (IChoice choId1 cho1) (Cons h t) =
   applyCases env state (IChoice choId1 cho1) t" |
 "applyCases env state INotify (Cons h t) =
   applyCases env state INotify t" |
-"applyCases env state acc Nil = ApplyError ApplyNoMatch"
+"applyCases env state acc Nil = ApplyNoMatchError"
 
 fun applyM :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightarrow> Contract \<Rightarrow> ApplyResult" where
 "applyM env state act (When cases t cont) = applyCases env state act cases" |
-"applyM env state act c = ApplyError ApplyNoMatch"
+"applyM env state act c = ApplyNoMatchError"
 
 datatype ApplyAllResult = AppliedAll "ReduceWarning list" "ReduceEffect list"
                                      State Contract
-                        | AAApplyError ApplyError
-                        | AAReduceError ReduceError
+                        | ApplyAllNoMatchError
+                        | ApplyAllAmbiguousSlotIntervalError
 
 fun applyAllAux :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
                     ReduceWarning list \<Rightarrow> ReduceEffect list \<Rightarrow>
                     ApplyAllResult" where
 "applyAllAux env state c l wa ef =
    (case reduceAll env state c of
-      ReduceAllError raerr \<Rightarrow> AAReduceError raerr
+      RRAmbiguousSlotIntervalError \<Rightarrow> ApplyAllAmbiguousSlotIntervalError
     | ReducedAll twa tef tstate tc \<Rightarrow>
        (case l of
           Nil \<Rightarrow> AppliedAll (wa @ twa) (ef @ tef) tstate tc
         | Cons h t \<Rightarrow>
            (case applyM env tstate h tc of
               Applied nst nc \<Rightarrow> applyAllAux env nst nc t (wa @ twa) (ef @ tef)
-            | ApplyError aeerr \<Rightarrow> AAApplyError aeerr)))"
+            |  ApplyNoMatchError \<Rightarrow> ApplyAllNoMatchError)))"
 
 fun applyAll :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
                  ApplyAllResult" where
@@ -692,18 +678,16 @@ fun applyAll :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Righta
 
 type_synonym TransactionSignatures = "Party list"
 
-datatype ProcessError = PEReduceError ReduceError
-                      | PEApplyError ApplyError
-                      | PEIntervalError IntervalError
-                      | PEUselessTransaction
+datatype ProcessError = TEAmbiguousSlotIntervalError
+                      | TEApplyNoMatchError
+                      | TEIntervalError IntervalError
+                      | TEUselessTransaction
 
 type_synonym ProcessWarning = ReduceWarning
 type_synonym ProcessEffect = ReduceEffect
 
 datatype ProcessResult = Processed "ProcessWarning list"
                                    "ProcessEffect list"
-                                   TransactionSignatures
-                                   TransactionOutcomes
                                    State
                                    Contract
                        | ProcessError ProcessError
@@ -720,7 +704,7 @@ fun getSignatures :: "Input list \<Rightarrow> TransactionSignatures" where
 "getSignatures l = foldl addSig SList.empty l"
 
 fun getPartiesFromReduceEffect :: "ReduceEffect list \<Rightarrow> (Party \<times> Money) list" where
-"getPartiesFromReduceEffect (Cons (ReduceNormalPay p m) t) =
+"getPartiesFromReduceEffect (Cons (ReduceWithPayment (Payment p m)) t) =
    Cons (p, -m) (getPartiesFromReduceEffect t)" |
 "getPartiesFromReduceEffect (Cons x t) = getPartiesFromReduceEffect t" |
 "getPartiesFromReduceEffect Nil = Nil"
@@ -731,11 +715,6 @@ fun getPartiesFromInput :: "Input list \<Rightarrow> (Party \<times> Money) list
 "getPartiesFromInput (Cons x t) = getPartiesFromInput t" |
 "getPartiesFromInput Nil = Nil"
 
-fun getOutcomes :: "ReduceEffect list \<Rightarrow> Input list \<Rightarrow> TransactionOutcomes" where
-"getOutcomes eff inp =
-   foldl (\<lambda> acc (p, m) . addOutcome p m acc) emptyOutcome
-         ((getPartiesFromReduceEffect eff) @ (getPartiesFromInput inp))"
-
 fun process :: "Transaction \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ProcessResult" where
 "process tra sta c =
   (let inps = inputs tra in
@@ -743,13 +722,38 @@ fun process :: "Transaction \<Rightarrow> State \<Rightarrow> Contract \<Rightar
      IntervalTrimmed env fixSta \<Rightarrow>
        (case applyAll env fixSta c inps of
           AppliedAll wa ef nsta ncon \<Rightarrow>
-            let sigs = getSignatures inps in
-            let outcomes = getOutcomes ef inps in
             if c = ncon
-            then ProcessError PEUselessTransaction
-            else Processed wa ef sigs outcomes nsta ncon
-        | AAApplyError aperr \<Rightarrow> ProcessError (PEApplyError aperr)
-        | AAReduceError reerr \<Rightarrow> ProcessError (PEReduceError reerr))
-     | IntervalError intErr \<Rightarrow> ProcessError (PEIntervalError intErr))"
+            then ProcessError TEUselessTransaction
+            else Processed wa ef nsta ncon
+        | ApplyAllNoMatchError \<Rightarrow> ProcessError TEApplyNoMatchError
+        | ApplyAllAmbiguousSlotIntervalError \<Rightarrow> ProcessError TEAmbiguousSlotIntervalError)
+     | IntervalError intErr \<Rightarrow> ProcessError (TEIntervalError intErr))"
+
+(* Extra functions *)
+
+type_synonym TransactionOutcomes = "(Party \<times> Money) list"
+
+definition "emptyOutcome = (MList.empty :: TransactionOutcomes)"
+
+lemma emptyOutcomeValid : "valid_map emptyOutcome"
+  using MList.valid_empty emptyOutcome_def by auto
+
+fun isEmptyOutcome :: "TransactionOutcomes \<Rightarrow> bool" where
+"isEmptyOutcome trOut = all (\<lambda> (x, y) \<Rightarrow> y = 0) trOut"
+
+fun addOutcome :: "Party \<Rightarrow> Money \<Rightarrow> TransactionOutcomes \<Rightarrow> TransactionOutcomes" where
+"addOutcome party diffValue trOut =
+   (let newValue = case MList.lookup party trOut of
+                     Some value \<Rightarrow> value + diffValue
+                   | None \<Rightarrow> diffValue in
+    MList.insert party newValue trOut)"
+
+fun combineOutcomes :: "TransactionOutcomes \<Rightarrow> TransactionOutcomes \<Rightarrow> TransactionOutcomes" where
+"combineOutcomes x y = MList.unionWith plus x y"
+
+fun getOutcomes :: "ReduceEffect list \<Rightarrow> Input list \<Rightarrow> TransactionOutcomes" where
+"getOutcomes eff inp =
+   foldl (\<lambda> acc (p, m) . addOutcome p m acc) emptyOutcome
+         ((getPartiesFromReduceEffect eff) @ (getPartiesFromInput inp))"
 
 end

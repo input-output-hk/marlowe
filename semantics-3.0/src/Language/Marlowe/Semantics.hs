@@ -159,7 +159,7 @@ evalValue env state value = let
             balance = Map.findWithDefault (Lovelace 0) accId (accounts state)
             in getLovelace balance
         Constant integer     -> integer
-        NegValue val         -> eval val
+        NegValue val         -> negate (eval val)
         AddValue lhs rhs     -> eval lhs + eval rhs
         SubValue lhs rhs     -> eval lhs + eval rhs
         ChoiceValue choiceId defVal ->

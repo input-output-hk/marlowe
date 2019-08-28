@@ -306,7 +306,7 @@ fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarr
 "evalValue env state (AvailableMoney accId) =
     findWithDefault 0 accId (accounts state)" |
 "evalValue env state (Constant integer) = integer" |
-"evalValue env state (NegValue val) = evalValue env state val" |
+"evalValue env state (NegValue val) = uminus (evalValue env state val)" |
 "evalValue env state (AddValue lhs rhs) =
     evalValue env state lhs + evalValue env state rhs" |
 "evalValue env state (SubValue lhs rhs) =

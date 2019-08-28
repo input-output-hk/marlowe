@@ -273,7 +273,7 @@ evalValue bnds env state value =
                                                             0 (sAccountId a p) $
                                                             account state
     Constant integer         -> literal integer
-    NegValue val             -> go val
+    NegValue val             -> negate (go val)
     AddValue lhs rhs         -> go lhs + go rhs
     SubValue lhs rhs         -> go lhs + go rhs
     ChoiceValue (ChoiceId c p) defVal -> FSMap.findWithDefault (numChoices bnds)

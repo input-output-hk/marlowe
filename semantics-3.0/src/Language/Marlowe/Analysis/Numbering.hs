@@ -16,16 +16,16 @@ getNewNumbering :: Ord a => Numbering a -> (Integer, Numbering a)
 getNewNumbering num@(Numbering {lastNumbering = x}) = (nx, num{lastNumbering = nx})
   where nx = x + 1
 
-getNumbering :: Ord a => Numbering a -> a -> (Integer, Numbering a)
-getNumbering num x =
+getNumbering :: Ord a => a -> Numbering a -> (Integer, Numbering a)
+getNumbering x num =
   case Map.lookup x (numbering num) of
     Just y -> (y, num)
     Nothing -> let (y, newNum) = getNewNumbering num in
                (y, newNum { numbering = Map.insert x y (numbering newNum)
                           , label = Map.insert y x (label newNum) })
 
-getLabel :: Ord a => Numbering a -> Integer -> a
-getLabel num x =
+getLabel :: Ord a => Integer -> Numbering a -> a
+getLabel x num =
   case Map.lookup x (label num) of
     Just y -> y
     Nothing -> error "Numbering not defined"

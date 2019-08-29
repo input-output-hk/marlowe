@@ -12,7 +12,7 @@ empty = []
 
 insert :: Ord a => SymVal a => Integer -> SBV a -> FSSet a -> FSSet a
 insert b v s
-  | b <= 0 = s
+  | b < 0 = s
   | otherwise = ite (SL.null s)
                     (SL.singleton v)
                     (ite (v .< h)
@@ -25,7 +25,7 @@ insert b v s
 
 elem :: Ord a => SymVal a => Integer -> SBV a -> FSSet a -> SBool
 elem b v s
-  | b <= 0 = sFalse
+  | b < 0 = sFalse
   | otherwise = ite (SL.null s)
                     sFalse
                     (ite (v .> h)
@@ -39,7 +39,7 @@ size s = SL.length s
 
 delete :: Ord a => SymVal a => Integer -> SBV a -> FSSet a -> FSSet a
 delete b v s
-  | b <= 0 = s
+  | b < 0 = s
   | otherwise = ite (SL.null s)
                     []
                     (ite (v .< h)
@@ -52,7 +52,7 @@ delete b v s
 
 valid_aux :: Ord a => SymVal a => Integer -> SBV a -> FSSet a -> SBool
 valid_aux b v s
-  | b <= 0 = sFalse
+  | b < 0 = sFalse
   | otherwise = ite (SL.null s)
                     sTrue
                     (ite (v .< h)
@@ -63,7 +63,7 @@ valid_aux b v s
 
 valid :: Ord a => SymVal a => Integer -> FSSet a -> SBool
 valid b s
-  | b <= 0 = sFalse
+  | b < 0 = sFalse
   | otherwise = ite (SL.null s)
                     sTrue
                     (valid_aux b (SL.head s) (SL.tail s))

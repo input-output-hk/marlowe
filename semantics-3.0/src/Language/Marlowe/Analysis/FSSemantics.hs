@@ -17,6 +17,7 @@ import           Language.Marlowe.Analysis.FSMap(FSMap, NMap)
 import qualified Language.Marlowe.Analysis.FSSet as FSSet
 import           Language.Marlowe.Analysis.FSSet(FSSet, NSet)
 import           Language.Marlowe.Analysis.MkSymb(mkSymbolicDatatype)
+import qualified Language.Marlowe.Semantics as MS
 
 type SlotNumber = Integer
 type SSlotNumber = SInteger
@@ -273,7 +274,7 @@ evalValue bnds env state value =
                                                             0 (sAccountId a p) $
                                                             account state
     Constant integer         -> literal integer
-    NegValue val             -> negate (go val)
+    NegValue val             -> go val
     AddValue lhs rhs         -> go lhs + go rhs
     SubValue lhs rhs         -> go lhs + go rhs
     ChoiceValue (ChoiceId c p) defVal -> FSMap.findWithDefault (numChoices bnds)
@@ -313,7 +314,7 @@ evalObservation bnds env state obs =
 refundOne :: Integer -> FSMap NAccountId Money
           -> SMaybe ((Party, Money), NMap NAccountId Money)
 refundOne iters accounts
-  | iters > 0 =
+  | iters >= 0 =
       SM.maybe SM.sNothing
                (\ tup ->
                     let (he, rest) = ST.untuple tup in
@@ -515,7 +516,7 @@ reduceAllAux :: SymVal a => Bounds -> Integer -> Maybe Integer -> SEnvironment
              -> SState -> Contract -> SList NReduceWarning -> SList NReduceEffect
              -> (SReduceAllResult -> DetReduceAllResult -> SBV a) -> SBV a
 reduceAllAux bnds payNum (Just x) env sta c wa ef f
-  | x > 0 = reduce bnds env sta c contFunc
+  | x >= 0 = reduce bnds env sta c contFunc
   | otherwise = f (sReducedAll wa ef sta) DRARContractOver
   where contFunc sr dr =
           (let (nwa, nef, nsta) =
@@ -705,7 +706,7 @@ inputs x = let (_, inps) = ST.untuple x in inps
 sFoldl :: SymVal a => SymVal b => Integer
        -> (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
 sFoldl inte f acc list
-  | inte > 0 = ite (SL.null list)
+  | inte >= 0 = ite (SL.null list)
                    acc
                    (sFoldl (inte - 1) f (f acc (SL.head list)) (SL.tail list))
   | otherwise = acc 
@@ -731,14 +732,14 @@ addIfDep _ _ to = to
 getOutcomesAux :: Bounds -> Integer -> Integer -> SList NReduceEffect -> SList NInput
                -> STransactionOutcomes -> STransactionOutcomes
 getOutcomesAux bnds numPays numInps eff inp to
-  | numPays > 0 = ite (SL.null eff)
+  | numPays >= 0 = ite (SL.null eff)
                       (getOutcomesAux bnds 0 numInps [] inp to)
                       (getOutcomesAux bnds (numPays - 1) numInps
                                       (SL.tail eff) inp
                                       (symCaseReduceEffect
                                          (\oneEff -> addIfPay bnds oneEff to)
                                          (SL.head eff)))
-  | numInps > 0 = ite (SL.null inp)
+  | numInps >= 0 = ite (SL.null inp)
                       to 
                       (getOutcomesAux bnds 0 (numInps - 1)
                                       [] (SL.tail inp)
@@ -834,7 +835,7 @@ extractProcessResult spr =
 warningsTraceWBAux :: Integer -> Bounds -> SState -> SList NTransaction -> Contract
                    -> (SList NProcessWarning)
 warningsTraceWBAux inte bnds st transList con
-  | inte > 0 = process bnds (SL.head transList) st con cont
+  | inte >= 0 = process bnds (SL.head transList) st con cont
   | otherwise = [] -- SNH 
   where cont spr (DPProcessed ncon) = let (wa, _, _, _, nst) = extractProcessResult spr in
                                       ite (SL.null $ wa)
@@ -848,6 +849,4 @@ warningsTraceWB :: Bounds -> SSlotNumber -> SList NTransaction -> Contract
                 -> (SList NProcessWarning)
 warningsTraceWB bnds sn transList con =
   warningsTraceWBAux (numActions bnds) bnds (emptySState sn) transList con
-
-
 

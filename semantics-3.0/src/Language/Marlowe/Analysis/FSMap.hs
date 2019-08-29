@@ -16,7 +16,7 @@ empty = []
 insert :: Ord a => SymVal a => SymVal b => Integer ->
           SBV a -> SBV b -> FSMap a b -> FSMap a b
 insert b k v s
-  | b <= 0 = []
+  | b < 0 = []
   | otherwise = ite (SL.null s)
                     (SL.singleton nh)
                     (ite (k .> h)
@@ -32,7 +32,7 @@ insert b k v s
 lookup :: Ord a => SymVal a => SymVal b => Integer ->
           SBV a -> FSMap a b -> SMaybe b
 lookup b k s
-  | b <= 0 = sNothing
+  | b < 0 = sNothing
   | otherwise = ite (SL.null s)
                     SM.sNothing
                     (ite (k .> h)
@@ -50,7 +50,7 @@ member b k s = SM.isJust $ lookup b k s
 findWithDefault :: Ord a => SymVal a => SymVal b => Integer ->
           SBV b -> SBV a -> FSMap a b -> SBV b
 findWithDefault b def k s
-  | b <= 0 = def
+  | b < 0 = def
   | otherwise = ite (SL.null s)
                     def
                     (ite (k .> h)
@@ -67,7 +67,7 @@ size s = SL.length s
 delete :: Ord a => SymVal a => SymVal b => Integer ->
           SBV a -> FSMap a b -> FSMap a b
 delete b v s
-  | b <= 0 = s
+  | b < 0 = s
   | otherwise = ite (SL.null s)
                     []
                     (ite (v .< h1)
@@ -81,7 +81,7 @@ delete b v s
 
 valid_aux :: Ord a => SymVal a => SymVal b => Integer -> SBV a -> FSMap a b -> SBool
 valid_aux b v s
-  | b <= 0 = sFalse
+  | b < 0 = sFalse
   | otherwise = ite (SL.null s)
                     sTrue
                     (ite (v .< h)
@@ -92,14 +92,14 @@ valid_aux b v s
 
 valid :: Ord a => SymVal a => SymVal b => Integer -> FSMap a b -> SBool
 valid b s
-  | b <= 0 = sFalse
+  | b < 0 = sFalse
   | otherwise = ite (SL.null s)
                     sTrue
                     (valid_aux b (fst $ ST.untuple $ SL.head s) (SL.tail s))
 
 all :: Ord a => SymVal a => SymVal b => Integer -> (SBV b -> SBool) -> FSMap a b -> SBool
 all b f s
-  | b <= 0 = sFalse
+  | b < 0 = sFalse
   | otherwise = ite (SL.null s)
                     sTrue
                     ((f h) .&& (all (b - 1) f t))
@@ -109,7 +109,7 @@ all b f s
 unionWith :: Ord a => SymVal a => SymVal b => Integer ->
              (SBV b -> SBV b -> SBV b) -> FSMap a b -> FSMap a b -> FSMap a b
 unionWith b f m1 m2
-  | b <= 0 = []
+  | b < 0 = []
   | otherwise = ite (SL.null m1)
                     (m2)
                     (ite (SL.null m2)

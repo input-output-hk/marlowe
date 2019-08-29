@@ -40,6 +40,7 @@ executable marlowe
                         Language.Marlowe.Analysis.FSSet
                         Language.Marlowe.Analysis.FSMap
                         Language.Marlowe.Analysis.FSSemantics
+                        Language.Marlowe.Analysis.Numbering
                         Language.Marlowe.Analysis.FSDepositIncentive
                         Language.Marlowe.Analysis.MkSymb
     hs-source-dirs:     src

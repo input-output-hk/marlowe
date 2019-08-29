@@ -16,6 +16,7 @@ import qualified Language.Marlowe.Analysis.FSMap as FSMap
 import           Language.Marlowe.Analysis.FSMap(FSMap, NMap)
 import qualified Language.Marlowe.Analysis.FSSet as FSSet
 import           Language.Marlowe.Analysis.FSSet(FSSet, NSet)
+import           Language.Marlowe.Analysis.Numbering
 import           Language.Marlowe.Analysis.MkSymb(mkSymbolicDatatype)
 import qualified Language.Marlowe.Semantics as MS
 
@@ -46,6 +47,9 @@ type SAccountId = STuple NumAccount Party
 
 sAccountId :: NumAccount -> Party -> SAccountId
 sAccountId a p = ST.tuple (literal a, literal p)
+
+nestAccountId :: AccountId -> NAccountId
+nestAccountId (AccountId numAccId party) = (numAccId, party)
 
 literalAccountId :: AccountId -> SAccountId
 literalAccountId (AccountId a p) = sAccountId a p
@@ -849,4 +853,175 @@ warningsTraceWB :: Bounds -> SSlotNumber -> SList NTransaction -> Contract
                 -> (SList NProcessWarning)
 warningsTraceWB bnds sn transList con =
   warningsTraceWBAux (numActions bnds) bnds (emptySState sn) transList con
+
+-- Adaptor functions
+
+data Mappings = Mappings { partyM :: Numbering MS.Party
+                         , choiceM :: Numbering MS.ChoiceId
+                         , accountM :: Numbering MS.AccountId
+                         , valueM :: Numbering MS.ValueId }
+
+emptyMappings :: Mappings
+emptyMappings = Mappings { partyM = emptyNumbering
+                         , choiceM = emptyNumbering
+                         , accountM = emptyNumbering
+                         , valueM = emptyNumbering }
+
+type MaxActions = Integer
+
+convertTimeout :: MS.Timeout -> Timeout
+convertTimeout (MS.Slot num) = num
+
+convertParty :: MS.Party -> Mappings -> (Party, Mappings)
+convertParty party maps@(Mappings { partyM = partyNumberings }) = (newParty, newMaps)
+  where (newParty, newPartyNumberings) = getNumbering party partyNumberings
+        newMaps = maps { partyM = newPartyNumberings }
+
+convertAccId :: MS.AccountId -> Mappings -> (AccountId, Mappings)
+convertAccId accId@(MS.AccountId _ party) maps =
+    (AccountId newAccNum newParty, mapsWithParty)
+  where accountNumberings = accountM maps
+        (newAccNum, newAccountNumberings) = getNumbering accId accountNumberings
+        mapsWithAccId = maps { accountM = newAccountNumberings }
+        (newParty, mapsWithParty) = convertParty party mapsWithAccId
+
+convertValId :: MS.ValueId -> Mappings -> (ValueId, Mappings)
+convertValId valId maps@(Mappings { valueM = valueNumberings }) =
+    (ValueId newValId, mapsWithValId)
+  where valueNumberings = valueM maps
+        (newValId, newValueNumberings) = getNumbering valId valueNumberings
+        mapsWithValId = maps { valueM = newValueNumberings }
+
+convertChoId :: MS.ChoiceId -> Mappings -> (ChoiceId, Mappings)
+convertChoId choId@(MS.ChoiceId _ party) maps =
+    (ChoiceId newChoNum newParty, mapsWithParty)
+  where choiceNumberings = choiceM maps
+        (newChoNum, newChoountNumberings) = getNumbering choId choiceNumberings
+        mapsWithChoId = maps { choiceM = newChoountNumberings }
+        (newParty, mapsWithParty) = convertParty party mapsWithChoId
+
+convertPayee :: MS.Payee -> Mappings -> (Payee, Mappings)
+convertPayee (MS.Account accId) maps = (Account (nestAccountId newAccId), mapsWithAccId)
+  where (newAccId, mapsWithAccId) = convertAccId accId maps
+
+convertBound :: MS.Bound -> Bound
+convertBound (MS.Interval {MS.ivFrom = from, MS.ivTo = to}) = (from, to)
+
+convertValue :: MS.Value -> Mappings -> (Value, Mappings)
+convertValue (MS.AvailableMoney accId) maps =
+    (AvailableMoney newAccId, mapsWithAccId)
+  where (newAccId, mapsWithAccId) = convertAccId accId maps
+convertValue (MS.Constant inte) maps =
+    (Constant inte, maps)
+convertValue (MS.NegValue val) maps =
+    (NegValue newVal, mapsWithVal)
+  where (newVal, mapsWithVal) = convertValue val maps
+convertValue (MS.AddValue val1 val2) maps =
+    (AddValue newVal1 newVal2, mapsWithVal2)
+  where (newVal1, mapsWithVal1) = convertValue val1 maps
+        (newVal2, mapsWithVal2) = convertValue val2 mapsWithVal1
+convertValue (MS.SubValue val1 val2) maps =
+    (SubValue newVal1 newVal2, mapsWithVal2)
+  where (newVal1, mapsWithVal1) = convertValue val1 maps
+        (newVal2, mapsWithVal2) = convertValue val2 mapsWithVal1
+convertValue (MS.ChoiceValue choId val) maps =
+    (ChoiceValue newChoId newVal, mapsWithVal)
+  where (newChoId, mapsWithChoId) = convertChoId choId maps
+        (newVal, mapsWithVal) = convertValue val mapsWithChoId
+convertValue (MS.SlotIntervalStart) maps =
+    (SlotIntervalStart, maps)
+convertValue (MS.SlotIntervalEnd) maps =
+    (SlotIntervalEnd, maps)
+convertValue (MS.UseValue valId) maps =
+    (UseValue newValId, mapsWithValId)
+  where (newValId, mapsWithValId) = convertValId valId maps
+
+convertObservation :: MS.Observation -> Mappings -> (Observation, Mappings)
+convertObservation (MS.AndObs obs1 obs2) maps =
+    (AndObs newObs1 newObs2, mapsWithObs2)
+  where (newObs1, mapsWithObs1) = convertObservation obs1 maps
+        (newObs2, mapsWithObs2) = convertObservation obs2 mapsWithObs1
+convertObservation (MS.OrObs obs1 obs2) maps =
+    (OrObs newObs1 newObs2, mapsWithObs2)
+  where (newObs1, mapsWithObs1) = convertObservation obs1 maps
+        (newObs2, mapsWithObs2) = convertObservation obs2 mapsWithObs1
+convertObservation (MS.NotObs obs) maps =
+    (NotObs newObs, mapsWithObs)
+  where (newObs, mapsWithObs) = convertObservation obs maps
+convertObservation (MS.ChoseSomething choId) maps =
+    (ChoseSomething newChoId, mapsWithChoId)
+  where (newChoId, mapsWithChoId) = convertChoId choId maps
+convertObservation (MS.ValueGE val1 val2) maps =
+    (ValueGE newVal1 newVal2, mapsWithVal2)
+  where (newVal1, mapsWithVal1) = convertValue val1 maps
+        (newVal2, mapsWithVal2) = convertValue val2 mapsWithVal1
+convertObservation (MS.ValueGT val1 val2) maps =
+    (ValueGT newVal1 newVal2, mapsWithVal2)
+  where (newVal1, mapsWithVal1) = convertValue val1 maps
+        (newVal2, mapsWithVal2) = convertValue val2 mapsWithVal1
+convertObservation (MS.ValueLT val1 val2) maps =
+    (ValueLT newVal1 newVal2, mapsWithVal2)
+  where (newVal1, mapsWithVal1) = convertValue val1 maps
+        (newVal2, mapsWithVal2) = convertValue val2 mapsWithVal1
+convertObservation (MS.ValueLE val1 val2) maps =
+    (ValueLE newVal1 newVal2, mapsWithVal2)
+  where (newVal1, mapsWithVal1) = convertValue val1 maps
+        (newVal2, mapsWithVal2) = convertValue val2 mapsWithVal1
+convertObservation (MS.ValueEQ val1 val2) maps =
+    (ValueEQ newVal1 newVal2, mapsWithVal2)
+  where (newVal1, mapsWithVal1) = convertValue val1 maps
+        (newVal2, mapsWithVal2) = convertValue val2 mapsWithVal1
+convertObservation (MS.TrueObs) maps = (TrueObs, maps)
+convertObservation (MS.FalseObs) maps = (FalseObs, maps)
+
+convertAction :: MS.Action -> Mappings -> (Action, Mappings)
+convertAction (MS.Deposit accId party value) maps =
+    (Deposit newAccId newParty newValue, mapsWithValue)
+  where (newAccId, mapsWithAccId) = convertAccId accId mapsWithAccId
+        (newParty, mapsWithParty) = convertParty party mapsWithParty
+        (newValue, mapsWithValue) = convertValue value mapsWithValue
+convertAction (MS.Choice choId bounds) maps =
+    (Choice newChoId newBounds, mapsWithChoId)
+  where (newChoId, mapsWithChoId) = convertChoId choId maps
+        newBounds = map convertBound bounds
+convertAction (MS.Notify observation) maps =
+    (Notify newObservation, mapsWithObservation)
+  where (newObservation, mapsWithObservation) = convertObservation observation maps
+
+convertCaseList :: [MS.Case] -> Mappings -> ([Case], MaxActions, Mappings)
+convertCaseList [] maps = ([], 0, maps)
+convertCaseList (MS.Case action cont : rest) maps =
+    ((Case newAction newCont : newRest), max actionsWithCont actionsWithRest, mapsWithRest)
+  where (newAction, mapsWithAction) = convertAction action maps
+        (newCont, actionsWithCont, mapsWithCont) = convertContract cont mapsWithAction
+        (newRest, actionsWithRest, mapsWithRest) = convertCaseList rest mapsWithCont
+
+convertContract :: MS.Contract -> Mappings -> (Contract, MaxActions, Mappings)
+convertContract MS.Refund maps = (Refund, 0, maps)
+convertContract (MS.Pay accId payee value cont) maps =
+    (Pay newAccId newPayee newValue newCont, actionsWithCont, mapsWithContract)
+  where (newAccId, mapsWithAccId) = convertAccId accId maps
+        (newPayee, mapsWithPayee) = convertPayee payee mapsWithAccId
+        (newValue, mapsWithValue) = convertValue value mapsWithPayee
+        (newCont, actionsWithCont, mapsWithContract) = convertContract cont mapsWithValue
+convertContract (MS.If obs cont1 cont2) maps =
+    (If newObs newCont1 newCont2, actionsWithCont2, mapsWithCont2)
+  where (newObs, mapsWithObs) = convertObservation obs maps
+        (newCont1, actionsWithCont1, mapsWithCont1) = convertContract cont1 mapsWithObs
+        (newCont2, actionsWithCont2, mapsWithCont2) = convertContract cont2 mapsWithCont1
+convertContract (MS.When caseList timeout cont) maps =
+    ( When newCaseList newTimeout newCont
+    , max actionsWithCaseList actionsWithCont
+    , mapsWithCont)
+  where (newCaseList, actionsWithCaseList, mapsWithCaseList) = convertCaseList caseList maps
+        newTimeout = convertTimeout timeout
+        (newCont, actionsWithCont, mapsWithCont) = convertContract cont mapsWithCaseList
+convertContract (MS.Let valId value cont) maps =
+    (Let newValId newValue newCont, actionsWithCont, mapsWithContract)
+  where (newValId, mapsWithValId) = convertValId valId maps
+        (newValue, mapsWithValue) = convertValue value mapsWithValId
+        (newCont, actionsWithCont, mapsWithContract) = convertContract cont mapsWithValue 
+
+convertContractBase :: MS.Contract -> (Contract, MaxActions, Mappings)
+convertContractBase c = convertContract c emptyMappings
 

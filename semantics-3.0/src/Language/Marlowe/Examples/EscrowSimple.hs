@@ -23,7 +23,7 @@ contract = When [Case (Deposit "alice" "alice" price)
                       (When [ makePaymentToBob
                             , refundToAlice 
                             ]
-                            50
+                            90
                             Refund)
                 ]
                 10
@@ -34,13 +34,13 @@ makePaymentToBob, refundToAlice :: Case
 makePaymentToBob =
   Case bobAgrees 
     (When [Case carolAgrees (Pay "alice" (Party "bob") price Refund)]
-         90
+         100
          Refund)
 
 refundToAlice = 
   Case aliceAgrees 
     (When [Case carolAgrees Refund]
-       90
+       100
        Refund)
 
 aliceAgrees, bobAgrees, carolAgrees :: Action

@@ -7,11 +7,11 @@ import           Language.Marlowe
    Using layout for scoping here
 
 When
-  bobAgrees
+  bobClaims
     when
       carolAgrees
         Pay "alice" "bob" price
-  aliceAgrees
+  aliceClaims
     when
       carolAgrees
         Refund "alice"       
@@ -32,22 +32,27 @@ contract = When [Case (Deposit "alice" "alice" price)
 makePaymentToBob, refundToAlice :: Case
 
 makePaymentToBob =
-  Case bobAgrees 
-    (When [Case carolAgrees (Pay "alice" (Party "bob") price Refund)]
+  Case bobClaims 
+    (When [ Case carolAgrees (Pay "alice" (Party "bob") price Refund)
+          , Case carolDisagrees Refund
+          ]
          100
          Refund)
 
 refundToAlice = 
-  Case aliceAgrees 
-    (When [Case carolAgrees Refund]
+  Case aliceClaims 
+    (When [ Case carolAgrees Refund,
+            Case carolDisagrees (Pay "alice" (Party "bob") price Refund) 
+          ]
        100
        Refund)
 
-aliceAgrees, bobAgrees, carolAgrees :: Action
+aliceClaims, bobClaims, carolAgrees, carolDisagrees :: Action
 
-aliceAgrees = Choice (ChoiceId "agree" "alice") [Interval 0 0]
-bobAgrees   = Choice (ChoiceId "agree" "bob")   [Interval 0 0]
-carolAgrees = Choice (ChoiceId "agree" "carol") [Interval 0 0]
+aliceClaims    = Choice (ChoiceId "agree" "alice") [Interval 0 0]
+bobClaims      = Choice (ChoiceId "agree" "bob")   [Interval 0 0]
+carolAgrees    = Choice (ChoiceId "agree" "carol") [Interval 0 0]
+carolDisagrees = Choice (ChoiceId "agree" "carol") [Interval 1 1]
 
 
 -- Value under escrow

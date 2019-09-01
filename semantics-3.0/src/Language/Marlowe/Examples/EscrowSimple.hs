@@ -20,8 +20,8 @@ When
 
 contract :: Contract
 contract = When [Case (Deposit "alice" "alice" price)
-                      (When [ makePaymentToBob
-                            , refundToAlice 
+                      (When [ processBobClaim
+                            , processAliceClaim 
                             ]
                             90
                             Refund)
@@ -31,7 +31,7 @@ contract = When [Case (Deposit "alice" "alice" price)
 
 makePaymentToBob, refundToAlice :: Case
 
-makePaymentToBob =
+processBobClaim =
   Case bobClaims 
     (When [ Case carolAgrees (Pay "alice" (Party "bob") price Refund)
           , Case carolDisagrees Refund
@@ -39,7 +39,7 @@ makePaymentToBob =
          100
          Refund)
 
-refundToAlice = 
+processAliceClaim = 
   Case aliceClaims 
     (When [ Case carolAgrees Refund,
             Case carolDisagrees (Pay "alice" (Party "bob") price Refund) 

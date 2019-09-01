@@ -29,7 +29,7 @@ contract = When [Case (Deposit "alice" "alice" price)
                 10
                 Refund
 
-makePaymentToBob, refundToAlice :: Case
+processBobClaim, processAliceClaim :: Case
 
 processBobClaim =
   Case bobClaims 

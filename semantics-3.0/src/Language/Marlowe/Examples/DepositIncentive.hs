@@ -5,7 +5,7 @@ import Language.Marlowe
 
 payAll :: AccountId -> Payee -> Contract -> Contract
 payAll acId payee cont =
-  Pay acId payee (AvailableMoney acId) cont
+  Pay acId payee (AddValue (AvailableMoney acId) (Constant 1)) cont
 
 contract :: Contract
 contract =

@@ -24,7 +24,7 @@ inner =
               (When [ Case bobChoice 
                           (If (aliceChosen `ValueEQ` bobChosen)
                              agreement
-                             arbitrate) ]     
+                             arbitrate) ]
                     60
                     arbitrate),
         Case bobChoice
@@ -68,10 +68,13 @@ both   = [Interval 0 1]
 
 -- helper function to build Actions
 
+choiceName :: ChoiceName
+choiceName = "choice"
+
 choice :: Party -> [Bound] -> Action
 
 choice party bounds =
-  Choice (ChoiceId "choose" party) bounds
+  Choice (ChoiceId choiceName party) bounds
 
 -- Name choices according to person making choice and choice made
 
@@ -93,8 +96,8 @@ carolChoice = choice "carol" both
 
 aliceChosen, bobChosen :: Value
 
-aliceChosen = ChoiceValue (ChoiceId "choice" "alice") defValue
-bobChosen   = ChoiceValue (ChoiceId "choice" "bob") defValue
+aliceChosen = ChoiceValue (ChoiceId choiceName "alice") defValue
+bobChosen   = ChoiceValue (ChoiceId choiceName "bob") defValue
 
 defValue = Constant 42
 

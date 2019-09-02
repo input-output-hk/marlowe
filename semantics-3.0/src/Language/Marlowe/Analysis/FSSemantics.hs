@@ -824,7 +824,9 @@ warningsTraceWBAux inte bnds st transList con
                                       ite (SL.null $ wa)
                                           (warningsTraceWBAux (inte - 1) bnds nst
                                                               (SL.tail transList) ncon)
-                                          wa
+                                          (ite (SL.null (SL.tail transList))
+                                               wa
+                                               [])
         cont _ DPError = []
 
 warningsTraceWB :: Bounds -> SSlotNumber -> SList NTransaction -> Contract

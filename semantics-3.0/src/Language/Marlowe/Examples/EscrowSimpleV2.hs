@@ -25,24 +25,22 @@ inner :: Contract
 
 inner =
   When [ Case aliceChoice
-              (When ( Case bobChoice 
+              (When [ Case bobChoice 
                           (If (aliceChosen `ValueEQ` bobChosen)
                              agreement
-                             arbitrate) :
-                       carolCases)      
+                             arbitrate) ]     
                     60
-                    Refund),
+                    arbitrate),
         Case bobChoice
-              (When ( Case aliceChoice 
+              (When [ Case aliceChoice 
                           (If (aliceChosen `ValueEQ` bobChosen)
                               agreement
-                              arbitrate) :
-                      carolCases)
-                      60
-                    Refund)
-          ]
-          40
-          Refund
+                              arbitrate) ]
+                    60
+                    arbitrate)
+        ]
+        40
+        Refund
 
 carolCases :: [Case]
 

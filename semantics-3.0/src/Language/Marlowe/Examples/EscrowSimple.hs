@@ -11,10 +11,14 @@ When
     when
       carolAgrees
         Pay "alice" "bob" price
+      carolDisagrees
+        Refund "alice"       
   aliceClaims
     when
       carolAgrees
         Refund "alice"       
+      carolDisagrees
+        Pay "alice" "bob" price
 
 -}
 
@@ -49,8 +53,8 @@ processAliceClaim =
 
 aliceClaims, bobClaims, carolAgrees, carolDisagrees :: Action
 
-aliceClaims    = Choice (ChoiceId "agree" "alice") [Interval 0 0]
-bobClaims      = Choice (ChoiceId "agree" "bob")   [Interval 0 0]
+aliceClaims    = Choice (ChoiceId "claim" "alice") [Interval 0 0]
+bobClaims      = Choice (ChoiceId "claim" "bob")   [Interval 0 0]
 carolAgrees    = Choice (ChoiceId "agree" "carol") [Interval 0 0]
 carolDisagrees = Choice (ChoiceId "agree" "carol") [Interval 1 1]
 

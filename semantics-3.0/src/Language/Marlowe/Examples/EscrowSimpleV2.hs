@@ -4,19 +4,15 @@ module Language.Marlowe.Examples.EscrowSimpleV2 where
 import           Language.Marlowe
 
 {- What does the vanilla contract look like?
-   Using layout for scoping here
-
-Paraphrase: 
   - if Alice and Bob choose
       - and agree: do it
       - and disagree: Carol decides
-  - Carol can also decide after one of Alice or Bob has acted.             
-
-
+  - Carol also decides if timeout after one choice has been made;
+  - refund if no choices are made.
 -}
 
-
 contract :: Contract
+
 contract = When [Case (Deposit "alice" "alice" price) inner]
                 10
                 Refund
@@ -41,12 +37,10 @@ inner =
         ]
         40
         Refund
-
               
 -- The contract to follow when Alice and Bob have made the same choice.                       
          
 agreement :: Contract  
-
 agreement = 
   If 
     (aliceChosen `ValueEQ` (Constant 0))
@@ -54,7 +48,7 @@ agreement =
     Refund
      
 -- The contract to follow when Alice and Bob disagree, or if 
--- Carol wants to intervene after a single choice from Alice or Bob.
+-- Carol has to intervene after a single choice from Alice or Bob.
 
 arbitrate :: Contract
 
@@ -66,7 +60,7 @@ arbitrate =
 
 -- Names for choices
 
-pay,refund :: [Bound]
+pay,refund,both :: [Bound]
 
 pay    = [Interval 0 0]
 refund = [Interval 1 1]
@@ -78,7 +72,6 @@ choice :: Party -> [Bound] -> Action
 
 choice party bounds =
   Choice (ChoiceId "choose" party) bounds
-
 
 -- Name choices according to person making choice and choice made
 
@@ -96,7 +89,7 @@ carolPay    = choice "carol" pay
 carolRefund = choice "carol" refund
 carolChoice = choice "carol" both
 
--- the values chosen
+-- the values chosen in choices
 
 aliceChosen, bobChosen :: Value
 
@@ -106,5 +99,6 @@ bobChosen   = ChoiceValue (ChoiceId "choice" "bob") defValue
 defValue = Constant 42
 
 -- Value under escrow
+
 price :: Value
 price = Constant 450

@@ -1,0 +1,83 @@
+﻿== The Marlowe model
+
+Marlowe is designed to support the execution of financial contracts on blockchain, and specifically to work on Cardano. Contracts are built by putting together a small number of constructs that in combination can be used to describe many different kinds of financial contract. 
+
+Before we describe those constructs, we need to look at our general approach to modelling contracts in Marlowe, and the context in which Marlowe contracts are executed, the Cardano blockchain. In doing this we also introduce some of the terminology that we will use, indicating definitions by _italics_.
+
+=== Contracts
+
+Contracts in Marlowe run on a blockchain, but need to interact with the off-chain world. The _parties_ to the contract, whom we also call the _participants_, can engage in various _actions_: they can be asked to _deposit money_, or to _make a choice_ between various alternatives. A _notification_ of an external value (also called an _oracle_ value), such as the current price of a particular commodity, is the other possible form of input.footnote:[We can think of oracles as another kind of party to the contract; under this view notifications become the choices made by that party.] 
+
+Running a contract will also produce external _effects_, by making payments to parties in the contract.
+
+The Marlowe model allows for a contract to control money in a number of disjoint _accounts_: this allows for more explicit control of how the money flows in the contract. Each account is owned by a particular party to the contract, and that party receives a _refund_ of any remaining funds in the account on termination of the contract.footnote:[A fully “fungible” model is supported by a contract with a single account, and with explicit allocation of any remaining funds on contract termination.] These accounts are _local_, in that they only exist as during the execution of the contract, and during that time they are only accessible by parties to the contract.
+
+Marlowe contracts describe a series of _steps_, typically by describing the first step, together with another (sub-)contract that describes what to do next. For example, the contract  `Pay a p v cont` says “make a payment of `v` Lovelace to the party `p` from the account `a`, and then follow the contract `cont`”. We call `cont` the _continuation_ of the contract.
+
+In executing a contract we need to keep track of the _current contract_: after making a step in the example above, the current contract is the continuation, `cont`. We also have to keep track of some other information, such as how much is held in each account: we call this information the state: this potentially changes at each step too. A step can also see an action taking place, such as money being deposited, or an `effect` being produced, e.g. a payment.
+
+=== Blockchain
+
+While Marlowe is designed to work with blockchains in general,footnote:[Indeed, Marlowe could be modified to run off blockchain, or to work on a permissioned blockchain, too.] some details of how it interacts with the blockchain are relevant when describing the semantics and implementation of Marlowe.
+
+A UTxO-based blockchain is a chain of _blocks_, each of which contains a collection of transactions. Each _transaction_ has a set of inputs and outputs, and the blockchain is built by linking _unspent transaction outputs_ (UTxO) to the inputs of a new transaction. At most one block can be generated in each _slot_, which are 20 seconds long. 
+
+The mechanisms by which these blocks are generated, and by whom, are not relevant here, but contracts will be expressed in terms of _slot numbers_, counting from the starting (“genesis”) block of the blockchain.
+
+Value on the blockchain resides in the UTxO, which are protected cryptographically by a private key held by the owner. These keys can be used to _redeem_ the output, and so to use them as inputs to new transactions, which can be seen as spending the value in the inputs. Users typically keep track of their private keys, and the values attached to them, in a cryptographically-secure _wallet_. 
+
+It is through their wallets that users are able to interact with smart contracts - including Marlowe contracts – running on the blockchain. Deposits are made from users’ wallets, and payments received by them. Note, however, that these are definitely _off chain_ actions that need to be controlled by code running in the user’s wallet: they cannot be made to happen by the Marlowe contract itself.
+
+=== Executing a Marlowe contract
+
+At each slot, a running Marlowe contract will receive a list of inputs in order. The contract is executed by evaluating it _step by step_ until it cannot be[f] changed any further, a condition that we call being _quiescent_. The first input is then processed, and then the contract is single stepped again until quiescence, and this process is repeated until all the inputs are processed. At each step the current contact and the state will change, some input may be processed, and payments made.
+
+Putting this together gives us a _transaction_, as shown in the diagram below, and this information is added to the blockchain. What we do next is to describe in detail what Marlowe contracts look like, and how they are evaluated step by step.
+
+.Building a transaction
+[#img-transaction]
+[caption="Figure 1: "]
+image:./pix/transaction.svg[]
+
+=== Marlowe step by step  
+
+Marlowe has five ways of building contracts. Four of these – `Pay`, `Let`, `If` and `When` – build a complex contract from simpler contracts, and the fifth, `Refund`, is a simple contract. At each step of execution, as well as returning a new state and continuation contract, it is possible that effects – payments – and warnings can be generated too. 
+
+In explaining these contracts we will also explain Marlowe _values_, _observations_ and _actions_, which are used to supply external information and inputs to a running contract to control how it will evolve.
+
+==== Pay
+A payment contract `Pay a p v cont` will make a payment of value `v` from the account `a` to a payee `p`, which will be one of the contract participants or another account in the contract. Warnings will be generated if the value `v` is negative, or if there is not enough in the account to make the payment in full. In that case a partial payment (of all the money available) is made. The continuation contract is the one given in the contract: cont.
+
+==== Refund
+A refund contract `Refund` will provide refunds to the owners of accounts that contain a positive balance. This is performed one account per step, but all accounts will be refunded in a single transaction.
+
+Before discussing other forms of contracts, we need to describe values, observations and actions.
+
+==== Values, observations and actions
+*Values* include some quantities that change with time, including “the current slot number”,footnote:[The presentation here is a simplification of the concrete implementation, in which transactions are associated with a slot interval during which it is valid to add them to the blockchain.The reason for this is that in general it is difficult to predict the precise slot in which a transaction will be accepted for inclusion on the blockchain; it is therefore more robust to specify an interval in which the transaction should be accepted. The view presented here is a simplification in that effectively we consider only intervals of length one.  So, a Marlowe contract is able to access the upper and lower bounds on the current slot interval, rather than the specific current slot value. Executing a contract can, in some circumstances, lead to an “ambiguous slot interval error”, but we do not cover that any further here.] “the current balance of an account (in Lovelace)”, and any choices that have already been made; we call these _volatile_ values. Values can also be combined using addition, subtraction and negation.
+
+*Observations* are Boolean values derived by comparing values, and can be combined using the standard Boolean operators. It is also possible to observe whether any choice has been made (for a particular identified choice). 
+
+Observations will have a value at every step of execution. On the other hand, *actions* happen at particular points during execution. As noted earlier, actions can be 
+
+ * depositing money,
+ * making a choice between various alternatives, or
+ * notifying an external or oracle value, such as the current price of a particular commodity.
+
+==== If
+The conditional `If obs cont1 cont2` will continue as `cont1` or `cont2`, depending on the Boolean value of the observation `obs` when this construct is executed. 
+
+==== When
+This is the most complex constructor for contracts, with the form `When cases timeout cont`. It is a contract that is _triggered on actions_, which may or may not happen at any particular slot: what happens when various actions happen is described by the _cases_ in the contract. 
+
+In the contract `When cases timeout cont`, the list `cases` contains a collection of cases. Each case has the form `Case ac co` where `ac` is an action and `co` a continuation (another contract). When a particular action, e.g. `ac`, happens, the state is updated accordingly and the contract will continue as the corresponding continuation `co`.
+
+In order to make sure that the contract makes progress eventually, the contract  `When cases timeout cont` will continue as `cont` once the `timeout`, a slot number, is reached.
+
+==== Let
+A let contract `Let id val cont` allows a contract to _name a value_ using an identifier. In this case, the expression `val` is evaluated, and stored with the name `id`. The contract then continues as `cont`. 
+
+As well as allowing us to use abbreviations, this mechanism also means that we can capture and save volatile values that might be changing with time, e.g. the current price of oil, or the current slot number, at a particular point in the execution of the contract, to be used later on in contract execution. 
+
+
+

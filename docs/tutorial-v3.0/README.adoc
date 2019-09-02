@@ -1,32 +1,35 @@
-== Marlowe 2.0 tutorials
+== Marlowe 3.0 tutorials
 
 This document gives an overview of a set of Marlowe tutorials.
 
 ____
-*Important note:* these tutorials address the current version of
-Marlowe, 2.0, which irons out a number of infelicities in earlier
-versions. Marlowe 2.0 is implemented in the _Marlowe Playground_,
+These tutorials address the current version of
+Marlowe, 3.0, which is implemented in the _Marlowe Playground_, and
 available https://prod.meadow.marlowe.iohkdev.io[here].
 
 The version covered in the ISoLA paper, and supported in the original
-version of Meadow that includes Blockly, is tagged as *v1.3* and is
+version of Meadow, is tagged as *v1.3* and is
 available https://github.com/input-output-hk/marlowe/tree/v1.3[here].
 ____
 
-=== link:./introducing-marlowe.md[Introducing Marlowe]
+=== link:./introducing-marlowe.adoc[Introducing Marlowe]
 
 This tutorial gives an overview of the ideas behind Marlowe, as a
 domain-specific language embedded in Haskell. It also introduces
 commitments and timeouts, which are central to how Marlowe works in a
 blockchain context.
 
-=== link:./escrow-ex.md[A first example: the escrow contract]
+=== link:./escrow-ex.adoc[A first example: the escrow contract]
 
 This tutorial introduces a simple financial contract in pseudocode,
 before explaining how it is modified to work in Marlowe, giving the
 first example of a Marlowe contract.
 
-=== link:./marlowe-data.md[Marlowe as a Haskell data type]
+=== link:./marlowe-model.adoc[The Marlowe Model]
+
+
+
+=== link:./marlowe-data.adoc[Marlowe as a Haskell data type]
 
 This tutorial formally introduces Marlowe as a Haskell data type,
 building on the escrow example in the previous tutorial. It also
@@ -34,37 +37,37 @@ describes the different types used by the model, as well as discussing a
 number of assumptions about the infrastructure in which contracts will
 be run.
 
-=== link:./marlowe-semantics.md[Understanding the semantics]
+=== link:./marlowe-semantics.adoc[Understanding the semantics]
 
 This tutorial gives an introduction to the formal semantics of Marlowe
 by presenting an overview of the key Haskell definitions that interpret
 inputs and transactions, as well as fitting those into a schematic
 overview of how the components of the semantics work together.
 
-=== link:./embedded-marlowe.md[Embedded Marlowe]
+=== link:./embedded-marlowe.adoc[Embedded Marlowe]
 
 This tutorial shows how to use some simple features of Haskell to write
 Marlowe contracts that are more readable, maintainable and reusable, by
 revisiting the escrow contract.
 
-=== link:./using-marlowe.md[Using Marlowe]
+=== link:./using-marlowe.adoc[Using Marlowe]
 
 This tutorial shows you how to use Marlowe from within Haskell, and in
 particular shows how to exercise a contract using the semantics given in
-the link:./marlowe-semantics.md[earlier tutorial].
+the link:./marlowe-semantics.adoc[earlier tutorial].
 
-=== link:./playground-overview.md[The Marlowe Playground]
+=== link:./playground-overview.adoc[The Marlowe Playground]
 
 This tutorial introduces the Marlowe Playground, an online tool for
 creating embedded Marlowe contracts and interactively stepping through
 their execution.
 
-=== link:./actus-marlowe.md[ACTUS and Marlowe]
+=== link:./actus-marlowe.adoc[ACTUS and Marlowe]
 
 This tutorial gives an introduction to the general idea of the ACTUS
 taxonomy, plus examples implemented in Marlowe.
 
-=== link:./marlowe-plutus.md[Implementing Marlowe in Plutus]
+=== link:./marlowe-plutus.adoc[Implementing Marlowe in Plutus]
 
 So far these tutorials have dealt with Marlowe as a “stand alone”
 artefact; this tutorial describes how Marlowe is implemented on

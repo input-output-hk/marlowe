@@ -817,7 +817,9 @@ extractProcessResult bnds spr =
 warningsTraceWBAux :: Integer -> Bounds -> SState -> SList NTransaction -> Contract
                    -> (SList NProcessWarning)
 warningsTraceWBAux inte bnds st transList con
-  | inte >= 0 = process bnds (SL.head transList) st con cont
+  | inte >= 0 = ite (SL.null transList)
+                    []
+                    (process bnds (SL.head transList) st con cont)
   | otherwise = [] -- SNH 
   where cont spr (DPProcessed ncon) = let (wa, _, {- _, _, -} nst) =
                                              extractProcessResult bnds spr in

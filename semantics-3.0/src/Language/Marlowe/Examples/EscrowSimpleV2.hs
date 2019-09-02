@@ -42,12 +42,6 @@ inner =
         40
         Refund
 
-carolCases :: [Case]
-
-carolCases = 
-  [ Case carolRefund Refund,
-    Case carolPay (Pay "alice" (Party "bob") price Refund)
-  ]
               
 -- The contract to follow when Alice and Bob have made the same choice.                       
          
@@ -65,7 +59,8 @@ agreement =
 arbitrate :: Contract
 
 arbitrate =
-  When  carolCases
+  When  [ Case carolRefund Refund,
+          Case carolPay (Pay "alice" (Party "bob") price Refund) ]
         100
         Refund
 

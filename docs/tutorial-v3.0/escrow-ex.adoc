@@ -32,6 +32,25 @@ contract is activated.
 
 The second contract is itself another `When` – asking for a decision from `+bob+`, but inside that, there is a _choice_: `If` 
 `+alice+` and `+bob+` agree on what to do, it is done; if not,  `+carol+` is asked to arbitrate and make a decision.
+
+In fact, we can allow for the option of `+bob+` making the first choice, rather than `+alice+`, and so we offer a _list of cases_ which can be triggered by any of the actions offered:footnote:[Lists in Marlowe are included in square brackets, as in `[2,3,4\]`.]
+
+
+[source,haskell]
+----
+  When [ Case aliceChoice
+              (When [ Case bobChoice 
+                          (If (aliceChosen `ValueEQ` bobChosen)
+                             agreement
+                             arbitrate) ],
+        Case bobChoice
+              (When [ Case aliceChoice 
+                          (If (aliceChosen `ValueEQ` bobChosen)
+                              agreement
+                              arbitrate) ]
+       ]
+----
+
 ____
 *Exercise*
 
@@ -45,53 +64,46 @@ ____
 
 === Escrow in Marlowe
 
-In order to make sure that the contract does indeed progress properly,
-we will add timeouts and commitments to is, and this will give the first
-example of a Marlowe contract.
+Marlowe contracts incorporate extra constructs to ensure that they progress properly. Each time we see a `When`, we need to provide two things
+
+* a _timeout_ after which the contract will progress, and
+* the _continuation_ contract to which it progresses.
+
+
 
 ==== Adding timeouts
 
 First, let us examine how to modify what we have written to take care of
-the case that the condition of the `+When+` never becomes true. We add
-two fields to the contract
+the case that the condition of the `+When+` never becomes true. So, we  add two values to each of the three `When`s in the contract.
 
 [source,haskell]
 ----
-(When (OrObs (two_chose alice bob carol refund)
-             (two_chose alice bob carol pay))
-      90                 -- ADDED
-      (Choice (two_chose alice bob carol pay)
-              (Pay alice bob AvailableMoney)
-              redeem_original))
-      redeem_original    -- ADDED 
+  When [ Case aliceChoice
+              (When [ Case bobChoice 
+                          (If (aliceChosen `ValueEQ` bobChosen)
+                             agreement
+                             arbitrate) ]
+                    60            -- ADDED
+                    arbitrate),   -- ADDED
+        Case bobChoice
+              (When [ Case aliceChoice 
+                          (If (aliceChosen `ValueEQ` bobChosen)
+                              agreement
+                              arbitrate) ]
+                    60            -- ADDED
+                    arbitrate)    -- ADDED
+        ]
+        40            -- ADDED
+        Refund        -- ADDED
 ----
 
-The `+90+` is a _timeout_ on the time to wait for the observation to
-become true; if this timeout is passed, then the contract
-`+redeem_original+` is executed, thus making sure that the money locked
-into the contract is not lost.
+The outermost `When` calls for the first choice to be made by Alice or Bob: if neither of them has made a choice by time `40`, all the funds in the contract are refunded. 
 
-In a similar way, because a payment cannot be performed directly by the
-contract, but _must be initiated by the participant making the payment_,
-the `+Pay+` sub-contract is given a timeout of `+100+` for the payment
-to be claimed. Two sub-contracts describe what happens if the payment is
-claimed, and if the timeout happens: in both cases the `+Null+` contract
-is performed.
+`Refund` is typically the last step in each of the alternatives in a Marlowe contract, and its effect is to refund the money in the contract to the participants; we will describe this in more detail in a later tutorial. Refund will happen after `40` slots.
 
-[source,haskell]
-----
-(When (Or (two_chose alice bob carol refund)
-          (two_chose alice bob carol pay))
-      90                 
-      (Choice (two_chose alice bob carol pay)
-              (Pay iCC1 bob (Committed iCC1) 100 Null Null) -- ADDED
-              redeem_original))
-      redeem_original     
-----
+Looking at the inner constructs, if a choice has been made, then we wait for a second one. If that is not forthcoming by slot `60`, the Carol is called upon to arbitrate.footnote:[Again, we will describe how `arbitrate` works in a later tutorial.]
 
-Note also that the contract identifies the commitment from which the
-payment is made, `+iCC1+`, instead of stating the person making the
-payment.
+
 
 ==== Adding commitments
 

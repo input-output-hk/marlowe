@@ -2,15 +2,6 @@
 
 This document gives an overview of a set of Marlowe tutorials.
 
-____
-These tutorials address the current version of
-Marlowe, 3.0, which is implemented in the _Marlowe Playground_, and
-available https://prod.meadow.marlowe.iohkdev.io[here].
-
-The version covered in the ISoLA paper, and supported in the original
-version of Meadow, is tagged as *v1.3* and is
-available https://github.com/input-output-hk/marlowe/tree/v1.3[here].
-____
 
 === link:./introducing-marlowe.adoc[Introducing Marlowe]
 
@@ -79,3 +70,13 @@ So far these tutorials have dealt with Marlowe as a “stand alone”
 artefact; this tutorial describes how Marlowe is implemented on
 blockchain, using the “mockchain” that provides a high-fidelity
 simulation of the Cardano SL layer.
+
+____
+These tutorials address the current version of
+Marlowe, 3.0, which is implemented in the _Marlowe Playground_, and
+available https://prod.meadow.marlowe.iohkdev.io[here].
+
+The version covered in the ISoLA paper, and supported in the original
+version of Meadow, is tagged as *v1.3* and is
+available https://github.com/input-output-hk/marlowe/tree/v1.3[here].
+____

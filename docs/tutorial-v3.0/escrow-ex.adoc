@@ -17,11 +17,11 @@ contract is a simple example of _escrow_.
 
 [source,haskell]
 ----
-(When (Or (two_chose alice bob carol refund)
-          (two_chose alice bob carol pay))
-      (Choice (two_chose alice bob carol pay)
-              (Pay alice bob AvailableMoney)
-              redeem_original))
+When aliceChoice
+     (When bobChoice 
+           (If (aliceChosen `ValueEQ` bobChosen)
+               agreement
+               arbitrate))
 ----
 
 The contract is described using the _constructors_ of a Haskell data
@@ -30,23 +30,13 @@ an _observation_ and the second is another contract. The intended
 meaning of this is that _when_ the observation becomes true, the second
 contract is activated.
 
-The observation here is a disjunction, which is true - if two of the
-participants (presumably `+carol+` the trusted intermediary, and
-`+bob+`) agree that `+bob+` should be paid (the `+pay+` contract), or -
-if two of the participants (presumably, in this case, `+carol+` and
-`+alice+`) agree that `+alice+` should be refunded (`+refund+`).
-
-The second contract is itself a `+Choice+` depending on whether or not
-there has been agreement to pay `+bob+`. If that is indeed the case,
-then the payment is offered to `+bob+`; if not, then a refund is offered
-to `+alice+`.
-
+The second contract is itself another `When` – asking for a decision from `+bob+`, but inside that, there is a _choice_: `If` 
+`+alice+` and `+bob+` agree on what to do, it is done; if not,  `+carol+` is asked to arbitrate and make a decision.
 ____
 *Exercise*
 
 Think about executing this contract in practice. Suppose that Alice has
-already committed some money to the contract. What will happen if one of
-the participants chooses not to participate any further?
+already committed some money to the contract. What will happen if Bob chooses not to participate any further?
 
 We have assumed that Alice has already committed her payment, but
 suppose that we want to design a contract to ensure that: what would we
@@ -196,4 +186,4 @@ contracts: an adventure in financial engineering]
 * https://dl.acm.org/citation.cfm?id=2784747[Certified symbolic
 management of financial multi-party contracts]
 
-==== link:./introducing-marlowe.md[Prev] link:./README.md[Up] link:./marlowe-data.md[Next]
+==== link:./introducing-marlowe.adoc[Prev] link:./README.adoc[Up] link:./marlowe-model.adoc[Next]

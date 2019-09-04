@@ -16,7 +16,7 @@ The Marlowe model allows for a contract to control money in a number of disjoint
 
 ==== Steps and states
 
-Marlowe contracts describe a series of _steps_, typically by describing the first step, together with another (sub-)contract that describes what to do next. For example, the contract  `Pay a p v cont` says “make a payment of `v` Lovelace to the party `p` from the account `a`, and then follow the contract `cont`”. We call `cont` the _continuation_ of the contract.
+Marlowe contracts describe a series of _steps_, typically by describing the first step, together with another (sub-) contract that describes what to do next. For example, the contract  `Pay a p v cont` says “make a payment of `v` Lovelace to the party `p` from the account `a`, and then follow the contract `cont`”. We call `cont` the _continuation_ of the contract.
 
 In executing a contract we need to keep track of the _current contract_: after making a step in the example above, the current contract is the continuation, `cont`. We also have to keep track of some other information, such as how much is held in each account: we call this information the state: this potentially changes at each step too. A step can also see an action taking place, such as money being deposited, or an `effect` being produced, e.g. a payment.
 

@@ -62,9 +62,9 @@ arbitrate =
 
 pay,refund,both :: [Bound]
 
-pay    = [Interval 0 0]
-refund = [Interval 1 1]
-both   = [Interval 0 1]
+pay    = [Bound 0 0]
+refund = [Bound 1 1]
+both   = [Bound 0 1]
 
 -- helper function to build Actions
 

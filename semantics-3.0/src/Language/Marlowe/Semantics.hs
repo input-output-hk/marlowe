@@ -3,11 +3,12 @@ module Language.Marlowe.Semantics where
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
+import qualified Data.Text as T
 
 newtype Slot = Slot { getSlot :: Integer } deriving (Eq,Ord)
 
 instance Show Slot where
-    show (Slot n) = "(Slot " ++ show n ++ ")"
+    show (Slot n) = show n
 
 instance Num Slot where
     Slot l + Slot r = Slot (l + r)
@@ -20,7 +21,7 @@ instance Num Slot where
 newtype Ada = Lovelace { getLovelace :: Integer } deriving (Eq,Ord)
 
 instance Show Ada where
-    show (Lovelace n) = "(Lovelace " ++ show n ++ ")"
+    show (Lovelace n) = show n
 
 instance Num Ada where
     Lovelace l + Lovelace r = Lovelace (l + r)
@@ -30,12 +31,14 @@ instance Num Ada where
     fromInteger = Lovelace
     negate (Lovelace l) = Lovelace (negate l)
 
-
 newtype PubKey = PubKey Text
-  deriving (Eq,Ord,Show)
+  deriving (Eq,Ord)
 
-type Party = PubKey
-type ChoiceName = Text
+instance Show PubKey where
+  show (PubKey txt) = show (T.unpack txt)  
+
+type Party = PubKey   
+type ChoiceName = Text     -- Needs to be updated in playground.
 type NumAccount = Integer
 type Timeout = Slot
 type Money = Ada
@@ -49,9 +52,6 @@ accountOwner (AccountId _ party) = party
 
 data ChoiceId = ChoiceId ChoiceName Party
   deriving (Eq,Ord,Show)
-
-{- newtype OracleId = OracleId PubKey
-  deriving (Eq,Ord,Show) -}
 
 newtype ValueId = ValueId Integer
   deriving (Eq,Ord,Show)
@@ -80,15 +80,19 @@ data Observation = AndObs Observation Observation
                  | FalseObs
   deriving (Eq,Ord,Show)
 
--- |Interval of [ivFrom, ivTo], both bounds are included
-data Interval a = Interval { ivFrom :: a, ivTo :: a }
+data SlotInterval = SlotInterval Slot Slot
   deriving (Eq,Ord,Show)
 
-type SlotInterval = Interval Slot
-type Bound = Interval Integer
+ivFrom, ivTo :: SlotInterval -> Slot
+
+ivFrom (SlotInterval from _) = from
+ivTo   (SlotInterval _ to)   = to
+
+data Bound = Bound Integer Integer
+  deriving (Eq,Ord,Show)
 
 inBounds :: ChosenNum -> [Bound] -> Bool
-inBounds num = any (\(Interval l u) -> num >= l && num <= u)
+inBounds num = any (\(Bound l u) -> num >= l && num <= u)
 
 data Action = Deposit AccountId Party Value
             | Choice ChoiceId [Bound]
@@ -142,12 +146,12 @@ data IntervalResult = IntervalTrimmed Environment State
 
 fixInterval :: SlotInterval -> State -> IntervalResult
 fixInterval interval state = let
-    Interval { ivFrom = low, ivTo = high } = interval
+    SlotInterval low high  = interval
     curMinSlot = minSlot state
     -- newLow is both new "low" and new "minSlot" (the lower bound for slotNum)
     newLow = max low curMinSlot
     -- We know high is greater or equal than newLow (prove)
-    curInterval = Interval { ivFrom = newLow, ivTo = high }
+    curInterval = SlotInterval  newLow high 
     env = Environment { slotInterval = curInterval }
     newState = state { minSlot = newLow }
     in if high < low then IntervalError (InvalidInterval interval)

@@ -49,7 +49,7 @@ whenNOutOfMChooseAux ops n partiesLeft timeout defCont
   where
     (winnerVotes, _, winnerCont) = maximumBy (comparing (\(x, _, _) -> x)) ops
     votesLeft = genericLength partiesLeft
-    cases = [ Case (Choice (ChoiceId "OK" p) [Interval cchoice cchoice]) $
+    cases = [ Case (Choice (ChoiceId "OK" p) [Bound cchoice cchoice]) $
                    whenNOutOfMChooseAux (bo ++ (votes + 1, cchoice, cont) : bc)
                                         n (bp ++ ap) timeout defCont
              | (bp, p, ap) <- splitEverywhere partiesLeft

@@ -53,10 +53,10 @@ processAliceClaim =
 
 aliceClaims, bobClaims, carolAgrees, carolDisagrees :: Action
 
-aliceClaims    = Choice (ChoiceId "claim" "alice") [Interval 0 0]
-bobClaims      = Choice (ChoiceId "claim" "bob")   [Interval 0 0]
-carolAgrees    = Choice (ChoiceId "agree" "carol") [Interval 0 0]
-carolDisagrees = Choice (ChoiceId "agree" "carol") [Interval 1 1]
+aliceClaims    = Choice (ChoiceId "claim" "alice") [Bound 0 0]
+bobClaims      = Choice (ChoiceId "claim" "bob")   [Bound 0 0]
+carolAgrees    = Choice (ChoiceId "agree" "carol") [Bound 0 0]
+carolDisagrees = Choice (ChoiceId "agree" "carol") [Bound 1 1]
 
 
 -- Value under escrow

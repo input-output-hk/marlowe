@@ -91,8 +91,8 @@ literalAccountId (AccountId a p) = sAccountId a p
 nestedToSAccountId :: NAccountId -> SAccountId
 nestedToSAccountId (a, p) = sAccountId a p
 
-accountOwner :: AccountId -> Party
-accountOwner (AccountId _ party) = party
+accountNumber :: AccountId -> NumAccount
+accountNumber (AccountId numAccount _) = numAccount
 
 symAccountOwner :: SAccountId -> SParty
 symAccountOwner x = party
@@ -351,14 +351,14 @@ evalObservation bnds env state obs =
 
 -- Obtains the amount of money available an account
 moneyInAccount :: IntegerArray -> AccountId -> SMoney
-moneyInAccount accs accId = IntegerArray.findWithDefault 0 (accountOwner accId) accs
+moneyInAccount accs accId = IntegerArray.findWithDefault 0 (accountNumber accId) accs
 
 -- Sets the amount of money available in an account
 updateMoneyInAccount :: IntegerArray -> AccountId -> SMoney -> IntegerArray
 updateMoneyInAccount accs accId mon =
   ite (mon .<= 0)
-      (IntegerArray.delete (accountOwner accId) accs)
-      (IntegerArray.insert (accountOwner accId) mon accs)
+      (IntegerArray.delete (accountNumber accId) accs)
+      (IntegerArray.insert (accountNumber accId) mon accs)
 
 -- Withdraw up to the given amount of money from an account
 -- Return the amount of money withdrawn
@@ -873,7 +873,7 @@ convertPayee (MS.Party party) maps = (Party newParty, mapsWithParty)
   where (newParty, mapsWithParty) = convertParty party maps
 
 convertBound :: MS.Bound -> Bound
-convertBound (MS.Interval {MS.ivFrom = from, MS.ivTo = to}) = (from, to)
+convertBound (MS.Bound from to) = (from, to)
 
 convertValue :: MS.Value -> Mappings -> (Value, Mappings)
 convertValue (MS.AvailableMoney accId) maps =
@@ -1013,8 +1013,7 @@ revertSlotNum :: SlotNumber -> MS.Slot
 revertSlotNum sn = MS.Slot { MS.getSlot = sn }
 
 revertInterval :: SlotInterval -> MS.SlotInterval
-revertInterval (snl, snh) = MS.Interval { MS.ivFrom = revertSlotNum snl
-                                        , MS.ivTo = revertSlotNum snh }
+revertInterval (snl, snh) = MS.SlotInterval (revertSlotNum snl) (revertSlotNum snh)
 
 revertChoId :: ChoiceId -> Mappings -> MS.ChoiceId 
 revertChoId (ChoiceId choId _) maps = getLabel choId (choiceM maps)

@@ -10,7 +10,11 @@ Contracts in Marlowe run on a blockchain, but need to interact with the off-chai
 
 Running a contract will also produce external _effects_, by making payments to parties in the contract.
 
+==== Accounts
+
 The Marlowe model allows for a contract to control money in a number of disjoint _accounts_: this allows for more explicit control of how the money flows in the contract. Each account is owned by a particular party to the contract, and that party receives a _refund_ of any remaining funds in the account on termination of the contract.footnote:[A fully “fungible” model is supported by a contract with a single account, and with explicit allocation of any remaining funds on contract termination.] These accounts are _local_, in that they only exist as during the execution of the contract, and during that time they are only accessible by parties to the contract.
+
+==== Steps and states
 
 Marlowe contracts describe a series of _steps_, typically by describing the first step, together with another (sub-)contract that describes what to do next. For example, the contract  `Pay a p v cont` says “make a payment of `v` Lovelace to the party `p` from the account `a`, and then follow the contract `cont`”. We call `cont` the _continuation_ of the contract.
 
@@ -23,6 +27,8 @@ While Marlowe is designed to work with blockchains in general,footnote:[Indeed, 
 A UTxO-based blockchain is a chain of _blocks_, each of which contains a collection of transactions. Each _transaction_ has a set of inputs and outputs, and the blockchain is built by linking _unspent transaction outputs_ (UTxO) to the inputs of a new transaction. At most one block can be generated in each _slot_, which are 20 seconds long. 
 
 The mechanisms by which these blocks are generated, and by whom, are not relevant here, but contracts will be expressed in terms of _slot numbers_, counting from the starting (“genesis”) block of the blockchain.
+
+==== UTxO and wallets
 
 Value on the blockchain resides in the UTxO, which are protected cryptographically by a private key held by the owner. These keys can be used to _redeem_ the output, and so to use them as inputs to new transactions, which can be seen as spending the value in the inputs. Users typically keep track of their private keys, and the values attached to them, in a cryptographically-secure _wallet_. 
 

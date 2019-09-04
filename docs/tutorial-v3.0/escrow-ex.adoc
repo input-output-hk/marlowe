@@ -30,10 +30,10 @@ an _observation_ and the second is another contract. The intended
 meaning of this is that _when_ the observation becomes true, the second
 contract is activated.
 
-The second contract is itself another `When` – asking for a decision from `+bob+`, but inside that, there is a _choice_: `If` 
+The second contract is itself another `When` – asking for a decision from `+bob+` – but inside that, there is a _choice_: `If` 
 `+alice+` and `+bob+` agree on what to do, it is done; if not,  `+carol+` is asked to arbitrate and make a decision.
 
-In fact, we can allow for the option of `+bob+` making the first choice, rather than `+alice+`, and so we offer a _list of cases_ which can be triggered by any of the actions offered:footnote:[Lists in Marlowe are included in square brackets, as in `[2,3,4\]`.]
+In fact, we can allow for the option of `+bob+` making the first choice, rather than `+alice+`, and so in general `When` offers= a _list of cases_,footnote:[Lists in Marlowe are included in square brackets, as in `[2,3,4\]`.] each with an action and a corresponding contract that is triggered when that action happens:
 
 
 [source,haskell]
@@ -50,6 +50,7 @@ In fact, we can allow for the option of `+bob+` making the first choice, rather 
                               arbitrate) ]
        ]
 ----
+In this contract, either Alice or Bob can make the first choice; the other then makes a choice. If they agree, then that is done; if not, Carol arbitrates.
 
 ____
 *Exercise*
@@ -64,7 +65,7 @@ ____
 
 === Escrow in Marlowe
 
-Marlowe contracts incorporate extra constructs to ensure that they progress properly. Each time we see a `When`, we need to provide two things
+Marlowe contracts incorporate extra constructs to ensure that they progress properly. Each time we see a `When`, we need to provide two additional things:
 
 * a _timeout_ after which the contract will progress, and
 * the _continuation_ contract to which it progresses.
@@ -74,7 +75,7 @@ Marlowe contracts incorporate extra constructs to ensure that they progress prop
 === Adding timeouts
 
 First, let us examine how to modify what we have written to take care of
-the case that the condition of the `+When+` never becomes true. So, we  add two values each time `+When+` occurs in the contract.
+the case that the condition of the `+When+` never becomes true. So, we  add timeout and continuation values to each `+When+` occurring in the contract.
 
 [source,haskell]
 ----
@@ -99,9 +100,9 @@ the case that the condition of the `+When+` never becomes true. So, we  add two 
 
 The outermost `When` calls for the first choice to be made by Alice or Bob: if neither of them has made a choice by time `40`, all the funds in the contract are refunded. 
 
-`Refund` is typically the last step in each of the alternatives in a Marlowe contract, and its effect is to refund the money in the contract to the participants; we will describe this in more detail in a later tutorial. Refund will happen after `40` slots.
+`Refund` is typically the last step in every “path” through a Marlowe contract, and its effect is to refund the money in the contract to the participants; we will describe this in more detail in a later tutorial. In this particular case, refund will happen after `40` slots.
 
-Looking at the inner constructs, if a choice has been made, then we wait for a second one. If that is not forthcoming by slot `60`, the Carol is called upon to arbitrate.footnote:[Again, we will describe how `arbitrate` and `agreement` work in a later tutorial.]
+Looking at the inner constructs, if a choice has been made, then we wait for a second one. If that is not forthcoming by slot `60`, then Carol is called upon to arbitrate.footnote:[Again, we will describe how `arbitrate` and `agreement` work in a later tutorial.]
 
 === Adding commitments
 
@@ -123,8 +124,8 @@ contract.
                           (If (aliceChosen `ValueEQ` bobChosen)
                               agreement
                               arbitrate) ]
-                    60            -- ADDED
-                    arbitrate)    -- ADDED
+                    60            
+                    arbitrate)   
         ]
         40 
         Refund)
@@ -142,16 +143,22 @@ There is a timeout of `10` slots on making the deposit; if that is reached witho
 
 
 We will see link:./embedded-marlowe.adoc[later] that parts of this
-contract description, such as `+arbitrate+` and `agreement`, use the Haskell
-embedding of Marlowe to give some shorthand definitions. We also use _overloaded_ strings to make some descriptions – e.g. of accounts – more concise. 
+contract description, such as `+arbitrate+`, `agreement`, and `price`, use the Haskell 
+_embedding_ of Marlowe DSL to give some shorthand definitions. We also use _overloaded_ strings to make some descriptions – e.g. of accounts – more concise. 
+
+These are discussed in
+more detail when we look at link:./embedded-marlowe.adoc[embedded
+Marlowe].
 
 ____
 *Exercise*
 
-Comment on the choice of timeout values, and look at alternatives. For
-example, what would happen if the timeout of `+40+`on the `+When+` () were
-to be replaced by `+60+`, and vice versa? Would it be sensible to have the same timeout
-(`+100+`) on each `When`? If not, why not?
+Comment on the choice of timeout values, and look at alternatives. 
+
+For
+example, what would happen if the timeout of `+40+` on the `+When+` were 
+to be replaced by `+60+`, and vice versa? Would it be sensible to have the same timeout, of 
+`+100+` say, on each `When`? If not, why not?
 ____
 
 This example has shown many of the ingredients of the Marlowe contract
@@ -159,11 +166,7 @@ language; in the next tutorial we will present the complete language.
 
 === Notes
 
-* Many of the items used here, including, for example `+agreement+` and
-`+arbitrate+`, and defined using the embedded DSL, which is discussed in
-more detail when we look at link:./embedded-marlowe.adoc[embedded
-Marlowe].
-* While accounts need to be provided manually in the example here,
+* While accounts names need to be provided manually in the example here,
 these could be generated by users’ wallets in a version of Marlowe
 deployed on a blockchain.
 

@@ -40,5 +40,6 @@ A let contract `Let id val cont` allows a contract to _name a value_ using an id
 
 As well as allowing us to use abbreviations, this mechanism also means that we can capture and save volatile values that might be changing with time, e.g. the current price of oil, or the current slot number, at a particular point in the execution of the contract, to be used later on in contract execution. 
 
+==== link:./marlowe-model.adoc[Prev] link:./README.adoc[Up] link:./marlowe-data.adoc[Next]
 
 

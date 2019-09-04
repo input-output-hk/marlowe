@@ -11,7 +11,7 @@ contract :: Contract
 contract =
   When [ Case (Deposit incentiveAcc incentiviser (incentiveAmt))
               (When [ Case (Deposit depositAcc depositer (depositAmt))
-                           (When [ Case (Choice (ChoiceId "refund" depositer) [Interval 1 1])
+                           (When [ Case (Choice (ChoiceId "refund" depositer) [Bound 1 1])
                                         Refund
                                  ]
                                  200

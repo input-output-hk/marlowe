@@ -57,7 +57,7 @@ transitionFunction _ (party, True) =
    Deposit (AccountId 1 party) party (ChoiceValue (ChoiceId "1" party) (Constant 0)))
 transitionFunction maxContrib (party, False) =
   (Just (party, True),
-   Choice (ChoiceId "1" party) [Interval 0 maxContrib])
+   Choice (ChoiceId "1" party) [Bound 0 maxContrib])
 
 -- Interleaves a list of state machines defined by "f" transition function
 -- and "l" list of initial states. If all state machines terminate continues

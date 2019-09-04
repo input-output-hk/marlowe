@@ -18,7 +18,7 @@ The Marlowe model allows for a contract to control money in a number of disjoint
 
 Marlowe contracts describe a series of _steps_, typically by describing the first step, together with another (sub-) contract that describes what to do next. For example, the contract  `Pay a p v cont` says “make a payment of `v` Lovelace to the party `p` from the account `a`, and then follow the contract `cont`”. We call `cont` the _continuation_ of the contract.
 
-In executing a contract we need to keep track of the _current contract_: after making a step in the example above, the current contract is the continuation, `cont`. We also have to keep track of some other information, such as how much is held in each account: we call this information the state: this potentially changes at each step too. A step can also see an action taking place, such as money being deposited, or an `effect` being produced, e.g. a payment.
+In executing a contract we need to keep track of the _current contract_: after making a step in the example above, the current contract is the continuation, `cont`. We also have to keep track of some other information, such as how much is held in each account: we call this information the state: this potentially changes at each step too. A step can also see an action taking place, such as money being deposited, or an _effect_ being produced, e.g. a payment.
 
 === Blockchain
 
@@ -36,7 +36,7 @@ It is through their wallets that users are able to interact with smart contracts
 
 === Executing a Marlowe contract
 
-At each slot, a running Marlowe contract will receive a list of inputs in order. The contract is executed by evaluating it _step by step_ until it cannot be[f] changed any further, a condition that we call being _quiescent_. The first input is then processed, and then the contract is single stepped again until quiescence, and this process is repeated until all the inputs are processed. At each step the current contact and the state will change, some input may be processed, and payments made.
+At each slot, a running Marlowe contract will receive a list of inputs in order. The contract is executed by evaluating it _step by step_ until it cannot be changed any further without processing any input, a condition that we call being _quiescent_. The first input is then processed, and then the contract is single stepped again until quiescence, and this process is repeated until all the inputs are processed. At each step the current contact and the state will change, some input may be processed, and payments made.
 
 Putting this together gives us a _transaction_, as shown in the diagram below, and this information is added to the blockchain. What we do next is to describe in detail what Marlowe contracts look like, and how they are evaluated step by step.
 
@@ -46,4 +46,5 @@ Putting this together gives us a _transaction_, as shown in the diagram below, a
 image:./pix/transaction.svg[]
 
 
+==== link:./escrow-ex.adoc[Prev] link:./README.adoc[Up] link:./marlowe-step-by-step.adoc[Next]
 

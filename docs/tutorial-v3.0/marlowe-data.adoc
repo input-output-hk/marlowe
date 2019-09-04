@@ -13,43 +13,18 @@ type in Haskell:
 
 [source,haskell]
 ----
-data Contract =
-    Null |
-    Commit IdAction IdCommit Person Value Timeout Timeout Contract Contract |
-    Pay IdAction IdCommit Person Value Timeout Contract Contract |
-    Both Contract Contract |
-    Choice Observation Contract Contract |
-    When Observation Timeout Contract Contract |
-    While Observation Timeout Contract Contract |
-    Scale Value Value Value Contract |
-    Let LetLabel Contract Contract |
-    Use LetLabel
+data Contract = Refund
+              | Pay AccountId Payee Value Contract
+              | If Observation Contract Contract
+              | When [Case] Timeout Contract
+              | Let ValueId Value Contract
 ----
 
-Informally, this type provides these contracts, some of which were
-introduced already when we introduced the link:./escrow-ex.md[escrow
-example]: - A `+Null+` contract, which does nothing. - The next two
-constructs are the simplest contract-building primitives. They contain
-two sub-contracts: the first to be followed if the action has been
-performed successfully, and the second to use in the case of a timeout.
-- `+Commit+` will wait for a participant to make a commitment, and -
-`+Pay+` will wait for a payment to be claimed by the recipient.
+We saw link:./marlowe-step-by-step.adoc[in the previous section] what these contracts do.
 
-* The remaining constructors form composite contracts from simpler
-components, which include `+Contract+`s and `+Observation+`s:
-** `+Both+` has the behaviour of both its components,
-** `+Choice+` chooses between two contracts on the basis of an
-observation, +
-** `+When+` is quiescent until a condition – an observation – becomes
-true,
-** `+While+` is active until a condition becomes false.
-** `+Scale+` is used to scale the amounts specified in `+Commit+`s and
-`+Pay+`s in a contract, and
-** `+Let+` and `+Use+` allow for making and using local definitions
-(``shorthand'') of contracts within a contract.
-
-Additionally, many of the contracts have `+Timeout+`s that also help to
-determine their behaviour.
+====
+revised to here
+====
 
 === The model types
 
@@ -159,4 +134,4 @@ Marlowe strict in all arguments to all constructors, so that Marlowe
 contracts are wholly _finite_ data structures, with no partial or
 infinite components.
 
-==== link:./escrow-ex.md[Prev] link:./README.md[Up] link:./marlowe-semantics.md[Next]
+==== link:./marlowe-step-by-step.adoc[Prev] link:./README.adoc[Up] link:./marlowe-semantics.adoc[Next]

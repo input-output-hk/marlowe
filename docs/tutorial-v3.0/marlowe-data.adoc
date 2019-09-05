@@ -135,11 +135,51 @@ This completes our discussion of the types that make up Marlowe contracts.
 
 === Dynamic data
 
-to do
+As we noted earlier, the semantics of Marlowe consist in building _transactions_, like this:
+[#img-transaction]
+[caption="Figure 1: "]
+image:./pix/transaction.svg[]
+A transaction is built from a series of steps, some of which consume an input value, and others produce effects, or payments. In describing this we explained that a transaction modified a contract (to its continuation) and the state, but more precisely we have a function
+[source,haskell]
+----
+computeTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
+----
+where the types are defined like this:
+[source,haskell]
+----
+data TransactionInput = TransactionInput
+    { txInterval :: SlotInterval
+    , txInputs   :: [Input] }
+
+data TransactionOutput =
+    TransactionOutput
+        { txOutWarnings :: [ReduceWarning]
+        , txOutPayments :: [Payment]
+        , txOutState    :: State
+        , txOutContract :: Contract }
+    | Error TransactionError
+----
+The notation used here adds field names to the arguments of the constructors, giving selectors for the data as well as making in clearer the purpose of each field.
+
+The `TransactionInput` type has two components: the `SlotInterval` in which it can validly be added to the blockchain, and an ordered sequence of `Input` values to be processed in that transaction.
+
+A `TransactionOutput` value has four components: the last two are the updated `State` and `Contract`, while the second gives a ordered sequence of `Payments` produced by the transaction. The first component contains a list of any warnings produced by processing the transaction.
 
 === Slot ranges
 
-to do
+This is part of the architecture of Cardano/Plutus, which acknowledges that it is not possible to predict precisely in which slot a particular transaction will be processed. Transactions are therefore given a _slot interval_ in which they are expected to be processed, and this carries over to Marlowe: each step of a Marlowe contract is processed in the context of a range of slots.
+[source,haskell]
+----
+data Slot         = Slot Integer 
+data SlotInterval = SlotInterval Slot Slot
+
+ivFrom, ivTo :: SlotInterval -> Slot
+ivFrom (SlotInterval from _) = from
+ivTo   (SlotInterval _ to)   = to
+----
+How does this affect the processing of a Marlowe contract? Each step is processed relative to a slot interval, and the current slot value needs to lie within that interval. 
+
+The endpoints of the interval are accessible as the values `SlotIntervalStart` and `SlotIntervalEnd`, and these can be used in observations. Timeouts need to be processed _unambiguously_, so that _all values in the slot interval_ have to have exceeded the timeout for it to take effect. In other words, the timeout value needs to be greater than `SlotIntervalEnd`.
 
 ==== Notes
 

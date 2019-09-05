@@ -23,13 +23,13 @@ We saw link:./marlowe-step-by-step.adoc[in the previous tutorial] what these con
 
 === Basic components
 
-In modelling basic parts of Marlowe we use a combination of Haskell `data` types, that define _new_ types, and `type` synonyms that give a new name to an existing type.footnote:[In fact we used `newtype` declarations rather than `data` types because they are more efficiently implemented.] So, members of `PubKey` will look like `(PubKey "alice")`, `(PubKey "bob")` and so on. 
+In modelling basic parts of Marlowe we use a combination of Haskell `data` types, that define _new_ types, and `type` synonyms that give a new name to an existing type.footnote:[In fact we used `newtype` declarations rather than `data` types because they are more efficiently implemented.] So, members of `PubKey` and `Party` will look like `(PubKey "alice")`, `(PubKey "bob")` and so on. 
 [source,haskell]
 ----
 data PubKey = PubKey Text
 type Party  = PubKey   
 ----
-However, Haskell allows us to present and read in these values more concisely, by declaring a custom instance of `Show` and using _overloaded strings_, so that these can be input and read as `"alice"`, `"bob"` etc. Because `Party` is a synonym for `PubKey`, the same applies to parties to contracts. 
+However, Haskell allows us to present and read in these values more concisely (by declaring a custom instance of `Show` and using _overloaded strings_) so that these can be input and read as `"alice"`, `"bob"` etc. Because `Party` is a synonym for `PubKey`, the same applies to parties to contracts. 
 
 Slot numbers and amounts of money are treated in a similar way; with the same show/overload approach they will appear in contracts as numbers:
 
@@ -41,7 +41,7 @@ type Timeout = Slot
 data Ada     = Lovelace Integer 
 type Money   = Ada
 ----
-Accounts have a number (`NumAccount`) and an owner, who is a `Party` to the contract.
+Accounts have a number `NumAccount` and an owner, who is a `Party` to the contract.
 [source,haskell]
 ----
 type NumAccount = Integer
@@ -50,6 +50,14 @@ data AccountId  = AccountId NumAccount Party
 and an example would be `AccountId 0 "alice"`. Note that `"alice"` is the owner here in the sense that she will be refunded any money in the account when the contract terminates. 
 
 Because in many contracts, each party will own at most one account, we can use overloaded strings to allow us to abbreviate this account – account number `0` for any owner – by the name of its owner: in this case `"alice"`. 
+
+A payment can be made to one of the parties to the contract, or to one of the accounts of the contract, and this is reflected in the definition
+
+[source,haskell]
+----
+data Payee = Account AccountId
+           | Party Party
+----
 
 Choices – of integers – are identified by `ChoiceId` which combines a name for the choice with the `Party` who had made the choice:
 [source,haskell]
@@ -64,90 +72,76 @@ Values, as defined using `Let` are also identified by integers.footnote:[This ma
 data ValueId    = ValueId Integer
 ----
 
-====
-revised to here
-====
+=== Values, observations and actions
 
-=== The model types
-
-The interface between Marlowe contracts and the real world is governed
-by a series of types that represent the elements that the contracts need
-to consider.
-
-image:./pix/context.png[Environment]
-
-==== Inputs
-
-First, contracts need to receive information from the real world.
-Because Marlowe contracts are passive – they do not make things, such as
-payments, happen; rather they allow then to take place – all
-interactions are done through inputs.
-
-Inputs can have one of four different kinds: `+Commit+`, `+Pay+`,
-`+Choice+`, and `+Oracle+`. From these four, `+Commit+` and `+Pay+` are
-considered to be _actions_ and are typically associated with the
-transfer of some money between the participant and the contract. On the
-other hand, `+Choice+` and `+Oracle+` inputs are only used to provide
-information to the contract.
-
-===== Inputs (pt 1): `+Commit+` and `+Pay+`
-
-The attentive may have noticed that `+Commit+` and `+Pay+` inputs
-correspond to two types of contract with the same name. Indeed, actions
-of type `+Commit+` and `+Pay+` are enabled by the constructs of the same
-name. In fact, inputs for `+Commit+` and `+Pay+` actions just consist of
-their identifier (`+IdAction+`), since the rest of information can be
-inferred from the contract.
+Building on the basic types, we can describe three higher-level components of contracts: a type of _values_, on top of that a type of _observations_, and also a type of _actions_, which trigger particular cases. First, looking at `Value` we have
 
 [source,haskell]
 ----
-data AnyInput = Action IdAction
-              | Input Input
+data Value = AvailableMoney AccountId
+           | Constant Integer
+           | NegValue Value
+           | AddValue Value Value
+           | SubValue Value Value
+           | ChoiceValue ChoiceId Value
+           | SlotIntervalStart
+           | SlotIntervalEnd
+           | UseValue ValueId
 ----
+The different kinds of values – all of which are `Integer` – are pretty much self explanatory, but for completeness we have
 
-Inputs of kind `+Commit+` represent commitments of currency (or
-``cash''), while inputs of kind `+Pay+` represent claims of payments by
-a participant. While informally we might see a commitment to something
-as being indefinite, as noted earlier, it is important to realise that,
-on blockchain, a commitment needs to have a _timeout_ so that progress
-can be ensured in contracts.
+* Lookup of the value in an account `AvailableMoney`, made in a choice `ChoiceValue` and in an identifier that has already been defined  `UseValue`.
+* Arithmetic constants and operators.
+* The start and end of the current _slot interval_; see below for further discussion of this.
 
-After the timeout period, the cash will be refunded in the next
-transaction that is signed by the participant that made the commitment.
-Information about the commitments currently in force forms the
-`+State+`, which can be modified at each execution step.
-
-===== Inputs (pt 2): `+Choice+` and `+Oracle+`
-
-`+Choice+`s are values _chosen_ by participants; while `+Oracle+`s
-provide values from a trusted source of information and can change over
-time. Oracles can be used to provided varying quantities from the real
-world, for example, the current time, ``the price of oil'', or ``the
-exchange rate between currencies A and B''.
+Next we have observations 
 
 [source,haskell]
 ----
-data Input = IChoice IdChoice Choice
-           | IOracle IdOracle BlockNumber Integer
+data Observation = AndObs Observation Observation
+                 | OrObs Observation Observation
+                 | NotObs Observation
+                 | ChoseSomething ChoiceId
+                 | ValueGE Value Value
+                 | ValueGT Value Value
+                 | ValueLT Value Value
+                 | ValueLE Value Value
+                 | ValueEQ Value Value
+                 | TrueObs
+                 | FalseObs
 ----
 
-Values provided by `+Choice+`s and `+Oracle+`s can be inspected and
-acted upon by contracts by using a ``little language'' for that purpose
-called `+Observation+`, as used in some of the contracts described by
-the `+Contract+` type.
+These are really self-explanatory: we can compare values for (in)equality and ordering, and combine observations using the Boolean connectives. The only other construct `ChoseSomething` indicates whether any choice has been made for a given `ChoiceId`.
 
-==== Participants
+Cases and actions are given by these types:
 
-All Marlowe contracts have a finite number of participants. In the
-semantics for Marlowe , we use integers to model participants; in the
-actual implementation, participants are typically represented by a
-public key or by its hash. In addition, the semantics takes a list of
-signatures (represented as a list of integer numbers), but in the
-implementation we assume that transactions are cryptographically signed
-using the private key of the participants, and that the implementation
-will check that these signatures are valid.
+[source,haskell]
+----
+data Case = Case Action Contract
 
-==== Infrastructure
+data Action = Deposit AccountId Party Value
+            | Choice ChoiceId [Bound]
+            | Notify Observation
+
+data Bound = Bound Integer Integer
+----
+Three kinds of action are possible: 
+
+* A `Deposit n p v` makes a deposit of value `v` into account number `n` belonging to party `p`.is made into account number 
+* A choice is made for a particular id with a list of bounds on the values that are acceptable.  For example, `[Bound 0 0, Bound 3 5]` offers the choice of one of `0`, `3`, `4` and `5`.
+* The contract is notified that a particular observation be made. Typically this would be done by one of the parties, or one of their wallets acting automatically.
+
+This completes our discussion of the types that make up Marlowe contracts.
+
+=== Dynamic data
+
+to do
+
+=== Slot ranges
+
+to do
+
+==== Notes
 
 The model makes a number of assumptions about the blockchain
 infrastructure in which it is run.
@@ -158,18 +152,14 @@ explicitly.
 * We assume that time is ``coarse grained'' and measured by block or
 slot number, so that, in particular, timeouts are delimited using
 block/slot numbers.
-* Making a commitment is not something that a contract can perform;
-rather, it can request that a commitment is made, but that then has to
-be established externally: hence the input of (a set of) commitments at
-each step.
-* The model manages the release of funds back to the committer when a
-cash commitment expires.
+* Making a deposit is not something that a contract can perform;
+rather, it can request that a deposit is made, but that then has to
+be established externally: hence the input of (a collection of) deposits for
+each transaction.
+* The model manages the refund of funds back to the person owning a particular account when a
+contract reaches the point of `Refund`.
 
-=== Notes
-
-* Marlowe 2.0 extends the Marlowe `+Contract+` type in version 1.3 with
-local definitions, scaling and a `+While+` construct.
-* For ease of reading, in the `+data+` type definition at the start of
+For ease of reading, in the `+data+` type definition at the start of
 this section, we omit the `+!+` symbol before every field of all
 constructors. This makes them strict in that field. We choose to make
 Marlowe strict in all arguments to all constructors, so that Marlowe

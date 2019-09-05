@@ -179,7 +179,7 @@ ivTo   (SlotInterval _ to)   = to
 ----
 How does this affect the processing of a Marlowe contract? Each step is processed relative to a slot interval, and the current slot value needs to lie within that interval. 
 
-The endpoints of the interval are accessible as the values `SlotIntervalStart` and `SlotIntervalEnd`, and these can be used in observations. Timeouts need to be processed _unambiguously_, so that _all values in the slot interval_ have to have exceeded the timeout for it to take effect. In other words, the timeout value needs to be greater than `SlotIntervalEnd`.
+The endpoints of the interval are accessible as the values `SlotIntervalStart` and `SlotIntervalEnd`, and these can be used in observations. Timeouts need to be processed _unambiguously_, so that _all values in the slot interval_ have to either have exceeded the timeout for it to take effect, or fall before the timeout, for normal execution to take effect. In other words, the timeout value needs to either be less or equal than `SlotIntervalStart` (in order for the timeout to take effect) or be strictly greater than `SlotIntervalEnd` (for normal execution to take place).
 
 ==== Notes
 

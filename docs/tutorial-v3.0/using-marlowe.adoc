@@ -1,5 +1,7 @@
 == Using Marlowe
 
+:prewrap:
+
 This tutorial shows you how to use Marlowe from within Haskell, and in
 particular shows how to exercise a contract using the semantics given in
 the link:./marlowe-semantics.md[earlier tutorial].
@@ -77,6 +79,7 @@ Prelude> :l Language/Marlowe/Examples/EscrowSimpleV2.hs
 In doing this we have pattern matched the output of an application of `computeTransaction`, which takes three inputs: the second is an initial state (at slot number 0) and the initial escrow contract. The first is a `TransactionInput` which contains a `SlotInterval` – here `SlotInterval 0 0` – and a deposit of 450 Lovelace from `"alice"` into her account `"alice"` namely `IDeposit "alice" "alice" 450`.
 
 The output is matched with `TransactionOutput txWarn1 txPay1 state1 con1` so that we can investigate the various components separately:
+
 [source,haskell]
 ----
 *Lang...V2> txWarn1
@@ -92,6 +95,7 @@ When [Case (Choice (ChoiceId "choice" "alice") [Bound 0 1])
 This shows that the transaction generates no warnings or payments, but updates the state to show the balance in the account `"alice"`, and updates the contract.
 
 In the next state the contract is waiting for input, and if both Alice and Bob agree to make a payment to Bob by choosing `0`, then a payment to Bob is generated. This is verified through this interaction in GHCI:
+
 [source,haskell]
 ----
 *Lang...V2> let (TransactionOutput txWarn2 txPay2 state2 con2) = computeTransaction (TransactionInput (SlotInterval 0 0) [IChoice (ChoiceId "choice" "alice") 0, IChoice (ChoiceId "choice" "bob") 0]) state1 con1
@@ -116,7 +120,8 @@ definitions used above in such a file.
 An alternative single stepping is given by
 
 * First step: Alice deposits money as in the earlier example.
-* Second step: Alice and Bob select different options. This can be done thus:
+* Second step: Alice and Bob select different options. This can be done like this:
+
 [source,haskell]
 ----
 *Lang...V2> let (TransactionOutput txWarn2 txPay2 state2 con2) = computeTransaction (TransactionInput (SlotInterval 0 0) [IChoice (ChoiceId "choice" "alice") 0, IChoice (ChoiceId "choice" "bob") 1]) state1 con1
@@ -125,12 +130,13 @@ When [Case (Choice (ChoiceId "choice" "carol") [Bound 1 1]) Refund,Case (Choice 
 *Lang...V2> state2
 State {accounts = fromList [(AccountId 0 "alice",450)], choices = fromList [(ChoiceId "choice" "alice",0),(ChoiceId "choice" "bob",1)], boundValues = fromList [], minSlot = 0}
 ----
+
 This shows that we're now in a contract where the choice is up to Carol, and that there is still the 450 Lovelace in the `"alice"` account.
 
 * Third step: Carol makes a choice. If she chooses 0, payment to Bob is made. If  she chooses 1, Alice is refunded. Let's do that now:
+
 [source,haskell]
 ----
-
 *Lang...V2> let (TransactionOutput txWarn3 txPay3 state3 con3) = computeTransaction (TransactionInput (SlotInterval 0 0) [IChoice (ChoiceId "choice" "carol") 1]) state2 con2
 *Lang...V2> txPay3
 [Payment "alice" 450]
@@ -139,6 +145,7 @@ Refund
 *Lang...V2> state3
 State {accounts = fromList [], choices = fromList [(ChoiceId "choice" "alice",0),(ChoiceId "choice" "bob",1),(ChoiceId "choice" "carol",1)], boundValues = fromList [], minSlot = 0}
 ----
+
 So now the contract is ready to `Refund`, but it is clear from `state3` that there are no accounts containing non-zero balances, and so the contract is terminated.
 
 Why is single stepping useful? It is the equivalent of debugging, and we

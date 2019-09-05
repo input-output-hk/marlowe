@@ -33,12 +33,14 @@ the different types used by the model, and discussing a
 number of assumptions about the infrastructure in which contracts will
 be run.
 
+//// 
 === link:./marlowe-semantics.adoc[Understanding the semantics] IGNORE THIS
 
 This tutorial gives an introduction to the formal semantics of Marlowe
 by presenting an overview of the key Haskell definitions that interpret
 inputs and transactions, as well as fitting those into a schematic
 overview of how the components of the semantics work together.
+////
 
 === link:./embedded-marlowe.adoc[Embedded Marlowe] NOT YET UPDATED
 

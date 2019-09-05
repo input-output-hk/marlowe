@@ -49,8 +49,7 @@ revisiting the escrow contract.
 === link:./using-marlowe.adoc[Using Marlowe]
 
 This tutorial shows you how to use Marlowe from within Haskell, and in
-particular shows how to exercise a contract using the semantics given in
-the link:./marlowe-semantics.adoc[earlier tutorial].
+particular shows how to exercise a contract using the semantics given earlier.
 
 === link:./playground-overview.adoc[The Marlowe Playground] NOT YET UPDATED
 

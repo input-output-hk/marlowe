@@ -206,4 +206,4 @@ Marlowe strict in all arguments to all constructors, so that Marlowe
 contracts are wholly _finite_ data structures, with no partial or
 infinite components.
 
-==== link:./marlowe-step-by-step.adoc[Prev] link:./README.adoc[Up] link:./marlowe-semantics.adoc[Next]
+==== link:./marlowe-step-by-step.adoc[Prev] link:./README.adoc[Up] link:./embedded-marlowe.adoc[Next]

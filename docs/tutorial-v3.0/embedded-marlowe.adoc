@@ -195,4 +195,4 @@ and
 https://github.com/input-output-hk/marlowe/blob/master/semantics-2.0/examples/embedded/Escrow.hs[`+EscrowV2.hs+`]
 in v2.0 of Marlowe.
 
-==== link:./marlowe-semantics.md[Prev] link:./README.md[Up] link:./using-marlowe.md[Next]
+==== link:./marlowe-data.adoc[Prev] link:./README.adoc[Up] link:./using-marlowe.adoc[Next]

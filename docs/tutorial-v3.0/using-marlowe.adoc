@@ -96,7 +96,7 @@ This shows that the transaction generates no warnings or payments, but updates t
 
 In the next state the contract is waiting for input, and if both Alice and Bob agree to make a payment to Bob by choosing `0`, then a payment to Bob is generated. This is verified through this interaction in GHCI:
 
-[source,haskell]
+[source%wrap,haskell]
 ----
 *Lang...V2> let (TransactionOutput txWarn2 txPay2 state2 con2) = computeTransaction (TransactionInput (SlotInterval 0 0) [IChoice (ChoiceId "choice" "alice") 0, IChoice (ChoiceId "choice" "bob") 0]) state1 con1
 *Lang...V2> txPay2

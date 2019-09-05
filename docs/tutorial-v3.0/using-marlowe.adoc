@@ -150,9 +150,8 @@ ____
 *Exercise*
 
 Explore some other ways of engaging with the contract - What happens
-when two participants choose to refund the money to Alice? - What
-happens if Bob requests a payment before the choice is made to make the
-payment to him? - What happens if the contract reaches timeout?
+when Bob and Alice choose to refund the money to Alice? - What
+happens if Bob and Alice disagree, but Carol sides with Bob?
 ____
 
 === There must be an easier way!

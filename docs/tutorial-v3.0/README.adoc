@@ -33,14 +33,14 @@ the different types used by the model, and discussing a
 number of assumptions about the infrastructure in which contracts will
 be run.
 
-=== link:./marlowe-semantics.adoc[Understanding the semantics]
+=== link:./marlowe-semantics.adoc[Understanding the semantics] IGNORE THIS
 
 This tutorial gives an introduction to the formal semantics of Marlowe
 by presenting an overview of the key Haskell definitions that interpret
 inputs and transactions, as well as fitting those into a schematic
 overview of how the components of the semantics work together.
 
-=== link:./embedded-marlowe.adoc[Embedded Marlowe]
+=== link:./embedded-marlowe.adoc[Embedded Marlowe] NOT YET UPDATED
 
 This tutorial shows how to use some simple features of Haskell to write
 Marlowe contracts that are more readable, maintainable and reusable, by
@@ -52,18 +52,18 @@ This tutorial shows you how to use Marlowe from within Haskell, and in
 particular shows how to exercise a contract using the semantics given in
 the link:./marlowe-semantics.adoc[earlier tutorial].
 
-=== link:./playground-overview.adoc[The Marlowe Playground]
+=== link:./playground-overview.adoc[The Marlowe Playground] NOT YET UPDATED
 
 This tutorial introduces the Marlowe Playground, an online tool for
 creating embedded Marlowe contracts and interactively stepping through
 their execution.
 
-=== link:./actus-marlowe.adoc[ACTUS and Marlowe]
+=== link:./actus-marlowe.adoc[ACTUS and Marlowe] NOT YET UPDATED
 
 This tutorial gives an introduction to the general idea of the ACTUS
 taxonomy, plus examples implemented in Marlowe.
 
-=== link:./marlowe-plutus.adoc[Implementing Marlowe in Plutus]
+=== link:./marlowe-plutus.adoc[Implementing Marlowe in Plutus] NOT YET UPDATED
 
 So far these tutorials have dealt with Marlowe as a “stand alone”
 artefact; this tutorial describes how Marlowe is implemented on

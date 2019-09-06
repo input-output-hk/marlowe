@@ -25,8 +25,7 @@ ada.
 * Funds will be locked until time 100.
 * Only after time 100 funds will be redeemable.
 
-image:./pix/escrow/contract1.png
-[Lock Savings,title="Lock Savings"]
+image:./pix/escrow/contract1.png[Lock Savings,title="Lock Savings"]
 
 Marlowe code:
 
@@ -59,8 +58,8 @@ Rules:
 * Alice can redeem funds after time 100 if Bob did not claim the
 payment.
 
-image:./pix/escrow/contract2.png
-[Lock Savings,title="Simple Payment with time limit to claim"]
+image:./pix/escrow/contract2.png[Lock
+Savings,title="Simple Payment with time limit to claim"]
 
 Marlowe code:
 
@@ -103,8 +102,7 @@ the payment to Bob.
 100.
 * Funds are reedemable by Alice after time 100.
 
-image:./pix/escrow/contract3.png[Lock
-Savings,title="Authorize payment"]
+image:./pix/escrow/contract3.png[Lock Savings,title="Authorize payment"]
 
 Marlowe code: ~~~~ CommitCash (IdentCC 1) 1 (ConstMoney 500) 10 100
 (When (PersonChoseThis (IdentChoice 1) 1 1) 40 (Pay (IdentPay 1) 1 2
@@ -135,8 +133,7 @@ Rules:
 from time 41 to time 100.
 * Funds are reedemable by Alice after time 100.
 
-image:./pix/escrow/contract4.png[Lock
-Savings,title="Deny payment"]
+image:./pix/escrow/contract4.png[Lock Savings,title="Deny payment"]
 
 Marlowe code:
 
@@ -189,8 +186,7 @@ after time 100.
 payment from time 61 to time 100.
 * Funds are reedemable by Alice after time 100.
 
-image:./pix/escrow/contract5.png[Lock
-Savings,title="Simple Escrow"]
+image:./pix/escrow/contract5.png[Lock Savings,title="Simple Escrow"]
 
 Marlowe Code:
 
@@ -250,13 +246,12 @@ immediatly.
 payment from time 61 to time 100.
 * Funds are reedemable by Alice after time 100.
 
-image:./pix/escrow/contract6.png[Lock
-Savings,title="Complete Escrow"]
+image:./pix/escrow/contract6.png[Lock Savings,title="Complete Escrow"]
 
 Decision Tree
 
-image:./pix/escrow/contract8.png[Lock
-Savings,title="Decision tree"] Marlowe Code:
+image:./pix/escrow/contract8.png[Lock Savings,title="Decision tree"]
+Marlowe Code:
 
 ....
 CommitCash (IdentCC 1) 1

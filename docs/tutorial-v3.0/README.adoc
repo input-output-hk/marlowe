@@ -26,6 +26,10 @@ This tutorial explains the five ways of building contracts in Marlowe. Four of t
 
 In explaining these contracts we will also explain Marlowe _values_, _observations_ and _actions_, which are used to supply external information and inputs to a running contract to control how it will evolve.
 
+== link:./escrow_step_by_step.adoc [Escrow step by step] NOT YET UPDATED
+On this tutorial we build the escrow contract step by step. From a single contract with a single actor (Alice) to multiple actors (Alice,Bob,Carol) and multiple interactions. /This was the script for the example in the udemy class/.
+
+
 === link:./marlowe-data.adoc[Marlowe and its components as Haskell data types]
 
 This tutorial formally introduces Marlowe as a Haskell data type, as well as presenting 

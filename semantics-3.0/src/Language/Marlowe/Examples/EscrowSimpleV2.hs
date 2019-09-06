@@ -1,7 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.Marlowe.Examples.EscrowSimpleV2 where
 
-import           Language.Marlowe
+import  Data.List (genericLength)
+import  Language.Marlowe
+import  Language.Marlowe.Pretty
+    
+main :: IO ()
+main = putStrLn $ show $ pretty $ contract
+   
 
 {- What does the vanilla contract look like?
   - if Alice and Bob choose

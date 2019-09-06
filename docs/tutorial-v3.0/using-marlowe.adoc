@@ -78,9 +78,9 @@ Prelude> :l Language/Marlowe/Examples/EscrowSimpleV2.hs
    contract
 ----
 
-In doing this we have pattern matched the output of an application of `computeTransaction`, which takes three inputs: the second is an initial state (at slot number 0) and the initial escrow contract. The first is a `TransactionInput` which contains a `SlotInterval` – here `SlotInterval 0 0` – and a deposit of 450 Lovelace from `"alice"` into her account `"alice"` namely `IDeposit "alice" "alice" 450`.
+In doing this we have pattern matched the output of an application of `computeTransaction`, which takes three inputs: the second is an initial state (at slot number 0) and the third is the initial escrow contract. The first is a `TransactionInput` which contains a `SlotInterval` – here `SlotInterval 0 0` – and a deposit of 450 Lovelace from `"alice"` into her account `"alice"` namely `IDeposit "alice" "alice" 450`.
 
-The output is matched with `TransactionOutput txWarn1 txPay1 state1 con1` so that we can investigate the various components separately:
+The output is matched with `TransactionOutput txWarn1 txPay1 state1 con1` so that we can examine the various components separately:
 
 [source,haskell]
 ----
@@ -95,7 +95,7 @@ State {accounts = fromList [(AccountId 0 "alice",450)], choices = fromList [],
 When [Case (Choice (ChoiceId "choice" "alice") [Bound 0 1]) 
  ...
 ----
-This shows that the transaction generates no warnings or payments, but updates the state to show the balance in the account `"alice"`, and updates the contract.
+This shows that the transaction generates no warnings or payments, but updates the state to show the balance in the account `"alice"`, and updates the contract, ready to receive a choice from Alice or Bob.
 
 In the next state the contract is waiting for input, and if both Alice and Bob agree to make a payment to Bob by choosing `0`, then a payment to Bob is generated. This is verified through this interaction in GHCI:
 
@@ -113,9 +113,6 @@ State {accounts = fromList [], choices = fromList [(ChoiceId "choice" "alice",0)
 (ChoiceId "choice" "bob",0)], boundValues = fromList [], minSlot = 0}
 ----
 
-Note that the local
-bindings are lost each time a `+:load+` or `+:l+` command is performed.
-
 An alternative way of doing this is to add these definitions to a
 working file, e.g. `+Build.hs+`, where these definitions will be
 preserved. Indeed, it would be very sensible to include some of the
@@ -123,7 +120,10 @@ definitions used above in such a file.
 
 === Alternative routes through the contract
 
-An alternative single stepping is given by
+
+The local
+bindings are lost each time a `+:load+` or `+:l+` command is performed, so doing that allows us to re-use some earlier commands.
+An alternative execution of the contract is given by
 
 * First step: Alice deposits money as in the earlier example.
 * Second step: Alice and Bob select different options. This can be done like this:
@@ -181,7 +181,7 @@ ____
 
 Yes, there is!
 
-We look next at how we can build a tool, the Marlowe Playground, that
+We look next at our tool, the Marlowe Playground, that
 will capitalise on the fact that we are working in a DSL to _automate_
 picking the right inputs and allow users to interact with contracts.
 

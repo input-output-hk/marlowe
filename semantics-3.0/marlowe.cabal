@@ -32,7 +32,6 @@ executable marlowe
                         Language.Marlowe.Examples.DepositIncentive
                         Language.Marlowe.Examples.Escrow
                         Language.Marlowe.Examples.EscrowSimple
-                        Language.Marlowe.Examples.EscrowSimpleV2
                         Language.Marlowe.Examples.ExpCrowdFunding
                         Language.Marlowe.Examples.ExpEscrow
                         Language.Marlowe.Examples.ExpRent

@@ -78,6 +78,8 @@ Prelude> :l Language/Marlowe/Examples/EscrowSimpleV2.hs
 
 In doing this we have pattern matched the output of an application of `computeTransaction`, which takes three inputs: the second is an initial state (at slot number 0) and the third is the initial escrow contract. The first is a `TransactionInput` which contains a `SlotInterval` – here `SlotInterval 0 0` – and a deposit of 450 Lovelace from `"alice"` into her account `"alice"` namely `IDeposit "alice" "alice" 450`.
 
+NOTE: If you want to try this for yourself in ghci, you can copy and paste from the code examples: they are in horizontally scrolling windows.
+
 The output is matched with `TransactionOutput txWarn1 txPay1 state1 con1` so that we can examine the various components separately:
 
 [source,haskell]

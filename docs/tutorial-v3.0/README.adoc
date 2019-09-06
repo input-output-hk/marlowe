@@ -53,24 +53,25 @@ revisiting the escrow contract.
 This tutorial shows you how to use Marlowe from within Haskell, and in
 particular shows how to exercise a contract using the semantics given earlier.
 
-=== link:./playground-overview.adoc[The Marlowe Playground] NOT YET UPDATED
+=== link:./playground-overview.adoc[The Marlowe Playground] TO BE UPDATED
 
 This tutorial introduces the Marlowe Playground, an online tool for
 creating embedded Marlowe contracts and interactively stepping through
 their execution.
 
-=== link:./actus-marlowe.adoc[ACTUS and Marlowe] NOT YET UPDATED
+=== link:./actus-marlowe.adoc[ACTUS and Marlowe] TO BE UPDATED
 
 This tutorial gives an introduction to the general idea of the ACTUS
 taxonomy, plus examples implemented in Marlowe.
 
+//// 
 === link:./marlowe-plutus.adoc[Implementing Marlowe in Plutus] NOT YET UPDATED
 
 So far these tutorials have dealt with Marlowe as a “stand alone”
 artefact; this tutorial describes how Marlowe is implemented on
 blockchain, using the “mockchain” that provides a high-fidelity
 simulation of the Cardano SL layer.
-
+////
 ____
 These tutorials address the current version of
 Marlowe, 3.0, which is implemented in the _Marlowe Playground_, and

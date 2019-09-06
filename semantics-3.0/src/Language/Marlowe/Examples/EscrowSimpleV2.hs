@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.Marlowe.Examples.EscrowSimpleV2 where
 
-import  Data.List (genericLength)
 import  Language.Marlowe
 import  Language.Marlowe.Pretty
     

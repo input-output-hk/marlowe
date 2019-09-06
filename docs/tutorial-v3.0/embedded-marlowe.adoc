@@ -66,7 +66,9 @@ Within these contracts we are also using simple abbreviations such as
 price :: Value
 price = Constant 450
 ----
-which indicates the price of the cat, and so the value of the money under escrow. We can also describe the choices made by Alice and Bob, noting that we’re also asked for a default value `defValue` just in case the choices have not been made.
+which indicates the price of the cat, and so the value of the money under escrow. 
+
+We can also describe the choices made by Alice and Bob, noting that we’re also asked for a default value `defValue` just in case the choices have not been made.
 
 [source,haskell]
 ----
@@ -196,7 +198,7 @@ ____
 This example has shown how embedding in Haskell gives us a more
 expressive language, simply by reusing some of the basic features of
 Haskell, namely definitions of constants and functions. In the next
-tutorial you will learn about how to exercise Marlowe contracts in ghci.
+tutorial you will learn about how to _exercise_ Marlowe contracts in ghci.
 
 ==== Note
 

@@ -609,26 +609,32 @@ termination reductionLoop
 fun reduceContractUntilQuiescent :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceResult" where
 "reduceContractUntilQuiescent env state contract = reductionLoop env state contract [] []"
 
-datatype ApplyResult = Applied State Contract
+datatype ApplyWarning = ApplyNoWarning
+                      | ApplyNonPositiveDeposit Party AccountId int
+
+datatype ApplyResult = Applied ApplyWarning State Contract
                      | ApplyNoMatchError
 
 fun applyCases :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightarrow> Case list \<Rightarrow> ApplyResult" where
 "applyCases env state (IDeposit accId1 party1 money)
             (Cons (Case (Deposit accId2 party2 val) cont) rest) =
   (let amount = evalValue env state val in
+   let warning = if amount > 0
+                 then ApplyNoWarning
+                 else ApplyNonPositiveDeposit party1 accId2 amount in
    let newState = state \<lparr> accounts := addMoneyToAccount accId1 money (accounts state) \<rparr> in
    if (accId1 = accId2 \<and> party1 = party2 \<and> money = amount)
-   then Applied newState cont
+   then Applied warning newState cont
    else applyCases env state (IDeposit accId1 party1 money) rest)" |
 "applyCases env state (IChoice choId1 choice)
             (Cons (Case (Choice choId2 bounds) cont) rest) =
   (let newState = state \<lparr> choices := MList.insert choId1 choice (choices state) \<rparr> in
    if (choId1 = choId2 \<and> inBounds choice bounds)
-   then Applied newState cont
+   then Applied ApplyNoWarning newState cont
    else applyCases env state (IChoice choId1 choice) rest)" |
 "applyCases env state INotify (Cons (Case (Notify obs) cont) rest) =
   (if evalObservation env state obs
-   then Applied state cont
+   then Applied ApplyNoWarning state cont
    else applyCases env state INotify rest)" |
 "applyCases env state (IDeposit accId1 party1 money) (Cons _ rest) =
   applyCases env state (IDeposit accId1 party1 money) rest" |
@@ -642,23 +648,52 @@ fun applyInput :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightar
 "applyInput env state input (When cases t cont) = applyCases env state input cases" |
 "applyInput env state input c = ApplyNoMatchError"
 
-datatype ApplyAllResult = ApplyAllSuccess "ReduceWarning list" "Payment list"
+datatype TransactionWarning = TransactionNonPositiveDeposit Party AccountId int
+                            | TransactionNonPositivePay AccountId Payee int
+                            | TransactionPartialPay AccountId Payee Money Money
+                            | TransactionShadowing ValueId int int
+
+fun convertReduceWarnings :: "ReduceWarning list \<Rightarrow> TransactionWarning list" where
+"convertReduceWarnings Nil = Nil" |
+"convertReduceWarnings (Cons ReduceNoWarning rest) =
+   convertReduceWarnings rest" |
+"convertReduceWarnings (Cons (ReduceNonPositivePay accId payee amount) rest) =
+   Cons (TransactionNonPositivePay accId payee amount)
+        (convertReduceWarnings rest)" |
+"convertReduceWarnings (Cons (ReducePartialPay accId payee paid expected) rest) =
+   Cons (TransactionPartialPay accId payee paid expected)
+        (convertReduceWarnings rest)" |
+"convertReduceWarnings (Cons (ReduceShadowing valId oldVal newVal) rest) =
+   Cons (TransactionShadowing valId oldVal newVal)
+        (convertReduceWarnings rest)"
+
+fun convertApplyWarning :: "ApplyWarning \<Rightarrow> TransactionWarning list" where
+"convertApplyWarning ApplyNoWarning = Nil" |
+"convertApplyWarning (ApplyNonPositiveDeposit party accId amount) =
+   Cons (TransactionNonPositiveDeposit party accId amount) Nil"
+
+datatype ApplyAllResult = ApplyAllSuccess "TransactionWarning list" "Payment list"
                                      State Contract
                         | ApplyAllNoMatchError
                         | ApplyAllAmbiguousSlotIntervalError
 
 fun applyAllLoop :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
-                    ReduceWarning list \<Rightarrow> Payment list \<Rightarrow>
+                    TransactionWarning list \<Rightarrow> Payment list \<Rightarrow>
                     ApplyAllResult" where
 "applyAllLoop env state contract inputs warnings payments =
    (case reduceContractUntilQuiescent env state contract of
       RRAmbiguousSlotIntervalError \<Rightarrow> ApplyAllAmbiguousSlotIntervalError
-    | ContractQuiescent warns pays curState cont \<Rightarrow>
+    | ContractQuiescent reduceWarns pays curState cont \<Rightarrow>
        (case inputs of
-          Nil \<Rightarrow> ApplyAllSuccess (warnings @ warns) (payments @ pays) curState cont
+          Nil \<Rightarrow> ApplyAllSuccess (warnings @ (convertReduceWarnings reduceWarns))
+                                 (payments @ pays) curState cont
         | Cons input rest \<Rightarrow>
            (case applyInput env curState input cont of
-              Applied newState cont \<Rightarrow> applyAllLoop env newState cont rest (warnings @ warns) (payments @ pays)
+              Applied applyWarn newState cont \<Rightarrow>
+                  applyAllLoop env newState cont rest
+                               (warnings @ (convertReduceWarnings reduceWarns)
+                                         @ (convertApplyWarning applyWarn))
+                               (payments @ pays)
             | ApplyNoMatchError \<Rightarrow> ApplyAllNoMatchError)))"
 
 fun applyAllInputs :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
@@ -672,7 +707,7 @@ datatype TransactionError = TEAmbiguousSlotIntervalError
                           | TEIntervalError IntervalError
                           | TEUselessTransaction
 
-record TransactionOutputRecord = txOutWarnings :: "ReduceWarning list"
+record TransactionOutputRecord = txOutWarnings :: "TransactionWarning list"
                                  txOutPayments :: "Payment list"
                                  txOutState :: State
                                  txOutContract :: Contract

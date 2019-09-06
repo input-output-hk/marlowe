@@ -524,28 +524,26 @@ reduceAll :: SymVal a => Bounds -> SEnvironment -> SState -> Contract
           -> (SReduceAllResult -> DetReduceAllResult -> SBV a) -> SBV a
 reduceAll bnds env sta c f = reduceAllAux bnds 0 Nothing env sta c [] [] f
 
-splitReduceAllResult :: Bounds -> SList NReduceWarning -> SList NReduceEffect
-                     -> SSReduceAllResult
-                     -> SBV ([NReduceWarning], [NReduceEffect], State, NReduceError)
-splitReduceAllResult bnds wa ef (SSReducedAll twa tef tsta) = ST.tuple $
-  (twa SL..++ wa, tef SL..++ ef, tsta, sReduceAmbiguousSlotInterval {- SNH -}) 
-splitReduceAllResult bnds _ _ (SSReduceAllError terr) =
-   ST.tuple $ ([] {- SNH -}, [] {- SNH -}, emptySState bnds 0{- SNH -}, terr)
-
-splitReduceAllResultWrap :: Bounds -> SList NReduceWarning -> SList NReduceEffect
-                         -> SReduceAllResult
-                         -> SBV ([NReduceWarning], [NReduceEffect], State, NReduceError)
-splitReduceAllResultWrap bnds wa ef sr =
-  symCaseReduceAllResult (splitReduceAllResult bnds wa ef) sr
-
 -- APPLY
+
+data ApplyWarning = ApplyNoWarning
+                  | ApplyNonPositiveDeposit Party NAccountId Integer
+  deriving (Eq,Ord,Show,Read)
+
+mkSymbolicDatatype ''ApplyWarning
+
+data TransactionWarning = TransactionReduceWarnings [NReduceWarning]
+                        | TransactionApplyWarning NApplyWarning
+
+mkSymbolicDatatype ''TransactionWarning
+
 
 data ApplyError = ApplyNoMatch
   deriving (Eq,Ord,Show,Read)
 
 mkSymbolicDatatype ''ApplyError
 
-data ApplyResult = Applied State
+data ApplyResult = Applied NApplyWarning State
                  | ApplyError NApplyError
   deriving (Eq,Show)
 
@@ -555,31 +553,50 @@ data DetApplyResult = DARNormal Contract
                                 Integer -- num of Inputs
                     | DARError
 
+splitReduceAllResult :: Bounds -> SList NTransactionWarning -> SList NReduceEffect
+                     -> SSReduceAllResult
+                     -> SBV ([NTransactionWarning], [NReduceEffect], State, NReduceError)
+splitReduceAllResult bnds wa ef (SSReducedAll twa tef tsta) = ST.tuple $
+  (ite (SL.null twa)
+       wa
+       (wa SL..++ (sTransactionReduceWarnings twa SL..: [])), tef SL..++ ef, tsta, sReduceAmbiguousSlotInterval {- SNH -}) 
+splitReduceAllResult bnds _ _ (SSReduceAllError terr) =
+   ST.tuple $ ([] {- SNH -}, [] {- SNH -}, emptySState bnds 0{- SNH -}, terr)
+
+splitReduceAllResultWrap :: Bounds -> SList NTransactionWarning -> SList NReduceEffect
+                         -> SReduceAllResult
+                         -> SBV ([NTransactionWarning], [NReduceEffect], State, NReduceError)
+splitReduceAllResultWrap bnds wa ef sr =
+  symCaseReduceAllResult (splitReduceAllResult bnds wa ef) sr
+
 -- Apply a single Input to the contract (assumes the contract is reduced)
 applyCases :: SymVal a => Bounds -> SEnvironment -> SState -> SSInput -> [Case] ->
               (SApplyResult -> DetApplyResult -> SBV a) -> SBV a
 applyCases bnds env state inp@(SSIDeposit accId1 party1 mon1)
            ((Case (Deposit accId2 party2 val2) nc): t) f =
   ite ((accId1 .== sAccId2) .&& (party1 .== sParty2) .&& (mon1 .== mon2))
-      (f (sApplied newState) (DARNormal nc 1))
+      (f (sApplied warning newState) (DARNormal nc 1))
       (applyCases bnds env state inp t f)
   where sAccId2 = literalAccountId accId2
         sParty2 = literal party2
         mon2 = evalValue bnds env state val2
+        warning = ite (mon2 .> 0)
+                      (sApplyNoWarning)
+                      (sApplyNonPositiveDeposit party1 sAccId2 mon2)
         accs = account state
         newAccs = addMoneyToAccount accs accId2 mon1
         newState = state `setAccount` newAccs
 applyCases bnds env state inp@(SSIChoice choId1 cho1)
            (Case (Choice choId2 bounds2) nc : t) f =
   ite ((choId1 .== sChoId2) .&& (inBounds cho1 bounds2))
-      (f (sApplied newState) (DARNormal nc 1))
+      (f (sApplied sApplyNoWarning newState) (DARNormal nc 1))
       (applyCases bnds env state inp t f)
   where newState = state `setChoice`
                      (IntegerArray.insert (choiceNumber choId2) cho1 $ choice state)
         sChoId2 = literalChoiceId choId2
 applyCases bnds env state inp@SSINotify (Case (Notify obs) nc : t) f =
   (ite (evalObservation bnds env state obs)
-       (f (sApplied state) (DARNormal nc 1))
+       (f (sApplied sApplyNoWarning state) (DARNormal nc 1))
        (applyCases bnds env state inp t f))
 applyCases _ _ _ _ _ f = f (sApplyError sApplyNoMatch) DARError
 
@@ -591,7 +608,7 @@ apply _ _ _ _ _ f = f (sApplyError sApplyNoMatch) DARError
 
 -- APPLY ALL
 
-data ApplyAllResult = AppliedAll [NReduceWarning] [NReduceEffect] State
+data ApplyAllResult = AppliedAll [NTransactionWarning] [NReduceEffect] State
                     | AAApplyError NApplyError
                     | AAReduceError NReduceError
   deriving (Eq,Show)
@@ -603,12 +620,16 @@ data DetApplyAllResult = DAARNormal Contract
                                     Integer -- num of Inputs 
                        | DAARError
 
+addIfEffWa :: SList NTransactionWarning -> SSApplyWarning -> SList NTransactionWarning
+addIfEffWa nwa SSApplyNoWarning = nwa
+addIfEffWa nwa (SSApplyNonPositiveDeposit party accId amount) =
+  nwa SL..++ ((sTransactionApplyWarning $ sApplyNonPositiveDeposit party accId amount) SL..: [])
 
 -- Apply a list of Inputs to the contract
 applyAllAux :: SymVal a => Integer
             -> Bounds -> Integer -> Integer
             -> SEnvironment -> SState -> Contract -> SList NInput
-            -> SList NReduceWarning -> SList NReduceEffect
+            -> SList NTransactionWarning -> SList NReduceEffect
             -> (SApplyAllResult -> DetApplyAllResult -> SBV a) -> SBV a
 applyAllAux n bnds numPays numInps env state c l wa ef f
   | n >= 0 = reduceAll bnds env state c contFunReduce
@@ -629,14 +650,15 @@ applyAllAux n bnds numPays numInps env state c l wa ef f
         contFunApply _ _ _ _ sr DARError =
           f (symCaseApplyResult
                (\x -> case x of
-                        SSApplied _ -> sAAReduceError sReduceAmbiguousSlotInterval -- SNH 
+                        SSApplied _ _ -> sAAReduceError sReduceAmbiguousSlotInterval -- SNH 
                         SSApplyError err -> sAAApplyError err) sr)
             DAARError
         contFunApply t nwa nef np sr (DARNormal nc ni) =
           (symCaseApplyResult
              (\x -> case x of
-                      SSApplied nst -> applyAllAux (n - 1) bnds (numPays + np) (numInps + ni)
-                                                   env nst nc t nwa nef f
+                      SSApplied twa nst ->
+                          applyAllAux (n - 1) bnds (numPays + np) (numInps + ni)
+                                      env nst nc t (symCaseApplyWarning (addIfEffWa nwa) twa) nef f
                       SSApplyError err -> f (sAAApplyError err) DAARError {- SNH -}) sr)
 
 applyAll :: SymVal a => Bounds
@@ -651,23 +673,18 @@ applyAll bnds env state c l f =
 --type STransactionSignatures = FSSet Party
 --type NTransactionSignatures = NSet Party
 
-data ProcessError = PEReduceError NReduceError
-                  | PEApplyError NApplyError
-                  | PEIntervalError NIntervalError
-                  | PEUselessTransaction
+data TransactionError = TEReduceError NReduceError
+                      | TEApplyError NApplyError
+                      | TEIntervalError NIntervalError
+                      | TEUselessTransaction
   deriving (Eq,Show)
 
-mkSymbolicDatatype ''ProcessError
+mkSymbolicDatatype ''TransactionError
 
-type ProcessWarning = ReduceWarning
-type NProcessWarning = NReduceWarning
-type SProcessWarning = SReduceWarning
-type SSProcessWarning = SSReduceWarning
-
-type ProcessEffect = ReduceEffect
-type NProcessEffect = NReduceEffect
-type SProcessEffect = SReduceEffect
-type SSProcessEffect = SSReduceEffect
+type TransactionEffect = ReduceEffect
+type NTransactionEffect = NReduceEffect
+type STransactionEffect = SReduceEffect
+type SSTransactionEffect = SSReduceEffect
 
 --data Transaction = Transaction { interval :: SSlotInterval
 --                               , inputs   :: [SInput] }
@@ -735,40 +752,38 @@ sFoldl inte f acc list
 --getOutcomes bnds numPays numInps eff inp =
 --  getOutcomesAux bnds numPays numInps eff inp emptyOutcome 
 
-data ProcessResult = Processed [NProcessWarning]
-                               [NProcessEffect]
+data TransactionResult = TransactionProcessed [NTransactionWarning]
+                               [NTransactionEffect]
 --                               NTransactionSignatures
 --                               NTransactionOutcomes
                                State
-                   | ProcessError NProcessError
+                   | TransactionError NTransactionError
   deriving (Eq,Show)
 
+mkSymbolicDatatype ''TransactionResult
 
-mkSymbolicDatatype ''ProcessResult
-
-
-data DetProcessResult = DPProcessed Contract
-                      | DPError
+data DetTransactionResult = DTProcessed Contract
+                      | DTError
 
 extractAppliedAll :: SymVal a => Bounds -> SSApplyAllResult
-   -> (SBV [NProcessWarning] -> SBV [NProcessEffect] -> SBV State -> SBV a)
+   -> (SBV [NTransactionWarning] -> SBV [NTransactionEffect] -> SBV State -> SBV a)
    -> SBV a
-extractAppliedAll _ (SSAppliedAll wa ef nsta) f = f wa ef nsta 
+extractAppliedAll _ (SSAppliedAll wa ef nsta) f = f (wa) ef nsta 
 extractAppliedAll bnds (SSAAApplyError _) f = f [] [] (emptySState bnds 0) -- SNH
 extractAppliedAll bnds (SSAAReduceError _) f = f [] [] (emptySState bnds 0) -- SNH
 
-convertProcessError :: SymVal a => SSApplyAllResult
-                    -> (SProcessResult -> DetProcessResult -> SBV a) -> SBV a
-convertProcessError (SSAppliedAll _ _ _) f =
-  f (sProcessError $ sPEReduceError $ sReduceAmbiguousSlotInterval) DPError -- SNH
-convertProcessError (SSAAApplyError aperr) f =
-  f (sProcessError $ sPEApplyError aperr) DPError
-convertProcessError (SSAAReduceError reerr) f =
-  f (sProcessError $ sPEReduceError reerr) DPError
+convertTransactionError :: SymVal a => SSApplyAllResult
+                        -> (STransactionResult -> DetTransactionResult -> SBV a) -> SBV a
+convertTransactionError (SSAppliedAll _ _ _) f =
+  f (sTransactionError $ sTEReduceError $ sReduceAmbiguousSlotInterval) DTError -- SNH
+convertTransactionError (SSAAApplyError aperr) f =
+  f (sTransactionError $ sTEApplyError aperr) DTError
+convertTransactionError (SSAAReduceError reerr) f =
+  f (sTransactionError $ sTEReduceError reerr) DTError
 
 -- Try to process a transaction
 processApplyResult :: SymVal a => Bounds -> STransaction -> Contract
-                   -> (SProcessResult -> DetProcessResult -> SBV a)
+                   -> (STransactionResult -> DetTransactionResult -> SBV a)
                    -> SApplyAllResult -> DetApplyAllResult 
                    -> SBV a
 processApplyResult bnds tra c f saar (DAARNormal ncon numPays numInps) =
@@ -779,60 +794,60 @@ processApplyResult bnds tra c f saar (DAARNormal ncon numPays numInps) =
 --        let sigs = getSignatures bnds numInps inps in
 --        let outcomes = getOutcomes bnds numPays numInps ef inps in
         if c == ncon
-        then f (sProcessError sPEUselessTransaction) DPError
-        else f (sProcessed wa ef {- sigs outcomes -} nsta) (DPProcessed ncon)))
+        then f (sTransactionError sTEUselessTransaction) DTError
+        else f (sTransactionProcessed wa ef {- sigs outcomes -} nsta) (DTProcessed ncon)))
     saar
   where inps = inputs tra
 processApplyResult _ _ _ f saar DAARError =
   symCaseApplyAllResult
-    (\aar -> convertProcessError aar f)
+    (\aar -> convertTransactionError aar f)
     saar
 
 processAux :: SymVal a => Bounds -> STransaction -> SState -> Contract
-           -> (SProcessResult -> DetProcessResult -> SBV a)
+           -> (STransactionResult -> DetTransactionResult -> SBV a)
            -> SSIntervalResult -> SBV a
 processAux bnds tra _ c f (SSIntervalTrimmed env fixSta) =
   applyAll bnds env fixSta c (inputs tra)
            (\sym det -> processApplyResult bnds tra c f sym det)
 processAux _ _ _ _ f (SSIntervalError intErr) =
-  f (sProcessError $ sPEIntervalError intErr) DPError
+  f (sTransactionError $ sTEIntervalError intErr) DTError
 
 process :: SymVal a => Bounds -> STransaction -> SState -> Contract
-        -> (SProcessResult -> DetProcessResult -> SBV a) -> SBV a
+        -> (STransactionResult -> DetTransactionResult -> SBV a) -> SBV a
 process bnds tra sta c f =
   symCaseIntervalResult (\interv -> processAux bnds tra sta c f interv)
                         (fixInterval (interval tra) sta)
 
-extractProcessResult :: Bounds ->
-                        SProcessResult -> ( SList NProcessWarning
-                                          , SList NProcessEffect
---                                          , STransactionSignatures
---                                          , STransactionOutcomes
-                                          , SState)
-extractProcessResult bnds spr =
-  ST.untuple (symCaseProcessResult prCases spr)
-  where prCases (SSProcessed wa ef {- ts to -} nst) = ST.tuple (wa, ef, {- ts, to, -} nst)
-        prCases (SSProcessError _) = ST.tuple ([], [], {- [], [], -} emptySState bnds 0) -- SNH 
+extractTransactionResult :: Bounds ->
+                        STransactionResult -> ( SList NTransactionWarning
+                                              , SList NTransactionEffect
+--                                            , STransactionSignatures
+--                                            , STransactionOutcomes
+                                              , SState)
+extractTransactionResult bnds spr =
+  ST.untuple (symCaseTransactionResult prCases spr)
+  where prCases (SSTransactionProcessed wa ef {- ts to -} nst) = ST.tuple (wa, ef, {- ts, to, -} nst)
+        prCases (SSTransactionError _) = ST.tuple ([], [], {- [], [], -} emptySState bnds 0) -- SNH 
 
 warningsTraceWBAux :: Integer -> Bounds -> SState -> SList NTransaction -> Contract
-                   -> (SList NProcessWarning)
+                   -> (SList NTransactionWarning)
 warningsTraceWBAux inte bnds st transList con
   | inte >= 0 = ite (SL.null transList)
                     []
                     (process bnds (SL.head transList) st con cont)
   | otherwise = [] -- SNH 
-  where cont spr (DPProcessed ncon) = let (wa, _, {- _, _, -} nst) =
-                                             extractProcessResult bnds spr in
+  where cont spr (DTProcessed ncon) = let (wa, _, {- _, _, -} nst) =
+                                             extractTransactionResult bnds spr in
                                       ite (SL.null $ wa)
                                           (warningsTraceWBAux (inte - 1) bnds nst
                                                               (SL.tail transList) ncon)
                                           (ite (SL.null (SL.tail transList))
                                                wa
                                                [])
-        cont _ DPError = []
+        cont _ DTError = []
 
 warningsTraceWB :: Bounds -> SSlotNumber -> SList NTransaction -> Contract
-                -> (SList NProcessWarning)
+                -> (SList NTransactionWarning)
 warningsTraceWB bnds sn transList con =
   warningsTraceWBAux (numActions bnds) bnds (emptySState bnds sn) transList con
 
@@ -842,7 +857,6 @@ type MaxActions = Integer
 
 convertTimeout :: MS.Timeout -> Timeout
 convertTimeout (MS.Slot num) = num
-
 
 convertAccId :: MS.AccountId -> Mappings -> (AccountId, Mappings)
 convertAccId accId@(MS.AccountId _ party) maps =
@@ -1056,30 +1070,41 @@ revertReduceWarningList (ReduceShadowing valId int1 int2) maps =
      MS.ReduceShadowing newValId int1 int2
   where newValId = revertValId (unNestValueId valId) maps
 
+revertTransactionWarningList :: TransactionWarning -> Mappings -> [MS.TransactionWarning]
+revertTransactionWarningList (TransactionReduceWarnings warningList) maps =
+  MS.convertReduceWarnings $ map (((flip revertReduceWarningList) maps) . unNestReduceWarning) warningList
+revertTransactionWarningList (TransactionApplyWarning applyWarning) maps =
+  case unNestApplyWarning applyWarning of
+    (ApplyNonPositiveDeposit party accId amount) ->
+       [MS.TransactionNonPositiveDeposit (revertParty party maps)
+                                         (revertAccId (unNestAccountId accId) maps)
+                                         amount]
+    ApplyNoWarning -> error "ApplyNoWarning in result"
 
 snLabel, transListLabel :: String
 snLabel = "sn"
 transListLabel = "transList"
 
 extractCounterExample :: SMTModel -> Mappings
-                      -> (SSlotNumber -> SList NTransaction -> SList NProcessWarning)
-                      -> (MS.Slot, [MS.TransactionInput], [MS.ReduceWarning])
+                      -> (SSlotNumber -> SList NTransaction -> SList NTransactionWarning)
+                      -> (MS.Slot, [MS.TransactionInput], [MS.TransactionWarning])
 extractCounterExample smtModel maps func = ( revertSlotNum slotNum
                                            , revertTransactionList transList maps
-                                           , revertAllWarnings warningList)
+                                           , revertAllWarnings )
   where assocs = modelAssocs smtModel
         (Just cvSlotNum) = lookup snLabel assocs
         (Just cvTransList) = lookup transListLabel assocs
         slotNum = fromCV cvSlotNum
         transList = fromCV cvTransList
         Just warningList = unliteral (func (literal slotNum) (literal transList))
-        revertAllWarnings = map (\x -> revertReduceWarningList (unNestReduceWarning x) maps)
+        revertAllWarnings = concat $ map (\x -> revertTransactionWarningList
+                                                  (unNestTransactionWarning x) maps) warningList
 
 warningsTrace :: MS.Contract
               -> IO (Either (ThmResult)
                             (Maybe ( MS.Slot
                                    , [MS.TransactionInput]
-                                   , [MS.ReduceWarning] )))
+                                   , [MS.TransactionWarning] )))
 warningsTrace con =
     do thmRes@(ThmResult result) <- satCommand
        return (case result of

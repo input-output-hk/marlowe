@@ -42,7 +42,7 @@ inputs and transactions, as well as fitting those into a schematic
 overview of how the components of the semantics work together.
 ////
 
-=== link:./embedded-marlowe.adoc[Embedded Marlowe] NOT YET UPDATED
+=== link:./embedded-marlowe.adoc[Embedded Marlowe] 
 
 This tutorial shows how to use some simple features of Haskell to write
 Marlowe contracts that are more readable, maintainable and reusable, by

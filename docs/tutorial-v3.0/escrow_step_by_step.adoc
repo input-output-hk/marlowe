@@ -8,11 +8,11 @@ A new smart contract language for the financial world
 
 [[tutorial.-building-upon-an-escrow-contract.]]
 Tutorial. Building upon an escrow contract.
-+++++++++++++++++++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 [[contract-1.-locked-savings.]]
 Contract 1. Locked Savings.
-+++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Goal:
 
@@ -41,11 +41,9 @@ Test cases:
 * Ada cannot be redeemed before time 100
 * Ada can be redeemed after time 100
 
---
-
 [[contract-2.-simple-payment-with-time-limit-to-claim.]]
 Contract 2. Simple Payment with time limit to claim.
-++++++++++++++++++++++++++++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Goal:
 
@@ -58,7 +56,8 @@ Rules:
 * Alice can redeem funds after time 100 if Bob did not claim the
 payment.
 
-image:./pix/escrow/contract2.png[Lock Savings,title="Simple Payment with time limit to claim"]
+image:./pix/escrow/contract2.png[Lock
+Savings,title="Simple Payment with time limit to claim"]
 
 Marlowe code:
 
@@ -81,11 +80,9 @@ reached.
 * Only person 2 can claim the payment.
 * Ada can be redeemed after time 100.
 
---
-
 [[contract-3.-authorize-payment]]
 Contract 3. Authorize payment
-+++++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Goal:
 
@@ -123,11 +120,9 @@ Test cases:
 * Alice authorizes payment
 * Alice doesn’t authorize
 
---
-
 [[contract-4.-pay-unless-explicit-rejection]]
 Contract 4. Pay unless explicit rejection
-+++++++++++++++++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Goal:
 
@@ -169,11 +164,9 @@ Test cases:
 * Alice can cancel payment
 * Bob can’t claim payment before block 40 or approval from alice.
 
---
-
 [[contract-5.-simple-escrow]]
 Contract 5. Simple Escrow
-+++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Goal:
 
@@ -227,11 +220,9 @@ pay.
 * Only person 2 (bob) can claim the payment.
 * Ada can be redeemed after block 100
 
---
-
 [[contract-6.-complete-escrow]]
 Contract 6. Complete Escrow
-+++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Goal:
 

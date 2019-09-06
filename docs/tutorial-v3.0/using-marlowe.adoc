@@ -68,14 +68,12 @@ https://github.com/input-output-hk/marlowe/blob/master/semantics-3.0/src/Languag
 To single step, you can work in `+ghci+` like this, using the facility
 to make local bindings:
 
-[source,haskell]
+[,haskell]
 ----
 Prelude> :set -XOverloadedStrings
 Prelude> :l Language/Marlowe/Examples/EscrowSimpleV2.hs 
  ...
- *Lang...V2> let (TransactionOutput txWarn1 txPay1 state1 con1) = computeTransaction
-  (TransactionInput (SlotInterval 0 0) [IDeposit "alice" "alice" 450]) (emptyState 0)
-   contract
+*Lang...V2> let (TransactionOutput txWarn1 txPay1 state1 con1) = computeTransaction (TransactionInput (SlotInterval 0 0) [IDeposit "alice" "alice" 450]) (emptyState 0) contract
 ----
 
 In doing this we have pattern matched the output of an application of `computeTransaction`, which takes three inputs: the second is an initial state (at slot number 0) and the third is the initial escrow contract. The first is a `TransactionInput` which contains a `SlotInterval` – here `SlotInterval 0 0` – and a deposit of 450 Lovelace from `"alice"` into her account `"alice"` namely `IDeposit "alice" "alice" 450`.

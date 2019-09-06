@@ -58,8 +58,7 @@ Rules:
 * Alice can redeem funds after time 100 if Bob did not claim the
 payment.
 
-image:./pix/escrow/contract2.png[Lock
-Savings,title="Simple Payment with time limit to claim"]
+image:./pix/escrow/contract2.png[Lock Savings,title="Simple Payment with time limit to claim"]
 
 Marlowe code:
 
@@ -104,10 +103,20 @@ the payment to Bob.
 
 image:./pix/escrow/contract3.png[Lock Savings,title="Authorize payment"]
 
-Marlowe code: ~~~~ CommitCash (IdentCC 1) 1 (ConstMoney 500) 10 100
-(When (PersonChoseThis (IdentChoice 1) 1 1) 40 (Pay (IdentPay 1) 1 2
-(AvailableMoney (IdentCC 1)) 100 Null) (RedeemCC (IdentCC 1) Null)) Null
-~~~~
+Marlowe code:
+
+....
+CommitCash (IdentCC 1) 1
+           (ConstMoney 500)
+           10 100
+           (When (PersonChoseThis (IdentChoice 1) 1 1)
+                 40
+                 (Pay (IdentPay 1) 1 2
+                      (AvailableMoney (IdentCC 1))
+                      100 Null)
+                 (RedeemCC (IdentCC 1) Null))
+           Null
+....
 
 Test cases:
 
@@ -251,6 +260,7 @@ image:./pix/escrow/contract6.png[Lock Savings,title="Complete Escrow"]
 Decision Tree
 
 image:./pix/escrow/contract8.png[Lock Savings,title="Decision tree"]
+
 Marlowe Code:
 
 ....

@@ -8,11 +8,11 @@ A new smart contract language for the financial world
 
 [[tutorial.-building-upon-an-escrow-contract.]]
 Tutorial. Building upon an escrow contract.
-+++++++++++++++++++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 [[contract-1.-locked-savings.]]
 Contract 1. Locked Savings.
-+++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Goal:
 
@@ -21,19 +21,18 @@ Goal:
 Rules:
 
 * Alice has from time 0 to time 10 to make a deposit (commit) of 500
-ada. +
-* Funds will be locked until time 100. +
+ada.
+* Funds will be locked until time 100.
 * Only after time 100 funds will be redeemable.
 
-image:/Users/carloslopezdelara/Desktop/contract1.png[Lock
-Savings,title="Lock Savings"]
+image:./pix/escrow/contract1.png[Lock Savings,title="Lock Savings"]
 
 Marlowe code:
 
 ....
 CommitCash (IdentCC 1) 1
            (ConstMoney 500)
-           10 100 Null Null 
+           10 100 Null Null
 ....
 
 Test cases:
@@ -42,37 +41,48 @@ Test cases:
 * Ada cannot be redeemed before time 100
 * Ada can be redeemed after time 100
 
-[width="2%",cols="100%",]
-|=======================================================================
-|#### Contract 2. Simple Payment with time limit to claim.
+[[contract-2.-simple-payment-with-time-limit-to-claim.]]
+Contract 2. Simple Payment with time limit to claim.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-|Goal:
+Goal:
 
-|- Pay for a product or service.
+* Pay for a product or service.
 
-|Rules:
+Rules:
 
-|- Alice has from time 0 to time 10 to make a deposit of 500 ada. - Bob
-can claim payment from time 11 to time 100. - Alice can redeem funds
-after time 100 if Bob did not claim the payment.
+* Alice has from time 0 to time 10 to make a deposit of 500 ada.
+* Bob can claim payment from time 11 to time 100.
+* Alice can redeem funds after time 100 if Bob did not claim the
+payment.
 
-|image:/Users/carloslopezdelara/Desktop/contract2.png[Lock
+image:./pix/escrow/contract2.png[Lock
 Savings,title="Simple Payment with time limit to claim"]
 
-|Marlowe code:
+Marlowe code:
 
-|~~~~ CommitCash (IdentCC 1) 1 (ConstMoney 500) 10 100 (Pay (IdentPay 1)
-1 2 (AvailableMoney (IdentCC 1)) 100 Null) Null ~~~~ Test cases:
+....
+CommitCash (IdentCC 1) 1
+           (ConstMoney 500)
+           10 100
+           (Pay (IdentPay 1) 1 2
+                (AvailableMoney (IdentCC 1))
+                100 Null)
+           Null
+....
 
-|- Cash cannot be committed after time 10. - Ada can be claimed at any
-time after commitment and before time 100 is reached. - Ada cannot be
-redeemed before time 100. - Only person 2 can claim the payment. - Ada
-can be redeemed after time 100.
-|=======================================================================
+Test cases:
+
+* Cash cannot be committed after time 10.
+* Ada can be claimed at any time after commitment and before time 100 is
+reached.
+* Ada cannot be redeemed before time 100.
+* Only person 2 can claim the payment.
+* Ada can be redeemed after time 100.
 
 [[contract-3.-authorize-payment]]
 Contract 3. Authorize payment
-+++++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Goal:
 
@@ -88,24 +98,31 @@ the payment to Bob.
 100.
 * Funds are reedemable by Alice after time 100.
 
-image:/Users/carloslopezdelara/Desktop/contract3.png[Lock
-Savings,title="Authorize payment"]
+image:./pix/escrow/contract3.png[Lock Savings,title="Authorize payment"]
 
-Marlowe code: ~~~~ CommitCash (IdentCC 1) 1 (ConstMoney 500) 10 100
-(When (PersonChoseThis (IdentChoice 1) 1 1) 40 (Pay (IdentPay 1) 1 2
-(AvailableMoney (IdentCC 1)) 100 Null) (RedeemCC (IdentCC 1) Null)) Null
-~~~~
+Marlowe code:
+
+....
+CommitCash (IdentCC 1) 1
+           (ConstMoney 500)
+           10 100
+           (When (PersonChoseThis (IdentChoice 1) 1 1)
+                 40
+                 (Pay (IdentPay 1) 1 2
+                      (AvailableMoney (IdentCC 1))
+                      100 Null)
+                 (RedeemCC (IdentCC 1) Null))
+           Null
+....
 
 Test cases:
 
 * Alice authorizes payment
 * Alice doesn’t authorize
 
---
-
 [[contract-4.-pay-unless-explicit-rejection]]
 Contract 4. Pay unless explicit rejection
-+++++++++++++++++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Goal:
 
@@ -120,8 +137,7 @@ Rules:
 from time 41 to time 100.
 * Funds are reedemable by Alice after time 100.
 
-image:/Users/carloslopezdelara/Desktop/contract4.png[Lock
-Savings,title="Deny payment"]
+image:./pix/escrow/contract4.png[Lock Savings,title="Deny payment"]
 
 Marlowe code:
 
@@ -148,11 +164,9 @@ Test cases:
 * Alice can cancel payment
 * Bob can’t claim payment before block 40 or approval from alice.
 
---
-
 [[contract-5.-simple-escrow]]
 Contract 5. Simple Escrow
-+++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Goal:
 
@@ -174,8 +188,7 @@ after time 100.
 payment from time 61 to time 100.
 * Funds are reedemable by Alice after time 100.
 
-image:/Users/carloslopezdelara/Desktop/contract5.png[Lock
-Savings,title="Simple Escrow"]
+image:./pix/escrow/contract5.png[Lock Savings,title="Simple Escrow"]
 
 Marlowe Code:
 
@@ -207,11 +220,9 @@ pay.
 * Only person 2 (bob) can claim the payment.
 * Ada can be redeemed after block 100
 
---
-
 [[contract-6.-complete-escrow]]
 Contract 6. Complete Escrow
-+++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Goal:
 
@@ -235,13 +246,13 @@ immediatly.
 payment from time 61 to time 100.
 * Funds are reedemable by Alice after time 100.
 
-image:/Users/carloslopezdelara/Desktop/contract6.png[Lock
-Savings,title="Complete Escrow"]
+image:./pix/escrow/contract6.png[Lock Savings,title="Complete Escrow"]
 
 Decision Tree
 
-image:/Users/carloslopezdelara/Desktop/contract8.png[Lock
-Savings,title="Decision tree"] Marlowe Code:
+image:./pix/escrow/contract8.png[Lock Savings,title="Decision tree"]
+
+Marlowe Code:
 
 ....
 CommitCash (IdentCC 1) 1
@@ -278,5 +289,3 @@ Test Cases:
 
 * Check that when both Alice and Carol choose NOT to pay, Alice can
 immediately redeem the funds.
-
-'''''

@@ -57,7 +57,7 @@ revisiting the escrow contract.
 This tutorial shows you how to use Marlowe from within Haskell, and in
 particular shows how to exercise a contract using the semantics given earlier.
 
-=== link:./playground-overview.adoc[The Marlowe Playground] TO BE UPDATED
+=== link:./playground-overview.adoc[The Marlowe Playground]
 
 This tutorial introduces the Marlowe Playground, an online tool for
 creating embedded Marlowe contracts and interactively stepping through

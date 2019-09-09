@@ -9,7 +9,7 @@ plus examples implemented in Marlowe.
 The ACTUS Financial Research Foundation https://www.actusfrf.org has
 created a standard for financial contracts, categorised by means of a
 https://www.actusfrf.org/taxonomy[taxonomy] and described in a detailed
-https://www.actusfrf.org/algorithmic-standard[technical specification].
+https://www.actusfrf.org/techspecs[technical specification].
 
 The ACTUS standards build on the understanding that financial contracts
 are legal agreements between two (or more) counterparties on the
@@ -140,4 +140,4 @@ ____
 IOHK plans to implement the full ACTUS standard using Marlowe and Plutus
 over the coming year.
 
-==== link:./playground-overview.md[Prev] link:./README.md[Up] link:./marlowe-plutus.md[Next]
+==== link:./playground-overview.adoc[Prev] link:./README.adoc[Up] 

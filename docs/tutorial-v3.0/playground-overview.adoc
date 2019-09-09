@@ -40,7 +40,7 @@ image:./pix/haskell-2.png[The Haskell editor]
 
 The figure shows a screenshot of the Marlowe Playground in the middle of
 developing an “escrow” contract; other contract examples, based on the
-link:./actus-marlowe.md[ACTUS] standard, can be loaded by clicking on
+link:./actus-marlowe.adoc[ACTUS] standard, can be loaded by clicking on
 the named *Demos* below the *HASKELL EDITOR* tab.
 
 image:./pix/gists.png[Loading and saving github gists]
@@ -146,7 +146,7 @@ system to its initial state by pressing the *Reset* button.
 
 Use the Marlowe Playground to interact with the `+escrow+` contract in
 the various scenarios discussed earlier, in the tutorial on
-link:./using-marlowe.md[using Marlowe].
+link:./using-marlowe.adoc[using Marlowe].
 
 Explore making some changes to the contract, and interactions with those
 modified contracts.
@@ -160,4 +160,4 @@ Use the Marlowe Playground to explore the other contracts presented in
 there: the deposit incentive contract, and the crowd-funding example.
 ====
 
-==== link:./using-marlowe.md[Prev] link:./README.md[Up] link:./actus-marlowe.md[Next]
+==== link:./using-marlowe.adoc[Prev] link:./README.adoc[Up] link:./actus-marlowe.adoc[Next]

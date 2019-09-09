@@ -37,7 +37,7 @@ number of advantages:
 all Marlowe contracts, thus making it easier to implement, review, and
 test what we have done.
 * It is close to the semantics of Marlowe, as described in the
-link:./marlowe-semantics.md[earlier tutorial], so making it easier to
+link:./marlowe-semantics.adoc[earlier tutorial], so making it easier to
 validate.
 * It means that the same implementation can be used for both on- and
 off-chain (wallet) execution of Marlowe code.
@@ -228,4 +228,4 @@ https://github.com/input-output-hk/plutus/blob/master/plutus-tutorial/tutorial/T
 * The extended UTxO model
 https://github.com/input-output-hk/plutus/blob/master/docs/extended-utxo/README.md[link]
 
-==== link:./actus-marlowe.md[Prev] link:./README.md[Up] link:[Next]
+==== link:./actus-marlowe.adoc[Prev] link:./README.adoc[Up] link:[Next]

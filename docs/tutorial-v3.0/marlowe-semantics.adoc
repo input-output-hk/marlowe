@@ -14,7 +14,7 @@ participants. Concretely, we represent a transaction as a list of
 `+AnyInput+`s together with a set of integers representing the set of
 signatories.
 
-As we mentioned in link:./marlowe-data.md[the previous tutorial], inputs
+As we mentioned in link:./marlowe-data.adoc[the previous tutorial], inputs
 can have one out of four kinds: `+Commit+`, `+Pay+`, `+Choice+`, and
 `+Oracle+`. Of these, `+Commit+` and `+Pay+` are considered to be
 _actions_ and are typically associated with the transfer of money
@@ -460,4 +460,4 @@ Analogously to `+Scale+`, `+Let+` construct will only get reduced when
 there are no corresponding `+Use+` constructs that use it, this clean-up
 procedure is carried out by `+simplify+` function.
 
-==== link:./marlowe-data.md[Prev] link:./README.md[Up] link:./embedded-marlowe.md[Next]
+==== link:./marlowe-data.adoc[Prev] link:./README.adoc[Up] link:./embedded-marlowe.adoc[Next]

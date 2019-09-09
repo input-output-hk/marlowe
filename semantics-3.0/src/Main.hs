@@ -36,20 +36,20 @@ main = do
 
 couponBondFor3Month12Percent =
     -- investor deposits 1000 Ada
-    When [ Case (Deposit "investor" "invertor" (Constant 1000))
+    When [ Case (Deposit "investor" "investor" (Constant 1000))
         -- and pays it to the issuer
         (Pay "investor" (Party "issuer") (Constant 1000)
             -- after a month expect to receive 10 Ada interest
             (When [ Case (Deposit "investor" "issuer" (Constant 10))
                 -- and pay it to the investor
-                (Pay "investor" (Party "invertor" ) (Constant 10)
+                (Pay "investor" (Party "investor" ) (Constant 10)
                     -- same for 2nd month
                     (When [ Case (Deposit "investor" "issuer" (Constant 10))
-                        (Pay "investor" (Party "invertor" ) (Constant 10)
+                        (Pay "investor" (Party "investor" ) (Constant 10)
                             -- after maturity date investor
                             -- expects to receive notional + interest payment
                             (When [ Case (Deposit "investor" "issuer" (Constant 1010))
-                                (Pay "investor" (Party "invertor" ) (Constant 1010) Refund)]
+                                (Pay "investor" (Party "investor" ) (Constant 1010) Refund)]
                             (Slot 1571788789)
                             Refund))]
                     (Slot 1569196789)
@@ -61,11 +61,11 @@ couponBondFor3Month12Percent =
 
 
 zeroCouponBond = When [ Case
-        (Deposit "investor" "invertor" (Constant 850))
+        (Deposit "investor" "investor" (Constant 850))
         (Pay "investor" (Party "issuer") (Constant 850)
             (When
                 [ Case (Deposit "investor" "issuer" (Constant 1000))
-                        (Pay "investor" (Party "invertor" ) (Constant 1000) Refund)
+                        (Pay "investor" (Party "investor" ) (Constant 1000) Refund)
                 ]
                 (Slot 1579305589)
                 Refund
@@ -76,16 +76,16 @@ zeroCouponBond = When [ Case
     Refund
 
 couponBondGuaranteed = When [Case (Deposit "investor" "guarantor" (Constant 1030))
-    (When [Case (Deposit "investor" "invertor" (Constant 1000))
+    (When [Case (Deposit "investor" "investor" (Constant 1000))
         (Pay "investor" (Party "issuer") (Constant 1000)
             (When [Case (Deposit "investor" "issuer" (Constant 10))
-                (Pay "investor" (Party "invertor" ) (Constant 10)
+                (Pay "investor" (Party "investor" ) (Constant 10)
                 (Pay "investor" (Party "guarantor") (Constant 10)
                     (When [Case (Deposit "investor" "issuer" (Constant 10))
-                        (Pay "investor" (Party "invertor" ) (Constant 10)
+                        (Pay "investor" (Party "investor" ) (Constant 10)
                         (Pay "investor" (Party "guarantor") (Constant 10)
                             (When [Case (Deposit "investor" "issuer" (Constant 1010))
-                                (Pay "investor" (Party "invertor" ) (Constant 1010)
+                                (Pay "investor" (Party "investor" ) (Constant 1010)
                                 (Pay "investor" (Party "guarantor") (Constant 1010) Refund))]
                             (Slot 1571788789) Refund)))]
                     (Slot 1569196789) Refund)))]

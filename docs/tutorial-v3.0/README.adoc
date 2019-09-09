@@ -63,7 +63,7 @@ This tutorial introduces the Marlowe Playground, an online tool for
 creating embedded Marlowe contracts and interactively stepping through
 their execution.
 
-=== link:./actus-marlowe.adoc[ACTUS and Marlowe] TO BE UPDATED
+=== link:./actus-marlowe.adoc[ACTUS and Marlowe] 
 
 This tutorial gives an introduction to the general idea of the ACTUS
 taxonomy, plus examples implemented in Marlowe.

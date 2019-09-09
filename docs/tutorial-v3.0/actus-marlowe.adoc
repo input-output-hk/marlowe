@@ -86,6 +86,7 @@ bond is issued.
 ____
 ____
 *Exercise*
+
 Give a variant of the `+zeroCouponBond+` contract which also includes a
 `+guarantor+` who puts up the full payment up before the bond is issued,
 and who will pay that counterparty if the issuer defaults; if the issuer
@@ -128,6 +129,7 @@ couponBondFor3Month12Percent =
 
 ____
 *Exercise*
+
 Give a variant of the `+zcouponBondFor3Month12Percent+` contract which also includes a
 `+guarantor+` who puts up the full payment up before the bond is issued,
 and who will pay that counterparty if the issuer defaults; if the issuer

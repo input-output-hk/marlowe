@@ -1,4 +1,4 @@
-== Marlowe and its components as Haskell data types
+== The Marlowe data types
 
 This tutorial formally introduces Marlowe as a Haskell data type, as well as presenting 
 the different types used by the model, and discussing a

@@ -30,7 +30,7 @@ In explaining these contracts we will also explain Marlowe _values_, _observatio
 On this tutorial we build the escrow contract step by step. From a single contract with a single actor (Alice) to multiple actors (Alice,Bob,Carol) and multiple interactions. /This was the script for the example in the udemy class/.
 
 
-=== link:./marlowe-data.adoc[Marlowe and its components as Haskell data types]
+=== link:./marlowe-data.adoc[The Marlowe data types]
 
 This tutorial formally introduces Marlowe as a Haskell data type, as well as presenting 
 the different types used by the model, and discussing a

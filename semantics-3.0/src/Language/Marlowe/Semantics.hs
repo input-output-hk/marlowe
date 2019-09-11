@@ -35,9 +35,9 @@ newtype PubKey = PubKey Text
   deriving (Eq,Ord)
 
 instance Show PubKey where
-  show (PubKey txt) = show (T.unpack txt)  
+  show (PubKey txt) = show (T.unpack txt)
 
-type Party = PubKey   
+type Party = PubKey
 type ChoiceName = Text     -- Needs to be updated in playground.
 type NumAccount = Integer
 type Timeout = Slot
@@ -53,7 +53,7 @@ accountOwner (AccountId _ party) = party
 data ChoiceId = ChoiceId ChoiceName Party
   deriving (Eq,Ord,Show)
 
-newtype ValueId = ValueId Integer
+newtype ValueId = ValueId Text
   deriving (Eq,Ord,Show)
 
 data Value = AvailableMoney AccountId
@@ -151,7 +151,7 @@ fixInterval interval state = let
     -- newLow is both new "low" and new "minSlot" (the lower bound for slotNum)
     newLow = max low curMinSlot
     -- We know high is greater or equal than newLow (prove)
-    curInterval = SlotInterval  newLow high 
+    curInterval = SlotInterval  newLow high
     env = Environment { slotInterval = curInterval }
     newState = state { minSlot = newLow }
     in if high < low then IntervalError (InvalidInterval interval)

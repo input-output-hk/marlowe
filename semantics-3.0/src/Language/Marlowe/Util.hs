@@ -14,6 +14,10 @@ instance IsString PubKey where
 instance IsString AccountId where
     fromString s = AccountId 0 (PubKey (T.pack s))
 
+instance IsString ValueId where
+    fromString s = ValueId (T.pack s)
+
+
 alicePubKey :: PubKey
 alicePubKey = PubKey "Alice"
 

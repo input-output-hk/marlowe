@@ -804,11 +804,10 @@ lemma reduceContractStepPayIsQuiescent :
   apply (metis (mono_tags, lifting) ReduceStepResult.distinct(1) case_prod_unfold)
   apply (cases "evalValue env sta x23 \<le> 0")
   apply simp
-  apply (cases "min balance (evalValue env sta x23) < evalValue env sta x23")
+  apply (cases "min (moneyInAccount x21 (accounts sta)) (evalValue env sta x23) < evalValue env sta x23")
   apply simp
   apply (metis (no_types, lifting) ReduceStepResult.distinct(1) case_prod_unfold)
   apply simp
-  apply (metis (no_types, lifting) ReduceStepResult.distinct(1) case_prod_unfold)
   by (smt ReduceStepResult.distinct(1) case_prod_unfold)
   
 lemma reduceContractStepIsQuiescent : "reduceContractStep env sta cont = NotReduced \<Longrightarrow> isQuiescent cont"

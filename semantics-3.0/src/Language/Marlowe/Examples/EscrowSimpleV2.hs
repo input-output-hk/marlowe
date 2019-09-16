@@ -48,7 +48,7 @@ inner =
 agreement :: Contract  
 agreement = 
   If 
-    (aliceChosen `ValueEQ` (Constant 0))
+    (isPay aliceChosen)
     (Pay "alice" (Party "bob") price Refund)
     Refund
      
@@ -62,6 +62,12 @@ arbitrate =
           Case carolPay (Pay "alice" (Party "bob") price Refund) ]
         100
         Refund
+
+-- Predicate for choices
+
+isPay :: Value -> Bool
+
+isPay chosen = chosen `ValueEQ` (Constant 0)
 
 -- Names for choices
 

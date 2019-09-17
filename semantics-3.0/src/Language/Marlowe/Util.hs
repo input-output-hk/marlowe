@@ -1,10 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 module Language.Marlowe.Util where
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import           Data.List                  (foldl')
+import           Data.Map.Strict            (Map)
+import qualified Data.Map.Strict            as Map
 import           Data.String
-import           Data.Text (Text)
-import qualified Data.Text as T
+import qualified Data.Text                  as T
 
 import           Language.Marlowe.Semantics
 
@@ -16,7 +17,6 @@ instance IsString AccountId where
 
 instance IsString ValueId where
     fromString s = ValueId (T.pack s)
-
 
 alicePubKey :: PubKey
 alicePubKey = PubKey "Alice"
@@ -57,7 +57,7 @@ emptyAccountsDiff = Map.empty
 
 
 isEmptyAccountsDiff :: AccountsDiff -> Bool
-isEmptyAccountsDiff trOut = all (== Lovelace 0) trOut
+isEmptyAccountsDiff = all (== Lovelace 0)
 
 
 -- Adds a value to the map of outcomes
@@ -72,7 +72,7 @@ addAccountsDiff party diffValue trOut = let
 -- | Extract total outcomes from transaction inputs and outputs
 getAccountsDiff :: [Payment] -> [Input] -> AccountsDiff
 getAccountsDiff payments inputs =
-    foldl (\acc (p, m) -> addAccountsDiff p m acc) emptyAccountsDiff (incomes ++ outcomes)
+    foldl' (\acc (p, m) -> addAccountsDiff p m acc) emptyAccountsDiff (incomes ++ outcomes)
   where
     incomes  = [ (p,  m) | IDeposit _ p m <- inputs ]
     outcomes = [ (p, -m) | Payment p m  <- payments ]

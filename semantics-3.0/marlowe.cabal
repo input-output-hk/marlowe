@@ -11,19 +11,21 @@ cabal-version:          >= 1.10
 executable marlowe
     default-language:   Haskell2010
     build-depends:      base >=4.9,
-                        mtl,
                         containers,
-                        text,
-                        sbv,
-                        time,
                         QuickCheck,
+                        mtl,
+                        sbv,
                         tasty,
                         tasty-hunit,
                         tasty-smallcheck,
                         tasty-quickcheck,
-                        template-haskell
+                        text,
+                        template-haskell,
+                        time,
+                        wl-pprint -any
     other-modules:
                         Language.Marlowe
+                        Language.Marlowe.Pretty
                         Language.Marlowe.Semantics
                         Language.Marlowe.Util
                         Language.Marlowe.ACTUS
@@ -46,3 +48,4 @@ executable marlowe
                         Language.Marlowe.Analysis.MkSymb
     hs-source-dirs:     src
     main-is:            Main.hs
+

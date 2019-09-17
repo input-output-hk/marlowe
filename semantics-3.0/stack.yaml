@@ -1,4 +1,5 @@
 resolver: lts-13.15
 extra-deps: 
  - sbv-8.4
+ - wl-pprint-1.2.1@sha256:aea676cff4a062d7d912149d270e33f5bb0c01b68a9db46ff13b438141ff4b7c
 

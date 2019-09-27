@@ -24,4 +24,10 @@ You can try to add these variants, either one at a time, or in combination.
 
 For each contract that you write, does your contract pass the analysis? If not, how could you modify it so that it passes?
 
+## Links
+
+- The [Marlowe Playground](http://bit.ly/marlowe_plovdiv).
+
+- The [Marlowe github repo](https://github.com/input-output-hk/marlowe).
+
 

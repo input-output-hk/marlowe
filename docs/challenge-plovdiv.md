@@ -20,6 +20,8 @@ You can try to add these variants, either one at a time, or in combination.
 - You can cancel the subscription giving 30 slots notice; on doing this you can recover half the deposit.
 - The company can increase the fixed fee by a given amount once only,  giving 20 slots notice. If this is done, then you can withdraw from the contract without losing your deposit.
 
+## Analysis
+
 For each contract that you write, does your contract pass the analysis? If not, how could you modify it so that it passes?
 
 

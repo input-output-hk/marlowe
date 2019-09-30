@@ -37,7 +37,7 @@ end
 
 lemma linearAccountId : "x \<le> y \<or> y \<le> (x::AccountId)"
   by (smt less_eq_AccId.elims(3) less_eq_AccId.simps less_eq_AccountId_def)
- 
+
 instantiation "AccountId" :: linorder
 begin
 instance
@@ -93,7 +93,7 @@ end
 
 lemma linearChoiceId : "x \<le> y \<or> y \<le> (x::ChoiceId)"
   by (smt less_eq_ChoId.elims(3) less_eq_ChoId.simps less_eq_ChoiceId_def)
- 
+
 instantiation "ChoiceId" :: linorder
 begin
 instance
@@ -310,7 +310,7 @@ fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarr
 "evalValue env state (AddValue lhs rhs) =
     evalValue env state lhs + evalValue env state rhs" |
 "evalValue env state (SubValue lhs rhs) =
-    evalValue env state lhs + evalValue env state rhs" |
+    evalValue env state lhs - evalValue env state rhs" |
 "evalValue env state (ChoiceValue choId defVal) =
     findWithDefault (evalValue env state defVal) choId (choices state)" |
 "evalValue env state (SlotIntervalStart) = fst (slotInterval env)" |
@@ -563,7 +563,7 @@ lemma reduceContractStepReducesSize_Let_aux :
    c = Contract.Let vId val cont \<Longrightarrow>
    lookup vId (boundValues sta) = Some a \<Longrightarrow>
    evalBound nsta nc < evalBound sta c"
-  by auto  
+  by auto
 
 lemma reduceContractStepReducesSize_Let :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
@@ -809,7 +809,7 @@ lemma reduceContractStepPayIsQuiescent :
   apply (metis (no_types, lifting) ReduceStepResult.distinct(1) case_prod_unfold)
   apply simp
   by (smt ReduceStepResult.distinct(1) case_prod_unfold)
-  
+
 lemma reduceContractStepIsQuiescent : "reduceContractStep env sta cont = NotReduced \<Longrightarrow> isQuiescent cont"
   apply (cases cont)
   apply auto[1]

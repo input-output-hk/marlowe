@@ -4,6 +4,7 @@
 *.pdf
 *.gz
 *.out
+stack.yaml.lock
 .stack-work/
 .vscode/
 .history/

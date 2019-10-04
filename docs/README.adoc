@@ -1,4 +1,4 @@
-== Learning about Marlowe and the Marlowe Playground (Meadow)
+== Learning about Marlowe and the Marlowe Playground
 
 Marlowe is a domain-specific language (DSL) for writing financial
 contracts that run on blockchain.

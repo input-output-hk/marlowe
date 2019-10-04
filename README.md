@@ -8,16 +8,17 @@ This repository contains Marlowe, a domain-specific language (DSL) for describin
 
 ## Learning about Marlowe and Marlowe Playground
 
-The [Marlowe tutorials](./docs/README.adoc) introduce Marlowe and Meadow.
+The [Marlowe tutorials](ct)https://david.marlowe.iohkdev.io/tutorial/) introduce Marlowe and the Marlowe Playground.
 
-## Version 1.3, stable branch, master branch, and version 2.0
+## Versions of Marlowe
 
-The last stable version of Marlowe can be found in the branch `stable`. This branch currently contains very small improvements with respect to version `1.3` and is the one in which the current version of Meadow is based (see Meadow section below). For the pure version `1.3` you can check the `v1.3` tag. A full description of the `1.3` version was presented at ISoLA 2018, and the paper is available [here](https://iohk.io/research/papers/#2WHKDRA8).
+The `master` branch contains the latest version of Marlowe, version `3.0`.
 
-The `master` branch contains the latest developments of Marlowe, version `3.0`.
-Versions `1.x`, and `2.0` can be found under `semantics-1.0`, and `semantics-2.0`, respectivly.
+An earlier version of Marlowe is described in a [paper](https://iohk.io/research/papers/#2WHKDRA8) that was presented at ISoLA 2018. This versin is tagged `v1.3` and a minor update on this is taggedn `v1.3.1`.
+Versions `1.x`, and `2.0` can also be found in the `master` branch under `semantics-1.0`, and `semantics-2.0`, respectively.
 
 ## Build on MacOS
+
 
 Requirements: Homebrew, Haskell Stack 1.6 or later.
 

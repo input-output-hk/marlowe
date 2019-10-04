@@ -318,6 +318,20 @@ fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarr
 "evalValue env state (UseValue valId) =
     findWithDefault 0 valId (boundValues state)"
 
+
+lemma evalDoubleNegValue :
+  "evalValue env sta (NegValue (NegValue x)) = evalValue env sta x"
+  by auto
+
+lemma evalNegValue :
+  "evalValue env sta (AddValue x (NegValue x)) = 0"
+  by auto
+
+lemma evalSubValue :
+  "evalValue env sta (SubValue (AddValue x y) y) = evalValue env sta x"
+  by auto
+
+
 fun evalObservation :: "Environment \<Rightarrow> State \<Rightarrow> Observation \<Rightarrow> bool" where
 "evalObservation env state (AndObs lhs rhs) =
     (evalObservation env state lhs \<and> evalObservation env state rhs)" |
@@ -873,5 +887,28 @@ theorem computeTransactionIsQuiescent : "computeTransaction traIn sta cont = Tra
   apply (cases "traIn")
   apply (cases "traOut")
   by (smt IntervalResult.exhaust IntervalResult.simps(6) Transaction.update_convs(3) TransactionOutput.distinct(1) TransactionOutputRecord.select_convs(4) computeTransaction.elims computeTransactionIsQuiescent_aux old.unit.exhaust)
+
+fun allAccountsPositive :: "(AccountId \<times> Money) list \<Rightarrow> bool" where
+"allAccountsPositive accs = foldl (\<lambda> r (_, money) . r \<and> money > 0) True accs"
+
+
+fun allAccountsPositiveState :: "State \<Rightarrow> bool" where
+"allAccountsPositiveState state = allAccountsPositive (accounts state)"
+
+
+lemma positiveMoneyInAccount [simp] :
+  "allAccountsPositive accs \<Longrightarrow> 0 \<le> moneyInAccount accId accs"
+  oops
+
+lemma addMoneyToAccountPositive :
+  "0 \<le> money \<and> allAccountsPositive accs
+  \<Longrightarrow> allAccountsPositive (addMoneyToAccount accId money accs)"
+  oops
+
+theorem accountsArePositive :
+    "allAccountsPositiveState state
+    \<Longrightarrow> computeTransaction txIn state cont = TransactionOutput txOut
+    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"
+  oops
 
 end

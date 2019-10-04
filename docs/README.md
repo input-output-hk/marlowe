@@ -1,7 +1,11 @@
 
-# Learning about Marlowe and the Marlowe Playground (Meadow)
+# Learning about Marlowe and the Marlowe Playground
 
 Marlowe is a domain-specific language (DSL) for writing financial contracts that run on blockchain. 
+
+The best place to go to learn about Marlowe and to try it out is the [Marlowe Playground](https://david.marlowe.iohkdev.io/), which also contains a [tutorial](https://david.marlowe.iohkdev.io/tutorial/) about Marlowe.
+
+## Earlier versions of Marlowe
 
 This document describes the different materials available for learning about Marlowe and the online tool that accompanies it: the Marlowe Playground. originally called Meadow. It also advises you where to begin, depending on what you want to learn, and where you are starting from.
 

@@ -134,9 +134,13 @@ theorem delete_lookup_None : "valid_map b \<Longrightarrow>
   apply simp
   using delete_lookup_None_aux2 by fastforce
 
-theorem insert_lookup_Some : "valid_map c \<Longrightarrow>
-                              MList.lookup a (MList.insert a b c) = Some b"
+theorem insert_lookup_Some : "MList.lookup a (MList.insert a b c) = Some b"
   apply (induction c)
+  apply simp
+  by force
+
+theorem insert_lookup_different : "a \<noteq> b \<Longrightarrow> MList.lookup a (MList.insert b c d) = MList.lookup a d"
+  apply (induction d)
   apply simp
   by force
 

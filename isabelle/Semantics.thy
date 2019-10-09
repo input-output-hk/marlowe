@@ -274,6 +274,11 @@ record State = accounts :: "(AccountId \<times> Money) list"
                boundValues :: "(ValueId \<times> int) list"
                minSlot :: Slot
 
+fun valid_state :: "State \<Rightarrow> bool" where
+"valid_state state = (valid_map (accounts state)
+                     \<and> valid_map (choices state)
+                     \<and> valid_map (boundValues state))"
+
 record Environment = slotInterval :: SlotInterval
 
 datatype Input = IDeposit AccountId Party Money

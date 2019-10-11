@@ -1,5 +1,5 @@
 theory PositiveAccounts
-imports Semantics
+imports Semantics ValidState
 begin
 
 lemma addMoneyToAccountPositve_match :
@@ -104,17 +104,54 @@ lemma reduceContractStep_geZero_Refund :
    0 \<le> moneyInAccount y (accounts newState)"
   using reduceContractStep_geZero_Refund_aux by auto
 
-lemma reduceContractStep_geZero :
+lemma MList_delete_preserves_geZero : "valid_map accs \<Longrightarrow> \<forall>x. 0 \<le> moneyInAccount x accs \<Longrightarrow>
+                                       0 \<le> moneyInAccount y (MList.delete accId accs)"
+  by (metis MList.delete_lookup_None MList.delete_lookup_None_aux MList.delete_valid MList.different_delete_lookup eq_iff findWithDefault.simps moneyInAccount.simps moneyInAccount_valid_zero refundOne.elims)
+
+lemma reduceContractStep_geZero_Pay_aux :
+  "valid_state state \<Longrightarrow>
+   \<forall>x. 0 \<le> moneyInAccount x (accounts state) \<Longrightarrow>
+   0 \<le> moneyInAccount x (updateMoneyInAccount accId amount (accounts state))"
+  using MList_delete_preserves_geZero updateMoneyInAccount_geZero by auto
+
+lemma reduceContractStep_geZero_Pay :
+  "valid_state state \<Longrightarrow>
+   \<forall>x. 0 \<le> moneyInAccount x (accounts state) \<Longrightarrow>
+   reduceContractStep env state (Pay accId payee val cont) = Reduced wa eff newState newCont \<Longrightarrow>
+   0 \<le> moneyInAccount y (accounts newState)"
+  apply (simp only:reduceContractStep.simps)
+  apply (cases "evalValue env state val \<le> 0")
+  apply simp
+  apply (cases "giveMoney payee (min (moneyInAccount accId (accounts state)) (evalValue env state val))
+                (updateMoneyInAccount accId (moneyInAccount accId (accounts state) - min (moneyInAccount accId (accounts state)) (evalValue env state val))
+                  (accounts state))")
+  apply (simp del:moneyInAccount.simps valid_state.simps updateMoneyInAccount.simps)
+  by (smt MList_delete_preserves_geZero ReduceStepResult.inject State.select_convs(1) State.surjective State.update_convs(1) giveMoney_geZero updateMoneyInAccount.simps updateMoneyInAccount_geZero valid_state.elims(2))
+
+lemma reduceContractStep_geZero_Let :
+  "valid_state state \<Longrightarrow>
+   \<forall>x. 0 \<le> moneyInAccount x (accounts state) \<Longrightarrow>
+   reduceContractStep env state (Contract.Let valueId val cont) = Reduced wa eff newState newCont \<Longrightarrow>
+   0 \<le> moneyInAccount y (accounts newState)"
+  apply (simp only:reduceContractStep.simps)
+  apply (cases "state")
+  apply (cases "newState")
+  apply (simp del:moneyInAccount.simps valid_state.simps)
+  by (metis ReduceStepResult.inject State.ext_inject)
+
+theorem reduceContractStep_geZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x. moneyInAccount x (accounts state) \<ge> 0) \<Longrightarrow>
    reduceContractStep env state cont = Reduced wa eff newState newCont \<Longrightarrow>
    moneyInAccount y (accounts newState) \<ge> 0"
   apply (cases cont)
-  apply (simp only:reduceContractStep.simps)
   apply (cases "refundOne (accounts state)")
   apply simp
   using reduceContractStep_geZero_Refund apply force
-  oops
+  using reduceContractStep_geZero_Pay apply blast
+  apply simp
+  apply (smt ReduceStepResult.distinct(1) ReduceStepResult.inject ReduceStepResult.simps(5) case_prod_unfold reduceContractStep.simps(4))
+  using reduceContractStep_geZero_Let by blast
 
 (* Alternative formulation *)
 

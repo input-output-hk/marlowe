@@ -115,4 +115,50 @@ lemma applyAllLoop_preserves_valid_state :
   apply (induct env state cont inp wa pa rule:applyAllLoop.induct)
   using applyAllLoop_preserves_valid_state_aux by blast
 
+lemma applyAllInputs_preserves_valid_state :
+  "valid_state state \<Longrightarrow>
+   applyAllInputs env state cont inp = ApplyAllSuccess wa pa newState newCont \<Longrightarrow>
+   valid_state newState"
+  by (metis applyAllInputs.simps applyAllLoop_preserves_valid_state)
+
+lemma fixInterval_preserves_valid_state :
+  "valid_state state \<Longrightarrow>
+   fixInterval (a, b) state = IntervalTrimmed newEnv newState \<Longrightarrow>
+   valid_state newState"
+  apply (simp only:fixInterval.simps)
+  apply (cases "b < a")
+  apply simp
+  apply (cases "b < minSlot state")
+  apply simp
+  apply (simp del:valid_state.simps add:Let_def)
+  by auto
+
+lemma computeTransaction_preserves_valid_state_aux :
+  "valid_state newState \<Longrightarrow>
+    (case applyAllInputs newEnv newState cont (inputs \<lparr>interval = intervalI, inputs = inputsI\<rparr>) of
+       ApplyAllSuccess warnings payments newState conta \<Rightarrow>
+         if cont = conta then TransactionError TEUselessTransaction
+         else TransactionOutput \<lparr>txOutWarnings = warnings, txOutPayments = payments, txOutState = newState, txOutContract = conta\<rparr>
+     | ApplyAllNoMatchError \<Rightarrow> TransactionError TEApplyNoMatchError | ApplyAllAmbiguousSlotIntervalError \<Rightarrow> TransactionError TEAmbiguousSlotIntervalError)
+     = TransactionOutput \<lparr>txOutWarnings = txOutWarningsO, txOutPayments = txOutPaymentsO, txOutState = txOutStateO, txOutContract = txOutContractO\<rparr> \<Longrightarrow>
+   valid_state txOutStateO"
+  apply (cases "applyAllInputs newEnv newState cont (inputs \<lparr>interval = intervalI, inputs = inputsI\<rparr>)")
+  apply (smt ApplyAllResult.simps(8) TransactionOutput.distinct(2) TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) applyAllInputs.simps applyAllLoop_preserves_valid_state)
+  by simp_all
+
+lemma computeTransaction_preserves_valid_state_aux2 :
+  "valid_state state \<Longrightarrow>
+   computeTransaction  \<lparr>interval = intervalI, inputs = inputsI\<rparr> state cont
+      = TransactionOutput \<lparr>txOutWarnings = txOutWarningsO, txOutPayments = txOutPaymentsO, txOutState = txOutStateO, txOutContract = txOutContractO\<rparr> \<Longrightarrow>
+   valid_state (txOutStateO)"
+  apply (simp only:computeTransaction.simps Let_def)
+  apply (cases "fixInterval (interval \<lparr>interval = intervalI, inputs = inputsI\<rparr>) state")
+  apply (simp only:IntervalResult.case)
+  apply (metis (no_types, lifting) computeTransaction_preserves_valid_state_aux fixInterval_preserves_valid_state surj_pair)
+  by simp
+
+lemma computeTransaction_preserves_valid_state :
+  "valid_state state \<Longrightarrow> computeTransaction tran state cont = TransactionOutput out \<Longrightarrow> valid_state (txOutState out) "
+  by (metis (full_types) Transaction.surjective TransactionOutputRecord.surjective computeTransaction_preserves_valid_state_aux2 old.unit.exhaust)
+
 end

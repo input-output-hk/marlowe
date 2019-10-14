@@ -77,4 +77,42 @@ lemma reductionLoop_preserves_valid_state :
   apply (induction env state cont wa pa rule:reductionLoop.induct)
   using reductionLoop_preserves_valid_state_aux by blast
 
+lemma applyCases_preserves_valid_state :
+  "valid_state state \<Longrightarrow>
+   applyCases env state input caseList = Applied wa newState newCont \<Longrightarrow>
+   valid_state newState"
+  apply (induction env state input caseList rule:applyCases.induct)
+  apply (simp only:Let_def addMoneyToAccount.simps applyCases.simps valid_state.simps)
+  apply (smt ApplyResult.inject State.select_convs(1) State.select_convs(2) State.select_convs(3) State.surjective State.update_convs(1) updateMoneyInAccount_preserves_valid_map)
+  apply (simp only:Let_def applyCases.simps valid_state.simps)
+  apply (metis ApplyResult.inject MList.insert_valid State.select_convs(1) State.select_convs(2) State.select_convs(3) State.surjective State.update_convs(2))
+  apply (metis ApplyResult.inject applyCases.simps(3))
+  by auto
+
+lemma applyAllLoop_preserves_valid_state_aux :
+  "(\<And>redWa redPa redSta redCon headInp restInp intWa intState intCont.
+    reduceContractUntilQuiescent env state contract = ContractQuiescent redWa redPa redSta redCon \<Longrightarrow>
+    inp = headInp # restInp \<Longrightarrow>
+    applyInput env redSta headInp redCon = Applied intWa intState intCont \<Longrightarrow>
+    valid_state intState \<Longrightarrow>
+    applyAllLoop env intState intCont restInp (warnings @ convertReduceWarnings redWa @ convertApplyWarning intWa) (payments @ redPa) = ApplyAllSuccess newWa newPa newState newCont \<Longrightarrow>
+    valid_state newState) \<Longrightarrow>
+   valid_state state \<Longrightarrow> applyAllLoop env state contract inp warnings payments = ApplyAllSuccess newWa newPa newState newCont \<Longrightarrow> valid_state newState"
+  apply (simp only:applyAllLoop.simps [of env state contract inp warnings payments])
+  apply (cases "reduceContractUntilQuiescent env state contract")
+  apply (simp only:ReduceResult.case)
+  apply (cases inp)
+  apply (simp only:list.case)
+  apply (metis ApplyAllResult.inject reduceContractUntilQuiescent.simps reductionLoop_preserves_valid_state)
+  apply (simp del:valid_state.simps applyAllLoop.simps applyInput.simps reductionLoop.simps)
+  apply (metis (no_types, lifting) ApplyAllResult.distinct(1) ApplyResult.exhaust ApplyResult.simps(4) ApplyResult.simps(5) applyCases_preserves_valid_state applyInput.simps(1) applyInput.simps(2) applyInput.simps(3) applyInput.simps(4) applyInput.simps(5) isQuiescent.elims(2) isQuiescent.elims(3) reductionLoop_preserves_valid_state)
+  by simp
+
+lemma applyAllLoop_preserves_valid_state :
+  "valid_state state \<Longrightarrow>
+   applyAllLoop env state cont inp wa pa = ApplyAllSuccess newWa newPa newState newCont \<Longrightarrow>
+   valid_state newState"
+  apply (induct env state cont inp wa pa rule:applyAllLoop.induct)
+  using applyAllLoop_preserves_valid_state_aux by blast
+
 end

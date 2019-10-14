@@ -49,15 +49,15 @@ couponBondFor3Month12Percent =
                             -- after maturity date investor
                             -- expects to receive notional + interest payment
                             (When [ Case (Deposit "investor" "issuer" (Constant 1010))
-                                (Pay "investor" (Party "investor" ) (Constant 1010) Refund)]
+                                (Pay "investor" (Party "investor" ) (Constant 1010) Close)]
                             (Slot 1571788789)
-                            Refund))]
+                            Close))]
                     (Slot 1569196789)
-                    Refund))]
+                    Close))]
             (Slot 1566518389)
-            Refund))]
+            Close))]
     (Slot 1563839989)
-    Refund
+    Close
 
 
 zeroCouponBond = When [ Case
@@ -65,15 +65,15 @@ zeroCouponBond = When [ Case
         (Pay "investor" (Party "issuer") (Constant 850)
             (When
                 [ Case (Deposit "investor" "issuer" (Constant 1000))
-                        (Pay "investor" (Party "investor" ) (Constant 1000) Refund)
+                        (Pay "investor" (Party "investor" ) (Constant 1000) Close)
                 ]
                 (Slot 1579305589)
-                Refund
+                Close
             )
         )
     ]
     (Slot 1563407989)
-    Refund
+    Close
 
 couponBondGuaranteed = When [Case (Deposit "investor" "guarantor" (Constant 1030))
     (When [Case (Deposit "investor" "investor" (Constant 1000))
@@ -86,12 +86,12 @@ couponBondGuaranteed = When [Case (Deposit "investor" "guarantor" (Constant 1030
                         (Pay "investor" (Party "guarantor") (Constant 10)
                             (When [Case (Deposit "investor" "issuer" (Constant 1010))
                                 (Pay "investor" (Party "investor" ) (Constant 1010)
-                                (Pay "investor" (Party "guarantor") (Constant 1010) Refund))]
-                            (Slot 1571788789) Refund)))]
-                    (Slot 1569196789) Refund)))]
-            (Slot 1566518389) Refund))]
-    (Slot 1563839989) Refund)]
-    (Slot 1563839989) Refund
+                                (Pay "investor" (Party "guarantor") (Constant 1010) Close))]
+                            (Slot 1571788789) Close)))]
+                    (Slot 1569196789) Close)))]
+            (Slot 1566518389) Close))]
+    (Slot 1563839989) Close)]
+    (Slot 1563839989) Close
 
 
 couponBondGuaranteedWithAccounts =
@@ -105,21 +105,21 @@ couponBondGuaranteedWithAccounts =
                         (When [Case (Deposit "party1" "party2" (Constant 10))
                             (Pay "party1" (Party "party1") (Constant 10)
                                 (When [Case (Deposit "party1" "party2" (Constant 1010))
-                                    (Pay "party1" (Party "party1") (Constant 1010) Refund)]
+                                    (Pay "party1" (Party "party1") (Constant 1010) Close)]
                                 (Slot 1571788789)
                                 -- if the issues fails to return notional
                                 -- guarantor pays from his account and refunds
-                                (Pay "party2" (Party "party1") (Constant 1010) Refund))
+                                (Pay "party2" (Party "party1") (Constant 1010) Close))
                             )]
                         (Slot 1569196789)
                         -- guarantor pays from his account and refunds
-                        (Pay "party2" (Party "party1") (Constant 1020) Refund)))]
+                        (Pay "party2" (Party "party1") (Constant 1020) Close)))]
                 (Slot 1566518389)
                 -- guarantor pays from his account and refunds
-                (Pay "party2" (Party "party1") (Constant 1030) Refund)))]
+                (Pay "party2" (Party "party1") (Constant 1030) Close)))]
         -- if partees do not proceed guarantor automatically gets his money back
-        (Slot 1563839989) Refund)]
-    (Slot 1563839989) Refund
+        (Slot 1563839989) Close)]
+    (Slot 1563839989) Close
 
 
 couponBondGuaranteedWithoutAccounts =
@@ -133,23 +133,23 @@ couponBondGuaranteedWithoutAccounts =
                         (When [Case (Deposit "party1" "party2" (Constant 10))
                             (Pay "party1" (Party "party1") (Constant 10)
                                 (When [Case (Deposit "party1" "party2" (Constant 1010))
-                                    (Pay "party1" (Party "party1") (Constant 1010) Refund)]
+                                    (Pay "party1" (Party "party1") (Constant 1010) Close)]
                                 (Slot 1571788789)
                                 (Pay "party1" (Party "party1") (Constant 1010)
                                 -- with single account we have to
                                 -- manually redistibute money to guarantor
-                                (Pay "party1" (Party "guarantor") (Constant 20) Refund))))]
+                                (Pay "party1" (Party "guarantor") (Constant 20) Close))))]
                         (Slot 1569196789)
                         (Pay "party1" (Party "party1") (Constant 1020)
                         -- in all the cases
-                        (Pay "party1" (Party "guarantor") (Constant 10) Refund))))]
+                        (Pay "party1" (Party "guarantor") (Constant 10) Close))))]
                 (Slot 1566518389)
                 -- here as well
-                (Pay "party1" (Party "party1") (Constant 1030) Refund)))]
+                (Pay "party1" (Party "party1") (Constant 1030) Close)))]
         (Slot 1563839989)
         -- and thes are only 3 payments
-        (Pay "party1" (Party "guarantor") (Constant 1030) Refund))]
-    (Slot 1563839989) Refund
+        (Pay "party1" (Party "guarantor") (Constant 1030) Close))]
+    (Slot 1563839989) Close
 
 
 {- Simply swap two payments between parties -}
@@ -158,19 +158,19 @@ swapExample =
             -- when 1st party committed, wait for 2nd
             (When [ Case (Deposit acc2 "party2" (Constant 300))
                 (Pay acc1 (Party "party2") (Constant 500)
-                (Pay acc2 (Party "party1") (Constant 300) Refund))
+                (Pay acc2 (Party "party1") (Constant 300) Close))
                 ] date1
-            -- if a party dosn't commit, simply Refund to the owner
-            Refund)
+            -- if a party dosn't commit, simply Close to the owner
+            Close)
           , Case (Deposit acc2 "party2" (Constant 300))
             -- if 2nd party committed first wait for 1st
             (When [ Case (Deposit acc1 "party1" (Constant 500))
                 -- we can just pay a diff between account and refund
-                (Pay acc1 (Account acc2) (Constant 200) Refund)
+                (Pay acc1 (Account acc2) (Constant 200) Close)
             ] date1
-            -- if a party dosn't commit, simply Refund to the owner
-            Refund)
-        ] (date1 - gracePeriod) Refund
+            -- if a party dosn't commit, simply Close to the owner
+            Close)
+        ] (date1 - gracePeriod) Close
   where
     gracePeriod = Slot 3*60*24 -- 24 hours
     date1 = Slot 1563839989
@@ -182,18 +182,18 @@ swapSingleAccount =
     When [ Case (Deposit acc1 "party1" (Constant 500))
             (When [ Case (Deposit acc1 "party2" (Constant 300))
                 (Pay acc1 (Party "party2") (Constant 500)
-                (Pay acc1 (Party "party1") (Constant 300) Refund))
+                (Pay acc1 (Party "party1") (Constant 300) Close))
                 ] (Slot date1)
             -- refund to the 1st party
-            (Pay acc1 (Party "party1") (Constant 500) Refund))
+            (Pay acc1 (Party "party1") (Constant 500) Close))
          , Case (Deposit acc1 "party2" (Constant 300))
             (When [ Case (Deposit acc1 "party1" (Constant 500))
                 (Pay acc1 (Party "party2") (Constant 500)
-                (Pay acc1 (Party "party1") (Constant 300) Refund))
+                (Pay acc1 (Party "party1") (Constant 300) Close))
             ] (Slot date1)
             -- refund to the 2nd party
-            (Pay acc1 (Party "party2") (Constant 300) Refund))
-        ] (Slot (date1 - gracePeriod)) Refund
+            (Pay acc1 (Party "party2") (Constant 300) Close))
+        ] (Slot (date1 - gracePeriod)) Close
   where
     gracePeriod = 3*60*24 -- 24 hours
     date1 = 1563839989
@@ -207,21 +207,21 @@ swapGuaranteedExample =
             Case (Deposit acc1 "party1" (Constant 500))
                 (When [ Case (Deposit acc2 "party2" (Constant 300))
                     (Pay acc1 (Party "party2") (Constant 500)
-                    (Pay acc2 (Party "party1") (Constant 300) Refund))
+                    (Pay acc2 (Party "party1") (Constant 300) Close))
                     ] date1
                     -- just transfer from guarantor account to party1 and refund to owner
-                    (Pay acc3 (Account acc1) (Constant 300) Refund))
+                    (Pay acc3 (Account acc1) (Constant 300) Close))
             , Case (Deposit acc2 "party2" (Constant 300))
                 (When [ Case (Deposit acc2 "party2" (Constant 500))
                     (Pay acc1 (Party "party2") (Constant 500)
-                    (Pay acc2 (Party "party1") (Constant 300) Refund))
+                    (Pay acc2 (Party "party1") (Constant 300) Close))
                     ] date1
                     -- just transfer from guarantor account to party1 and refund to owner
-                    (Pay acc3 (Account acc2) (Constant 500) Refund))
+                    (Pay acc3 (Account acc2) (Constant 500) Close))
             ] (date1 - gracePeriod)
             -- automatically refund to guarantor if parties don't proceed
-            Refund)
-        ] (date1 - 2 * gracePeriod) Refund
+            Close)
+        ] (date1 - 2 * gracePeriod) Close
   where
     gracePeriod = Slot 3*60*24 -- 24 hours
     date1 = Slot 1563839989
@@ -239,28 +239,28 @@ swapSingleAccountGuaranteedExample =
                 (When [ Case (Deposit acc1 "party2" (Constant 300))
                     (Pay acc1 (Party "party2") (Constant 500)
                     (Pay acc1 (Party "party1") (Constant 300)
-                    (Pay acc1 (Party "guarantor") (Constant 800) Refund)))
+                    (Pay acc1 (Party "guarantor") (Constant 800) Close)))
                     ] date1
                     -- with single account all payments must be duplicated
                     (Pay acc1 (Party "party2") (Constant 500)
                     (Pay acc1 (Party "party1") (Constant 300)
-                    (Pay acc1 (Party "guarantor") (Constant 500) Refund)))
+                    (Pay acc1 (Party "guarantor") (Constant 500) Close)))
                 )
             , Case (Deposit acc2 "party2" (Constant 300))
                 (When [ Case (Deposit acc2 "party2" (Constant 500))
                     (Pay acc1 (Party "party2") (Constant 500)
                     (Pay acc1 (Party "party1") (Constant 300)
-                    (Pay acc1 (Party "guarantor") (Constant 800) Refund)))
+                    (Pay acc1 (Party "guarantor") (Constant 800) Close)))
                     ] date1
                     -- with single account all payments must be duplicated
                     (Pay acc1 (Party "party2") (Constant 500)
                     (Pay acc1 (Party "party1") (Constant 300)
-                    (Pay acc1 (Party "guarantor") (Constant 00) Refund)))
+                    (Pay acc1 (Party "guarantor") (Constant 00) Close)))
                 )
             ] (date1 - gracePeriod)
             -- manually refund to guarantor if parties don't proceed
-            (Pay acc1 (Party "guarantor") (Constant 800) Refund))
-        ] (date1 - 2 * gracePeriod) Refund
+            (Pay acc1 (Party "guarantor") (Constant 800) Close))
+        ] (date1 - 2 * gracePeriod) Close
     where
     gracePeriod = Slot 3*60*24 -- 24 hours
     date1 = Slot 1563839989

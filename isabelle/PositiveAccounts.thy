@@ -38,7 +38,7 @@ lemma addMoneyToAccountPositive :
 
 lemma giveMoney_geZero :
     "\<forall>x. 0 \<le> moneyInAccount x accs \<Longrightarrow>
-       (eff, newAccs) = giveMoney payee money accs \<Longrightarrow> 
+       (eff, newAccs) = giveMoney payee money accs \<Longrightarrow>
        0 \<le> moneyInAccount y newAccs"
   by (metis addMoneyToAccount.simps addMoneyToAccountPositive giveMoney.elims linear snd_conv)
 
@@ -86,7 +86,7 @@ lemma reduceOne_geZero :
   apply (meson MList.sublist_valid not_le reduceOne_geZero_aux)
   by auto
 
-lemma reduceContractStep_geZero_Refund_aux : 
+lemma reduceContractStep_geZero_Refund_aux :
   "valid_state state \<Longrightarrow>
    \<forall>x. 0 \<le> moneyInAccount x (accounts state) \<Longrightarrow>
    refundOne (accounts state) = Some ((party, money), newAccount) \<Longrightarrow>
@@ -95,11 +95,11 @@ lemma reduceContractStep_geZero_Refund_aux :
    0 \<le> moneyInAccount y newAccount"
   using reduceOne_geZero valid_state.elims(2) by blast
 
-lemma reduceContractStep_geZero_Refund : 
+lemma reduceContractStep_geZero_Refund :
   "valid_state state \<Longrightarrow>
    \<forall>x. 0 \<le> moneyInAccount x (accounts state) \<Longrightarrow>
-   refundOne (accounts state) = Some ((party, money), newAccount) \<Longrightarrow> 
-   Reduced ReduceNoWarning (ReduceWithPayment (Payment party money)) (state\<lparr>accounts := newAccount\<rparr>) Refund =
+   refundOne (accounts state) = Some ((party, money), newAccount) \<Longrightarrow>
+   Reduced ReduceNoWarning (ReduceWithPayment (Payment party money)) (state\<lparr>accounts := newAccount\<rparr>) Close =
       Reduced wa eff newState newCont \<Longrightarrow>
    0 \<le> moneyInAccount y (accounts newState)"
   using reduceContractStep_geZero_Refund_aux by auto

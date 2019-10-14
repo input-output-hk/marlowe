@@ -43,7 +43,7 @@ convertParty party maps@(Mappings { partyM = partyNumberings }) = (newParty, new
   where (newParty, newPartyNumberings) = getNumbering party partyNumberings
         newMaps = maps { partyM = newPartyNumberings }
 
-revertAccId :: AccountId -> Mappings -> MS.AccountId 
+revertAccId :: AccountId -> Mappings -> MS.AccountId
 revertAccId (AccountId accId _) maps = getLabel accId (accountM maps)
 
 getOriginalOwner :: NumAccount -> Mappings -> Party
@@ -178,7 +178,7 @@ mkSymbolicDatatype ''Payee
 data Case = Case Action Contract
   deriving (Eq,Ord,Show,Read)
 
-data Contract = Refund
+data Contract = Close
               | Pay AccountId Payee Value Contract
               | If Observation Contract Contract
               | When [Case] Timeout Contract
@@ -193,9 +193,9 @@ type SState = STuple4 (NIntegerArray)
                       (NIntegerArray)
                       (NIntegerArray)
                       SlotNumber
-type State = ( NIntegerArray 
-             , NIntegerArray 
-             , NIntegerArray 
+type State = ( NIntegerArray
+             , NIntegerArray
+             , NIntegerArray
              , SlotNumber)
 
 emptySState :: Bounds -> SSlotNumber -> SState
@@ -322,7 +322,7 @@ evalValue bnds env state value =
     AddValue lhs rhs         -> go lhs + go rhs
     SubValue lhs rhs         -> go lhs + go rhs
     ChoiceValue (ChoiceId c p) defVal -> SM.maybe (go defVal)
-                                                  id 
+                                                  id
                                                   (IntegerArray.lookup c $ choice state)
     SlotIntervalStart        -> inStart
     SlotIntervalEnd          -> inEnd
@@ -392,7 +392,7 @@ mkSymbolicDatatype ''ReduceEffect
 -- Gives the given amount of money to the given payee
 -- Return the appropriate effect and updated Map
 giveMoney :: IntegerArray -> Payee -> SMoney
-          -> STuple2 NReduceEffect NIntegerArray 
+          -> STuple2 NReduceEffect NIntegerArray
 giveMoney accs (Party party) mon = ST.tuple ( sReduceNormalPay (literal party) mon
                                             , accs )
 giveMoney accs (Account accId) mon = ST.tuple ( sReduceNoEffect
@@ -433,7 +433,7 @@ data DetReduceResult = DRRContractOver
 -- Carry a step of the contract with no inputs
 reduce :: SymVal a => Bounds -> SEnvironment -> SState -> Contract
        -> (SReduceResult -> DetReduceResult -> SBV a) -> SBV a
-reduce bnds _ state Refund f = f sNotReduced $ DRRContractOver
+reduce bnds _ state Close f = f sNotReduced $ DRRContractOver
 reduce bnds env state (Pay accId payee val nc) f =
   ite (mon .<= 0)
       (f (sReduced (sReduceNonPositivePay (literalAccountId accId)
@@ -492,7 +492,7 @@ splitReduceResultReduce :: Bounds -> SList NReduceWarning -> SList NReduceEffect
                         -> SSReduceResult
                         -> (SList NReduceWarning, SList NReduceEffect, SState,
                             SReduceError)
-splitReduceResultReduce _ wa ef (SSReduced twa tef tsta) = 
+splitReduceResultReduce _ wa ef (SSReduced twa tef tsta) =
   ( symCaseReduceWarning
        (\x -> case x of -- Do not add if ReduceNoWarning
                 SSReduceNoWarning -> wa
@@ -502,7 +502,7 @@ splitReduceResultReduce _ wa ef (SSReduced twa tef tsta) =
                 SSReduceNoEffect -> ef
                 _ -> tef SL..: ef) tef
   , tsta
-  , sReduceAmbiguousSlotInterval {- SNH -}) 
+  , sReduceAmbiguousSlotInterval {- SNH -})
 splitReduceResultReduce bnds _ _ SSNotReduced =
   ([] {- SNH -}, [] {- SNH -}, emptySState bnds 0 {- SNH -}, sReduceAmbiguousSlotInterval {- SNH -})
 splitReduceResultReduce bnds _ _ (SSReduceError terr) = ([] {- SNH -}, [] {- SNH -}, emptySState bnds 0{- SNH -}, terr)
@@ -559,7 +559,7 @@ splitReduceAllResult :: Bounds -> SList NTransactionWarning -> SList NReduceEffe
 splitReduceAllResult bnds wa ef (SSReducedAll twa tef tsta) = ST.tuple $
   (ite (SL.null twa)
        wa
-       (wa SL..++ (sTransactionReduceWarnings twa SL..: [])), tef SL..++ ef, tsta, sReduceAmbiguousSlotInterval {- SNH -}) 
+       (wa SL..++ (sTransactionReduceWarnings twa SL..: [])), tef SL..++ ef, tsta, sReduceAmbiguousSlotInterval {- SNH -})
 splitReduceAllResult bnds _ _ (SSReduceAllError terr) =
    ST.tuple $ ([] {- SNH -}, [] {- SNH -}, emptySState bnds 0{- SNH -}, terr)
 
@@ -617,7 +617,7 @@ mkSymbolicDatatype ''ApplyAllResult
 
 data DetApplyAllResult = DAARNormal Contract
                                     Integer -- num of Payments
-                                    Integer -- num of Inputs 
+                                    Integer -- num of Inputs
                        | DAARError
 
 addIfEffWa :: SList NTransactionWarning -> SSApplyWarning -> SList NTransactionWarning
@@ -640,7 +640,7 @@ applyAllAux n bnds numPays numInps env state c l wa ef f
         contFunReduce sr DRARContractOver =
           let (nwa, nef, nstate, _) = ST.untuple $ splitReduceAllResultWrap bnds wa ef sr in
           ite (SL.null l)
-              (f (sAppliedAll nwa nef nstate) $ DAARNormal Refund numPays numInps)
+              (f (sAppliedAll nwa nef nstate) $ DAARNormal Close numPays numInps)
               (f (sAAApplyError sApplyNoMatch) DAARError)
         contFunReduce sr (DRARNormal nc p) =
           let (nwa, nef, nstate, _) = ST.untuple $ splitReduceAllResultWrap bnds wa ef sr in
@@ -650,7 +650,7 @@ applyAllAux n bnds numPays numInps env state c l wa ef f
         contFunApply _ _ _ _ sr DARError =
           f (symCaseApplyResult
                (\x -> case x of
-                        SSApplied _ _ -> sAAReduceError sReduceAmbiguousSlotInterval -- SNH 
+                        SSApplied _ _ -> sAAReduceError sReduceAmbiguousSlotInterval -- SNH
                         SSApplyError err -> sAAApplyError err) sr)
             DAARError
         contFunApply t nwa nef np sr (DARNormal nc ni) =
@@ -707,22 +707,22 @@ sFoldl inte f acc list
   | inte >= 0 = ite (SL.null list)
                    acc
                    (sFoldl (inte - 1) f (f acc (SL.head list)) (SL.tail list))
-  | otherwise = acc 
+  | otherwise = acc
 
 --getSignatures :: Bounds -> Integer -> SList NInput -> STransactionSignatures
 --getSignatures bnds numInps =
---  sFoldl numInps (\x y -> symCaseInput (addSig x) y) FSSet.empty 
+--  sFoldl numInps (\x y -> symCaseInput (addSig x) y) FSSet.empty
 --  where
 --    addSig acc (SSIDeposit _ p _) = FSSet.insert (numParties bnds) p acc
 --    addSig acc (SSIChoice t _) = let (_, p) = ST.untuple t in
 --                                 FSSet.insert (numParties bnds) p acc
 --    addSig acc SSINotify = acc
 --
---addIfPay :: Bounds -> SSReduceEffect -> STransactionOutcomes -> STransactionOutcomes 
+--addIfPay :: Bounds -> SSReduceEffect -> STransactionOutcomes -> STransactionOutcomes
 --addIfPay bnds (SSReduceNormalPay p m) to = addOutcome bnds p (-m) to
 --addIfPay _ _ to = to
 --
---addIfDep :: Bounds -> SSInput -> STransactionOutcomes -> STransactionOutcomes 
+--addIfDep :: Bounds -> SSInput -> STransactionOutcomes -> STransactionOutcomes
 --addIfDep bnds (SSIDeposit _ p m) to = addOutcome bnds p m to
 --addIfDep _ _ to = to
 --
@@ -738,19 +738,19 @@ sFoldl inte f acc list
 --                                         (\oneEff -> addIfPay bnds oneEff to)
 --                                         (SL.head eff)))
 --  | numInps >= 0 = ite (SL.null inp)
---                      to 
+--                      to
 --                      (getOutcomesAux bnds (-1) (numInps - 1)
 --                                      [] (SL.tail inp)
 --                                      (symCaseInput
 --                                         (\oneInp -> addIfDep bnds oneInp to)
 --                                         (SL.head inp)))
---                                      
---  | otherwise = to -- SNH 
+--
+--  | otherwise = to -- SNH
 --
 --getOutcomes :: Bounds -> Integer -> Integer -> SList NReduceEffect -> SList NInput
 --            -> STransactionOutcomes
 --getOutcomes bnds numPays numInps eff inp =
---  getOutcomesAux bnds numPays numInps eff inp emptyOutcome 
+--  getOutcomesAux bnds numPays numInps eff inp emptyOutcome
 
 data TransactionResult = TransactionProcessed [NTransactionWarning]
                                [NTransactionEffect]
@@ -768,7 +768,7 @@ data DetTransactionResult = DTProcessed Contract
 extractAppliedAll :: SymVal a => Bounds -> SSApplyAllResult
    -> (SBV [NTransactionWarning] -> SBV [NTransactionEffect] -> SBV State -> SBV a)
    -> SBV a
-extractAppliedAll _ (SSAppliedAll wa ef nsta) f = f (wa) ef nsta 
+extractAppliedAll _ (SSAppliedAll wa ef nsta) f = f (wa) ef nsta
 extractAppliedAll bnds (SSAAApplyError _) f = f [] [] (emptySState bnds 0) -- SNH
 extractAppliedAll bnds (SSAAReduceError _) f = f [] [] (emptySState bnds 0) -- SNH
 
@@ -784,7 +784,7 @@ convertTransactionError (SSAAReduceError reerr) f =
 -- Try to process a transaction
 processApplyResult :: SymVal a => Bounds -> STransaction -> Contract
                    -> (STransactionResult -> DetTransactionResult -> SBV a)
-                   -> SApplyAllResult -> DetApplyAllResult 
+                   -> SApplyAllResult -> DetApplyAllResult
                    -> SBV a
 processApplyResult bnds tra c f saar (DAARNormal ncon numPays numInps) =
   symCaseApplyAllResult
@@ -827,7 +827,7 @@ extractTransactionResult :: Bounds ->
 extractTransactionResult bnds spr =
   ST.untuple (symCaseTransactionResult prCases spr)
   where prCases (SSTransactionProcessed wa ef {- ts to -} nst) = ST.tuple (wa, ef, {- ts, to, -} nst)
-        prCases (SSTransactionError _) = ST.tuple ([], [], {- [], [], -} emptySState bnds 0) -- SNH 
+        prCases (SSTransactionError _) = ST.tuple ([], [], {- [], [], -} emptySState bnds 0) -- SNH
 
 warningsTraceWBAux :: Integer -> Bounds -> SState -> SList NTransaction -> Contract
                    -> (SList NTransactionWarning)
@@ -835,7 +835,7 @@ warningsTraceWBAux inte bnds st transList con
   | inte >= 0 = ite (SL.null transList)
                     []
                     (process bnds (SL.head transList) st con cont)
-  | otherwise = [] -- SNH 
+  | otherwise = [] -- SNH
   where cont spr (DTProcessed ncon) = let (wa, _, {- _, _, -} nst) =
                                              extractTransactionResult bnds spr in
                                       ite (SL.null $ wa)
@@ -981,7 +981,7 @@ convertCaseList (MS.Case action cont : rest) maps =
         (newRest, actionsWithRest, mapsWithRest) = convertCaseList rest mapsWithCont
 
 convertContract :: MS.Contract -> Mappings -> (Contract, MaxActions, Mappings)
-convertContract MS.Refund maps = (Refund, 0, maps)
+convertContract MS.Close maps = (Close, 0, maps)
 convertContract (MS.Pay accId payee value cont) maps =
     (Pay newAccId newPayee newValue newCont, actionsWithCont, mapsWithContract)
   where (newAccId, mapsWithAccId) = convertAccId accId maps
@@ -1004,7 +1004,7 @@ convertContract (MS.Let valId value cont) maps =
     (Let newValId newValue newCont, actionsWithCont, mapsWithContract)
   where (newValId, mapsWithValId) = convertValId valId maps
         (newValue, mapsWithValue) = convertValue value mapsWithValId
-        (newCont, actionsWithCont, mapsWithContract) = convertContract cont mapsWithValue 
+        (newCont, actionsWithCont, mapsWithContract) = convertContract cont mapsWithValue
 
 convertContractBase :: MS.Contract -> (Contract, MaxActions, Mappings)
 convertContractBase c = convertContract c emptyMappings
@@ -1029,11 +1029,11 @@ revertSlotNum sn = MS.Slot { MS.getSlot = sn }
 revertInterval :: SlotInterval -> MS.SlotInterval
 revertInterval (snl, snh) = MS.SlotInterval (revertSlotNum snl) (revertSlotNum snh)
 
-revertChoId :: ChoiceId -> Mappings -> MS.ChoiceId 
+revertChoId :: ChoiceId -> Mappings -> MS.ChoiceId
 revertChoId (ChoiceId choId _) maps = getLabel choId (choiceM maps)
 
-revertValId :: ValueId -> Mappings -> MS.ValueId 
-revertValId (ValueId valId) maps = getLabel valId (valueM maps) 
+revertValId :: ValueId -> Mappings -> MS.ValueId
+revertValId (ValueId valId) maps = getLabel valId (valueM maps)
 
 revertInput :: Input -> Mappings -> MS.Input
 revertInput (IDeposit accId party mon) maps = MS.IDeposit newAccId newParty newMon
@@ -1057,7 +1057,7 @@ revertPayee (Party party) maps = MS.Party (revertParty party maps)
 revertReduceWarningList :: ReduceWarning -> Mappings -> MS.ReduceWarning
 revertReduceWarningList ReduceNoWarning _ = MS.ReduceNoWarning
 revertReduceWarningList (ReduceNonPositivePay accId payee inte) maps =
-     MS.ReduceNonPositivePay newAccId newPayee inte 
+     MS.ReduceNonPositivePay newAccId newPayee inte
   where newAccId = revertAccId (unNestAccountId accId) maps
         newPayee = revertPayee (unNestPayee payee) maps
 revertReduceWarningList (ReducePartialPay accId payee mon1 mon2) maps =
@@ -1108,7 +1108,7 @@ warningsTrace :: MS.Contract
 warningsTrace con =
     do thmRes@(ThmResult result) <- satCommand
        return (case result of
-                 Unsatisfiable _ _ -> Right Nothing 
+                 Unsatisfiable _ _ -> Right Nothing
                  Satisfiable _ smtModel ->
                     Right (Just (extractCounterExample smtModel maps
                                    warningsFunc))

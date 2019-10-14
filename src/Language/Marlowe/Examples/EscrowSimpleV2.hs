@@ -3,10 +3,10 @@ module Language.Marlowe.Examples.EscrowSimpleV2 where
 
 import  Language.Marlowe
 import  Language.Marlowe.Pretty
-    
+
 main :: IO ()
 main = putStrLn $ show $ pretty $ contract
-   
+
 
 {- What does the vanilla contract look like?
   - if Alice and Bob choose
@@ -20,20 +20,20 @@ contract :: Contract
 
 contract = When [Case (Deposit "alice" "alice" price) inner]
                 10
-                Refund
+                Close
 
 inner :: Contract
 
 inner =
   When [ Case aliceChoice
-              (When [ Case bobChoice 
+              (When [ Case bobChoice
                           (If (aliceChosen `ValueEQ` bobChosen)
                              agreement
                              arbitrate) ]
                     60
                     arbitrate),
         Case bobChoice
-              (When [ Case aliceChoice 
+              (When [ Case aliceChoice
                           (If (aliceChosen `ValueEQ` bobChosen)
                               agreement
                               arbitrate) ]
@@ -41,27 +41,27 @@ inner =
                     arbitrate)
         ]
         40
-        Refund
-              
--- The contract to follow when Alice and Bob have made the same choice.                       
-         
-agreement :: Contract  
-agreement = 
-  If 
+        Close
+
+-- The contract to follow when Alice and Bob have made the same choice.
+
+agreement :: Contract
+agreement =
+  If
     (isPay aliceChosen)
-    (Pay "alice" (Party "bob") price Refund)
-    Refund
-     
--- The contract to follow when Alice and Bob disagree, or if 
+    (Pay "alice" (Party "bob") price Close)
+    Close
+
+-- The contract to follow when Alice and Bob disagree, or if
 -- Carol has to intervene after a single choice from Alice or Bob.
 
 arbitrate :: Contract
 
 arbitrate =
-  When  [ Case carolRefund Refund,
-          Case carolPay (Pay "alice" (Party "bob") price Refund) ]
+  When  [ Case carolRefund Close,
+          Case carolPay (Pay "alice" (Party "bob") price Close) ]
         100
-        Refund
+        Close
 
 -- Predicate for choices
 

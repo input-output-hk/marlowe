@@ -22,8 +22,8 @@ crowdfunding :: Integer -> Integer -> Timeout -> Party -> [Party] -> Contract
 crowdfunding target maxContrib tim p lp =
   multiState (transitionFunction maxContrib) [(cp, False) | cp <- lp] cont tim cont
   where cont = If (ValueGE (addAll srcAvail) (Constant target))
-                  (payAllAccsTo srcAccs (Account creatorAcc) Refund)
-                  Refund
+                  (payAllAccsTo srcAccs (Account creatorAcc) Close)
+                  Close
         srcAccs = [AccountId 1 cp | cp <- lp]
         srcAvail = map AvailableMoney srcAccs
         creatorAcc = AccountId 1 p

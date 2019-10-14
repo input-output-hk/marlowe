@@ -19,8 +19,8 @@ crowdfunding target tim =
                        (Pay (AccountId 1 "3") (Account creatorAcc) (AvailableMoney (AccountId 1 "3"))
                             (Pay (AccountId 1 "4") (Account creatorAcc) (AvailableMoney (AccountId 1 "4"))
                                  (Pay (AccountId 1 "5") (Account creatorAcc) (AvailableMoney (AccountId 1 "5"))
-                                      Refund))))
-                  Refund
+                                      Close))))
+                  Close
         creatorAcc = AccountId 1 "1"
 
 -- Defines a state machine for each contributor:

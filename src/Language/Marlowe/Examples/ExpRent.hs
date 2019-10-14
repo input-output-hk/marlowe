@@ -15,17 +15,17 @@ expanded =
                       (When [
                          Case (Deposit (AccountId 2 "party1") "party1" (Constant 120))
                            (Pay (AccountId 2 "party1") (Party "party2") (AvailableMoney (AccountId 2 "party1"))
-                              Refund)]
+                              Close)]
                          100
                          (Pay (AccountId 1 "party1") (Party "party2") (AvailableMoney (AccountId 1 "party1"))
-                           Refund)))]
+                           Close)))]
                  70
                  (Pay (AccountId 1 "party1") (Party "party2") (AvailableMoney (AccountId 1 "party1"))
-                    Refund)))]
+                    Close)))]
          40
          (Pay (AccountId 1 "party1") (Party "party2") (AvailableMoney (AccountId 1 "party1"))
-            Refund))]
+            Close))]
     10
-    Refund
+    Close
 
 

@@ -168,24 +168,92 @@ fun allAccountsPositive :: "(AccountId \<times> Money) list \<Rightarrow> bool" 
 fun allAccountsPositiveState :: "State \<Rightarrow> bool" where
 "allAccountsPositiveState state = allAccountsPositive (accounts state)"
 
+lemma allAccountsPositiveMeansFirstIsPositive_aux :
+  "(foldl (\<lambda>r ab. r \<and> (case ab of (u, x) \<Rightarrow> 0 < x)) (0 < b) accs \<Longrightarrow> 0 < b) \<Longrightarrow>
+   foldl (\<lambda>r ab. r \<and> (case ab of (u, x) \<Rightarrow> 0 < x)) (0 < b \<and> (case a of (u, x) \<Rightarrow> 0 < x)) accs \<Longrightarrow> 0 < b"
+  apply (cases "(case a of (u, x) \<Rightarrow> 0 < x)")
+  by auto
+
+lemma allAccountsPositiveMeansFirstIsPositive :
+ "allAccountsPositive ((a, b) # accs) \<Longrightarrow> 0 < b"
+  apply (induction accs)
+  apply simp
+  apply simp
+  using allAccountsPositiveMeansFirstIsPositive_aux by blast
+
+lemma allAccountsPositiveMeansAllAccountsInTailArePositive_aux :
+ "(allAccountsPositive ((a, b) # accs) \<Longrightarrow> allAccountsPositive accs) \<Longrightarrow> allAccountsPositive ((a, b) # aa # accs) \<Longrightarrow> allAccountsPositive (aa # accs)"
+  apply simp
+  apply (cases "(case aa of (u, x) \<Rightarrow> 0 < x)")
+  by simp_all
+
+lemma allAccountsPositiveMeansAllAccountsInTailArePositive :
+ "allAccountsPositive ((a, b) # accs) \<Longrightarrow> allAccountsPositive accs"
+  apply (induction accs)
+  apply simp
+  using allAccountsPositiveMeansAllAccountsInTailArePositive_aux by blast
+
+lemma allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount_aux :
+  "(\<And>accId. allAccountsPositive accs \<Longrightarrow> positiveMoneyInAccountOrNoAccount accId accs) \<Longrightarrow>
+   allAccountsPositive ((a, b) # accs) \<Longrightarrow> positiveMoneyInAccountOrNoAccount accId ((a, b) # accs)"
+  apply (simp only:positiveMoneyInAccountOrNoAccount.simps)
+  apply (cases "accId = a")
+  apply (simp del:valid_map.simps)
+  apply (rule allAccountsPositiveMeansFirstIsPositive)
+  apply simp
+  apply (simp only:lookup.simps if_False)
+  apply (cases "a < accId")
+  apply (simp only:if_True)
+  using allAccountsPositiveMeansAllAccountsInTailArePositive apply blast
+  by simp
+
 lemma allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount :
   "allAccountsPositive accs \<Longrightarrow> positiveMoneyInAccountOrNoAccount accId accs"
-  oops
+  apply (induction accs arbitrary: accId)
+  apply simp
+  using allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount_aux by auto
+
+lemma positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive_aux :
+ "b > 0 \<Longrightarrow> allAccountsPositive accs \<Longrightarrow> allAccountsPositive ((a, b) # accs)"
+  by simp
+
+lemma positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive_aux2 :
+  "(valid_map accs \<Longrightarrow> \<forall>accId. positiveMoneyInAccountOrNoAccount accId accs \<Longrightarrow> allAccountsPositive accs) \<Longrightarrow>
+   valid_map ((a, b) # accs) \<Longrightarrow> \<forall>accId. positiveMoneyInAccountOrNoAccount accId ((a, b) # accs) \<Longrightarrow> allAccountsPositive ((a, b) # accs)"
+  apply (cases "0 \<ge> b")
+  apply (simp del:foldl_Cons valid_map.simps)
+  apply (smt option.simps(5))
+  apply (simp only:positiveMoneyInAccountOrNoAccount.simps)
+  apply (rule positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive_aux)
+  apply linarith
+  using positiveMoneyInAccountOrNoAccount_gtZero_preservation by auto
 
 lemma positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive :
-  "(\<forall> accId. positiveMoneyInAccountOrNoAccount accId accs) \<Longrightarrow> allAccountsPositive accs"
-  oops
+  "valid_map accs \<Longrightarrow> (\<forall> accId. positiveMoneyInAccountOrNoAccount accId accs) \<Longrightarrow> allAccountsPositive accs"
+  apply (induction accs)
+  apply simp
+  using positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive_aux2 by auto
 
 theorem accountsArePositive :
-"(\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
+  "valid_state state \<Longrightarrow> (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
   computeTransaction txIn state cont = TransactionOutput txOut \<Longrightarrow>
   positiveMoneyInAccountOrNoAccount y (accounts (txOutState txOut))"
-oops
+  oops
 
 theorem accountsArePositive2 :
-    "allAccountsPositiveState state
+    "valid_state state \<Longrightarrow> allAccountsPositiveState state
     \<Longrightarrow> computeTransaction txIn state cont = TransactionOutput txOut
     \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"
   oops
+  (* by (meson accountsArePositive allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2)) *)
+
+fun validAndPositive_state :: "State \<Rightarrow> bool" where
+"validAndPositive_state state = (valid_state state \<and> allAccountsPositiveState state)"
+
+lemma validAndPositiveImpliesValid : "validAndPositive_state state \<Longrightarrow> valid_state state"
+  by simp
+
+lemma validAndPositiveImpliesPositive : "validAndPositive_state state \<Longrightarrow> (\<forall> x. positiveMoneyInAccountOrNoAccount x (accounts state))"
+  using allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount by auto
 
 end

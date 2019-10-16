@@ -263,7 +263,7 @@ datatype Payee = Account AccountId
                | Party Party
 
 datatype Case = Case Action Contract
-and Contract = Refund
+and Contract = Close
              | Pay AccountId Payee Value Contract
              | If Observation Contract Contract
              | When "Case list" Timeout Contract
@@ -425,11 +425,11 @@ datatype ReduceStepResult = Reduced ReduceWarning ReduceEffect State Contract
                           | AmbiguousSlotIntervalReductionError
 
 fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceStepResult" where
-"reduceContractStep _ state Refund =
+"reduceContractStep _ state Close =
   (case refundOne (accounts state) of
      Some ((party, money), newAccount) \<Rightarrow>
        let newState = state \<lparr> accounts := newAccount \<rparr> in
-       Reduced ReduceNoWarning (ReduceWithPayment (Payment party money)) newState Refund
+       Reduced ReduceNoWarning (ReduceWithPayment (Payment party money)) newState Close
    | None \<Rightarrow> NotReduced)" |
 "reduceContractStep env state (Pay accId payee val cont) =
   (let moneyToPay = evalValue env state val in
@@ -479,9 +479,9 @@ lemma reduceContractStepReducesSize_Refund_aux :
 
 lemma reduceContractStepReducesSize_Refund_aux2 :
   "Reduced ReduceNoWarning (ReduceWithPayment (Payment party money))
-          (sta\<lparr>accounts := newAccount\<rparr>) Refund =
+          (sta\<lparr>accounts := newAccount\<rparr>) Close =
    Reduced twa tef nsta nc \<Longrightarrow>
-   c = Refund \<Longrightarrow>
+   c = Close \<Longrightarrow>
    refundOne (accounts sta) = Some ((party, money), newAccount) \<Longrightarrow>
    length (accounts nsta) + 2 * size nc < length (accounts sta)"
   apply simp
@@ -491,9 +491,9 @@ lemma reduceContractStepReducesSize_Refund :
   "(case a of
           ((party, money), newAccount) \<Rightarrow>
             Reduced ReduceNoWarning (ReduceWithPayment (Payment party money))
-             (sta\<lparr>accounts := newAccount\<rparr>) Refund) =
+             (sta\<lparr>accounts := newAccount\<rparr>) Close) =
          Reduced twa tef nsta nc \<Longrightarrow>
-         c = Refund \<Longrightarrow>
+         c = Close \<Longrightarrow>
          refundOne (accounts sta) = Some a \<Longrightarrow>
          length (accounts nsta) + 2 * size nc < length (accounts sta)"
   apply (cases a)
@@ -801,7 +801,7 @@ fun getSignatures :: "Input list \<Rightarrow> TransactionSignatures" where
 "getSignatures l = foldl addSig SList.empty l"
 
 fun isQuiescent :: "Contract \<Rightarrow> bool" where
-"isQuiescent Refund = True" |
+"isQuiescent Close = True" |
 "isQuiescent (When _ _ _) = True" |
 "isQuiescent _ = False"
 

@@ -12,7 +12,7 @@ lemma refundOne_preserves_valid_map_accounts :
 
 lemma reductionStep_preserves_valid_state_Refund :
   "valid_state state \<Longrightarrow>
-   reduceContractStep env state Refund = Reduced wa ef newState newCont \<Longrightarrow>
+   reduceContractStep env state Close = Reduced wa ef newState newCont \<Longrightarrow>
    state = \<lparr>accounts = oldAccounts, choices = oldChoices, boundValues = oldBoundValues, minSlot = oldMinSlot\<rparr> \<Longrightarrow>
    newState = \<lparr>accounts = newAccounts, choices = newChoices, boundValues = newBoundValues, minSlot = newMinSlot\<rparr> \<Longrightarrow>
    valid_state newState"

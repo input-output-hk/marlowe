@@ -12,11 +12,11 @@ When
       carolAgrees
         Pay "alice" "bob" price
       carolDisagrees
-        Refund "alice"       
+        Close "alice"
   aliceClaims
     when
       carolAgrees
-        Refund "alice"       
+        Close "alice"
       carolDisagrees
         Pay "alice" "bob" price
 
@@ -25,31 +25,31 @@ When
 contract :: Contract
 contract = When [Case (Deposit "alice" "alice" price)
                       (When [ processBobClaim
-                            , processAliceClaim 
+                            , processAliceClaim
                             ]
                             90
-                            Refund)
+                            Close)
                 ]
                 10
-                Refund
+                Close
 
 processBobClaim, processAliceClaim :: Case
 
 processBobClaim =
-  Case bobClaims 
-    (When [ Case carolAgrees (Pay "alice" (Party "bob") price Refund)
-          , Case carolDisagrees Refund
+  Case bobClaims
+    (When [ Case carolAgrees (Pay "alice" (Party "bob") price Close)
+          , Case carolDisagrees Close
           ]
          100
-         Refund)
+         Close)
 
-processAliceClaim = 
-  Case aliceClaims 
-    (When [ Case carolAgrees Refund,
-            Case carolDisagrees (Pay "alice" (Party "bob") price Refund) 
+processAliceClaim =
+  Case aliceClaims
+    (When [ Case carolAgrees Close,
+            Case carolDisagrees (Pay "alice" (Party "bob") price Close)
           ]
        100
-       Refund)
+       Close)
 
 aliceClaims, bobClaims, carolAgrees, carolDisagrees :: Action
 

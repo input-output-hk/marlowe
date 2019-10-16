@@ -12,17 +12,17 @@ contract =
   When [ Case (Deposit incentiveAcc incentiviser (incentiveAmt))
               (When [ Case (Deposit depositAcc depositer (depositAmt))
                            (When [ Case (Choice (ChoiceId "refund" depositer) [Bound 1 1])
-                                        Refund
+                                        Close
                                  ]
                                  200
                                  (payAll incentiveAcc (Account depositAcc)
-                                         Refund))
+                                         Close))
                     ]
                     20
-                    Refund)
+                    Close)
        ]
        10
-       Refund
+       Close
 
 depositAmt, incentiveAmt :: Value
 depositAmt = Constant 100

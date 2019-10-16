@@ -800,9 +800,9 @@ fun addSig :: "Party list \<Rightarrow> Input \<Rightarrow> Party list" where
 fun getSignatures :: "Input list \<Rightarrow> TransactionSignatures" where
 "getSignatures l = foldl addSig SList.empty l"
 
-fun isQuiescent :: "Contract \<Rightarrow> bool" where
-"isQuiescent Close = True" |
-"isQuiescent (When _ _ _) = True" |
-"isQuiescent _ = False"
+fun isQuiescent :: "Contract \<Rightarrow> State \<Rightarrow> bool" where
+"isQuiescent Close state = (True \<and> (accounts state = []))" |
+"isQuiescent (When _ _ _) _ = True" |
+"isQuiescent _ _ = False"
 
 end

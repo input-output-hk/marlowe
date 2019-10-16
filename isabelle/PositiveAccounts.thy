@@ -256,4 +256,41 @@ lemma validAndPositiveImpliesValid : "validAndPositive_state state \<Longrightar
 lemma validAndPositiveImpliesPositive : "validAndPositive_state state \<Longrightarrow> (\<forall> x. positiveMoneyInAccountOrNoAccount x (accounts state))"
   using allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount by auto
 
+lemma reduceContractStep_preserves_validAndPositive_state :
+  "validAndPositive_state state \<Longrightarrow>
+   reduceContractStep env state cont = Reduced wa eff newState newCont \<Longrightarrow>
+   validAndPositive_state newState"
+  apply (simp only:validAndPositive_state.simps)
+  by (meson allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive reduceContractStep_gtZero reductionStep_preserves_valid_state valid_state.elims(2))
+
+lemma reduceContractUntilQuiescent_preserves_validAndPositive_state :
+  "validAndPositive_state state \<Longrightarrow>
+   reduceContractUntilQuiescent env state contract = ContractQuiescent nwa npa nstate ncont \<Longrightarrow>
+   validAndPositive_state nstate"
+  oops
+
+lemma applyInput_preserves_preserves_validAndPositive_state :
+  "validAndPositive_state state \<Longrightarrow>
+   applyInput env state inp cont = Applied nwa nstate ncont \<Longrightarrow>
+   validAndPositive_state nstate"
+  oops
+
+lemma applyAllInputs_preserves_preserves_validAndPositive_state :
+  "validAndPositive_state state \<Longrightarrow>
+   applyAllInputs env state cont inps = ApplyAllSuccess wa pa nstate ncont \<Longrightarrow>
+   validAndPositive_state nstate"
+  oops
+
+lemma fixInterval_preserves_preserves_validAndPositive_state :
+  "validAndPositive_state state \<Longrightarrow>
+   fixInterval inte state = IntervalTrimmed nenv nstate \<Longrightarrow>
+   validAndPositive_state nstate"
+  oops
+
+lemma applyAllLoop_preserves_preserves_validAndPositive_state :
+  "validAndPositive_state state \<Longrightarrow>
+   applyAllLoop env state cont inp wa pa = ApplyAllSuccess nwa npa nstate ncont \<Longrightarrow>
+   validAndPositive_state nstate"
+  oops
+
 end

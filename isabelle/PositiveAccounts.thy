@@ -155,12 +155,27 @@ theorem reduceContractStep_gtZero :
   apply (smt ReduceStepResult.distinct(1) ReduceStepResult.inject ReduceStepResult.simps(5) case_prod_unfold reduceContractStep.simps(4))
   using reduceContractStep_gtZero_Let by blast
 
+lemma reduceLoop_gtZero : 
+  "valid_state state \<Longrightarrow>
+    \<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state) \<Longrightarrow>
+    reductionLoop env state contract warns pays = ContractQuiescent nwa npa newState ncont \<Longrightarrow>
+    positiveMoneyInAccountOrNoAccount y (accounts newState)"
+  apply (induction env state contract warns pays rule: reductionLoop.induct)
+  subgoal for env state contract warns pays 
+    apply (cases "reduceContractStep env state contract")
+      apply (simp only:reductionLoop.simps [of env state contract warns pays])
+    apply (metis (no_types, lifting) ReduceStepResult.simps(8) reduceContractStep_gtZero reductionStep_preserves_valid_state)
+  by simp_all
+  done
+
 lemma reduceContractUntilQuiescent_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
    reduceContractUntilQuiescent env state contract = ContractQuiescent nwa npa newState ncont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y (accounts newState)"
-  oops
+  apply (simp only:reduceContractUntilQuiescent.simps)
+  using reduceLoop_gtZero by blast
+
 
 lemma applyInput_gtZero :
   "valid_state state \<Longrightarrow>
@@ -301,6 +316,8 @@ lemma reduceContractUntilQuiescent_preserves_validAndPositive_state :
   "validAndPositive_state state \<Longrightarrow>
    reduceContractUntilQuiescent env state contract = ContractQuiescent nwa npa nstate ncont \<Longrightarrow>
    validAndPositive_state nstate"
+  apply (simp del:)
+  
   oops
 
 lemma applyInput_preserves_preserves_validAndPositive_state :

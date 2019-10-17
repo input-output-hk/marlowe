@@ -160,6 +160,48 @@ theorem reduceContractStep_gtZero :
   apply (smt ReduceStepResult.distinct(1) ReduceStepResult.inject ReduceStepResult.simps(5) case_prod_unfold reduceContractStep.simps(4))
   using reduceContractStep_gtZero_Let by blast
 
+lemma reduceContractUntilQuiescent_gtZero :
+  "valid_state state \<Longrightarrow>
+   (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
+   reduceContractUntilQuiescent env state contract = ContractQuiescent nwa npa nstate ncont \<Longrightarrow>
+   positiveMoneyInAccountOrNoAccount y (accounts newState)"
+  oops
+
+lemma applyInput_gtZero :
+  "valid_state state \<Longrightarrow>
+   (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
+   applyInput env state inp cont = Applied nwa nstate ncont \<Longrightarrow>
+   positiveMoneyInAccountOrNoAccount y (accounts newState)"
+  oops
+
+lemma applyAllInputs_gtZero :
+  "valid_state state \<Longrightarrow>
+   (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
+   applyAllInputs env state cont inps = ApplyAllSuccess wa pa nstate ncont \<Longrightarrow>
+   positiveMoneyInAccountOrNoAccount y (accounts newState)"
+  oops
+
+lemma fixInterval_gtZero :
+  "valid_state state \<Longrightarrow>
+   (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
+   fixInterval inte state = IntervalTrimmed nenv nstate \<Longrightarrow>
+   positiveMoneyInAccountOrNoAccount y (accounts newState)"
+  oops
+
+lemma applyAllLoop_gtZero :
+  "valid_state state \<Longrightarrow>
+   (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
+   applyAllLoop env state cont inp wa pa = ApplyAllSuccess nwa npa nstate ncont \<Longrightarrow>
+   positiveMoneyInAccountOrNoAccount y (accounts newState)"
+  oops
+
+lemma computeTransaction_gtZero :
+  "valid_state state \<Longrightarrow>
+   (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
+   computeTransaction tx state contract = (TransactionOutput txOut) \<Longrightarrow>
+   positiveMoneyInAccountOrNoAccount y (accounts (txState txOut))"
+  oops
+
 (* Alternative formulation *)
 
 fun allAccountsPositive :: "(AccountId \<times> Money) list \<Rightarrow> bool" where

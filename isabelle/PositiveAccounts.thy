@@ -74,23 +74,18 @@ lemma positiveMoneyInAccountOrNoAccount_gtZero_preservation :
   apply (simp only:positiveMoneyInAccountOrNoAccount.simps findWithDefault.simps)
   by (metis lookup.simps(2) option.simps(5) positiveMoneyInAccountOrNoAccount.simps positiveMoneyInAccountOrNoAccount_sublist_gtZero)
 
-lemma reduceOne_gtZero_aux :
-  "valid_map ((accId, money) # rest) \<Longrightarrow>
-   (money \<le> 0 \<Longrightarrow> \<forall>x. positiveMoneyInAccountOrNoAccount x rest \<Longrightarrow> refundOne rest = Some (paym, newAccs) \<Longrightarrow> positiveMoneyInAccountOrNoAccount y newAccs) \<Longrightarrow>
-   \<forall>x. positiveMoneyInAccountOrNoAccount x ((accId, money) # rest) \<Longrightarrow> refundOne ((accId, money) # rest) = Some (paym, newAccs) \<Longrightarrow> positiveMoneyInAccountOrNoAccount y newAccs"
-  apply (cases "money > 0")
-  apply (simp only:refundOne.simps)
-  using positiveMoneyInAccountOrNoAccount_sublist_gtZero apply auto[1]
-  apply (simp only:refundOne.simps if_False)
-  using positiveMoneyInAccountOrNoAccount_gtZero_preservation not_less by blast
-
 lemma reduceOne_gtZero :
   "valid_map accs \<Longrightarrow>
    \<forall>x. positiveMoneyInAccountOrNoAccount x accs \<Longrightarrow>
    refundOne accs = Some (paym, newAccs) \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y newAccs"
   apply (induction accs rule:"refundOne.induct")
-  apply (meson MList.sublist_valid not_le reduceOne_gtZero_aux)
+  subgoal for accId money rest
+    apply (cases "money > 0")
+    apply (simp only:refundOne.simps)
+    using positiveMoneyInAccountOrNoAccount_gtZero_preservation apply auto[1]
+    apply (simp only:refundOne.simps if_False)
+    using positiveMoneyInAccountOrNoAccount_gtZero_preservation by auto
   by auto
 
 lemma reduceContractStep_gtZero_Refund_aux :
@@ -163,35 +158,35 @@ theorem reduceContractStep_gtZero :
 lemma reduceContractUntilQuiescent_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
-   reduceContractUntilQuiescent env state contract = ContractQuiescent nwa npa nstate ncont \<Longrightarrow>
+   reduceContractUntilQuiescent env state contract = ContractQuiescent nwa npa newState ncont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y (accounts newState)"
   oops
 
 lemma applyInput_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
-   applyInput env state inp cont = Applied nwa nstate ncont \<Longrightarrow>
+   applyInput env state inp cont = Applied nwa newState ncont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y (accounts newState)"
   oops
 
 lemma applyAllInputs_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
-   applyAllInputs env state cont inps = ApplyAllSuccess wa pa nstate ncont \<Longrightarrow>
+   applyAllInputs env state cont inps = ApplyAllSuccess wa pa newState ncont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y (accounts newState)"
   oops
 
 lemma fixInterval_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
-   fixInterval inte state = IntervalTrimmed nenv nstate \<Longrightarrow>
+   fixInterval inte state = IntervalTrimmed nenv newState \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y (accounts newState)"
   oops
 
 lemma applyAllLoop_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
-   applyAllLoop env state cont inp wa pa = ApplyAllSuccess nwa npa nstate ncont \<Longrightarrow>
+   applyAllLoop env state cont inp wa pa = ApplyAllSuccess nwa npa newState ncont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y (accounts newState)"
   oops
 
@@ -210,18 +205,15 @@ fun allAccountsPositive :: "(AccountId \<times> Money) list \<Rightarrow> bool" 
 fun allAccountsPositiveState :: "State \<Rightarrow> bool" where
 "allAccountsPositiveState state = allAccountsPositive (accounts state)"
 
-lemma allAccountsPositiveMeansFirstIsPositive_aux :
-  "(foldl (\<lambda>r ab. r \<and> (case ab of (u, x) \<Rightarrow> 0 < x)) (0 < b) accs \<Longrightarrow> 0 < b) \<Longrightarrow>
-   foldl (\<lambda>r ab. r \<and> (case ab of (u, x) \<Rightarrow> 0 < x)) (0 < b \<and> (case a of (u, x) \<Rightarrow> 0 < x)) accs \<Longrightarrow> 0 < b"
-  apply (cases "(case a of (u, x) \<Rightarrow> 0 < x)")
-  by auto
-
 lemma allAccountsPositiveMeansFirstIsPositive :
  "allAccountsPositive ((a, b) # accs) \<Longrightarrow> 0 < b"
   apply (induction accs)
   apply simp
-  apply simp
-  using allAccountsPositiveMeansFirstIsPositive_aux by blast
+  subgoal for aa accs
+    apply simp
+    apply (cases "(case aa of (uu_, x) \<Rightarrow> 0 < x)")
+    by auto
+  done
 
 lemma allAccountsPositiveMeansAllAccountsInTailArePositive_aux :
  "(allAccountsPositive ((a, b) # accs) \<Longrightarrow> allAccountsPositive accs) \<Longrightarrow> allAccountsPositive ((a, b) # aa # accs) \<Longrightarrow> allAccountsPositive (aa # accs)"

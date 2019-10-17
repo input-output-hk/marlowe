@@ -177,19 +177,127 @@ lemma reduceContractUntilQuiescent_gtZero :
   using reduceLoop_gtZero by blast
 
 
+(*lemma aaa : "valid_state state \<Longrightarrow> 
+   \<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state) \<Longrightarrow>
+  newState = state \<lparr> accounts := (
+    updateMoneyInAccount accId1 (moneyInAccount accId1 (accounts state) + evalValue env state val)
+        (accounts state)) \<rparr> \<Longrightarrow>
+   positiveMoneyInAccountOrNoAccount accId (accounts newState)"
+  using reduceContractStep_gtZero_Pay_aux by auto
+*)
+
+
+lemma applyCases_positive : "valid_state state \<Longrightarrow>
+       \<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state) \<Longrightarrow>
+       applyCases env state inp cases = Applied nwa newState ncont \<Longrightarrow>
+       positiveMoneyInAccountOrNoAccount y (accounts newState)"
+  (* Deposit case *)
+  apply (induction env state inp cases rule: applyCases.induct)
+  subgoal for env state accId1 party1 money accId2 party2 val cont rest
+    apply (simp only:applyCases.simps(1) [of env state accId1 party1 money accId2 party2 val cont rest])
+    apply (cases "accId1 = accId2 \<and> party1 = party2 \<and> money = ( evalValue env state val)")
+   
+     apply (cases " evalValue env state val \<le> 0")
+      apply (simp add:Let_def del:valid_state.simps positiveMoneyInAccountOrNoAccount.simps moneyInAccount.simps)
+  apply (simp add:Let_def del:valid_state.simps updateMoneyInAccount.simps positiveMoneyInAccountOrNoAccount.simps moneyInAccount.simps)
+    using reduceContractStep_gtZero_Pay_aux apply auto[1]
+  by (simp add:Let_def del:valid_state.simps updateMoneyInAccount.simps positiveMoneyInAccountOrNoAccount.simps moneyInAccount.simps)
+  (* Choice case *)
+  apply (metis ApplyResult.inject State.ext_inject State.simps(7) State.surjective applyCases.simps(2))
+  apply (metis ApplyResult.inject applyCases.simps(3))
+  by auto
+
+
 lemma applyInput_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
    applyInput env state inp cont = Applied nwa newState ncont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y (accounts newState)"
-  oops
+  apply (cases cont)
+      apply (simp)
+  apply (simp)
+    apply (simp)
+  apply (simp only:applyInput.simps)
+  using applyCases_positive apply blast
+  by simp
+
+
+lemma yyy :
+" (\<And>x11 x12 x13 x14 x21 x22 x11a x12a x13a.
+           ContractQuiescent newWarns newPays newSta newCont = ContractQuiescent x11 x12 x13 x14 \<Longrightarrow>
+           h # t = x21 # x22 \<Longrightarrow>
+           applyInput env x13 x21 x14 = Applied x11a x12a x13a \<Longrightarrow>
+           valid_state x12a \<Longrightarrow>
+           \<forall>x. positiveMoneyInAccountOrNoAccount x (accounts x12a) \<Longrightarrow>
+           applyAllLoop env x12a x13a x22 (warnings @ convertReduceWarnings x11 @ convertApplyWarning x11a)
+            (payments @ x12) =
+           ApplyAllSuccess wa pa newState ncont \<Longrightarrow>
+           positiveMoneyInAccountOrNoAccount y (accounts newState)) \<Longrightarrow>
+       valid_state x12 \<Longrightarrow>
+       \<forall>x. positiveMoneyInAccountOrNoAccount x (accounts x12) \<Longrightarrow>
+       applyAllLoop env x12 x13 t (warnings @ convertReduceWarnings newWarns @ convertApplyWarning x11)
+        (payments @ newPays) =
+       ApplyAllSuccess wa pa newState ncont \<Longrightarrow>
+       reduceContractUntilQuiescent env state contract = ContractQuiescent newWarns newPays newSta newCont \<Longrightarrow>
+       applyInput env newSta h newCont = Applied x11 x12 x13 \<Longrightarrow>
+       positiveMoneyInAccountOrNoAccount y (accounts newState)"
+  by blast
+
+lemma zzz :
+" (\<And>x11 x12 x13 x14 x21 x22 x11a x12a x13a.
+           ContractQuiescent newWarns newPays newSta newCont = ContractQuiescent x11 x12 x13 x14 \<Longrightarrow>
+           h # t = x21 # x22 \<Longrightarrow>
+           applyInput env x13 x21 x14 = Applied x11a x12a x13a \<Longrightarrow>
+           valid_state x12a \<Longrightarrow>
+           \<forall>x. positiveMoneyInAccountOrNoAccount x (accounts x12a) \<Longrightarrow>
+           applyAllLoop env x12a x13a x22 (warnings @ convertReduceWarnings x11 @ convertApplyWarning x11a)
+            (payments @ x12) =
+           ApplyAllSuccess wa pa newState ncont \<Longrightarrow>
+           positiveMoneyInAccountOrNoAccount y (accounts newState)) \<Longrightarrow>
+       valid_state newSta \<Longrightarrow>
+       \<forall>x. positiveMoneyInAccountOrNoAccount x (accounts x12) \<Longrightarrow>
+       applyAllLoop env x12 x13 t (warnings @ convertReduceWarnings newWarns @ convertApplyWarning x11)
+        (payments @ newPays) =
+       ApplyAllSuccess wa pa newState ncont \<Longrightarrow>
+       reduceContractUntilQuiescent env state contract = ContractQuiescent newWarns newPays newSta newCont \<Longrightarrow>
+       applyInput env newSta h newCont = Applied x11 x12 x13 \<Longrightarrow>
+       positiveMoneyInAccountOrNoAccount y (accounts newState)"
+  sledgehammer
+
+
+lemma xxx : 
+  "valid_state state \<Longrightarrow>
+    \<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state) \<Longrightarrow>
+    applyAllLoop env state cont inps warns pays = ApplyAllSuccess wa pa newState ncont \<Longrightarrow>
+    positiveMoneyInAccountOrNoAccount y (accounts newState)"
+  apply (induction  env state cont inps warns pays rule: applyAllLoop.induct)
+  subgoal for env state contract inputs warnings payments 
+    apply (cases inputs)
+  apply (simp only:list.case applyAllLoop.simps [of env state contract "[]" warnings payments])
+   apply (cases "reduceContractUntilQuiescent env state contract")
+  apply (simp only:ReduceResult.case)
+  using reduceContractUntilQuiescent_gtZero apply auto[1]
+   apply simp
+  subgoal for h t
+   apply (simp only:list.case applyAllLoop.simps [of env state contract "h#t" warnings payments])
+    apply (cases "reduceContractUntilQuiescent env state contract")
+     apply (simp only:ReduceResult.case)
+  subgoal for newWarns newPays newSta newCont
+    apply (cases "applyInput env newSta h newCont")
+    apply (simp only:ApplyResult.case)
+    subgoal for x11 x12 x13
+     apply (rule yyy)
+      apply (auto)
+    sledgehammer
+
 
 lemma applyAllInputs_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
    applyAllInputs env state cont inps = ApplyAllSuccess wa pa newState ncont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y (accounts newState)"
-  oops
+  apply (simp only:applyAllInputs.simps)
+  using xxx by blast
 
 lemma fixInterval_gtZero :
   "valid_state state \<Longrightarrow>

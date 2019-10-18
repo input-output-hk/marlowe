@@ -244,26 +244,33 @@ lemma applyAllInputs_gtZero :
   apply (simp only:applyAllInputs.simps)
   using applyAllLoop_gtZero by blast
 
+
 lemma fixInterval_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
    fixInterval inte state = IntervalTrimmed nenv newState \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y (accounts newState)"
-  oops
+  apply (cases  inte)
+  apply (simp only:fixInterval.simps)
+  by (smt IntervalResult.distinct(1) IntervalResult.inject(1) State.select_convs(1) State.surjective State.update_convs(4))
 
-lemma applyAllLoop_gtZero :
-  "valid_state state \<Longrightarrow>
-   (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
-   applyAllLoop env state cont inp wa pa = ApplyAllSuccess nwa npa newState ncont \<Longrightarrow>
-   positiveMoneyInAccountOrNoAccount y (accounts newState)"
-  oops
 
-lemma computeTransaction_gtZero :
+theorem computeTransaction_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
    computeTransaction tx state contract = (TransactionOutput txOut) \<Longrightarrow>
-   positiveMoneyInAccountOrNoAccount y (accounts (txState txOut))"
-  oops
+   positiveMoneyInAccountOrNoAccount y (accounts (txOutState txOut))"
+ 
+  apply (simp only:computeTransaction.simps)
+  apply (cases "fixInterval (interval tx) state")
+  apply (simp only:IntervalResult.case)
+  subgoal for env state
+    apply (simp only:Let_def)
+    apply (cases "applyAllInputs env state contract (inputs tx)")
+    apply (simp only:ApplyAllResult.case)
+    apply (metis TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) applyAllInputs_gtZero fixInterval_gtZero fixInterval_preserves_valid_state old.prod.exhaust)
+    by auto
+  by auto
 
 (* Alternative formulation *)
 
@@ -340,14 +347,13 @@ theorem accountsArePositive :
   "valid_state state \<Longrightarrow> (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
   computeTransaction txIn state cont = TransactionOutput txOut \<Longrightarrow>
   positiveMoneyInAccountOrNoAccount y (accounts (txOutState txOut))"
-  oops
+  using computeTransaction_gtZero by blast
 
 theorem accountsArePositive2 :
     "valid_state state \<Longrightarrow> allAccountsPositiveState state
     \<Longrightarrow> computeTransaction txIn state cont = TransactionOutput txOut
-    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"
-  oops
-  (* by (meson accountsArePositive allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2)) *)
+    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"  
+  by (meson accountsArePositive allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2))
 
 fun validAndPositive_state :: "State \<Rightarrow> bool" where
 "validAndPositive_state state = (valid_state state \<and> allAccountsPositiveState state)"
@@ -369,32 +375,30 @@ lemma reduceContractUntilQuiescent_preserves_validAndPositive_state :
   "validAndPositive_state state \<Longrightarrow>
    reduceContractUntilQuiescent env state contract = ContractQuiescent nwa npa nstate ncont \<Longrightarrow>
    validAndPositive_state nstate"
-  apply (simp del:)
-  
-  oops
+  by (metis allAccountsPositiveState.elims(3) positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive reduceContractUntilQuiescent.simps reduceContractUntilQuiescent_gtZero reductionLoop_preserves_valid_state validAndPositiveImpliesPositive validAndPositiveImpliesValid validAndPositive_state.elims(3) valid_state.elims(2))
 
 lemma applyInput_preserves_preserves_validAndPositive_state :
   "validAndPositive_state state \<Longrightarrow>
    applyInput env state inp cont = Applied nwa nstate ncont \<Longrightarrow>
    validAndPositive_state nstate"
-  oops
+  by (meson allAccountsPositiveState.simps applyInput_gtZero applyInput_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositiveImpliesPositive validAndPositive_state.simps valid_state.simps)
 
 lemma applyAllInputs_preserves_preserves_validAndPositive_state :
   "validAndPositive_state state \<Longrightarrow>
    applyAllInputs env state cont inps = ApplyAllSuccess wa pa nstate ncont \<Longrightarrow>
    validAndPositive_state nstate"
-  oops
+  by (metis allAccountsPositiveState.elims(3) applyAllInputs.simps applyAllInputs_gtZero applyAllLoop_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositiveImpliesPositive validAndPositiveImpliesValid validAndPositive_state.elims(3) valid_state.elims(2))
 
 lemma fixInterval_preserves_preserves_validAndPositive_state :
   "validAndPositive_state state \<Longrightarrow>
    fixInterval inte state = IntervalTrimmed nenv nstate \<Longrightarrow>
    validAndPositive_state nstate"
-  oops
+  by (metis allAccountsPositiveState.elims(3) fixInterval_gtZero fixInterval_preserves_valid_state old.prod.exhaust positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositiveImpliesPositive validAndPositiveImpliesValid validAndPositive_state.elims(3) valid_state.simps)
 
 lemma applyAllLoop_preserves_preserves_validAndPositive_state :
   "validAndPositive_state state \<Longrightarrow>
    applyAllLoop env state cont inp wa pa = ApplyAllSuccess nwa npa nstate ncont \<Longrightarrow>
    validAndPositive_state nstate"
-  oops
+  by (meson allAccountsPositiveState.simps applyAllLoop_gtZero applyAllLoop_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositiveImpliesPositive validAndPositive_state.simps valid_state.simps)
 
 end

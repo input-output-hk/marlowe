@@ -76,21 +76,18 @@ lemma applyAllInputsLoopIsQuiescent_loop : "(\<And>env fixSta cont wa ef.
   apply (cases "reduceContractUntilQuiescent env fixSta cont")
   apply (unfold applyAllLoop.simps [of "env" "fixSta"])
   apply (simp only:ReduceResult.case list.case)
-  oops
-  (* apply (metis (mono_tags, lifting) ApplyAllResult.distinct(1) ApplyResult.exhaust ApplyResult.simps(4) ApplyResult.simps(5) applyInput_preserves_preserves_validAndPositive_state reduceContractUntilQuiescent_preserves_validAndPositive_state)
-     by simp *)
+  apply (metis (mono_tags, lifting) ApplyAllResult.distinct(1) ApplyResult.exhaust ApplyResult.simps(4) ApplyResult.simps(5) applyInput_preserves_preserves_validAndPositive_state reduceContractUntilQuiescent_preserves_validAndPositive_state)
+  by simp
 
 lemma applyAllInputsLoopIsQuiescent : "validAndPositive_state fixSta \<Longrightarrow>
                                        applyAllLoop env fixSta cont inps wa ef = ApplyAllSuccess nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
   apply (induction inps arbitrary:env fixSta cont wa ef)
   apply (simp add: applyAllInputsLoopIsQuiescent_base)
-  oops
-  (* using applyAllInputsLoopIsQuiescent_loop by blast *)
+  using applyAllInputsLoopIsQuiescent_loop by blast
 
 lemma applyAllInputsIsQuiescent : "validAndPositive_state fixSta \<Longrightarrow>
                                    applyAllInputs env fixSta cont inps = ApplyAllSuccess warnings payments newState newCont \<Longrightarrow> isQuiescent newCont newState"
-  oops
-  (* by (simp add: applyAllInputsLoopIsQuiescent) *)
+  by (simp add: applyAllInputsLoopIsQuiescent)
 
 lemma computeTransactionIsQuiescent_aux : "validAndPositive_state sta \<Longrightarrow>
                                            computeTransaction (Transaction \<lparr>interval = interva, inputs = inps\<rparr>) sta cont
@@ -101,8 +98,7 @@ lemma computeTransactionIsQuiescent_aux : "validAndPositive_state sta \<Longrigh
        fixInterval (interval (Transaction \<lparr>interval = interva, inputs = inps\<rparr>)) sta = IntervalTrimmed x11 x12
        \<Longrightarrow> isQuiescent ncont nsta"
   apply (simp only:computeTransaction.simps)
-  oops
-  (* by (smt ApplyAllResult.exhaust ApplyAllResult.simps(10) ApplyAllResult.simps(8) ApplyAllResult.simps(9) IntervalResult.simps(5) TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllInputs.simps applyAllInputsLoopIsQuiescent fixInterval_preserves_preserves_validAndPositive_state) *)
+  by (smt ApplyAllResult.exhaust ApplyAllResult.simps(10) ApplyAllResult.simps(8) ApplyAllResult.simps(9) IntervalResult.simps(5) TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllInputs.simps applyAllInputsLoopIsQuiescent fixInterval_preserves_preserves_validAndPositive_state)
 
 theorem computeTransactionIsQuiescent : "validAndPositive_state sta \<Longrightarrow>
                                          computeTransaction traIn sta cont = TransactionOutput traOut \<Longrightarrow>
@@ -110,7 +106,6 @@ theorem computeTransactionIsQuiescent : "validAndPositive_state sta \<Longrighta
 
   apply (cases "traIn")
   apply (cases "traOut")
-  oops
-  (* by (smt IntervalResult.exhaust IntervalResult.simps(6) Transaction.update_convs(3) TransactionOutput.distinct(1) TransactionOutputRecord.surjective computeTransaction.simps computeTransactionIsQuiescent_aux old.unit.exhaust) *)
+  by (smt IntervalResult.exhaust IntervalResult.simps(6) Transaction.update_convs(3) TransactionOutput.distinct(1) TransactionOutputRecord.surjective computeTransaction.simps computeTransactionIsQuiescent_aux old.unit.exhaust)
 
 end

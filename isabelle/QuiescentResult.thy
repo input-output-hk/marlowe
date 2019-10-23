@@ -108,4 +108,16 @@ theorem computeTransactionIsQuiescent : "validAndPositive_state sta \<Longrighta
   apply (cases "traOut")
   by (smt IntervalResult.exhaust IntervalResult.simps(6) Transaction.update_convs(3) TransactionOutput.distinct(1) TransactionOutputRecord.surjective computeTransaction.simps computeTransactionIsQuiescent_aux old.unit.exhaust)
 
+lemma playTraceAuxIsQuiescent : "validAndPositive_state (txOutState traIn) \<Longrightarrow>
+                                 (l \<noteq> Nil \<or> isQuiescent (txOutContract traIn) (txOutState traIn)) \<Longrightarrow>
+                                 playTraceAux traIn l = TransactionOutput traOut \<Longrightarrow>
+                                 isQuiescent (txOutContract traOut) (txOutState traOut)"
+  apply (induction traIn l arbitrary:traOut rule:playTraceAux.induct)
+  apply simp
+  by (metis TransactionOutput.exhaust TransactionOutput.simps(5) TransactionOutput.simps(6) TransactionOutputRecord.select_convs(3) computeTransactionIsQuiescent computeTransaction_preserves_validAndPositive_state playTraceAux.simps(2))
+
+theorem playTraceIsQuiescent : "playTrace sl cont (Cons h t) = TransactionOutput traOut \<Longrightarrow>
+                                isQuiescent (txOutContract traOut) (txOutState traOut)"
+  by (metis PositiveAccounts.valid_state_valid_accounts TransactionOutputRecord.select_convs(3) allAccountsPositiveState.simps emptyState_gtZero empty_state_valid_state list.distinct(1) playTrace.simps playTraceAuxIsQuiescent positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositive_state.simps)
+
 end

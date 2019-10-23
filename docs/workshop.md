@@ -9,6 +9,10 @@ Using the BLOCKLY tab, try building these contracts
 1. Modify contract 2 to ask for a decision from Carol. Carol should choose 0 or 1: if she chooses 1, the payment is split between Alice and Bob; if zero, it all goes to Bob.
 1. Try to analyse the contracts that you have written. Try modifying the contracts so that ones that didn't pass now do, and vice versa. 
 
+## “Bulgarian escrow”: modifying the escrow contract
+
+Modify the Haskell escrow contract to a “Bulgarian” variant in which Bob has to make a deposit in advance. This is returned to him if gives up the cat, but goes to Alice if he does not.
+
 ## Challenge: utility contract
 
 The challenge is to write a Marlowe contract that models payments for a utility, such as a mobile phone.

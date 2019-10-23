@@ -260,7 +260,6 @@ theorem computeTransaction_gtZero :
    (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts state)) \<Longrightarrow>
    computeTransaction tx state contract = (TransactionOutput txOut) \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y (accounts (txOutState txOut))"
- 
   apply (simp only:computeTransaction.simps)
   apply (cases "fixInterval (interval tx) state")
   apply (simp only:IntervalResult.case)
@@ -271,6 +270,30 @@ theorem computeTransaction_gtZero :
     apply (metis TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) applyAllInputs_gtZero fixInterval_gtZero fixInterval_preserves_valid_state old.prod.exhaust)
     by auto
   by auto
+
+lemma playTraceAux_gtZero :
+  "valid_state (txOutState txIn) \<Longrightarrow>
+   (\<forall>x. positiveMoneyInAccountOrNoAccount x (accounts (txOutState txIn))) \<Longrightarrow>
+   playTraceAux txIn transList = TransactionOutput txOut \<Longrightarrow>
+   positiveMoneyInAccountOrNoAccount y (accounts (txOutState txOut))"
+  apply (induction txIn transList rule:playTraceAux.induct)
+  apply simp
+  apply (cases txOut)
+  subgoal for state cont h t txOutWarnings txOutPayments txOutStatea txOutContract
+    apply (simp del:valid_state.simps computeTransaction.simps positiveMoneyInAccountOrNoAccount.simps add:Let_def)
+    apply (cases "computeTransaction txOutWarnings h t")
+    using computeTransaction_gtZero computeTransaction_preserves_valid_state apply auto[1]
+    by simp
+  done
+
+lemma emptyState_gtZero : "positiveMoneyInAccountOrNoAccount y (accounts (emptyState sl))"
+  apply simp
+  by (simp add: MList.lookup_empty)  
+
+theorem playTrace_gtZero :
+  "playTrace sl contract t = TransactionOutput txOut \<Longrightarrow>
+   positiveMoneyInAccountOrNoAccount y (accounts (txOutState txOut))"
+  by (metis TransactionOutputRecord.select_convs(3) emptyState_gtZero playTrace.simps playTraceAux.simps(1) playTraceAux_gtZero playTrace_preserves_valid_state)
 
 (* Alternative formulation *)
 
@@ -355,6 +378,16 @@ theorem accountsArePositive2 :
     \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"  
   by (meson accountsArePositive allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2))
 
+lemma valid_state_valid_accounts : "valid_state state \<Longrightarrow> valid_map (accounts state)"
+  apply (cases state)
+  by simp
+
+theorem accountsArePositive2_trace :
+    "valid_state (txOutState txIn) \<Longrightarrow> allAccountsPositiveState (txOutState txIn)
+    \<Longrightarrow> playTraceAux txIn transList = TransactionOutput txOut
+    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"
+  by (meson allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.simps playTraceAux_gtZero playTraceAux_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state_valid_accounts)
+
 fun validAndPositive_state :: "State \<Rightarrow> bool" where
 "validAndPositive_state state = (valid_state state \<and> allAccountsPositiveState state)"
 
@@ -400,5 +433,17 @@ lemma applyAllLoop_preserves_preserves_validAndPositive_state :
    applyAllLoop env state cont inp wa pa = ApplyAllSuccess nwa npa nstate ncont \<Longrightarrow>
    validAndPositive_state nstate"
   by (meson allAccountsPositiveState.simps applyAllLoop_gtZero applyAllLoop_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositiveImpliesPositive validAndPositive_state.simps valid_state.simps)
+
+lemma computeTransaction_preserves_validAndPositive_state :
+    "validAndPositive_state state
+    \<Longrightarrow> computeTransaction txIn state cont = TransactionOutput txOut
+    \<Longrightarrow> validAndPositive_state (txOutState txOut)"  
+  using accountsArePositive2 computeTransaction_preserves_valid_state validAndPositive_state.simps by blast
+
+lemma playTraceAux_preserves_validAndPositive_state :
+  "validAndPositive_state (txOutState txIn) \<Longrightarrow>
+   playTraceAux txIn transList = TransactionOutput txOut \<Longrightarrow>
+   validAndPositive_state (txOutState txOut)"
+  using accountsArePositive2_trace playTraceAux_preserves_valid_state validAndPositive_state.simps by blast
 
 end

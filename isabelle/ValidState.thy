@@ -2,6 +2,18 @@ theory ValidState
 imports Semantics
 begin
 
+lemma valid_state_valid_accounts : "valid_state state \<Longrightarrow> valid_map (accounts state)"
+  apply (cases state)
+  by simp
+
+lemma valid_state_valid_choices : "valid_state state \<Longrightarrow> valid_map (choices state)"
+  apply (cases state)
+  by simp
+
+lemma valid_state_valid_boundValues : "valid_state state \<Longrightarrow> valid_map (boundValues state)"
+  apply (cases state)
+  by simp
+
 lemma refundOne_preserves_valid_map_accounts :
   "valid_map oldAccounts \<Longrightarrow>
    refundOne oldAccounts = Some ((party, money), newAccounts)
@@ -169,5 +181,25 @@ lemma computeTransaction_preserves_valid_state_aux2 :
 lemma computeTransaction_preserves_valid_state :
   "valid_state state \<Longrightarrow> computeTransaction tran state cont = TransactionOutput out \<Longrightarrow> valid_state (txOutState out) "
   by (metis (full_types) Transaction.surjective TransactionOutputRecord.surjective computeTransaction_preserves_valid_state_aux2 old.unit.exhaust)
+
+lemma playTraceAux_preserves_valid_state :
+  "valid_state (txOutState txIn) \<Longrightarrow>
+   playTraceAux txIn transList = TransactionOutput txOut \<Longrightarrow>
+   valid_state (txOutState txOut)"
+  apply (induction txIn transList rule:playTraceAux.induct)
+  apply simp
+  apply (cases txOut)
+  apply (simp del:valid_state.simps computeTransaction.simps add:Let_def)
+  by (smt TransactionOutput.case(1) TransactionOutput.case(2) TransactionOutput.exhaust computeTransaction_preserves_valid_state)
+
+lemma empty_state_valid_state :
+  "valid_state (emptyState sl)"
+  by (metis MList.valid_empty State.select_convs(1) State.select_convs(2) State.select_convs(3) emptyState.elims valid_state.simps)
+
+lemma playTrace_preserves_valid_state :
+  "playTrace sl c transList = TransactionOutput txOut \<Longrightarrow>
+   valid_state (txOutState txOut)"
+  apply (simp only:playTrace.simps)
+  by (metis MList.valid_empty State.select_convs(1) State.select_convs(2) State.select_convs(3) TransactionOutputRecord.select_convs(3) emptyState.elims playTraceAux_preserves_valid_state valid_state.simps)
 
 end

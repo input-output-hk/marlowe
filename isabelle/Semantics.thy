@@ -753,6 +753,29 @@ fun computeTransaction :: "Transaction \<Rightarrow> State \<Rightarrow> Contrac
         | ApplyAllAmbiguousSlotIntervalError \<Rightarrow> TransactionError TEAmbiguousSlotIntervalError)
      | IntervalError error \<Rightarrow> TransactionError (TEIntervalError error))"
 
+fun playTraceAux :: "TransactionOutputRecord \<Rightarrow> Transaction list \<Rightarrow> TransactionOutput" where
+"playTraceAux res Nil = TransactionOutput res" |
+"playTraceAux \<lparr> txOutWarnings = warnings
+              , txOutPayments = payments
+              , txOutState = state
+              , txOutContract = cont \<rparr> (Cons h t) =
+   (let transRes = computeTransaction h state cont in
+    case transRes of
+      TransactionOutput transResRec \<Rightarrow> playTraceAux transResRec t
+    | TransactionError _ \<Rightarrow> transRes)"
+
+fun emptyState :: "Slot \<Rightarrow> State" where
+"emptyState sl = \<lparr> accounts = MList.empty
+                 , choices = MList.empty
+                 , boundValues = MList.empty
+                 , minSlot = sl \<rparr>"
+
+fun playTrace :: "Slot \<Rightarrow> Contract \<Rightarrow> Transaction list \<Rightarrow> TransactionOutput" where
+"playTrace sl c t = playTraceAux \<lparr> txOutWarnings = Nil
+                                 , txOutPayments = Nil
+                                 , txOutState = emptyState sl
+                                 , txOutContract = c \<rparr> t"
+
 (* Extra functions *)
 
 type_synonym TransactionOutcomes = "(Party \<times> Money) list"

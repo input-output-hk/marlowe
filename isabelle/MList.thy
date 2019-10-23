@@ -108,6 +108,9 @@ fun lookup :: "'a::linorder \<Rightarrow> ('a \<times> 'b) list \<Rightarrow> 'b
            then lookup a z
            else None))"
 
+lemma lookup_empty : "MList.lookup y MList.empty = None"
+  by (simp add: MList.empty_def)
+
 lemma insert_existing_length : "MList.lookup k l = Some a \<Longrightarrow>
                                 length (MList.insert k v l) = length l"
   apply (induction l)

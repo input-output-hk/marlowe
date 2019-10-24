@@ -27,7 +27,6 @@ lemma reduceContractStep_quiescent_reduces : "isQuiescent c st \<Longrightarrow>
 lemma reduceContractStep_not_quiescent_reduces : "\<not> isQuiescent c st \<Longrightarrow>
                                                   reduceContractStep env st c = Reduced wa ef nst nc \<Longrightarrow>
                                                   countWhens nc \<le> countWhens c"
-  
   apply (induction env st c rule:reduceContractStep.induct)
   apply auto
   subgoal for state
@@ -51,9 +50,7 @@ lemma reduceContractStep_doesnt_increase_maxTransactions : "reduceContractStep e
                                                             maxTransactions nc nst \<le> maxTransactions c st"
   using reduceContractStep_not_quiescent_reduces reduceContractStep_quiescent_reduces by fastforce
 
-
-lemma reductionLoop_doesnt_increase_maxTransactions : "validAndPositive_state st \<Longrightarrow>
-                                                       reductionLoop env st c wa ef = ContractQuiescent nwa nef nst nc \<Longrightarrow>
+lemma reductionLoop_doesnt_increase_maxTransactions : "reductionLoop env st c wa ef = ContractQuiescent nwa nef nst nc \<Longrightarrow>
                                                        maxTransactions nc nst \<le> maxTransactions c st"
   apply (induction env st c wa ef rule:reductionLoop.induct)
   subgoal for env state contract warnings payments
@@ -61,7 +58,7 @@ lemma reductionLoop_doesnt_increase_maxTransactions : "validAndPositive_state st
     apply (cases "reduceContractStep env state contract")
     subgoal for x11 x12 x13 x14
       apply (simp only:ReduceStepResult.simps)
-      by (metis dual_order.trans reduceContractStep_doesnt_increase_maxTransactions reduceContractStep_preserves_validAndPositive_state)
+      by (metis dual_order.trans reduceContractStep_doesnt_increase_maxTransactions)
       by simp_all
   done
 
@@ -78,7 +75,5 @@ lemma reductionLoop_reduces_maxTransactions : "validAndPositive_state st \<Longr
       apply simp
       by simp
     done
-
-
 
 end

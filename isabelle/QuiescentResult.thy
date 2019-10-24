@@ -2,6 +2,9 @@ theory QuiescentResult
 imports Semantics PositiveAccounts
 begin
 
+lemma reduceOne_onlyIfNonEmptyState : "refundOne acc = Some c \<Longrightarrow> acc \<noteq> []"
+  by auto
+
 lemma reduceContractStepPayIsQuiescent :
       "(let moneyToPay = evalValue env sta x23
         in if moneyToPay \<le> 0 then Reduced (ReduceNonPositivePay x21 x22 moneyToPay) ReduceNoPayment sta x24

@@ -446,4 +446,7 @@ lemma playTraceAux_preserves_validAndPositive_state :
    validAndPositive_state (txOutState txOut)"
   using accountsArePositive2_trace playTraceAux_preserves_valid_state validAndPositive_state.simps by blast
 
+lemma validAndPositive_initial_state : "validAndPositive_state (emptyState sl)"
+  using emptyState_gtZero empty_state_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive by auto
+
 end

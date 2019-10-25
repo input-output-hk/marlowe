@@ -255,5 +255,60 @@ lemma computeTransaction_decreases_maxTransactions :
     by simp
   by simp
 
+lemma playTraceAux_only_accepts_maxTransactions_aux :
+  "validAndPositive_state (txOutState txIn) \<Longrightarrow>
+   l \<noteq> Nil \<Longrightarrow>
+   playTraceAux txIn l = TransactionOutput txOut \<Longrightarrow>
+   maxTransactions (txOutContract txOut) (txOutState txOut) < maxTransactions (txOutContract txIn) (txOutState txIn)"
+  apply (induction txIn l rule:playTraceAux.induct)
+  apply blast
+  subgoal for warnings payments state cont h t
+    apply (cases "computeTransaction h state cont")
+    apply (simp del:validAndPositive_state.simps computeTransaction.simps maxTransactions.simps add:Let_def)
+    apply (metis computeTransaction_decreases_maxTransactions computeTransaction_preserves_validAndPositive_state less_trans playTraceAux.simps(1))
+    by simp
+  done
+
+lemma playTraceAux_only_accepts_maxTransactions :
+  "validAndPositive_state (txOutState txIn) \<Longrightarrow>
+   playTraceAux txIn tList = TransactionOutput txOut \<Longrightarrow>
+   length tList \<le> maxTransactions (txOutContract txIn) (txOutState txIn)"
+  apply (induction tList arbitrary: txIn txOut)
+  apply simp
+  subgoal for head tail txIn txOut
+    apply (cases txIn)
+    apply (simp only:playTraceAux.simps)
+    subgoal for txOutWarningsa txOutPaymentsa txOutStatea txOutContracta
+    apply (cases "computeTransaction head txOutStatea txOutContracta")
+    apply (simp del:validAndPositive_state.simps computeTransaction.simps maxTransactions.simps add:Let_def)
+    apply (meson Suc_le_eq computeTransaction_decreases_maxTransactions computeTransaction_preserves_validAndPositive_state le_trans not_less_eq_eq)
+    by simp
+    done
+  done
+
+fun maxTransactionsInitialStateSN :: "int \<Rightarrow> Contract \<Rightarrow> nat" where
+  "maxTransactionsInitialStateSN sl c = maxTransactions c (emptyState sl)"
+
+lemma playTrace_only_accepts_maxTransactionsInitialStateSN :
+  "playTrace sl c l = TransactionOutput txOut \<Longrightarrow>
+   length l \<le> maxTransactionsInitialStateSN sl c"
+  apply (simp only:playTrace.simps maxTransactionsInitialStateSN.simps)
+  using playTraceAux_only_accepts_maxTransactions validAndPositive_initial_state by force
+
+fun maxTransactionsInitialState :: "Contract \<Rightarrow> nat" where
+  "maxTransactionsInitialState (When cl n c) = countWhens (When cl n c)" |
+  "maxTransactionsInitialState Close = countWhens Close" |
+  "maxTransactionsInitialState cont = Suc (countWhens cont)"
+
+lemma maxTransactionsInitialState_equiv_maxTransactionsInitialStateSN :
+  "maxTransactionsInitialStateSN sl c = maxTransactionsInitialState c"
+  apply simp
+  apply (cases c)
+  by (simp_all add:MList.empty_def)
+
+lemma playTrace_only_accepts_maxTransactionsInitialState :
+  "playTrace sl c l = TransactionOutput txOut \<Longrightarrow>
+   length l \<le> maxTransactionsInitialState c"
+  using maxTransactionsInitialState_equiv_maxTransactionsInitialStateSN playTrace_only_accepts_maxTransactionsInitialStateSN by auto
 
 end

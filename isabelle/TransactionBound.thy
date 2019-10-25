@@ -212,4 +212,48 @@ lemma applyAllLoop_decreases_maxTransactions :
     by simp
   done
 
+lemma minSlot_doesnt_affect_maxTransactions :
+  "maxTransactions cont (sta\<lparr>minSlot := y\<rparr>) = maxTransactions cont sta"
+  apply (cases cont)
+  by simp_all
+
+lemma fixInterval_preserves_maxTransactions :
+  "fixInterval interv sta = IntervalTrimmed env fixedState \<Longrightarrow>
+   maxTransactions cont fixedState = maxTransactions cont sta"
+  apply (cases interv)
+  apply (simp only:fixInterval.simps)
+  subgoal for left right
+    apply (cases "right < left")
+    apply simp
+    apply (cases "right < minSlot sta")
+    apply simp
+    apply (simp del:maxTransactions.simps add:Let_def)
+    using minSlot_doesnt_affect_maxTransactions by blast
+  done
+
+lemma computeTransaction_decreases_maxTransactions_aux :
+  "validAndPositive_state fixedState \<Longrightarrow>
+   applyAllInputs env fixedState cont inps = ApplyAllSuccess nwarn npay nstate ncont \<Longrightarrow>
+   cont \<noteq> ncont \<Longrightarrow> maxTransactions ncont nstate < maxTransactions cont fixedState"
+  using applyAllLoop_decreases_maxTransactions by fastforce
+
+lemma computeTransaction_decreases_maxTransactions :
+  "validAndPositive_state sta \<Longrightarrow>
+   computeTransaction tra sta cont = TransactionOutput txOut \<Longrightarrow>
+   maxTransactions (txOutContract txOut) (txOutState txOut) < maxTransactions cont sta"
+  apply (simp only:computeTransaction.simps)
+  apply (cases "fixInterval (interval tra) sta")
+  apply (simp only:IntervalResult.case)
+  subgoal for env fixedState
+    apply (cases "applyAllInputs env fixedState cont (inputs tra)")
+    subgoal for nwarn npay nstate ncont
+      apply (cases "cont = ncont")
+      apply simp
+      apply (simp del:validAndPositive_state.simps fixInterval.simps applyAllInputs.simps maxTransactions.simps)
+      by (metis TransactionOutputRecord.select_convs(3) TransactionOutputRecord.select_convs(4) computeTransaction_decreases_maxTransactions_aux fixInterval_preserves_maxTransactions fixInterval_preserves_preserves_validAndPositive_state)
+     apply simp
+    by simp
+  by simp
+
+
 end

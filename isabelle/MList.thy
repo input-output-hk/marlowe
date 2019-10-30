@@ -99,6 +99,13 @@ theorem delete_valid : "valid_map c \<Longrightarrow> valid_map (MList.delete a 
   apply auto[1]
   using delete_valid_aux2 by blast
 
+lemma delete_step :
+  "valid_map ((k, v) # t) \<Longrightarrow>
+   \<not> k2 = k \<Longrightarrow>
+   MList.delete k2 ((k, v) # t) = ((k, v)#(MList.delete k2 t))"
+  apply (induction t)
+  by auto
+
 fun lookup :: "'a::linorder \<Rightarrow> ('a \<times> 'b) list \<Rightarrow> 'b option" where
   "lookup a Nil = None" |
   "lookup a (Cons (x, y) z) =
@@ -277,6 +284,14 @@ fun findWithDefault :: "'b \<Rightarrow> 'a \<Rightarrow> (('a::linorder) \<time
 "findWithDefault d k l = (case lookup k l of
                             None \<Rightarrow> d
                           | Some x \<Rightarrow> x)"
+
+lemma findWithDefault_step :
+  "valid_map ((k, v) # tail) \<Longrightarrow>
+   k2 \<noteq> k \<Longrightarrow>
+   findWithDefault d k2 ((k, v) # tail) = findWithDefault d k2 tail"
+  apply simp
+  apply (induction tail)
+  by auto
 
 fun member :: "'a \<Rightarrow> ((('a::linorder) \<times> 'b) list) \<Rightarrow> bool" where
 "member k d = (lookup k d \<noteq> None)"

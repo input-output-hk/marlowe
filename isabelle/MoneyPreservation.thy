@@ -24,6 +24,15 @@ fun moneyInRefundOneResult :: "(AccountId \<times> Money) list \<Rightarrow>
 "moneyInRefundOneResult accs None = moneyInAccounts accs" |
 "moneyInRefundOneResult _ (Some ((_, m), newAccs)) = m + moneyInAccounts newAccs"
 
+fun moneyInInput :: "Input \<Rightarrow> int" where
+"moneyInInput (IDeposit accId party money) = max 0 money" |
+"moneyInInput (IChoice choId val) = 0" |
+"moneyInInput INotify = 0"
+
+fun moneyInApplyResult :: "State \<Rightarrow> Input \<Rightarrow> ApplyResult \<Rightarrow> int" where
+"moneyInApplyResult state inp (Applied warns newState newCont) = moneyInState newState" |
+"moneyInApplyResult state inp ApplyNoMatchError = moneyInState state + moneyInInput inp"
+
 lemma refundOne_preserves_money :
   "allAccountsPositive accs \<Longrightarrow>
    moneyInAccounts accs = moneyInRefundOneResult accs (refundOne accs)"
@@ -238,8 +247,7 @@ lemma transferMoneyBetweenAccounts_preserves :
   using addMoneyToAccountIf_ge_zero transferMoneyBetweenAccounts_preserves_aux3 by fastforce
 
 lemma reduceContractStep_preserves_money_acc_to_acc_aux :
-  "valid_map (accounts state) \<Longrightarrow>
-   allAccountsPositive (accounts state) \<Longrightarrow>
+  "validAndPositive_state state \<Longrightarrow>
    econt = Pay accId (Account x1) val cont \<Longrightarrow>
    \<not> evalValue env state val \<le> 0 \<Longrightarrow>
    moneyToPay = evalValue env state val \<Longrightarrow>
@@ -252,8 +260,8 @@ lemma reduceContractStep_preserves_money_acc_to_acc_aux :
   using transferMoneyBetweenAccounts_preserves by auto
 
 lemma reduceContractStep_preserves_money_acc_to_acc :
-  "valid_map (accounts state) \<Longrightarrow>
-   allAccountsPositive (accounts state) \<Longrightarrow>
+  "valid_state state \<Longrightarrow>
+   allAccountsPositiveState state \<Longrightarrow>
    econt = Pay accId payee val cont \<Longrightarrow>
    \<not> moneyToPay \<le> 0 \<Longrightarrow>
    payee = Account x1 \<Longrightarrow>
@@ -269,13 +277,12 @@ lemma reduceContractStep_preserves_money_acc_to_acc :
   subgoal for a b
     apply (cases a)
     apply (simp only:moneyInReduceEffect.simps)
-    apply (metis add.left_neutral reduceContractStep_preserves_money_acc_to_acc_aux snd_conv)
+    using transferMoneyBetweenAccounts_preserves apply auto[1]
     by simp
   done
 
 lemma reduceContractStep_preserves_money :
-  "valid_map (accounts state) \<Longrightarrow>
-   allAccountsPositiveState state \<Longrightarrow>
+  "validAndPositive_state state \<Longrightarrow>
    moneyInState state = moneyInReduceStepResult state (reduceContractStep env state cont)"
   apply (cases cont)
   apply (simp only: reduceContractStep.simps)
@@ -292,11 +299,11 @@ lemma reduceContractStep_preserves_money :
   subgoal for accId payee val cont
     apply (cases "evalValue env state val \<le> 0")
     apply simp
-    apply (simp del:valid_map.simps allAccountsPositive.simps moneyInAccount.simps moneyInAccounts.simps giveMoney.simps updateMoneyInAccount.simps)
+    apply (simp del:validAndPositive_state.simps valid_map.simps allAccountsPositive.simps moneyInAccount.simps moneyInAccounts.simps giveMoney.simps updateMoneyInAccount.simps)
     apply (cases payee)
     apply (simp only:Let_def)
     subgoal for x1
-      using reduceContractStep_preserves_money_acc_to_acc by blast
+      using reduceContractStep_preserves_money_acc_to_acc_aux by force
     apply (simp only:Let_def)
     subgoal for x2
       using reduceContractStep_preserves_money_acc_to_party by auto
@@ -313,5 +320,30 @@ lemma reduceContractStep_preserves_money :
     apply (simp only:reduceContractStep.simps)
     by (metis State.simps(1) State.simps(8) State.surjective add.left_neutral moneyInReduceEffect.simps(2) moneyInReduceStepResult.simps(1) moneyInState.simps)
   done
+
+lemma applyCases_preserves_money_aux :
+  "validAndPositive_state state \<Longrightarrow>
+   money > 0 \<Longrightarrow>
+   moneyInState state + moneyInInput (IDeposit accId2 party2 money) =
+   moneyInState (state\<lparr>accounts := updateMoneyInAccount accId2 (moneyInAccount accId2 (accounts state) + money) (accounts state)\<rparr>)"
+  apply (simp only:moneyInState.simps state_account_red)
+  by (smt allAccountsPositiveState.simps moneyInInput.simps(1) updateMoneyInAccount_money2 validAndPositive_state.simps valid_state.simps)
+
+lemma applyCases_preserves_money :
+  "validAndPositive_state state \<Longrightarrow>
+   moneyInState state + moneyInInput inp = moneyInApplyResult state inp (applyCases env state inp caseList)"
+  apply (induction env state inp caseList rule:applyCases.induct)
+  subgoal for env state accId1 party1 money accId2 party2 val cont rest
+    apply (simp only:applyCases.simps)
+    apply (cases "accId1 = accId2 \<and> party1 = party2 \<and> money = evalValue env state val")
+    apply (auto simp del:evalValue.simps moneyInState.simps moneyInInput.simps moneyInApplyResult.simps validAndPositive_state.simps updateMoneyInAccount.simps moneyInAccount.simps)
+    apply (simp only:Let_def moneyInApplyResult.simps)
+    apply (cases "evalValue env state val \<le> 0")
+    apply simp
+    apply (simp only:bool.case if_False)
+    using applyCases_preserves_money_aux not_le by blast
+  subgoal for env state choId1 choice choId2 bounds cont rest
+    by simp
+  by simp_all
 
 end

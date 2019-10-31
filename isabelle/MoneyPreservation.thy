@@ -2,8 +2,11 @@ theory MoneyPreservation
 imports Semantics PositiveAccounts
 begin
 
+fun moneyInPayment :: "Payment \<Rightarrow> int" where
+"moneyInPayment (Payment _ x) = x"
+
 fun moneyInReduceEffect :: "ReduceEffect \<Rightarrow> int" where
-"moneyInReduceEffect (ReduceWithPayment (Payment _ x)) = x" |
+"moneyInReduceEffect (ReduceWithPayment p) = moneyInPayment p" |
 "moneyInReduceEffect ReduceNoPayment = 0"
 
 fun moneyInAccounts :: "(AccountId \<times> Money) list \<Rightarrow> int" where
@@ -23,6 +26,23 @@ fun moneyInRefundOneResult :: "(AccountId \<times> Money) list \<Rightarrow>
                                ((Party \<times> Money) \<times> ((AccountId \<times> Money) list)) option \<Rightarrow> int" where
 "moneyInRefundOneResult accs None = moneyInAccounts accs" |
 "moneyInRefundOneResult _ (Some ((_, m), newAccs)) = m + moneyInAccounts newAccs"
+
+fun moneyInPayments :: "Payment list \<Rightarrow> int" where
+"moneyInPayments (Cons h t) = moneyInPayment h + moneyInPayments t" |
+"moneyInPayments Nil = 0"
+
+lemma moneyInPayments_rev_cons : "moneyInPayments (h # payments) = moneyInPayments (payments @ [h])"
+  apply (induction payments)
+  by auto
+
+lemma moneyInPayments_works_on_rev : "moneyInPayments payments = moneyInPayments (rev payments)"
+  apply (induction payments)
+  apply simp
+  using moneyInPayments_rev_cons by auto
+
+fun moneyInReduceResult :: "Payment list \<Rightarrow> State \<Rightarrow> ReduceResult \<Rightarrow> int" where
+"moneyInReduceResult pa sta (ContractQuiescent wa newPa newSta cont) = moneyInState newSta + moneyInPayments newPa" |
+"moneyInReduceResult pa sta RRAmbiguousSlotIntervalError = moneyInState sta + moneyInPayments pa"
 
 fun moneyInInput :: "Input \<Rightarrow> int" where
 "moneyInInput (IDeposit accId party money) = max 0 money" |
@@ -170,7 +190,7 @@ lemma reduceContractStep_preserves_money_acc_to_party :
       apply (cases x2a)
       apply (simp only:prod.case moneyInReduceStepResult.simps moneyInReduceEffect.simps)
       apply (simp only:moneyInState.simps "state_account_red")
-      by (metis add.commute diff_add_cancel giveMoney.simps(1) moneyInReduceEffect.simps(1) not_less not_less_iff_gr_or_eq prod.sel(1) snd_conv updateMoneyInAccount_money)
+      by (metis add_diff_cancel_left' add_diff_eq giveMoney.simps(1) le_less moneyInPayment.simps moneyInReduceEffect.simps(1) prod.inject updateMoneyInAccount_money)
     done
   done
 
@@ -345,5 +365,88 @@ lemma applyCases_preserves_money :
   subgoal for env state choId1 choice choId2 bounds cont rest
     by simp
   by simp_all
+
+
+lemma reductionLoop_preserves_money_NoPayment_not_ReduceNoWarning :
+  "warning \<noteq> ReduceNoWarning \<Longrightarrow>
+   x = warning # warnings \<Longrightarrow>
+   (validAndPositive_state newState \<Longrightarrow>
+    moneyInState newState + moneyInPayments payments = moneyInReduceResult xa newState (reductionLoop env newState ncontract x xa)) \<Longrightarrow>
+    validAndPositive_state state \<Longrightarrow>
+    reduceContractStep env state contract = Reduced warning ReduceNoPayment newState ncontract \<Longrightarrow>
+    moneyInState state + moneyInPayments payments = moneyInReduceResult payments state (reductionLoop env newState ncontract x xa)"
+  by (metis ReduceResult.exhaust add.left_neutral moneyInReduceEffect.simps(2) moneyInReduceResult.simps(1) moneyInReduceResult.simps(2) moneyInReduceStepResult.simps(1) reduceContractStep_preserves_money reduceContractStep_preserves_validAndPositive_state)
+
+lemma reductionLoop_preserves_money_NoPayment :
+  "x = (if warning = ReduceNoWarning then warnings else warning # warnings) \<Longrightarrow>
+   (validAndPositive_state newState \<Longrightarrow>
+    moneyInState newState + moneyInPayments payments = moneyInReduceResult xa newState (reductionLoop env newState ncontract x xa)) \<Longrightarrow>
+    validAndPositive_state state \<Longrightarrow>
+    reduceContractStep env state contract = Reduced warning ReduceNoPayment newState ncontract \<Longrightarrow>
+    moneyInState state + moneyInPayments payments = moneyInReduceResult payments state (reductionLoop env newState ncontract x xa)"
+  by (metis ReduceResult.exhaust add.left_neutral moneyInReduceEffect.simps(2) moneyInReduceResult.simps(1) moneyInReduceResult.simps(2) moneyInReduceStepResult.simps(1) reduceContractStep_preserves_money reduceContractStep_preserves_validAndPositive_state)
+
+lemma reductionLoop_preserves_money_Payment_not_ReduceNoWarning :
+  "\<And>x2.
+     (\<And>x xa.
+      x = reWa # warnings \<Longrightarrow>
+      xa = (case ReduceWithPayment x2 of ReduceNoPayment \<Rightarrow> payments | ReduceWithPayment payment \<Rightarrow> payment # payments) \<Longrightarrow>
+      validAndPositive_state reSta \<Longrightarrow>
+      moneyInState reSta +
+      moneyInPayments (case ReduceWithPayment x2 of ReduceNoPayment \<Rightarrow> payments | ReduceWithPayment payment \<Rightarrow> payment # payments) =
+      moneyInReduceResult (case ReduceWithPayment x2 of ReduceNoPayment \<Rightarrow> payments | ReduceWithPayment payment \<Rightarrow> payment # payments) reSta
+       (reductionLoop env reSta reCont (if reWa = ReduceNoWarning then warnings else reWa # warnings)
+         (case ReduceWithPayment x2 of ReduceNoPayment \<Rightarrow> payments | ReduceWithPayment payment \<Rightarrow> payment # payments))) \<Longrightarrow>
+   validAndPositive_state state \<Longrightarrow>
+   reduceContractStep env state contract = Reduced reWa (ReduceWithPayment x2) reSta reCont \<Longrightarrow>
+   reEf = ReduceWithPayment x2 \<Longrightarrow>
+   reWa \<noteq> ReduceNoWarning \<Longrightarrow>
+   moneyInState state + moneyInPayments payments =
+   moneyInReduceResult payments state (reductionLoop env reSta reCont (reWa # warnings) (x2 # payments))"
+  by (smt ReduceEffect.simps(5) ReduceResult.exhaust moneyInPayments.simps(1) moneyInReduceEffect.simps(1) moneyInReduceResult.simps(1) moneyInReduceResult.simps(2) moneyInReduceStepResult.simps(1) reduceContractStep_preserves_money reduceContractStep_preserves_validAndPositive_state)
+
+lemma reductionLoop_preserves_money_Payment :
+  "\<And>x2. (\<And>x xa.
+              x = warnings \<Longrightarrow>
+              xa = x2 # payments \<Longrightarrow>
+              validAndPositive_state reSta \<Longrightarrow>
+              moneyInState reSta +
+              moneyInPayments xa =
+              moneyInReduceResult xa reSta (reductionLoop env reSta reCont warnings xa)) \<Longrightarrow>
+          validAndPositive_state state \<Longrightarrow>
+          reduceContractStep env state contract = Reduced ReduceNoWarning (ReduceWithPayment x2) reSta reCont \<Longrightarrow>
+          reEf = ReduceWithPayment x2 \<Longrightarrow>
+          reWa = ReduceNoWarning \<Longrightarrow>
+          moneyInState state + moneyInPayments payments =
+          moneyInReduceResult payments state (reductionLoop env reSta reCont warnings (x2 # payments))"
+  by (smt ReduceEffect.simps(5) ReduceResult.exhaust moneyInPayments.simps(1) moneyInReduceEffect.simps(1) moneyInReduceResult.simps(1) moneyInReduceResult.simps(2) moneyInReduceStepResult.simps(1) reduceContractStep_preserves_money reduceContractStep_preserves_validAndPositive_state)
+
+lemma reductionLoop_preserves_money :
+  "validAndPositive_state state \<Longrightarrow>
+   moneyInState state + moneyInPayments pa = moneyInReduceResult pa state (reductionLoop env state cont wa pa)"
+  apply (induction env state cont wa pa rule:reductionLoop.induct)
+  subgoal for env state contract warnings payments
+    apply (simp only:reductionLoop.simps[of env state contract warnings payments])
+    apply (cases "reduceContractStep env state contract")
+    subgoal for reWa reEf reSta reCont
+      apply (cases reEf)
+      apply (cases "reWa = ReduceNoWarning")
+      apply (simp only:Let_def ReduceResult.case ReduceEffect.case ReduceWarning.case)
+      apply (simp del:validAndPositive_state.simps moneyInState.simps reductionLoop.simps)
+      apply (metis reductionLoop_preserves_money_NoPayment)
+      apply (simp only:Let_def ReduceResult.case ReduceEffect.case ReduceWarning.case)
+      apply (simp del:validAndPositive_state.simps moneyInState.simps reductionLoop.simps)
+      using reductionLoop_preserves_money_NoPayment_not_ReduceNoWarning apply auto[1]
+      apply (cases "reWa = ReduceNoWarning")
+      apply (simp only:Let_def ReduceResult.case ReduceEffect.case ReduceWarning.case)
+      apply (simp del:validAndPositive_state.simps moneyInState.simps reductionLoop.simps)
+      apply (metis ReduceEffect.simps(5) reductionLoop_preserves_money_Payment)
+      apply (simp only:Let_def ReduceResult.case ReduceEffect.case ReduceWarning.case)
+      apply (simp del:validAndPositive_state.simps ReduceEffect.simps moneyInState.simps reductionLoop.simps)
+      apply (simp only:ReduceEffect.case)
+      by (metis reductionLoop_preserves_money_Payment_not_ReduceNoWarning)
+    using moneyInPayments_works_on_rev apply force
+    by simp
+  done
 
 end

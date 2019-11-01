@@ -49,6 +49,9 @@ fun moneyInInput :: "Input \<Rightarrow> int" where
 "moneyInInput (IChoice choId val) = 0" |
 "moneyInInput INotify = 0"
 
+lemma moneyInInput_is_positive : "moneyInInput x \<ge> 0"
+  by (metis (full_types) eq_iff max.bounded_iff moneyInInput.elims)
+
 fun moneyInInputs :: "Input list \<Rightarrow> int" where
 "moneyInInputs (Cons head tail) = moneyInInput head + moneyInInputs tail" |
 "moneyInInputs Nil = 0"

@@ -69,6 +69,17 @@ fun moneyInTransactionOutput :: "State \<Rightarrow> Input list \<Rightarrow> Tr
 "moneyInTransactionOutput st inp (TransactionOutput txOut) = moneyInState (txOutState txOut) + moneyInPayments (txOutPayments txOut)" |
 "moneyInTransactionOutput st inp (TransactionError te) = moneyInState st + moneyInInputs inp"
 
+fun inputsFromTransactions :: "Transaction list \<Rightarrow> Input list" where
+"inputsFromTransactions (Cons head tail) = (inputs head) @ (inputsFromTransactions tail)" |
+"inputsFromTransactions Nil = Nil"
+
+fun moneyInTransactions :: "Transaction list \<Rightarrow> int" where
+"moneyInTransactions traList = moneyInInputs (inputsFromTransactions traList)"
+
+fun moneyInPlayTraceResult :: "Transaction list \<Rightarrow> TransactionOutput \<Rightarrow> int" where
+"moneyInPlayTraceResult traList (TransactionOutput txOut) = moneyInState (txOutState txOut) + moneyInPayments (txOutPayments txOut)" |
+"moneyInPlayTraceResult traList (TransactionError te) = moneyInTransactions traList"
+
 lemma refundOne_preserves_money :
   "allAccountsPositive accs \<Longrightarrow>
    moneyInAccounts accs = moneyInRefundOneResult accs (refundOne accs)"
@@ -474,6 +485,14 @@ lemma reduceContractUntilQuiescent_preserves_money :
    moneyInState state = moneyInReduceResult [] state (reduceContractUntilQuiescent env state cont)"
   using reductionLoop_preserves_money by auto
 
+lemma moneyInInputs_distrib : "moneyInInputs (a @ b) = moneyInInputs a + moneyInInputs b"
+  apply (induction a)
+  by simp_all
+
+lemma moneyInTransactions_cons : "moneyInTransactions (a # b) = moneyInTransactions [a] + moneyInTransactions b"
+  apply simp
+  by (simp add: moneyInInputs_distrib)
+
 lemma moneyInPayments_distrib : "moneyInPayments (a @ b) = moneyInPayments a + moneyInPayments b"
   apply (induction a)
   by simp_all
@@ -533,6 +552,37 @@ lemma computeTransaction_preserves_money :
       apply (simp only:bool.case if_False)
       by (metis TransactionOutputRecord.select_convs(2) TransactionOutputRecord.select_convs(3) applyAllInputs_preserves_money fixInterval_preserves_money fixInterval_preserves_preserves_validAndPositive_state moneyInApplyAllResult.simps(1) moneyInTransactionOutput.simps(1))
     by simp_all
+  by simp
+
+lemma playTraceAux_preserves_money :
+  "validAndPositive_state (txOutState txInRec) \<Longrightarrow>
+   playTraceAux txInRec tra = TransactionOutput txOutRec \<Longrightarrow>
+   moneyInState (txOutState txOutRec) + moneyInPayments (txOutPayments txOutRec)
+   = moneyInState (txOutState txInRec) + moneyInPayments (txOutPayments txInRec) + moneyInTransactions tra"
+  apply (induction tra arbitrary: txInRec)
+  apply simp
+  apply (subst moneyInTransactions_cons)
+  subgoal for head tail txInRec
+    apply (cases txInRec)
+    subgoal for txOutWarningsV txOutPaymentsV txOutStateV txOutContractV
+      apply (simp only:playTraceAux.simps(2)[of txOutWarningsV txOutPaymentsV txOutStateV txOutContractV head tail])
+      apply (cases "computeTransaction head txOutStateV txOutContractV")
+      apply (simp only:TransactionOutput.simps Let_def)
+      apply (smt TransactionOutputRecord.select_convs(2) TransactionOutputRecord.select_convs(3) TransactionOutputRecord.surjective TransactionOutputRecord.update_convs(1) TransactionOutputRecord.update_convs(2) computeTransaction_preserves_money computeTransaction_preserves_validAndPositive_state inputsFromTransactions.simps(1) inputsFromTransactions.simps(2) moneyInPayments_distrib moneyInTransactionOutput.simps(1) moneyInTransactions.simps self_append_conv)
+      by simp
+    done
+  done
+
+theorem playTrace_preserves_money :
+  "moneyInTransactions tra = moneyInPlayTraceResult tra (playTrace sl contract tra)"
+  apply (simp only:playTrace.simps)
+  apply (cases "playTraceAux \<lparr>txOutWarnings = [], txOutPayments = [], txOutState = emptyState sl, txOutContract = contract\<rparr> tra")
+  apply (simp only: moneyInPlayTraceResult.simps)
+  subgoal for newTra
+    apply (subst playTraceAux_preserves_money[of "\<lparr>txOutWarnings = [], txOutPayments = [], txOutState = emptyState sl, txOutContract = contract\<rparr>" tra newTra])
+    using validAndPositive_initial_state apply auto[1]
+    apply blast
+    by (simp add:MList.empty_def)
   by simp
 
 end

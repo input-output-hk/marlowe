@@ -501,4 +501,10 @@ lemma applyAllLoop_preserves_money :
     by simp
   done
 
+lemma applyAllInputs_preserves_money :
+  "validAndPositive_state state \<Longrightarrow>
+   moneyInState state + moneyInInputs inp
+    = moneyInApplyAllResult state inp [] (applyAllInputs env state contract inp)"
+  using applyAllLoop_preserves_money by auto
+
 end

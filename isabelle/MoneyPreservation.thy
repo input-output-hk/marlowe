@@ -65,6 +65,10 @@ fun moneyInApplyAllResult :: "State \<Rightarrow> Input list \<Rightarrow> Payme
 "moneyInApplyAllResult state inps pa ApplyAllAmbiguousSlotIntervalError =
   moneyInState state + moneyInInputs inps + moneyInPayments pa"
 
+fun moneyInTransactionOutput :: "State \<Rightarrow> Input list \<Rightarrow> TransactionOutput \<Rightarrow> int" where
+"moneyInTransactionOutput st inp (TransactionOutput txOut) = moneyInState (txOutState txOut) + moneyInPayments (txOutPayments txOut)" |
+"moneyInTransactionOutput st inp (TransactionError te) = moneyInState st + moneyInInputs inp"
+
 lemma refundOne_preserves_money :
   "allAccountsPositive accs \<Longrightarrow>
    moneyInAccounts accs = moneyInRefundOneResult accs (refundOne accs)"
@@ -506,5 +510,29 @@ lemma applyAllInputs_preserves_money :
    moneyInState state + moneyInInputs inp
     = moneyInApplyAllResult state inp [] (applyAllInputs env state contract inp)"
   using applyAllLoop_preserves_money by auto
+
+lemma fixInterval_preserves_money :
+  "fixInterval inte state = IntervalTrimmed env newState \<Longrightarrow>
+   moneyInState state = moneyInState newState"
+  apply (cases inte)
+  apply (simp add:Let_def)
+  by (metis IntervalResult.inject(1) IntervalResult.simps(4) State.simps(1) State.simps(9) State.surjective)
+
+lemma computeTransaction_preserves_money :
+  "validAndPositive_state state \<Longrightarrow>
+   moneyInState state + moneyInInputs (inputs tra) = moneyInTransactionOutput state (inputs tra) (computeTransaction tra state contract)"
+  apply (simp only:computeTransaction.simps)    
+  apply (cases "fixInterval (interval tra) state")
+  subgoal for env fixSta
+    apply (simp only:IntervalResult.simps Let_def)
+    apply (cases "applyAllInputs env fixSta contract (inputs tra)")
+    subgoal for newWarn newPay newState newCont
+      apply (simp only:ApplyAllResult.simps)
+      apply (cases "contract = newCont")
+      apply (simp add:refl)
+      apply (simp only:bool.case if_False)
+      by (metis TransactionOutputRecord.select_convs(2) TransactionOutputRecord.select_convs(3) applyAllInputs_preserves_money fixInterval_preserves_money fixInterval_preserves_preserves_validAndPositive_state moneyInApplyAllResult.simps(1) moneyInTransactionOutput.simps(1))
+    by simp_all
+  by simp
 
 end

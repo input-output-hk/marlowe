@@ -585,4 +585,9 @@ theorem playTrace_preserves_money :
     by (simp add:MList.empty_def)
   by simp
 
+theorem playTrace_preserves_money2 :
+  "playTrace sl contract tra = TransactionOutput txOut \<Longrightarrow>
+   moneyInTransactions tra = moneyInState (txOutState txOut) + moneyInPayments (txOutPayments txOut)"
+  by (metis moneyInPlayTraceResult.simps(1) playTrace_preserves_money)
+
 end

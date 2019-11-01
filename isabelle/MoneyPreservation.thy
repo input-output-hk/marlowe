@@ -49,9 +49,21 @@ fun moneyInInput :: "Input \<Rightarrow> int" where
 "moneyInInput (IChoice choId val) = 0" |
 "moneyInInput INotify = 0"
 
+fun moneyInInputs :: "Input list \<Rightarrow> int" where
+"moneyInInputs (Cons head tail) = moneyInInput head + moneyInInputs tail" |
+"moneyInInputs Nil = 0"
+
 fun moneyInApplyResult :: "State \<Rightarrow> Input \<Rightarrow> ApplyResult \<Rightarrow> int" where
 "moneyInApplyResult state inp (Applied warns newState newCont) = moneyInState newState" |
 "moneyInApplyResult state inp ApplyNoMatchError = moneyInState state + moneyInInput inp"
+
+fun moneyInApplyAllResult :: "State \<Rightarrow> Input list \<Rightarrow> Payment list \<Rightarrow> ApplyAllResult \<Rightarrow> int" where
+"moneyInApplyAllResult state inps pa (ApplyAllSuccess newWa newPa newSta newCont) =
+  moneyInState newSta + moneyInPayments newPa" |
+"moneyInApplyAllResult state inps pa ApplyAllNoMatchError =
+  moneyInState state + moneyInInputs inps + moneyInPayments pa" |
+"moneyInApplyAllResult state inps pa ApplyAllAmbiguousSlotIntervalError =
+  moneyInState state + moneyInInputs inps + moneyInPayments pa"
 
 lemma refundOne_preserves_money :
   "allAccountsPositive accs \<Longrightarrow>
@@ -366,6 +378,11 @@ lemma applyCases_preserves_money :
     by simp
   by simp_all
 
+lemma applyInput_preserves_money :
+  "validAndPositive_state state \<Longrightarrow>
+   moneyInState state + moneyInInput inp = moneyInApplyResult state inp (applyInput env state inp cont)"
+  apply (cases cont)                                                        
+  by (simp_all add:applyCases_preserves_money del:validAndPositive_state.simps moneyInState.simps)
 
 lemma reductionLoop_preserves_money_NoPayment_not_ReduceNoWarning :
   "warning \<noteq> ReduceNoWarning \<Longrightarrow>
@@ -446,6 +463,41 @@ lemma reductionLoop_preserves_money :
       apply (simp only:ReduceEffect.case)
       by (metis reductionLoop_preserves_money_Payment_not_ReduceNoWarning)
     using moneyInPayments_works_on_rev apply force
+    by simp
+  done
+lemma reduceContractUntilQuiescent_preserves_money :
+  "validAndPositive_state state \<Longrightarrow>
+   moneyInState state = moneyInReduceResult [] state (reduceContractUntilQuiescent env state cont)"
+  using reductionLoop_preserves_money by auto
+
+lemma moneyInPayments_distrib : "moneyInPayments (a @ b) = moneyInPayments a + moneyInPayments b"
+  apply (induction a)
+  by simp_all
+
+lemma applyAllLoop_preserves_money :
+  "validAndPositive_state state \<Longrightarrow>
+   moneyInState state + moneyInInputs inp + moneyInPayments pa
+    = moneyInApplyAllResult state inp pa (applyAllLoop env state cont inp wa pa)"
+  apply (induction env state cont inp wa pa rule:applyAllLoop.induct)
+  subgoal for env state contract inputs warnings payments
+    apply (simp only:applyAllLoop.simps[of env state contract inputs warnings payments])
+    apply (cases "reduceContractUntilQuiescent env state contract")
+    subgoal for redWa redPa redSta redCont
+      apply (simp only:ReduceResult.simps)
+      apply (cases "inputs")
+      apply (simp only:list.simps)
+      apply (simp only:moneyInApplyAllResult.simps moneyInInputs.simps)
+      apply (smt moneyInPayments_distrib moneyInReduceResult.simps(1) reduceContractUntilQuiescent_preserves_money)
+      apply (simp only:list.simps)
+      subgoal for head tail
+        apply (cases "applyInput env redSta head redCont")
+        apply (simp only:ApplyResult.simps moneyInApplyAllResult.simps)
+        subgoal for appWarn appState appCont
+          apply (cases "(applyAllLoop env appState appCont tail (warnings @ convertReduceWarnings redWa @ convertApplyWarning appWarn) (payments @ redPa))")
+          apply (smt applyInput_preserves_money applyInput_preserves_preserves_validAndPositive_state moneyInApplyAllResult.simps(1) moneyInApplyResult.simps(1) moneyInInputs.simps(1) moneyInPayments_distrib moneyInReduceResult.simps(1) reduceContractUntilQuiescent_preserves_money reduceContractUntilQuiescent_preserves_validAndPositive_state)
+          by simp_all
+        by simp
+      done
     by simp
   done
 

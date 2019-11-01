@@ -761,7 +761,8 @@ fun playTraceAux :: "TransactionOutputRecord \<Rightarrow> Transaction list \<Ri
               , txOutContract = cont \<rparr> (Cons h t) =
    (let transRes = computeTransaction h state cont in
     case transRes of
-      TransactionOutput transResRec \<Rightarrow> playTraceAux transResRec t
+      TransactionOutput transResRec \<Rightarrow> playTraceAux (transResRec \<lparr> txOutPayments := payments @ (txOutPayments transResRec)
+                                                                 , txOutWarnings := warnings @ (txOutWarnings transResRec) \<rparr>) t
     | TransactionError _ \<Rightarrow> transRes)"
 
 fun emptyState :: "Slot \<Rightarrow> State" where

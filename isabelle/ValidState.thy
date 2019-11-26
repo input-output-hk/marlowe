@@ -33,23 +33,23 @@ lemma reductionStep_preserves_valid_state_Refund :
 
 lemma updateMoneyInAccount_preserves_valid_map :
   "valid_map accs \<Longrightarrow>
-   valid_map (updateMoneyInAccount accId ammount accs)"
-  using MList.delete_valid MList.insert_valid by fastforce
+   valid_map (updateMoneyInAccount accId tok ammount accs)"
+  using MList.delete_valid MList.insert_valid by force
 
 lemma giveMoney_preserves_valid_map :
   "valid_map accs \<Longrightarrow>
-   giveMoney payee ammount accs = (a, newAccs) \<Longrightarrow>
+   giveMoney payee tok ammount accs = (a, newAccs) \<Longrightarrow>
    valid_map newAccs"
   by (metis addMoneyToAccount.simps giveMoney.elims snd_conv updateMoneyInAccount_preserves_valid_map)
 
 lemma reductionStep_preserves_valid_state_Pay :
-  "valid_state state \<Longrightarrow> reduceContractStep env state (Pay accId payee val cont) = Reduced wa ef newState newCont \<Longrightarrow>
+  "valid_state state \<Longrightarrow> reduceContractStep env state (Pay accId payee tok val cont) = Reduced wa ef newState newCont \<Longrightarrow>
    valid_state newState"
   apply (simp only:reduceContractStep.simps)
   apply (cases "evalValue env state val \<le> 0")
   apply simp
-  apply (cases "giveMoney payee (min (moneyInAccount accId (accounts state)) (evalValue env state val))
-           (updateMoneyInAccount accId (moneyInAccount accId (accounts state) - min (moneyInAccount accId (accounts state)) (evalValue env state val))
+  apply (cases "giveMoney payee tok (min (moneyInAccount accId tok (accounts state)) (evalValue env state val))
+           (updateMoneyInAccount accId tok (moneyInAccount accId tok (accounts state) - min (moneyInAccount accId tok (accounts state)) (evalValue env state val))
              (accounts state))")
   apply (simp only:Product_Type.prod.case if_False Let_def)
   by (metis ReduceStepResult.inject State.select_convs(1) State.select_convs(2) State.select_convs(3) State.surjective State.update_convs(1) giveMoney_preserves_valid_map updateMoneyInAccount_preserves_valid_map valid_state.simps)

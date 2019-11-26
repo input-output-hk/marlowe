@@ -1,5 +1,5 @@
 theory Semantics
-imports Main MList SList ListTools
+imports Main MList SList ListTools "HOL-Library.Product_Lexorder"
 begin
 
 type_synonym Slot = int
@@ -7,6 +7,8 @@ type_synonym Slot = int
 type_synonym PubKey = int
 
 type_synonym Ada = int
+type_synonym CurrencySymbol = int
+type_synonym TokenName = int
 
 type_synonym Party = PubKey
 type_synonym ChoiceName = int
@@ -14,6 +16,7 @@ type_synonym NumAccount = int
 type_synonym Timeout = Slot
 type_synonym Money = Ada
 type_synonym ChosenNum = int
+type_synonym Token = "CurrencySymbol \<times> TokenName"
 
 datatype AccountId = AccountId NumAccount Party
 
@@ -227,7 +230,7 @@ qed
 end
 (* END Proof of linorder for ValueId *)
 
-datatype Value = AvailableMoney AccountId
+datatype Value = AvailableMoney AccountId Token
                | Constant int
                | NegValue Value
                | AddValue Value Value
@@ -255,7 +258,7 @@ type_synonym Bound = "int \<times> int"
 fun inBounds :: "ChosenNum \<Rightarrow> Bound list \<Rightarrow> bool" where
 "inBounds num = any (\<lambda> (l, u) \<Rightarrow> num \<ge> l \<and> num \<le> u)"
 
-datatype Action = Deposit AccountId Party Value
+datatype Action = Deposit AccountId Party Token Value
                 | Choice ChoiceId "Bound list"
                 | Notify Observation
 
@@ -264,12 +267,14 @@ datatype Payee = Account AccountId
 
 datatype Case = Case Action Contract
 and Contract = Close
-             | Pay AccountId Payee Value Contract
+             | Pay AccountId Payee Token Value Contract
              | If Observation Contract Contract
              | When "Case list" Timeout Contract
              | Let ValueId Value Contract
 
-record State = accounts :: "(AccountId \<times> Money) list"
+type_synonym Accounts = "((AccountId \<times> Token) \<times> Money) list"
+
+record State = accounts :: Accounts
                choices :: "(ChoiceId \<times> ChosenNum) list"
                boundValues :: "(ValueId \<times> int) list"
                minSlot :: Slot
@@ -281,7 +286,7 @@ fun valid_state :: "State \<Rightarrow> bool" where
 
 record Environment = slotInterval :: SlotInterval
 
-datatype Input = IDeposit AccountId Party Money
+datatype Input = IDeposit AccountId Party Token Money
                | IChoice ChoiceId ChosenNum
                | INotify
 
@@ -308,8 +313,8 @@ fun fixInterval :: "SlotInterval \<Rightarrow> State \<Rightarrow> IntervalResul
 (* EVALUATION *)
 
 fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarrow> int" where
-"evalValue env state (AvailableMoney accId) =
-    findWithDefault 0 accId (accounts state)" |
+"evalValue env state (AvailableMoney accId token) =
+    findWithDefault 0 (accId, token) (accounts state)" |
 "evalValue env state (Constant integer) = integer" |
 "evalValue env state (NegValue val) = uminus (evalValue env state val)" |
 "evalValue env state (AddValue lhs rhs) =
@@ -359,10 +364,10 @@ fun evalObservation :: "Environment \<Rightarrow> State \<Rightarrow> Observatio
 "evalObservation env state TrueObs = True" |
 "evalObservation env state FalseObs = False"
 
-fun refundOne :: "(AccountId \<times> Money) list \<Rightarrow>
-                  ((Party \<times> Money) \<times> ((AccountId \<times> Money) list)) option" where
-"refundOne ((accId, money)#rest) =
-   (if money > 0 then Some ((accountOwner accId, money), rest) else refundOne rest)" |
+fun refundOne :: "Accounts \<Rightarrow>
+                  ((Party \<times> Token \<times> Money) \<times> Accounts) option" where
+"refundOne (((accId, tok), money)#rest) =
+   (if money > 0 then Some ((accountOwner accId, tok, money), rest) else refundOne rest)" |
 "refundOne [] = None"
 
 lemma refundOneShortens : "refundOne acc = Some (c, nacc) \<Longrightarrow>
@@ -372,42 +377,41 @@ lemma refundOneShortens : "refundOne acc = Some (c, nacc) \<Longrightarrow>
   by (metis Pair_inject length_Cons less_Suc_eq list.distinct(1)
             list.inject option.inject refundOne.elims)
 
-datatype Payment = Payment Party Money
+datatype Payment = Payment Party Token Money
 
 datatype ReduceEffect = ReduceNoPayment
                       | ReduceWithPayment Payment
 
-fun moneyInAccount :: "AccountId \<Rightarrow> ((AccountId \<times> Money) list) \<Rightarrow> Money" where
-"moneyInAccount accId accountsV = findWithDefault 0 accId accountsV"
+fun moneyInAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Accounts \<Rightarrow> Money" where
+"moneyInAccount accId token accountsV = findWithDefault 0 (accId, token) accountsV"
 
-fun updateMoneyInAccount :: "AccountId \<Rightarrow> Money \<Rightarrow>
-                             ((AccountId \<times> Money) list) \<Rightarrow>
-                             ((AccountId \<times> Money) list)" where
-"updateMoneyInAccount accId money accountsV =
+fun updateMoneyInAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Money \<Rightarrow>
+                             Accounts \<Rightarrow>
+                             Accounts" where
+"updateMoneyInAccount accId token money accountsV =
   (if money \<le> 0
-   then MList.delete accId accountsV
-   else MList.insert accId money accountsV)"
+   then MList.delete (accId, token) accountsV
+   else MList.insert (accId, token) money accountsV)"
 
-fun addMoneyToAccount :: "AccountId \<Rightarrow> Money \<Rightarrow>
-                          ((AccountId \<times> Money) list) \<Rightarrow>
-                          ((AccountId \<times> Money) list)" where
-"addMoneyToAccount accId money accountsV =
-  (let balance = moneyInAccount accId accountsV in
+fun addMoneyToAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Money \<Rightarrow>
+                          Accounts \<Rightarrow>
+                          Accounts" where
+"addMoneyToAccount accId token money accountsV =
+  (let balance = moneyInAccount accId token accountsV in
    let newBalance = balance + money in
    if money \<le> 0
    then accountsV
-   else updateMoneyInAccount accId newBalance accountsV)"
+   else updateMoneyInAccount accId token newBalance accountsV)"
 
-fun giveMoney :: "Payee \<Rightarrow> Money \<Rightarrow>
-                  ((AccountId \<times> Money) list) \<Rightarrow>
-                  (ReduceEffect \<times> ((AccountId \<times> Money) list))" where
-"giveMoney (Party party) money accountsV =
-  (ReduceWithPayment (Payment party money), accountsV)" |
-"giveMoney (Account accId) money accountsV =
-  (let newAccs = addMoneyToAccount accId money accountsV in
+fun giveMoney :: "Payee \<Rightarrow> Token \<Rightarrow> Money \<Rightarrow> Accounts \<Rightarrow>
+                  (ReduceEffect \<times> Accounts)" where
+"giveMoney (Party party) token money accountsV =
+  (ReduceWithPayment (Payment party token money), accountsV)" |
+"giveMoney (Account accId) token money accountsV =
+  (let newAccs = addMoneyToAccount accId token money accountsV in
     (ReduceNoPayment, newAccs))"
 
-lemma giveMoneyIncOne : "giveMoney p m a = (e, na) \<Longrightarrow> length na \<le> length a + 1"
+lemma giveMoneyIncOne : "giveMoney p t m a = (e, na) \<Longrightarrow> length na \<le> length a + 1"
   apply (cases p)
   apply (cases "m \<le> 0")
   apply auto
@@ -416,8 +420,8 @@ lemma giveMoneyIncOne : "giveMoney p m a = (e, na) \<Longrightarrow> length na \
 (* REDUCE *)
 
 datatype ReduceWarning = ReduceNoWarning
-                       | ReduceNonPositivePay AccountId Payee Money
-                       | ReducePartialPay AccountId Payee Money Money
+                       | ReduceNonPositivePay AccountId Payee Token Money
+                       | ReducePartialPay AccountId Payee Token Money Money
                        | ReduceShadowing ValueId int int
 
 datatype ReduceStepResult = Reduced ReduceWarning ReduceEffect State Contract
@@ -427,22 +431,23 @@ datatype ReduceStepResult = Reduced ReduceWarning ReduceEffect State Contract
 fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceStepResult" where
 "reduceContractStep _ state Close =
   (case refundOne (accounts state) of
-     Some ((party, money), newAccount) \<Rightarrow>
+     Some ((party, token, money), newAccount) \<Rightarrow>
        let newState = state \<lparr> accounts := newAccount \<rparr> in
-       Reduced ReduceNoWarning (ReduceWithPayment (Payment party money)) newState Close
+       Reduced ReduceNoWarning (ReduceWithPayment (Payment party token money)) newState Close
    | None \<Rightarrow> NotReduced)" |
-"reduceContractStep env state (Pay accId payee val cont) =
+"reduceContractStep env state (Pay accId payee token val cont) =
   (let moneyToPay = evalValue env state val in
    if moneyToPay \<le> 0
-   then Reduced (ReduceNonPositivePay accId payee moneyToPay) ReduceNoPayment state cont
-   else (let balance = moneyInAccount accId (accounts state) in
+   then (let warning = ReduceNonPositivePay accId payee token moneyToPay in
+         Reduced warning ReduceNoPayment state cont)
+   else (let balance = moneyInAccount accId token (accounts state) in
         (let paidMoney = min balance moneyToPay in
          let newBalance = balance - paidMoney in
-         let newAccs = updateMoneyInAccount accId newBalance (accounts state) in
+         let newAccs = updateMoneyInAccount accId token newBalance (accounts state) in
          let warning = (if paidMoney < moneyToPay
-                        then ReducePartialPay accId payee paidMoney moneyToPay
+                        then ReducePartialPay accId payee token paidMoney moneyToPay
                         else ReduceNoWarning) in
-         let (payment, finalAccs) = giveMoney payee paidMoney newAccs in
+         let (payment, finalAccs) = giveMoney payee token paidMoney newAccs in
          Reduced warning payment (state \<lparr> accounts := finalAccs \<rparr>) cont)))" |
 "reduceContractStep env state (If obs cont1 cont2) =
   (let cont = (if evalObservation env state obs
@@ -478,19 +483,19 @@ lemma reduceContractStepReducesSize_Refund_aux :
   by (simp add: refundOneShortens)
 
 lemma reduceContractStepReducesSize_Refund_aux2 :
-  "Reduced ReduceNoWarning (ReduceWithPayment (Payment party money))
+  "Reduced ReduceNoWarning (ReduceWithPayment (Payment party token money))
           (sta\<lparr>accounts := newAccount\<rparr>) Close =
    Reduced twa tef nsta nc \<Longrightarrow>
    c = Close \<Longrightarrow>
-   refundOne (accounts sta) = Some ((party, money), newAccount) \<Longrightarrow>
+   refundOne (accounts sta) = Some ((party, token, money), newAccount) \<Longrightarrow>
    length (accounts nsta) + 2 * size nc < length (accounts sta)"
   apply simp
   using reduceContractStepReducesSize_Refund_aux by blast
 
 lemma reduceContractStepReducesSize_Refund :
   "(case a of
-          ((party, money), newAccount) \<Rightarrow>
-            Reduced ReduceNoWarning (ReduceWithPayment (Payment party money))
+          ((party, token, money), newAccount) \<Rightarrow>
+            Reduced ReduceNoWarning (ReduceWithPayment (Payment party token money))
              (sta\<lparr>accounts := newAccount\<rparr>) Close) =
          Reduced twa tef nsta nc \<Longrightarrow>
          c = Close \<Longrightarrow>
@@ -505,60 +510,60 @@ lemma zeroMinIfGT : "x > 0 \<Longrightarrow> min 0 x = (0 :: int)"
 
 lemma reduceContractStepReducesSize_Pay_aux :
   "length z \<le> length x \<Longrightarrow>
-   giveMoney x22 a z = (tef, y) \<Longrightarrow>
+   giveMoney x22 tok a z = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
   using giveMoneyIncOne by fastforce
 
 lemma reduceContractStepReducesSize_Pay_aux2 :
-  "giveMoney dst a (MList.delete src x)  = (tef, y) \<Longrightarrow>
+  "giveMoney dst tok a (MList.delete (src, tok) x) = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
   using delete_length reduceContractStepReducesSize_Pay_aux by blast
 
 lemma reduceContractStepReducesSize_Pay_aux3 :
   "sta\<lparr>accounts := b\<rparr> = nsta \<Longrightarrow>
-   giveMoney dst a (MList.delete src (accounts sta)) = (tef, b) \<Longrightarrow>
+   giveMoney dst tok a (MList.delete (src, tok) (accounts sta)) = (tef, b) \<Longrightarrow>
    length (accounts nsta) < Suc (Suc (length (accounts sta)))"
-  using reduceContractStepReducesSize_Pay_aux2 by auto
+  using reduceContractStepReducesSize_Pay_aux2 by fastforce
 
 lemma reduceContractStepReducesSize_Pay_aux4 :
-  "lookup k x = Some w \<Longrightarrow>
-   giveMoney dst a (MList.insert k v x) = (tef, y) \<Longrightarrow>
+  "lookup (k, tok) x = Some w \<Longrightarrow>
+   giveMoney dst tok a (MList.insert (k, tok) v x) = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
-  by (metis insert_existing_length le_refl reduceContractStepReducesSize_Pay_aux)
+  by (metis One_nat_def add.right_neutral add_Suc_right giveMoneyIncOne insert_existing_length le_imp_less_Suc)
 
 lemma reduceContractStepReducesSize_Pay_aux5 :
 "sta\<lparr>accounts := ba\<rparr> = nsta \<Longrightarrow>
- lookup src (accounts sta) = Some a \<Longrightarrow>
- giveMoney dst (evalValue env sta am) (MList.insert src (a - evalValue env sta am) (accounts sta)) = (tef, ba) \<Longrightarrow>
+ lookup (src, tok) (accounts sta) = Some a \<Longrightarrow>
+ giveMoney dst tok (evalValue env sta am) (MList.insert (src, tok) (a - evalValue env sta am) (accounts sta)) = (tef, ba) \<Longrightarrow>
  length (accounts nsta) < Suc (Suc (length (accounts sta)))"
-  using reduceContractStepReducesSize_Pay_aux4 by auto
+  using reduceContractStepReducesSize_Pay_aux4 by fastforce
 
 lemma reduceContractStepReducesSize_Pay_aux6 :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
-   c = Pay src dst am y \<Longrightarrow>
+   c = Pay src dst tok am y \<Longrightarrow>
    evalValue env sta am > 0 \<Longrightarrow>
-   lookup src (accounts sta) = Some a \<Longrightarrow>
+   lookup (src, tok) (accounts sta) = Some a \<Longrightarrow>
    evalBound nsta nc < evalBound sta c"
   apply (cases "a < evalValue env sta am")
   apply (simp add:min_absorb1)
-  apply (cases "giveMoney dst a (MList.delete src (accounts sta))")
+  apply (cases "giveMoney dst tok a (MList.delete (src, tok) (accounts sta))")
   using reduceContractStepReducesSize_Pay_aux3 apply fastforce
   apply (cases "a = evalValue env sta am")
-  apply (cases "giveMoney dst (evalValue env sta am) (MList.delete src (accounts sta))")
+  apply (cases "giveMoney dst tok (evalValue env sta am) (MList.delete (src, tok) (accounts sta))")
   apply (simp add:min_absorb2)
   using reduceContractStepReducesSize_Pay_aux3 apply blast
-  apply (cases "giveMoney dst (evalValue env sta am) (MList.insert src (a - evalValue env sta am) (accounts sta))")
+  apply (cases "giveMoney dst tok (evalValue env sta am) (MList.insert (src, tok) (a - evalValue env sta am) (accounts sta))")
   apply (simp add:min_absorb2)
   using reduceContractStepReducesSize_Pay_aux5 by blast
 
 lemma reduceContractStepReducesSize_Pay :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
-   c = Pay src dst am y \<Longrightarrow> evalBound nsta nc < evalBound sta c"
+   c = Pay src dst tok am y \<Longrightarrow> evalBound nsta nc < evalBound sta c"
   apply (cases "evalValue env sta am \<le> 0")
   apply auto[1]
-  apply (cases "lookup src (accounts sta)")
+  apply (cases "lookup (src, tok) (accounts sta)")
   apply (cases "evalValue env sta am > 0")
-  apply (cases "giveMoney dst 0 (MList.delete src (accounts sta))")
+  apply (cases "giveMoney dst tok 0 (MList.delete (src, tok) (accounts sta))")
   apply (simp add:zeroMinIfGT)
   using reduceContractStepReducesSize_Pay_aux3 apply blast
   apply simp
@@ -628,34 +633,34 @@ fun reduceContractUntilQuiescent :: "Environment \<Rightarrow> State \<Rightarro
 "reduceContractUntilQuiescent env state contract = reductionLoop env state contract [] []"
 
 datatype ApplyWarning = ApplyNoWarning
-                      | ApplyNonPositiveDeposit Party AccountId int
+                      | ApplyNonPositiveDeposit Party AccountId Token int
 
 datatype ApplyResult = Applied ApplyWarning State Contract
                      | ApplyNoMatchError
 
 fun applyCases :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightarrow> Case list \<Rightarrow> ApplyResult" where
-"applyCases env state (IDeposit accId1 party1 money)
-            (Cons (Case (Deposit accId2 party2 val) cont) rest) =
-  (let amount = evalValue env state val in
-   let warning = if amount > 0
-                 then ApplyNoWarning
-                 else ApplyNonPositiveDeposit party1 accId2 amount in
-   let newState = state \<lparr> accounts := addMoneyToAccount accId1 money (accounts state) \<rparr> in
-   if (accId1 = accId2 \<and> party1 = party2 \<and> money = amount)
-   then Applied warning newState cont
-   else applyCases env state (IDeposit accId1 party1 money) rest)" |
+"applyCases env state (IDeposit accId1 party1 tok1 amount)
+            (Cons (Case (Deposit accId2 party2 tok2 val) cont) rest) =
+  (if (accId1 = accId2 \<and> party1 = party2 \<and> tok1 = tok2
+        \<and> amount = evalValue env state val)
+   then let warning = if amount > 0
+                      then ApplyNoWarning
+                      else ApplyNonPositiveDeposit party1 accId2 tok2 amount in
+        let newState = state \<lparr> accounts := addMoneyToAccount accId1 tok1 amount (accounts state) \<rparr> in
+        Applied warning newState cont
+   else applyCases env state (IDeposit accId1 party1 tok1 amount) rest)" |
 "applyCases env state (IChoice choId1 choice)
             (Cons (Case (Choice choId2 bounds) cont) rest) =
-  (let newState = state \<lparr> choices := MList.insert choId1 choice (choices state) \<rparr> in
-   if (choId1 = choId2 \<and> inBounds choice bounds)
-   then Applied ApplyNoWarning newState cont
+  (if (choId1 = choId2 \<and> inBounds choice bounds)
+   then let newState = state \<lparr> choices := MList.insert choId1 choice (choices state) \<rparr> in
+        Applied ApplyNoWarning newState cont
    else applyCases env state (IChoice choId1 choice) rest)" |
 "applyCases env state INotify (Cons (Case (Notify obs) cont) rest) =
   (if evalObservation env state obs
    then Applied ApplyNoWarning state cont
    else applyCases env state INotify rest)" |
-"applyCases env state (IDeposit accId1 party1 money) (Cons _ rest) =
-  applyCases env state (IDeposit accId1 party1 money) rest" |
+"applyCases env state (IDeposit accId1 party1 tok1 amount) (Cons _ rest) =
+  applyCases env state (IDeposit accId1 party1 tok1 amount) rest" |
 "applyCases env state (IChoice choId1 choice) (Cons _ rest) =
   applyCases env state (IChoice choId1 choice) rest" |
 "applyCases env state INotify (Cons _ rest) =
@@ -666,20 +671,20 @@ fun applyInput :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightar
 "applyInput env state input (When cases t cont) = applyCases env state input cases" |
 "applyInput env state input c = ApplyNoMatchError"
 
-datatype TransactionWarning = TransactionNonPositiveDeposit Party AccountId int
-                            | TransactionNonPositivePay AccountId Payee int
-                            | TransactionPartialPay AccountId Payee Money Money
+datatype TransactionWarning = TransactionNonPositiveDeposit Party AccountId Token int
+                            | TransactionNonPositivePay AccountId Payee Token int
+                            | TransactionPartialPay AccountId Payee Token Money Money
                             | TransactionShadowing ValueId int int
 
 fun convertReduceWarnings :: "ReduceWarning list \<Rightarrow> TransactionWarning list" where
 "convertReduceWarnings Nil = Nil" |
 "convertReduceWarnings (Cons ReduceNoWarning rest) =
    convertReduceWarnings rest" |
-"convertReduceWarnings (Cons (ReduceNonPositivePay accId payee amount) rest) =
-   Cons (TransactionNonPositivePay accId payee amount)
+"convertReduceWarnings (Cons (ReduceNonPositivePay accId payee tok amount) rest) =
+   Cons (TransactionNonPositivePay accId payee tok amount)
         (convertReduceWarnings rest)" |
-"convertReduceWarnings (Cons (ReducePartialPay accId payee paid expected) rest) =
-   Cons (TransactionPartialPay accId payee paid expected)
+"convertReduceWarnings (Cons (ReducePartialPay accId payee tok paid expected) rest) =
+   Cons (TransactionPartialPay accId payee tok paid expected)
         (convertReduceWarnings rest)" |
 "convertReduceWarnings (Cons (ReduceShadowing valId oldVal newVal) rest) =
    Cons (TransactionShadowing valId oldVal newVal)
@@ -687,8 +692,8 @@ fun convertReduceWarnings :: "ReduceWarning list \<Rightarrow> TransactionWarnin
 
 fun convertApplyWarning :: "ApplyWarning \<Rightarrow> TransactionWarning list" where
 "convertApplyWarning ApplyNoWarning = Nil" |
-"convertApplyWarning (ApplyNonPositiveDeposit party accId amount) =
-   Cons (TransactionNonPositiveDeposit party accId amount) Nil"
+"convertApplyWarning (ApplyNonPositiveDeposit party accId tok amount) =
+   Cons (TransactionNonPositiveDeposit party accId tok amount) Nil"
 
 datatype ApplyAllResult = ApplyAllSuccess "TransactionWarning list" "Payment list"
                                      State Contract
@@ -799,25 +804,25 @@ fun addOutcome :: "Party \<Rightarrow> Money \<Rightarrow> TransactionOutcomes \
 fun combineOutcomes :: "TransactionOutcomes \<Rightarrow> TransactionOutcomes \<Rightarrow> TransactionOutcomes" where
 "combineOutcomes x y = MList.unionWith plus x y"
 
-fun getPartiesFromReduceEffect :: "ReduceEffect list \<Rightarrow> (Party \<times> Money) list" where
-"getPartiesFromReduceEffect (Cons (ReduceWithPayment (Payment p m)) t) =
-   Cons (p, -m) (getPartiesFromReduceEffect t)" |
+fun getPartiesFromReduceEffect :: "ReduceEffect list \<Rightarrow> (Party \<times> Token \<times> Money) list" where
+"getPartiesFromReduceEffect (Cons (ReduceWithPayment (Payment p tok m)) t) =
+   Cons (p, tok, -m) (getPartiesFromReduceEffect t)" |
 "getPartiesFromReduceEffect (Cons x t) = getPartiesFromReduceEffect t" |
 "getPartiesFromReduceEffect Nil = Nil"
 
-fun getPartiesFromInput :: "Input list \<Rightarrow> (Party \<times> Money) list" where
-"getPartiesFromInput (Cons (IDeposit _ p m) t) =
-   Cons (p, m) (getPartiesFromInput t)" |
+fun getPartiesFromInput :: "Input list \<Rightarrow> (Party \<times> Token \<times> Money) list" where
+"getPartiesFromInput (Cons (IDeposit _ p tok m) t) =
+   Cons (p, tok, m) (getPartiesFromInput t)" |
 "getPartiesFromInput (Cons x t) = getPartiesFromInput t" |
 "getPartiesFromInput Nil = Nil"
 
 fun getOutcomes :: "ReduceEffect list \<Rightarrow> Input list \<Rightarrow> TransactionOutcomes" where
 "getOutcomes eff inp =
-   foldl (\<lambda> acc (p, m) . addOutcome p m acc) emptyOutcome
+   foldl (\<lambda> acc (p, t, m) . addOutcome p m acc) emptyOutcome
          ((getPartiesFromReduceEffect eff) @ (getPartiesFromInput inp))"
 
 fun addSig :: "Party list \<Rightarrow> Input \<Rightarrow> Party list" where
-"addSig acc (IDeposit _ p _) = SList.insert p acc" |
+"addSig acc (IDeposit _ p _ _) = SList.insert p acc" |
 "addSig acc (IChoice (ChoiceId _ p) _) = SList.insert p acc" |
 "addSig acc INotify = acc"
 

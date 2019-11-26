@@ -3,15 +3,15 @@ imports Semantics PositiveAccounts
 begin
 
 fun moneyInPayment :: "Payment \<Rightarrow> int" where
-"moneyInPayment (Payment _ x) = x"
+"moneyInPayment (Payment _ _ x) = x"
 
 fun moneyInReduceEffect :: "ReduceEffect \<Rightarrow> int" where
 "moneyInReduceEffect (ReduceWithPayment p) = moneyInPayment p" |
 "moneyInReduceEffect ReduceNoPayment = 0"
 
-fun moneyInAccounts :: "(AccountId \<times> Money) list \<Rightarrow> int" where
+fun moneyInAccounts :: "Accounts \<Rightarrow> int" where
 "moneyInAccounts Nil = 0" |
-"moneyInAccounts (Cons (_, m) rest) = m + moneyInAccounts rest"
+"moneyInAccounts (Cons ((_, _), m) rest) = m + moneyInAccounts rest"
 
 fun moneyInState :: "State \<Rightarrow> int" where
 "moneyInState state = moneyInAccounts (accounts state)"
@@ -22,10 +22,10 @@ fun moneyInReduceStepResult :: "State \<Rightarrow> ReduceStepResult \<Rightarro
 "moneyInReduceStepResult state NotReduced = moneyInState state" |
 "moneyInReduceStepResult state AmbiguousSlotIntervalReductionError = moneyInState state"
 
-fun moneyInRefundOneResult :: "(AccountId \<times> Money) list \<Rightarrow>
-                               ((Party \<times> Money) \<times> ((AccountId \<times> Money) list)) option \<Rightarrow> int" where
+fun moneyInRefundOneResult :: "Accounts \<Rightarrow>
+                               ((Party \<times> Token \<times> Money) \<times> Accounts) option \<Rightarrow> int" where
 "moneyInRefundOneResult accs None = moneyInAccounts accs" |
-"moneyInRefundOneResult _ (Some ((_, m), newAccs)) = m + moneyInAccounts newAccs"
+"moneyInRefundOneResult _ (Some ((_, _, m), newAccs)) = m + moneyInAccounts newAccs"
 
 fun moneyInPayments :: "Payment list \<Rightarrow> int" where
 "moneyInPayments (Cons h t) = moneyInPayment h + moneyInPayments t" |
@@ -45,7 +45,7 @@ fun moneyInReduceResult :: "Payment list \<Rightarrow> State \<Rightarrow> Reduc
 "moneyInReduceResult pa sta RRAmbiguousSlotIntervalError = moneyInState sta + moneyInPayments pa"
 
 fun moneyInInput :: "Input \<Rightarrow> int" where
-"moneyInInput (IDeposit accId party money) = max 0 money" |
+"moneyInInput (IDeposit accId tok party money) = max 0 money" |
 "moneyInInput (IChoice choId val) = 0" |
 "moneyInInput INotify = 0"
 
@@ -90,32 +90,37 @@ lemma refundOne_preserves_money :
   apply simp
   subgoal for h t
     apply (cases h)
-    apply (simp only:refundOne.simps)
     subgoal for part mon
-      apply (cases "0 < mon")
-      apply simp
-      using allAccountsPositiveMeansFirstIsPositive by blast
+      apply (cases part)
+      subgoal for a b c
+        apply (cases "0 < mon")
+        apply (simp only:moneyInRefundOneResult.simps refundOne.simps if_True moneyInAccounts.simps)
+        using allAccountsPositiveMeansFirstIsPositive by blast
+      done
     done
   done
 
 lemma updateMoneyInAccount_no_match :
-  "valid_map ((thisAccId, money) # tail) \<Longrightarrow>
-   accId \<noteq> thisAccId \<Longrightarrow>
+  "valid_map (((thisAccId, thisTok), money) # tail) \<Longrightarrow>
+   (accId, tok) \<noteq> (thisAccId, thisTok) \<Longrightarrow>
    y \<ge> 0 \<Longrightarrow>
-   allAccountsPositive ((thisAccId, money) # tail) \<Longrightarrow>
-   moneyInAccounts (updateMoneyInAccount accId y ((thisAccId, money) # tail))
-   = money + moneyInAccounts (updateMoneyInAccount accId y tail)"
+   allAccountsPositive (((thisAccId, thisTok), money) # tail) \<Longrightarrow>
+   moneyInAccounts (updateMoneyInAccount accId tok y (((thisAccId, thisTok), money) # tail))
+   = money + moneyInAccounts (updateMoneyInAccount accId tok y tail)"
   apply (simp only:updateMoneyInAccount.simps)
   apply (cases "y \<le> 0")
   apply (simp only:bool.case if_True moneyInAccounts.simps)
-  using delete_step apply fastforce
-  apply (simp only:bool.case if_False)
+  apply (metis delete_step moneyInAccounts.simps(2))
+  apply (simp only:bool.case if_False MList.insert.simps)
+  apply (cases "(accId, tok) < (thisAccId, thisTok)")
+  apply (simp only:bool.case if_True moneyInAccounts.simps)
+  apply (smt MList.insert.simps(1) MList.insert.simps(2) MList.remove_from_middle leI le_less_trans moneyInAccounts.simps(2) order.asym refundOne.cases)
   by (smt MList.insert.simps(1) MList.insert.simps(2) MList.remove_from_middle leI le_less_trans moneyInAccounts.simps(2) not_less_iff_gr_or_eq refundOne.cases)
 
 lemma moneyInAccount_head_no_match :
-  "valid_map ((thisAccId, money) # tail) \<Longrightarrow>
-   accId \<noteq> thisAccId \<Longrightarrow>
-   moneyInAccount accId ((thisAccId, money) # tail) = moneyInAccount accId tail"
+  "valid_map (((thisAccId, thisTok), money) # tail) \<Longrightarrow>
+   (accId, tok) \<noteq> (thisAccId, thisTok) \<Longrightarrow>
+   moneyInAccount accId tok (((thisAccId, thisTok), money) # tail) = moneyInAccount accId tok tail"
   apply (simp only:moneyInAccount.simps)
   by (meson findWithDefault_step)
 
@@ -123,36 +128,38 @@ lemma updateMoneyInAccount_money :
   "valid_map accs \<Longrightarrow>
    allAccountsPositive accs \<Longrightarrow>
    moneyToPay \<ge> 0 \<Longrightarrow>
-   let balance = moneyInAccount accId accs;
+   let balance = moneyInAccount accId tok accs;
        paidMoney = min balance moneyToPay in
-   moneyInAccounts (updateMoneyInAccount accId (balance - paidMoney) accs) =
+   moneyInAccounts (updateMoneyInAccount accId tok (balance - paidMoney) accs) =
    moneyInAccounts accs - paidMoney"
-  apply (induction accs arbitrary:accId)
+  apply (induction accs arbitrary:accId tok)
   apply simp
-  subgoal for head tail accId
+  subgoal for head tail accId tok
     apply (cases head)
-    subgoal for thisAccId money
-      apply (cases "accId = thisAccId")
-      apply simp
-      apply linarith
-      apply (simp only:Let_def)
-      apply (subst updateMoneyInAccount_no_match[of thisAccId money tail accId 
-                                                    "(moneyInAccount accId ((thisAccId, money) # tail)
-                                                      - min (moneyInAccount accId ((thisAccId, money) # tail)) moneyToPay)"])
-      apply blast
-      apply blast
-      apply linarith
-      apply blast
-      apply (simp only:moneyInAccounts.simps moneyInAccount_head_no_match)
-      by (metis MList.sublist_valid add_diff_eq allAccountsPositiveMeansAllAccountsInTailArePositive findWithDefault_step moneyInAccount.simps)
+    subgoal for thisAccIdTok money
+      apply (cases thisAccIdTok)
+      subgoal for thisAccId thisTok thisCurr
+        apply (cases "(accId, tok) = (thisAccId, (thisTok, thisCurr))")
+        apply simp
+        apply force[1]
+        apply (simp only:Let_def)
+        apply (subst updateMoneyInAccount_no_match[of thisAccId "(thisTok, thisCurr)" money tail accId tok
+                                                      "(moneyInAccount accId tok (((thisAccId, thisTok, thisCurr), money) # tail)
+                                                        - min (moneyInAccount accId tok (((thisAccId, thisTok, thisCurr), money) # tail)) moneyToPay)"])
+        apply blast
+        apply blast
+        apply linarith
+        apply blast
+        apply (simp only:moneyInAccounts.simps moneyInAccount_head_no_match)
+        using allAccountsPositiveMeansAllAccountsInTailArePositive moneyInAccount_head_no_match by auto
+      done
     done
   done
-
 lemma updateMoneyInAccount_money2_aux :
-  "valid_map ((thisAccId, money) # tail) \<Longrightarrow>
-   allAccountsPositive ((thisAccId, money) # tail) \<Longrightarrow>
+  "valid_map (((thisAccId, tok), money) # tail) \<Longrightarrow>
+   allAccountsPositive (((thisAccId, tok), money) # tail) \<Longrightarrow>
    moneyToPay \<ge> 0 \<Longrightarrow>
-   moneyInAccount thisAccId ((thisAccId, money) # tail) + moneyToPay > 0"
+   moneyInAccount thisAccId tok (((thisAccId, tok), money) # tail) + moneyToPay > 0"
   apply (simp only:moneyInAccount.simps findWithDefault.simps lookup.simps refl if_True option.case)
   using add_pos_nonneg allAccountsPositiveMeansFirstIsPositive by blast
 
@@ -160,35 +167,38 @@ lemma updateMoneyInAccount_money2 :
   "valid_map accs \<Longrightarrow>
    allAccountsPositive accs \<Longrightarrow>
    moneyToPay \<ge> 0 \<Longrightarrow>
-   let balance = moneyInAccount accId accs in
-   moneyInAccounts (updateMoneyInAccount accId (balance + moneyToPay) accs) =
+   let balance = moneyInAccount accId tok accs in
+   moneyInAccounts (updateMoneyInAccount accId tok (balance + moneyToPay) accs) =
    moneyInAccounts accs + moneyToPay"
-  apply (induction accs arbitrary:accId)
+  apply (induction accs arbitrary:accId tok)
   apply simp
-  subgoal for head tail accId
+  subgoal for head tail accId tok
     apply (cases head)
-    subgoal for thisAccId money
-      apply (cases "accId = thisAccId")
+    subgoal for thisAccIdTok money
+      apply (cases "(accId, tok) = thisAccIdTok")
       apply (simp only:moneyInAccounts.simps updateMoneyInAccount.simps)
-      apply (cases "moneyInAccount thisAccId ((thisAccId, money) # tail) + moneyToPay \<le> 0")
-      apply (meson not_less updateMoneyInAccount_money2_aux)
-      apply simp
+      apply (cases "thisAccIdTok")
+      subgoal for thisAccId thisTok thisCurr
+        apply (cases "moneyInAccount accId tok ((thisAccIdTok, money) # tail) + moneyToPay \<le> 0")
+        apply (meson not_less updateMoneyInAccount_money2_aux)
+        apply simp
+      done
       apply (simp only:moneyInAccounts.simps moneyInAccount_head_no_match)
-      by (smt MList.sublist_valid allAccountsPositiveMeansAllAccountsInTailArePositive moneyInAccount_head_no_match updateMoneyInAccount.simps updateMoneyInAccount_no_match)
+    by (smt MList.sublist_valid allAccountsPositive.elims(2) allAccountsPositiveMeansAllAccountsInTailArePositive delete_step moneyInAccount_head_no_match moneyInAccounts.simps(2) prod.collapse updateMoneyInAccount.simps updateMoneyInAccount_no_match)
     done
   done
 
 lemma giveMoneyToParty_does_not_modify_accs :
-  "(snd (giveMoney (Party p) paidMoney accs)) = accs"
+  "(snd (giveMoney (Party p) tok paidMoney accs)) = accs"
   by simp
 
 lemma removeMoneyFromAccount_preservation :
   "valid_map accs \<Longrightarrow>
    allAccountsPositive accs \<Longrightarrow>
    moneyToPay \<ge> 0 \<Longrightarrow>
-   balance = moneyInAccount accId accs \<Longrightarrow>
+   balance = moneyInAccount accId tok accs \<Longrightarrow>
    paidMoney = min balance moneyToPay \<Longrightarrow>
-   moneyInAccounts (snd (giveMoney (Party p) paidMoney (updateMoneyInAccount accId (balance - paidMoney) accs))) =
+   moneyInAccounts (snd (giveMoney (Party p) tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) accs))) =
    moneyInAccounts accs - paidMoney"
   by (metis giveMoneyToParty_does_not_modify_accs updateMoneyInAccount_money)
 
@@ -199,20 +209,20 @@ lemma reduceContractStep_preserves_money_acc_to_party :
   "valid_map (accounts state) \<Longrightarrow>
    allAccountsPositive (accounts state) \<Longrightarrow>
    moneyToPay > 0 \<Longrightarrow>
-   balance = moneyInAccount accId (accounts state) \<Longrightarrow>
+   balance = moneyInAccount accId tok (accounts state) \<Longrightarrow>
    moneyToPay = evalValue env state val \<Longrightarrow>
    paidMoney = min balance moneyToPay \<Longrightarrow>
    moneyInAccounts (accounts state) =
    moneyInReduceStepResult state
-    (case giveMoney (Party x2) paidMoney
-             (updateMoneyInAccount accId (balance - paidMoney) (accounts state)) of
+    (case giveMoney (Party x2) tok paidMoney
+             (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state)) of
      (payment, finalAccs) \<Rightarrow>
        Reduced (if paidMoney < moneyToPay
-                then ReducePartialPay accId (Party x2) paidMoney moneyToPay
+                then ReducePartialPay accId (Party x2) tok paidMoney moneyToPay
                 else ReduceNoWarning)
                payment (state\<lparr>accounts := finalAccs\<rparr>) cont)"
-  apply (cases "giveMoney (Party x2) paidMoney
-                          (updateMoneyInAccount accId (balance - paidMoney) (accounts state))")
+  apply (cases "giveMoney (Party x2) tok paidMoney
+                          (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state))")
   subgoal for a b
     apply (cases a)
     apply simp
@@ -225,21 +235,21 @@ lemma reduceContractStep_preserves_money_acc_to_party :
   done
 
 lemma allAccountsPositive_implies_one_is_positive_aux :
-  "positiveMoneyInAccountOrNoAccount accId accs \<Longrightarrow> MList.lookup accId accs = Some x \<Longrightarrow> x > 0"
+  "positiveMoneyInAccountOrNoAccount accId tok accs \<Longrightarrow> MList.lookup (accId, tok) accs = Some x \<Longrightarrow> x > 0"
   by simp
 
 lemma allAccountsPositive_implies_one_is_positive :
-  "allAccountsPositive accs \<Longrightarrow> MList.lookup accId accs = Some x \<Longrightarrow> x > 0"
+  "allAccountsPositive accs \<Longrightarrow> MList.lookup (accId, tok) accs = Some x \<Longrightarrow> x > 0"
   using allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositive_implies_one_is_positive_aux by blast
 
 lemma addMoneyToAccountIf_ge_zero :
   "valid_map accs \<Longrightarrow>
    allAccountsPositive accs \<Longrightarrow>
    0 < moneyToPay \<Longrightarrow>
-   min (moneyInAccount accId accs) moneyToPay \<noteq> 0 \<Longrightarrow>
-   min (moneyInAccount accId accs) moneyToPay > 0"
+   min (moneyInAccount accId tok accs) moneyToPay \<noteq> 0 \<Longrightarrow>
+   min (moneyInAccount accId tok accs) moneyToPay > 0"
   apply (simp only:moneyInAccount.simps findWithDefault.simps)
-  apply (cases "lookup accId accs")
+  apply (cases "lookup (accId, tok) accs")
   apply simp
   using allAccountsPositive_implies_one_is_positive by auto
 
@@ -247,11 +257,11 @@ lemma transferMoneyBetweenAccounts_preserves_aux :
  "valid_map accs \<Longrightarrow>
   allAccountsPositive accs \<Longrightarrow>
   0 < moneyToPay \<Longrightarrow>
-  valTrans = min (moneyInAccount accId accs) moneyToPay \<Longrightarrow>
-  interAccs = updateMoneyInAccount accId (moneyInAccount accId accs - valTrans) accs \<Longrightarrow>
-  moneyInAccounts (updateMoneyInAccount accId (moneyInAccount accId accs - valTrans) accs)
+  valTrans = min (moneyInAccount accId tok accs) moneyToPay \<Longrightarrow>
+  interAccs = updateMoneyInAccount accId tok (moneyInAccount accId tok accs - valTrans) accs \<Longrightarrow>
+  moneyInAccounts (updateMoneyInAccount accId tok (moneyInAccount accId tok accs - valTrans) accs)
   = moneyInAccounts accs - valTrans"
-  by (metis (full_types) min.cobounded2 min.strict_order_iff updateMoneyInAccount_money)
+  by (meson le_less updateMoneyInAccount_money)
 
 lemma transferMoneyBetweenAccounts_preserves_aux2 :
   "valid_map accs \<Longrightarrow>
@@ -259,24 +269,24 @@ lemma transferMoneyBetweenAccounts_preserves_aux2 :
    valid_map interAccs \<Longrightarrow>
    allAccountsPositive interAccs \<Longrightarrow>
    0 < moneyToPay \<Longrightarrow>
-   valTrans = min (moneyInAccount accId accs) moneyToPay \<Longrightarrow>
-   moneyInAccounts (updateMoneyInAccount acc (moneyInAccount acc interAccs + valTrans) interAccs) =
+   valTrans = min (moneyInAccount accId tok accs) moneyToPay \<Longrightarrow>
+   moneyInAccounts (updateMoneyInAccount acc tok2 (moneyInAccount acc tok2 interAccs + valTrans) interAccs) =
    moneyInAccounts interAccs + valTrans"
-  by (metis (full_types) addMoneyToAccountIf_ge_zero min.order_iff min.strict_order_iff not_less updateMoneyInAccount_money2)
+  by (metis addMoneyToAccountIf_ge_zero le_less updateMoneyInAccount_money2)
 
 lemma transferMoneyBetweenAccounts_preserves_aux3 :
   "valid_map accs \<Longrightarrow>
    allAccountsPositive accs \<Longrightarrow>
    0 < moneyToPay \<Longrightarrow>
-   valTrans = min (moneyInAccount accId accs) moneyToPay \<Longrightarrow>
-   interAccs = updateMoneyInAccount accId (moneyInAccount accId accs - valTrans) accs \<Longrightarrow>
-   moneyInAccounts (updateMoneyInAccount acc (moneyInAccount acc interAccs + valTrans) interAccs) =
+   valTrans = min (moneyInAccount accId tok accs) moneyToPay \<Longrightarrow>
+   interAccs = updateMoneyInAccount accId tok (moneyInAccount accId tok accs - valTrans) accs \<Longrightarrow>
+   moneyInAccounts (updateMoneyInAccount acc tok2 (moneyInAccount acc tok2 interAccs + valTrans) interAccs) =
    moneyInAccounts accs"
-  apply (subst transferMoneyBetweenAccounts_preserves_aux2[of accs interAccs moneyToPay valTrans accId acc])
+  apply (subst transferMoneyBetweenAccounts_preserves_aux2[of accs interAccs moneyToPay valTrans accId tok acc tok2])
   apply blast
   apply blast
   using updateMoneyInAccount_preserves_valid_map apply blast
-  apply (smt MList_delete_preserves_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive updateMoneyInAccount.simps updateMoneyInAccount_gtZero updateMoneyInAccount_preserves_valid_map)
+  apply (smt MList.insert_lookup_Some MList_delete_preserves_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount insert_lookup_different option.simps(5) positiveMoneyInAccountOrNoAccount.simps positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive updateMoneyInAccount.simps updateMoneyInAccount_preserves_valid_map)
   apply blast
   apply blast
   by (metis (full_types) diff_add_cancel not_less not_less_iff_gr_or_eq updateMoneyInAccount_money)
@@ -285,49 +295,58 @@ lemma transferMoneyBetweenAccounts_preserves :
   "valid_map accs \<Longrightarrow>
    allAccountsPositive accs \<Longrightarrow>
    moneyToPay > 0 \<Longrightarrow>
-   balance = moneyInAccount accId accs \<Longrightarrow>
+   balance = moneyInAccount accId tok accs \<Longrightarrow>
    paidMoney = min balance moneyToPay \<Longrightarrow>
-   moneyInAccounts (snd (giveMoney (Account acc) paidMoney (updateMoneyInAccount accId (balance - paidMoney) accs))) =
+   moneyInAccounts (snd (giveMoney (Account acc) tok2 paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) accs))) =
    moneyInAccounts accs"
   apply (simp only:giveMoney.simps addMoneyToAccount.simps Let_def)
-  apply (cases "min (moneyInAccount accId accs) moneyToPay = 0")
+  apply (cases "min (moneyInAccount accId tok accs) moneyToPay = 0")
   apply (simp only:bool.case if_True snd_def prod.case)
   apply (simp only:Orderings.preorder_class.order_refl if_True)
   apply (metis diff_zero min.commute min.right_idem order_refl updateMoneyInAccount_money)
-  using addMoneyToAccountIf_ge_zero transferMoneyBetweenAccounts_preserves_aux3 by fastforce
+  by (smt addMoneyToAccountIf_ge_zero snd_conv transferMoneyBetweenAccounts_preserves_aux3)
 
 lemma reduceContractStep_preserves_money_acc_to_acc_aux :
   "validAndPositive_state state \<Longrightarrow>
-   econt = Pay accId (Account x1) val cont \<Longrightarrow>
+  econt = Pay accId (Account x1) tok val cont \<Longrightarrow>
    \<not> evalValue env state val \<le> 0 \<Longrightarrow>
    moneyToPay = evalValue env state val \<Longrightarrow>
-   balance = moneyInAccount accId (accounts state) \<Longrightarrow>
+  balance = moneyInAccount accId tok (accounts state) \<Longrightarrow>
    paidMoney = min balance moneyToPay \<Longrightarrow>
-   giveMoney (Account x1) paidMoney
-    (updateMoneyInAccount accId
-      (moneyInAccount accId (accounts state) - paidMoney) (accounts state)) =
-   rgm \<Longrightarrow> moneyInAccounts (snd rgm) = moneyInAccounts (accounts state)"
-  using transferMoneyBetweenAccounts_preserves by auto
+  rgm = giveMoney (Account x1) tok paidMoney
+          (updateMoneyInAccount accId tok
+            (moneyInAccount accId tok (accounts state) - paidMoney) (accounts state)) \<Longrightarrow>
+  moneyInAccounts (snd rgm) = moneyInAccounts (accounts state)"
+  subgoal premises fact
+    apply (subst fact(7))
+    apply (rule transferMoneyBetweenAccounts_preserves)
+    using PositiveAccounts.valid_state_valid_accounts fact(1) validAndPositiveImpliesValid apply blast
+    using fact(1) apply auto[1]
+    apply (rule not_le_imp_less[of "evalValue env state val" 0])
+    apply (rule fact(3))
+    apply (rule refl)
+    using fact(4) fact(5) fact(6) by simp
+  done
 
 lemma reduceContractStep_preserves_money_acc_to_acc :
   "valid_state state \<Longrightarrow>
    allAccountsPositiveState state \<Longrightarrow>
-   econt = Pay accId payee val cont \<Longrightarrow>
+   econt = Pay accId payee tok val cont \<Longrightarrow>
    \<not> moneyToPay \<le> 0 \<Longrightarrow>
    payee = Account x1 \<Longrightarrow>
    moneyToPay = evalValue env state val \<Longrightarrow>
-   balance = moneyInAccount accId (accounts state) \<Longrightarrow>
+   balance = moneyInAccount accId tok (accounts state) \<Longrightarrow>
    paidMoney = min balance moneyToPay \<Longrightarrow>
    moneyInAccounts (accounts state)
     = moneyInReduceStepResult state
-          (case giveMoney payee paidMoney (updateMoneyInAccount accId (balance - paidMoney) (accounts state)) of
+          (case giveMoney payee tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state)) of
                 (payment, finalAccs) \<Rightarrow> Reduced wa payment (state\<lparr>accounts := finalAccs\<rparr>) cont)"
-  apply (cases "giveMoney payee paidMoney (updateMoneyInAccount accId (balance - paidMoney) (accounts state))")
+  apply (cases "giveMoney payee tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state))")
   apply (simp del:valid_map.simps allAccountsPositive.simps moneyInAccount.simps moneyInAccounts.simps giveMoney.simps updateMoneyInAccount.simps)
   subgoal for a b
     apply (cases a)
     apply (simp only:moneyInReduceEffect.simps)
-    using transferMoneyBetweenAccounts_preserves apply auto[1]
+    apply (metis add.left_neutral not_le snd_conv transferMoneyBetweenAccounts_preserves)
     by simp
   done
 
@@ -346,14 +365,14 @@ lemma reduceContractStep_preserves_money :
       by (simp add: refundOne_preserves_money)
     done
   apply (simp only:reduceContractStep.simps)
-  subgoal for accId payee val cont
+  subgoal for accId payee tok val cont
     apply (cases "evalValue env state val \<le> 0")
     apply simp
     apply (simp del:validAndPositive_state.simps valid_map.simps allAccountsPositive.simps moneyInAccount.simps moneyInAccounts.simps giveMoney.simps updateMoneyInAccount.simps)
     apply (cases payee)
     apply (simp only:Let_def)
     subgoal for x1
-      using reduceContractStep_preserves_money_acc_to_acc_aux by force
+      using reduceContractStep_preserves_money_acc_to_acc validAndPositive_state.simps by blast
     apply (simp only:Let_def)
     subgoal for x2
       using reduceContractStep_preserves_money_acc_to_party by auto
@@ -374,8 +393,8 @@ lemma reduceContractStep_preserves_money :
 lemma applyCases_preserves_money_aux :
   "validAndPositive_state state \<Longrightarrow>
    money > 0 \<Longrightarrow>
-   moneyInState state + moneyInInput (IDeposit accId2 party2 money) =
-   moneyInState (state\<lparr>accounts := updateMoneyInAccount accId2 (moneyInAccount accId2 (accounts state) + money) (accounts state)\<rparr>)"
+   moneyInState state + moneyInInput (IDeposit accId2 party2 tok2 money) =
+   moneyInState (state\<lparr>accounts := updateMoneyInAccount accId2 tok2 (moneyInAccount accId2 tok2 (accounts state) + money) (accounts state)\<rparr>)"
   apply (simp only:moneyInState.simps state_account_red)
   by (smt allAccountsPositiveState.simps moneyInInput.simps(1) updateMoneyInAccount_money2 validAndPositive_state.simps valid_state.simps)
 
@@ -383,15 +402,15 @@ lemma applyCases_preserves_money :
   "validAndPositive_state state \<Longrightarrow>
    moneyInState state + moneyInInput inp = moneyInApplyResult state inp (applyCases env state inp caseList)"
   apply (induction env state inp caseList rule:applyCases.induct)
-  subgoal for env state accId1 party1 money accId2 party2 val cont rest
+  subgoal for env state accId1 party1 tok1 money accId2 party2 tok2 val cont rest
     apply (simp only:applyCases.simps)
-    apply (cases "accId1 = accId2 \<and> party1 = party2 \<and> money = evalValue env state val")
+    apply (cases "accId1 = accId2 \<and> party1 = party2 \<and> tok1 = tok2 \<and> money = evalValue env state val")
     apply (auto simp del:evalValue.simps moneyInState.simps moneyInInput.simps moneyInApplyResult.simps validAndPositive_state.simps updateMoneyInAccount.simps moneyInAccount.simps)
     apply (simp only:Let_def moneyInApplyResult.simps)
     apply (cases "evalValue env state val \<le> 0")
     apply simp
-    apply (simp only:bool.case if_False)
-    using applyCases_preserves_money_aux not_le by blast
+    using applyCases_preserves_money_aux apply auto[1]
+    by simp
   subgoal for env state choId1 choice choId2 bounds cont rest
     by simp
   by simp_all

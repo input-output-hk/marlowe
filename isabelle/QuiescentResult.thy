@@ -7,23 +7,23 @@ lemma reduceOne_onlyIfNonEmptyState : "refundOne acc = Some c \<Longrightarrow> 
 
 lemma reduceContractStepPayIsQuiescent :
       "(let moneyToPay = evalValue env sta x23
-        in if moneyToPay \<le> 0 then Reduced (ReduceNonPositivePay x21 x22 moneyToPay) ReduceNoPayment sta x24
-           else let balance = moneyInAccount x21 (accounts sta); paidMoney = min balance moneyToPay; newBalance = balance - paidMoney;
-                    newAccs = updateMoneyInAccount x21 newBalance (accounts sta);
-                    warning = if paidMoney < moneyToPay then ReducePartialPay x21 x22 paidMoney moneyToPay else ReduceNoWarning;
-                    (payment, finalAccs) = giveMoney x22 paidMoney newAccs
+        in if moneyToPay \<le> 0 then Reduced (ReduceNonPositivePay x21 x22 tok moneyToPay) ReduceNoPayment sta x24
+           else let balance = moneyInAccount x21 tok (accounts sta); paidMoney = min balance moneyToPay; newBalance = balance - paidMoney;
+                    newAccs = updateMoneyInAccount x21 tok newBalance (accounts sta);
+                    warning = if paidMoney < moneyToPay then ReducePartialPay x21 x22 tok paidMoney moneyToPay else ReduceNoWarning;
+                    (payment, finalAccs) = giveMoney x22 tok paidMoney newAccs
                 in Reduced warning payment (sta\<lparr>accounts := finalAccs\<rparr>) x24) =
        NotReduced \<Longrightarrow>
-       cont = Pay x21 x22 x23 x24 \<Longrightarrow> False"
+       cont = Pay x21 x22 tok x23 x24 \<Longrightarrow> False"
   apply (cases "evalValue env sta x23 \<le> 0")
   apply simp
-  apply (cases "min (moneyInAccount x21 (accounts sta)) (evalValue env sta x23) < (evalValue env sta x23)")
-  apply (cases "lookup x21 (accounts sta)")
+  apply (cases "min (moneyInAccount x21 tok (accounts sta)) (evalValue env sta x23) < (evalValue env sta x23)")
+  apply (cases "lookup (x21, tok) (accounts sta)")
   apply simp
   apply (metis (mono_tags, lifting) ReduceStepResult.distinct(1) case_prod_unfold)
   apply (cases "evalValue env sta x23 \<le> 0")
   apply simp
-  apply (cases "min (moneyInAccount x21 (accounts sta)) (evalValue env sta x23) < evalValue env sta x23")
+  apply (cases "min (moneyInAccount x21 tok (accounts sta)) (evalValue env sta x23) < evalValue env sta x23")
   apply simp
   apply (metis (no_types, lifting) ReduceStepResult.distinct(1) case_prod_unfold)
   apply simp
@@ -41,7 +41,7 @@ lemma reduceContractStepIsQuiescent : "validAndPositive_state sta \<Longrightarr
   apply (cases "refundOne (accounts sta)")
   apply (simp add: reduceOneIsSomeIfNotEmptyAndPositive)
   apply (simp add: case_prod_beta')
-  using reduceContractStepPayIsQuiescent apply fastforce
+  apply (metis reduceContractStep.simps(2) reduceContractStepPayIsQuiescent)
   apply simp
   using isQuiescent.simps(2) apply blast
   by (metis ReduceStepResult.distinct(1) reduceContractStep.simps(5))
@@ -117,10 +117,15 @@ lemma playTraceAuxIsQuiescent : "validAndPositive_state (txOutState traIn) \<Lon
                                  isQuiescent (txOutContract traOut) (txOutState traOut)"
   apply (induction traIn l arbitrary:traOut rule:playTraceAux.induct)
   apply simp
-  by (metis TransactionOutput.exhaust TransactionOutput.simps(5) TransactionOutput.simps(6) TransactionOutputRecord.select_convs(3) computeTransactionIsQuiescent computeTransaction_preserves_validAndPositive_state playTraceAux.simps(2))
+  apply (simp del:validAndPositive_state.simps isQuiescent.simps computeTransaction.simps)
+  subgoal for warnings payments state cont h t traOut
+    apply (cases "computeTransaction h state cont")
+    apply (simp del:validAndPositive_state.simps isQuiescent.simps computeTransaction.simps)
+    using computeTransactionIsQuiescent computeTransaction_preserves_validAndPositive_state by simp_all
+  done
 
 theorem playTraceIsQuiescent : "playTrace sl cont (Cons h t) = TransactionOutput traOut \<Longrightarrow>
                                 isQuiescent (txOutContract traOut) (txOutState traOut)"
-  by (metis PositiveAccounts.valid_state_valid_accounts TransactionOutputRecord.select_convs(3) allAccountsPositiveState.simps emptyState_gtZero empty_state_valid_state list.distinct(1) playTrace.simps playTraceAuxIsQuiescent positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositive_state.simps)
+  by (metis TransactionOutputRecord.select_convs(3) list.discI playTrace.simps playTraceAuxIsQuiescent validAndPositive_initial_state)
 
 end

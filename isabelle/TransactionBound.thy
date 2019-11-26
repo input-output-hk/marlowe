@@ -7,7 +7,7 @@ and countWhens :: "Contract \<Rightarrow> nat" where
 "countWhensCaseList (Cons (Case _ c) tail) = max (countWhens c) (countWhensCaseList tail)" |
 "countWhensCaseList Nil = 0" |
 "countWhens Close = 0" |
-"countWhens (Pay _ _ _ c) = countWhens c" |
+"countWhens (Pay _ _ _ _ c) = countWhens c" |
 "countWhens (If _ c c2) = max (countWhens c) (countWhens c2)" |
 "countWhens (When cl t c) = Suc (max (countWhensCaseList cl) (countWhens c))" |
 "countWhens (Contract.Let _ _ c) = countWhens c"
@@ -35,16 +35,16 @@ lemma reduceContractStep_not_quiescent_reduces : "\<not> isQuiescent c st \<Long
   subgoal for state
     apply (cases "refundOne (accounts state)")
     by (simp_all add: prod.case_eq_if)
-  subgoal for env state accId payee val cont
+  subgoal for env state accId payee tok curr val cont
     apply (cases "evalValue env state val \<le> 0")
     apply simp
     apply simp
     apply (cases "let moneyToPay = evalValue env state val;
-                      balance = case lookup accId (accounts state) of None \<Rightarrow> 0 | Some x \<Rightarrow> x;
+                      balance = case lookup (accId, (tok, curr)) (accounts state) of None \<Rightarrow> 0 | Some x \<Rightarrow> x;
                       paidMoney = min balance moneyToPay
-                  in giveMoney payee paidMoney (if balance \<le> moneyToPay
-                                                then MList.delete accId (accounts state)
-                                                else MList.insert accId (balance - paidMoney) (accounts state))")
+                  in giveMoney payee (tok,curr) paidMoney (if balance \<le> moneyToPay
+                                                           then MList.delete (accId, (tok, curr)) (accounts state)
+                                                           else MList.insert (accId, (tok, curr)) (balance - paidMoney) (accounts state))")
     apply (simp add:Let_def)
   done
   by (metis ReduceStepResult.inject le_eq_less_or_eq)
@@ -265,7 +265,7 @@ lemma playTraceAux_only_accepts_maxTransactions_aux :
   subgoal for warnings payments state cont h t
     apply (cases "computeTransaction h state cont")
     apply (simp del:validAndPositive_state.simps computeTransaction.simps maxTransactions.simps add:Let_def)
-    apply (metis computeTransaction_decreases_maxTransactions computeTransaction_preserves_validAndPositive_state less_trans playTraceAux.simps(1))
+    apply (metis TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) TransactionOutputRecord.select_convs(4) TransactionOutputRecord.surjective TransactionOutputRecord.update_convs(1) TransactionOutputRecord.update_convs(2) computeTransaction_decreases_maxTransactions computeTransaction_preserves_validAndPositive_state dual_order.strict_trans playTraceAux.simps(1))
     by simp
   done
 
@@ -279,10 +279,10 @@ lemma playTraceAux_only_accepts_maxTransactions :
     apply (cases txIn)
     apply (simp only:playTraceAux.simps)
     subgoal for txOutWarningsa txOutPaymentsa txOutStatea txOutContracta
-    apply (cases "computeTransaction head txOutStatea txOutContracta")
-    apply (simp del:validAndPositive_state.simps computeTransaction.simps maxTransactions.simps add:Let_def)
-    apply (meson Suc_le_eq computeTransaction_decreases_maxTransactions computeTransaction_preserves_validAndPositive_state le_trans not_less_eq_eq)
-    by simp
+      apply (cases "computeTransaction head txOutStatea txOutContracta")
+      apply (simp del:validAndPositive_state.simps computeTransaction.simps maxTransactions.simps add:Let_def)
+      apply (metis (mono_tags, lifting) TransactionOutputRecord.select_convs(3) TransactionOutputRecord.select_convs(4) TransactionOutputRecord.surjective TransactionOutputRecord.update_convs(1) TransactionOutputRecord.update_convs(2) computeTransaction_decreases_maxTransactions computeTransaction_preserves_validAndPositive_state le_trans not_le not_less_eq)
+      by simp
     done
   done
 

@@ -92,7 +92,7 @@ lemma refundOne_preserves_money :
     apply (cases h)
     subgoal for part mon
       apply (cases part)
-      subgoal for a b c
+      subgoal for a b
         apply (cases "0 < mon")
         apply (simp only:moneyInRefundOneResult.simps refundOne.simps if_True moneyInAccounts.simps)
         using allAccountsPositiveMeansFirstIsPositive by blast
@@ -138,14 +138,14 @@ lemma updateMoneyInAccount_money :
     apply (cases head)
     subgoal for thisAccIdTok money
       apply (cases thisAccIdTok)
-      subgoal for thisAccId thisTok thisCurr
-        apply (cases "(accId, tok) = (thisAccId, (thisTok, thisCurr))")
+      subgoal for thisAccId thisTok
+        apply (cases "(accId, tok) = (thisAccId, thisTok)")
         apply simp
         apply force[1]
         apply (simp only:Let_def)
-        apply (subst updateMoneyInAccount_no_match[of thisAccId "(thisTok, thisCurr)" money tail accId tok
-                                                      "(moneyInAccount accId tok (((thisAccId, thisTok, thisCurr), money) # tail)
-                                                        - min (moneyInAccount accId tok (((thisAccId, thisTok, thisCurr), money) # tail)) moneyToPay)"])
+        apply (subst updateMoneyInAccount_no_match[of thisAccId thisTok money tail accId tok
+                                                      "(moneyInAccount accId tok (((thisAccId, thisTok), money) # tail)
+                                                        - min (moneyInAccount accId tok (((thisAccId, thisTok), money) # tail)) moneyToPay)"])
         apply blast
         apply blast
         apply linarith
@@ -155,6 +155,7 @@ lemma updateMoneyInAccount_money :
       done
     done
   done
+
 lemma updateMoneyInAccount_money2_aux :
   "valid_map (((thisAccId, tok), money) # tail) \<Longrightarrow>
    allAccountsPositive (((thisAccId, tok), money) # tail) \<Longrightarrow>
@@ -178,7 +179,7 @@ lemma updateMoneyInAccount_money2 :
       apply (cases "(accId, tok) = thisAccIdTok")
       apply (simp only:moneyInAccounts.simps updateMoneyInAccount.simps)
       apply (cases "thisAccIdTok")
-      subgoal for thisAccId thisTok thisCurr
+      subgoal for thisAccId thisTok
         apply (cases "moneyInAccount accId tok ((thisAccIdTok, money) # tail) + moneyToPay \<le> 0")
         apply (meson not_less updateMoneyInAccount_money2_aux)
         apply simp

@@ -36,7 +36,6 @@ lemma addMoneyToAccountPositive :
   apply (simp only:"addMoneyToAccount.simps")
   apply (cases "money \<le> 0")
   apply simp
-  apply (metis small_lazy'.cases)
   apply (cases "lookup (accId, tok3) accs")
   apply simp
   apply (metis MList.insert_lookup_Some insert_lookup_different not_le option.simps(5) surj_pair)
@@ -51,9 +50,7 @@ lemma giveMoney_gtZero :
   apply (simp del:positiveMoneyInAccountOrNoAccount.simps addMoneyToAccount.simps)
   apply (rule addMoneyToAccountPositive)
   apply simp
-  apply (simp del:positiveMoneyInAccountOrNoAccount.simps addMoneyToAccount.simps)
-  apply (cases tok3)
-  by blast    
+  by (simp del:positiveMoneyInAccountOrNoAccount.simps addMoneyToAccount.simps)
 
 lemma positiveMoneyInAccountOrNoAccount_valid_zero : "valid_map (((accId, tok), money) # rest) \<Longrightarrow> positiveMoneyInAccountOrNoAccount accId tok rest"
   apply (simp only:positiveMoneyInAccountOrNoAccount.simps findWithDefault.simps)
@@ -120,13 +117,12 @@ lemma reduceContractStep_gtZero_Pay :
   apply (simp only:reduceContractStep.simps)
   apply (cases "evalValue env state val \<le> 0")
   apply simp
-  apply (metis prod.collapse)
   apply (cases "giveMoney payee tok2 (min (moneyInAccount accId tok2 (accounts state)) (evalValue env state val))
                 (updateMoneyInAccount accId tok2
                   (moneyInAccount accId tok2 (accounts state) - min (moneyInAccount accId tok2 (accounts state)) (evalValue env state val))
                   (accounts state))")
   apply (simp del:positiveMoneyInAccountOrNoAccount.simps valid_state.simps updateMoneyInAccount.simps)
-  by (metis (no_types, lifting) ReduceStepResult.inject State.simps(1) State.surjective State.update_convs(1) giveMoney_gtZero prod.collapse reduceContractStep_gtZero_Pay_aux)
+  by (metis (no_types, lifting) ReduceStepResult.inject State.simps(1) State.surjective State.update_convs(1) giveMoney_gtZero reduceContractStep_gtZero_Pay_aux)
 
 lemma reduceContractStep_gtZero_Let :
   "valid_state state \<Longrightarrow>
@@ -137,7 +133,7 @@ lemma reduceContractStep_gtZero_Let :
   apply (cases "state")
   apply (cases "newState")
   apply (simp del:positiveMoneyInAccountOrNoAccount.simps valid_state.simps)
-  by (metis ReduceStepResult.inject State.ext_inject old.prod.exhaust)
+  by (metis ReduceStepResult.inject State.ext_inject)
 
 theorem reduceContractStep_gtZero :
   "valid_state state \<Longrightarrow>
@@ -150,7 +146,6 @@ theorem reduceContractStep_gtZero :
   apply (metis (mono_tags, lifting) option.simps(5) prod.case_eq_if prod.collapse reduceContractStep.simps(1) reduceContractStep_gtZero_Refund)
   using reduceContractStep_gtZero_Pay apply blast
   apply simp
-  apply (metis prod.collapse)
   apply (smt ReduceStepResult.distinct(1) ReduceStepResult.inject ReduceStepResult.simps(5) case_prod_unfold reduceContractStep.simps(4))
   using reduceContractStep_gtZero_Let by blast
 
@@ -187,9 +182,8 @@ lemma applyCases_positive : "valid_state state \<Longrightarrow>
     apply (cases "accId1 = accId2 \<and> party1 = party2 \<and> tok1 = tok2a \<and> amount = evalValue env state val")
     apply (cases " evalValue env state val \<le> 0")
     apply (simp add:Let_def del:valid_state.simps positiveMoneyInAccountOrNoAccount.simps moneyInAccount.simps)
-    apply (metis small_lazy'.cases)
     apply (simp add:Let_def del:valid_state.simps updateMoneyInAccount.simps positiveMoneyInAccountOrNoAccount.simps moneyInAccount.simps)
-    apply (metis State.simps(1) State.surjective State.update_convs(1) old.prod.exhaust reduceContractStep_gtZero_Pay_aux)
+    apply (metis State.simps(1) State.surjective State.update_convs(1) reduceContractStep_gtZero_Pay_aux)
     by (simp add:Let_def del:valid_state.simps updateMoneyInAccount.simps positiveMoneyInAccountOrNoAccount.simps moneyInAccount.simps)
   (* Choice case *)
   apply (metis ApplyResult.inject State.ext_inject State.simps(7) State.surjective applyCases.simps(2))
@@ -277,7 +271,6 @@ lemma playTraceAux_gtZero :
    positiveMoneyInAccountOrNoAccount y tok2 (accounts (txOutState txOut))"
   apply (induction txIn transList rule:playTraceAux.induct)
   apply simp
-  apply (metis small_lazy'.cases)
   apply (cases txOut)
   subgoal for state cont h t txOutWarnings txOutPayments txOutStatea txOutContract
     apply (simp del:valid_state.simps computeTransaction.simps positiveMoneyInAccountOrNoAccount.simps add:Let_def)

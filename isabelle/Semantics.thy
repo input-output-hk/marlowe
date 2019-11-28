@@ -16,7 +16,6 @@ type_synonym NumAccount = int
 type_synonym Timeout = Slot
 type_synonym Money = Ada
 type_synonym ChosenNum = int
-type_synonym Token = "CurrencySymbol \<times> TokenName"
 
 datatype AccountId = AccountId NumAccount Party
 
@@ -73,6 +72,59 @@ end
 
 fun accountOwner :: "AccountId \<Rightarrow> Party" where
 "accountOwner (AccountId _ party) = party"
+
+datatype Token = Token CurrencySymbol TokenName
+
+(* BEGIN Proof of linorder for Token *)
+fun less_eq_Tok :: "Token \<Rightarrow> Token \<Rightarrow> bool" where
+"less_eq_Tok (Token a b) (Token c d) =
+   (if a < c then True
+    else (if (a > c) then False else b \<le> d))"
+
+fun less_Tok :: "Token \<Rightarrow> Token \<Rightarrow> bool" where
+"less_Tok a b = (\<not> (less_eq_Tok b a))"
+
+instantiation "Token" :: "ord"
+begin
+definition "a \<le> b = less_eq_Tok a b"
+definition "a < b = less_Tok a b"
+instance
+proof
+qed
+end
+
+lemma linearToken : "x \<le> y \<or> y \<le> (x::Token)"
+  by (smt less_eq_Tok.elims(3) less_eq_Tok.simps less_eq_Token_def)
+
+instantiation "Token" :: linorder
+begin
+instance
+proof
+  fix x y
+  have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: Token))"
+    by (meson less_Tok.elims(2) less_Tok.elims(3) less_Token_def less_eq_Token_def linearToken)
+  thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
+next
+  fix x
+  have "x \<le> (x :: Token)" by (meson linearToken)
+  thus "x \<le> x" by simp
+next
+  fix x y z
+  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: Token)"
+    by (smt less_eq_Tok.elims(2) less_eq_Tok.simps less_eq_Token_def)
+  thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
+next
+  fix x y z
+  have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Token)"
+    by (smt less_eq_Tok.elims(2) less_eq_Tok.simps less_eq_Token_def)
+  thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Token)" by simp
+next
+  fix x y
+  from linearToken have "x \<le> y \<or> y \<le> (x :: Token)" by simp
+  thus "x \<le> y \<or> y \<le> x" by simp
+qed
+end
+(* END Proof of linorder for Token *)
 
 datatype ChoiceId = ChoiceId ChoiceName Party
 

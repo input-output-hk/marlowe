@@ -35,17 +35,20 @@ lemma reduceContractStep_not_quiescent_reduces : "\<not> isQuiescent c st \<Long
   subgoal for state
     apply (cases "refundOne (accounts state)")
     by (simp_all add: prod.case_eq_if)
-  subgoal for env state accId payee tok curr val cont
-    apply (cases "evalValue env state val \<le> 0")
-    apply simp
-    apply simp
-    apply (cases "let moneyToPay = evalValue env state val;
-                      balance = case lookup (accId, (tok, curr)) (accounts state) of None \<Rightarrow> 0 | Some x \<Rightarrow> x;
-                      paidMoney = min balance moneyToPay
-                  in giveMoney payee (tok,curr) paidMoney (if balance \<le> moneyToPay
-                                                           then MList.delete (accId, (tok, curr)) (accounts state)
-                                                           else MList.insert (accId, (tok, curr)) (balance - paidMoney) (accounts state))")
-    apply (simp add:Let_def)
+  subgoal for env state accId payee token val cont
+    apply (cases token)
+    subgoal for tok curr
+      apply (cases "evalValue env state val \<le> 0")
+      apply simp
+      apply simp
+      apply (cases "let moneyToPay = evalValue env state val;
+                        balance = case lookup (accId, Token tok curr) (accounts state) of None \<Rightarrow> 0 | Some x \<Rightarrow> x;
+                        paidMoney = min balance moneyToPay
+                    in giveMoney payee (Token tok curr) paidMoney (if balance \<le> moneyToPay
+                                                                   then MList.delete (accId, Token tok curr) (accounts state)
+                                                                   else MList.insert (accId, Token tok curr) (balance - paidMoney) (accounts state))")
+      apply (simp add:Let_def)
+    done
   done
   by (metis ReduceStepResult.inject le_eq_less_or_eq)
 

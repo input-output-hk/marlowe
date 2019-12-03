@@ -47,7 +47,7 @@ School of Computing, University of Kent, UK\\
 The abstract should briefly summarize the contents of the paper in
 150--250 words.
 
-\keywords{First keyword  \and Second keyword \and Another keyword.}
+\keywords{First keyword \and Second keyword \and Another keyword.}
 \end{abstract}
 %
 %
@@ -75,15 +75,14 @@ We look at two complementary approaches: static analysis of concrete contracts (
 
 For some properties, given a particular contract, a computer can decidably determine whether the contract satisfies the property and, in the cases when it does not, it can provide a counter-example.
 
-For Turing-complete languages, this process is usually undecidable in the general case, and for Marlowe contracts it is often NP-complete in general. However, in practice, SAT and SMT (Satisfaction Modulo Theories) solvers are often able to solve moderately large instances of this problem reasonably efficiently.
+For Turing-complete languages, this process is usually undecidable in the general case, and for Marlowe contracts it is often NP-complete in general. However, in practice, SMT (Satisfaction Modulo Theories) solvers are often able to solve moderately large instances of this problem reasonably efficiently.
 
-Our implementation relies on the Haskell library SBV, which in turn relies on existing SAT and SMT solvers to check satisfiability of properties or finding counter-examples.
+Our implementation relies on the Haskell library SBV, which in turn relies on existing SMT solvers to check satisfiability of properties or finding counter-examples.
 
 \subsubsection{SBV library}
 
-SBV (SMT Base Verification) library provides a high-level API that allows developers to automatically prove properties about Haskell programs, among other functionalities. 
-The SBV library %seamlessly 
-translates these properties to SMTLib queries, passes them to one or several SAT/SMT solvers, and translates the results back to the format in which the queries were written.
+SBV \cite{SBV} (SMT Base Verification) library provides a high-level API that allows developers to automatically prove properties about Haskell programs, among other functionalities. 
+The SBV library translates these properties to SMTLib queries, passes them to one or several SMT solvers, and translates the results back to the format in which the queries were written.
 
 \paragraph{\texttt{SBV} monad.}
 
@@ -96,8 +95,8 @@ primeFactors x y = x .> 1 .&& y .> 1 .=> x * y ./= 25723297
 \end{verbatim}
 
 \noindent
-can be used both with normal integers and with symbolic parameters:
-%SJT: would be usweful to say something more about what symbolic parameters mean here: it's essentially that these are parameters that are universally quantified and passed to the solver, I think? They are instantiated with counter-examples if those exist. 
+can be used both with normal integers and with symbolic parameters, that is, parameters whose concrete value is not specified and which the solver will try to replace with values that satisfy or falsify the property:
+
 \begin{verbatim}
 *Main> primeFactors 98 314
 True
@@ -115,8 +114,7 @@ At the time of writing, there are some types of functions and data-types that SB
 
 Firstly, calls to recursive functions that are unbounded cannot be translated. As part of the process of converting functions to \texttt{SMTLib} terms, SBV unfolds them into a finite data-structure. For this reason, if the function is recursive and is not bounded by a non-symbolic value (a value that is known at the time of translation), the translation process will run out of memory.
 
-Secondly, to the best our knowledge, SBV does not currently provide support for custom data types directly, except for zero-ary datatypes, i.e: enumerations.
-%SJT: i.e. there's no symbolic representation of user defined data types in general?
+Secondly, to the best our knowledge, SBV does not currently directly provide support for representing custom data types symbolically, except for zero-ary datatypes, i.e: enumerations.
 
 In the following section, we explain how we worked around these limitations and give an overview of how we use SBV to avoid runtime problems with Marlowe contracts.
 
@@ -137,9 +135,7 @@ warningsTraceWB :: Bounds -> SSlotNumber -> SList NTransaction
 where types that begin with \texttt{S}, like \texttt{SSlotNumber}, are abbreviations for the symbolic versions of types: in this case \texttt{SBV SlotNumber}.
 The types that begin with \texttt{N} are \textit{nested} types, which we explain in the \textit{Custom datatypes} section below.
 
-We can see that this version of the implementation takes two concrete parameters: 
-%SJT: need to explain a little more about what the bounds are
-\texttt{Bounds} (with info about the bounds of the contract) and \texttt{Contract} (the contract we want to analyse); and two symbolic parameters: \texttt{SSlotNumber} (the initial slot number) and \texttt{SList NTransaction} (the input list of transactions); and it returns \texttt{SList NTransactionWarning} (a symbolic list of transaction warnings).
+We can see that this version of the implementation takes two concrete parameters: \texttt{Bounds} (see \textit{Bounds for the state and the inputs} section below) and \texttt{Contract} (the contract we want to analyse); and two symbolic parameters: \texttt{SSlotNumber} (the initial slot number) and \texttt{SList NTransaction} (the input list of transactions); and it returns \texttt{SList NTransactionWarning} (a symbolic list of transaction warnings).
 
 \paragraph{Custom datatypes}
 
@@ -166,13 +162,12 @@ type NTransactionResult =
 \end{verbatim}
 
 \noindent
-Because working with nested types is much more error prone than working with the original data-types, we used Template Haskell % SJT: nice! Need to add reference.
-to implement functions that transform the custom datatypes into nested types and generate the appropriate conversion functions.
+Because working with nested types is much more error prone than working with the original data-types, we used Template Haskell \cite{sheard2002template} to implement functions that transform the custom datatypes into nested types and generate the appropriate conversion functions.
 
 \paragraph{Returning non-symbolic \texttt{Contract} values}
 
 In the non-symbolic semantics, each step typically takes a \texttt{Contract}, a \texttt{State}, and a set of \texttt{Input}s; and it returns an updated \texttt{State} and a remaining \texttt{Contract}. 
-%SJT: a thought: could just give the type here, or cross-refer to an earlier section.
+
 This is a problem because values that rely on symbolic values have to be themselves symbolic. Moreover,  the resulting remaining \texttt{Contract} depends on the \texttt{Input}s and \texttt{State}, which are both symbolic.
 
 We work around this problem by  modifying the signature of the function to receive a \textit{continuation function} instead, and instead of just returning a value, we return the result of applying the \textit{continuation function} to the result we were planning to return.
@@ -200,17 +195,21 @@ where \texttt{DetApplyResult} contains the parts of \texttt{ApplyResult} that ar
 The recursion in the execution of the semantics is bounded by the \texttt{Contract}, and because the \texttt{Contract} is not a symbolic parameter, the translation will terminate.
 
 However, in both the input and the \texttt{State} record there are several lists (representing finite maps) that are not explicitly bounded in the implementation. Some parts of the semantics are bounded by the length of these lists (or maps), such as the implementation of \texttt{Close} that refunds any remaining money in the contract accounts.
-In order for the symbolic implementation to be finite we need to find a bound for the length of these lists and maps.
+In order for the symbolic implementation to be finite, we need to find a bound for the length of these lists and maps.
 
-With the current semantics of Marlowe all the lists/maps in \texttt{State} and input can be bound when looking at a particular contract. In particular, we can find out quite easily, by looking at the contract, how many parties there are, how many choice identifiers are used, how many accounts are used, and how many let binding identifiers are used.
+With the current semantics of Marlowe, all the lists/maps in \texttt{State} and input can be bounded when looking at a particular contract. In particular, we can find out quite easily, by looking at the contract, how many parties there are, how many choice identifiers are used, how many accounts are used, and how many let binding identifiers are used.
 
-It is less obvious that we can also set a bound for the input \texttt{Transaction} list as the maximum number of nested \texttt{When}s in the contract (for all the execution paths) plus one. We also provide a proof in Isabelle that shows that any longer list of transactions will result in an error. 
-%SJT: have I rephrased this right?
-That is because any transactions that result in errors do not modify the \texttt{State} or the \texttt{Contract}, we know that limiting the analysis to lists of transactions that are shorter than the bound does not lose generality.
+It is less obvious that we can also set a bound for the input \texttt{Transaction} list as the maximum number of nested \texttt{When}s in the contract (for all the execution paths) plus one. We also provide a proof in Isabelle that shows that any longer list of transactions will result in an error (we discuss this in Section~\ref{subsubsec:bound_max_transaction_number}).
 
 \subsection{Formal verification of semantics\label{subsec:verification}}
 
 We can also use proof assistants like Isabelle to demonstrate that Marlowe semantics present certain desirable properties (like that money is preserved and returned to users by the end of the execution of any contract). In the same way, we can also use this technique to prove properties for particular contracts, or for particular contract snippets, templates, or classes of contracts.
+
+\subsubsection{Bound on the maximum number of transactions\label{subsubsec:bound_max_transaction_number}}
+
+\emph{ToDo}
+Any transactions that result in errors do not modify the \texttt{State} or the \texttt{Contract}, we know that limiting the analysis to lists of transactions that are shorter than the bound does not lose generality.
+
 
 \clearpage
 \section{The Marlowe Playground}

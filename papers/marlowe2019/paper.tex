@@ -182,9 +182,9 @@ apply :: Environment -> State -> Input -> Contract -> ApplyResult
 and the symbolic version of the \texttt{apply} function has the following signature:
 
 \begin{verbatim}
-apply :: SymVal a => Bounds -> 
-      SEnvironment -> SState -> SInput -> Contract -> 
-      (SApplyResult -> DetApplyResult -> SBV a) -> SBV a
+apply :: SymVal a => Bounds
+      -> SEnvironment -> SState -> SInput -> Contract
+      -> (SApplyResult -> DetApplyResult -> SBV a) -> SBV a
 \end{verbatim}
 
 \noindent

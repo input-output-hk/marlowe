@@ -96,7 +96,7 @@ For example, the following function:
 
 \begin{verbatim}
 primeFactors :: SBV Integer -> SBV Integer -> SBV Bool
-primeFactors x y = x .> 1 .&& y .> 1 .=> x * y ./= 25723297
+primeFactors x y = x .> 1 .&& y .> 1 .&& x * y .== 25723297
 \end{verbatim}
 
 \noindent
@@ -104,13 +104,13 @@ can be used both with normal integers and with symbolic parameters, that is, par
 
 \begin{verbatim}
 *Main> primeFactors 98 314
-True
-*Main> prove primeFactors
-Falsifiable. Counter-example:
+False
+*Main> sat primeFactors 
+Satisfiable. Model:
     s0 = 6353 :: Integer
     s1 = 4049 :: Integer
 *Main> primeFactors 6353 4049
-False
+True    
 \end{verbatim}
 
 \paragraph{Limitations}

@@ -3,11 +3,23 @@
 % Version 2.20 of 2017/10/04
 %
 \documentclass[runningheads]{llncs}
-%
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{wrapfig}
 \usepackage{hyperref}
+\usepackage{stmaryrd}
+
+\DeclareUnicodeCharacter{21D2}{$\Rightarrow$}
+\DeclareUnicodeCharacter{2227}{$\wedge$}
+\DeclareUnicodeCharacter{2260}{$\neq$}
+\DeclareUnicodeCharacter{2265}{$\geq$}
+\DeclareUnicodeCharacter{2264}{$\leq$}
+\DeclareUnicodeCharacter{27F9}{$\Longrightarrow$}
+\DeclareUnicodeCharacter{2987}{$\llparenthesis$}
+\DeclareUnicodeCharacter{2988}{$\rrparenthesis$}
 
 % redefined to give listings in tt font
 \renewcommand{\lstinline}[1]{\texttt{#1}}
@@ -223,8 +235,8 @@ As part of the formalisation of the semantics, Isabelle proves termination autom
 The way we proved that this is the case was by establishing a measurment for the size of a pair of \texttt{Contract} and \texttt{State}. We defined such measurement as follows:
 
 \begin{verbatim}
-fun evalBound :: "State => Contract => nat" where
-"evalBound sta cont = length (accounts sta) + 2 * (size cont)"
+fun evalBound :: "State ⇒ Contract ⇒ nat" where
+"evalBound sta cont = length (accounts sta) + 2 * (size cont)"    
 \end{verbatim}
 
 \texttt{size} is a measurement already generated automatically by Isabelle for custom data types.
@@ -247,11 +259,11 @@ If a value of \texttt{State} satisfies the first two properties above we call it
 
 \begin{verbatim}
 fun positiveMoneyInAccountOrNoAccount
-             :: "AccountId => Token => Accounts => bool" where
+             :: "AccountId ⇒ Token ⇒ Accounts ⇒ bool" where
 "positiveMoneyInAccountOrNoAccount accId tok mlist =
     (case MList.lookup (accId, tok) mlist of
-       None => True
-     | Some x => x > 0)"
+       None ⇒ True
+     | Some x ⇒ x > 0)"
 \end{verbatim}
 
 For a state to have positive accounts, the above function must evaluate to \texttt{True} for any \texttt{AccountId} and \texttt{Token}.
@@ -263,7 +275,7 @@ We have proven that if all the three properties are true for a given input \text
 There is a class of combinations of \texttt{State} and \texttt{Contract} that will not evolve when passed to the semantics unless a matching \texttt{Input} is passed as well. We call these combinations of \texttt{Contract} and \texttt{State} \textit{quiescent}, and we define it as follows:
 
 \begin{verbatim}
-fun isQuiescent :: "Contract => State => bool" where
+fun isQuiescent :: "Contract ⇒ State ⇒ bool" where
 "isQuiescent Close state = (accounts state = [])" |
 "isQuiescent (When _ _ _) _ = True" |
 "isQuiescent _ _ = False"
@@ -283,9 +295,9 @@ Money is not created or destroyed by the semantics. We state this property as fo
 \begin{verbatim}
 lemma computeTransaction_preserves_money :
 "validAndPositive_state state
-  ==> moneyInState state + moneyInInputs (inputs tra)
-        = moneyInTransactionOutput state (inputs tra)
-                (computeTransaction tra state contract)"
+  ⟹ moneyInState state + moneyInInputs (inputs tra)
+       = moneyInTransactionOutput state (inputs tra)
+               (computeTransaction tra state contract)"
 \end{verbatim}
 
 The only consideration is that we only accept positive \texttt{Deposit}s, so we interpret money in \texttt{Deposit} inputs as the maximum of $0$ and the actual value specified in the \texttt{Deposit} input.
@@ -300,14 +312,14 @@ We proved that this conservative upper bound works for every contract in a prope
 
 \begin{verbatim}
 theorem timedOutTransaction_closes_contract :
-  "validAndPositive_state sta
-   ==> iniSlot >= minSlot sta
-   ==> iniSlot >= maxTimeContract cont
-   ==> endSlot >= iniSlot
-   ==> accounts sta ~= []
-   ==> isClosedAndEmpty
-          (computeTransaction (| interval = (iniSlot, endSlot)
-                               , inputs = [] |) sta cont)"
+"validAndPositive_state sta
+ ⟹ iniSlot ≥ minSlot sta
+ ⟹ iniSlot ≥ maxTimeContract cont
+ ⟹ endSlot ≥ iniSlot
+ ⟹ accounts sta ≠ []
+ ⟹ isClosedAndEmpty
+         (computeTransaction ⦇ interval = (iniSlot, endSlot)
+                             , inputs = [] ⦈ sta cont)"
 \end{verbatim}
 
 \noindent
@@ -315,10 +327,10 @@ theorem timedOutTransaction_closes_contract :
 where \texttt{isClosedAndEmpty} is defined as follows:
 
 \begin{verbatim}
-fun isClosedAndEmpty :: "TransactionOutput => bool" where
+fun isClosedAndEmpty :: "TransactionOutput ⇒ bool" where
 "isClosedAndEmpty (TransactionOutput txOut) =
    (txOutContract txOut = Close
-      /\ accounts (txOutState txOut) = [])" |
+      ∧ accounts (txOutState txOut) = [])" |
 "isClosedAndEmpty _ = False"
 \end{verbatim}
 
@@ -338,7 +350,7 @@ We state the property as follows:
 \begin{verbatim}
 lemma playTrace_only_accepts_maxTransactionsInitialState :
 "playTrace sl c l = TransactionOutput txOut
-  ==> length l <= maxTransactionsInitialState c"
+  ⟹ length l ≤ maxTransactionsInitialState c"
 \end{verbatim}
 
 \noindent

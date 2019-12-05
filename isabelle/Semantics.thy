@@ -886,4 +886,14 @@ fun isQuiescent :: "Contract \<Rightarrow> State \<Rightarrow> bool" where
 "isQuiescent (When _ _ _) _ = True" |
 "isQuiescent _ _ = False"
 
+fun maxTimeContract :: "Contract \<Rightarrow> int"
+and maxTimeCase :: "Case \<Rightarrow> int" where
+"maxTimeContract Close = 0" |
+"maxTimeContract (Pay _ _ _ _ contract) = maxTimeContract contract" |
+"maxTimeContract (If _ contractTrue contractFalse) = max (maxTimeContract contractTrue) (maxTimeContract contractFalse)" |
+"maxTimeContract (When Nil timeout contract) = max timeout (maxTimeContract contract)" |
+"maxTimeContract (When (Cons head tail) timeout contract) = max (maxTimeCase head) (maxTimeContract (When tail timeout contract))" |
+"maxTimeContract (Let _ _ contract) = maxTimeContract contract" |
+"maxTimeCase (Case _ contract) = maxTimeContract contract"
+
 end

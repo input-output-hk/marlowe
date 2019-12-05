@@ -213,14 +213,14 @@ We can also use proof assistants to demonstrate that Marlowe semantics present c
 Currently, we have translated the Haskell Marlowe semantics to Isabelle as closely as possible. The main differences between the Isabelle and the Haskell semantics are that:
 \begin{itemize}
     \item The Isabelle semantics uses \emph{integers for identifiers} and the Haskell semantics uses strings. We do this because handling integers in Isabelle is easier and we only compare them for equality and order (their value is irrelevant).
-    \item We use a \emph{custom implementation of maps and sets} that use lists of tuples and lists of elements respectively. We do this because Isabelle already provides many theorems that are proven for lists, so it considerably facilitates the automation of certain proofs.
+    \item We use a \emph{custom implementation of maps and sets} that uses lists of tuples and lists of elements respectively. We do this because Isabelle already provides many theorems that are proven for lists, so it considerably facilitates the automation of certain proofs.
 \end{itemize}
 
 \subsubsection{Termination proof}
 
 As part of the formalisation of the semantics, Isabelle proves termination automatically for most functions. The only function for which termination is not trivial is \texttt{reductionLoop}. The reason why Isabelle cannot infer termination for this function is that it repeatedly calls \texttt{reduceContractStep} until it returns \texttt{NotReduced}, so it requires proving that \texttt{reduceContractStep} will eventually do so.
 
-The way we proved that this is the case was by establishing a measurment for the size of a pair of \texttt{Contract} and \texttt{State}. And we defined such measurement as follows:
+The way we proved that this is the case was by establishing a measurment for the size of a pair of \texttt{Contract} and \texttt{State}. We defined such measurement as follows:
 
 \begin{verbatim}
 fun evalBound :: "State => Contract => nat" where
@@ -229,21 +229,21 @@ fun evalBound :: "State => Contract => nat" where
 
 \texttt{size} is a measurement already generated automatically by Isabelle for custom data types.
 
-The reason why we need the number of accounts in the \texttt{State} for the measurement is that \texttt{reduceContractStep}, when called with the contract \texttt{Close}, will refund one of the accounts and the contract will remain as \texttt{Close}.
+The reason why we need the number of accounts in the \texttt{State} for the measurement is that \texttt{reduceContractStep}, when called with the contract \texttt{Close}, will refund one of the accounts and the contract will remain as \texttt{Close}, so its \texttt{size} does not decrease.
 
-And the reason why we multiply the size of the \texttt{Contract} by two is that the primitive \texttt{Deposit} may increase the number of accounts in the \texttt{State} by one, but it will also reduce the size of \texttt{Contract} by at least one. By multiplying the size of the \texttt{Contract} by two, its decrease compensates the increase in the size of the list of accounts and, thus, it ensures that the measurement will decrease even in that scenario.
+And the reason why we multiply the size of the \texttt{Contract} by two is that the primitive \texttt{Deposit} may increase the number of accounts in the \texttt{State} by one, but it will also reduce the size of \texttt{Contract} by at least one. By multiplying the size of the \texttt{Contract} by two, the decrease in the \texttt{size} of the \texttt{Contract} compensates the increase in the \texttt{length} of the list of accounts and, thus, it ensures that the overall measurement \texttt{evalBound} will decrease even in that scenario.
 
 \subsubsection{Valid state and positive account preservation}
 
-Since we use lists of pairs of integers as maps in our \texttt{State}, there are some values that are allowed by the type definition of state but, nevertheless, they make no sense given what these lists represent. In particular:
+Since we use lists of pairs of integers as maps in our \texttt{State}, there are some values that are allowed by the type definition of \texttt{State} still make no sense given what these lists represent:
 
 \begin{enumerate}
-    \item The lists of tuples are representing a maps, so it does not make sense for two elements of the list to have the same first element (key).
-    \item Additionally, we want to minimise the number of ways in which a map can be represented as a list, so we require the first elements of the elements of the list to be sorted ascendingly. This allows us to use standard equality for comparing maps, for example.
-    \item We only expect accounts to store positive amounts money, so the second element of the pairs of the list of accounts must be a positive integer. Whenever an account becomes empty we just delete the account from the list.
+    \item The lists of tuples are representing maps, so it does not make sense for two elements of the list to be tuples with the same first element (repeated keys).
+    \item We want to minimise the number of ways in which a map can be represented as a list, so we require the tuples in the list to be sorted ascendingly by their first element. This allows us to use standard equality for comparing maps.
+    \item We only expect accounts to store positive amounts money, so the second element of the tuples of the list of accounts must be a positive integer. Whenever an account becomes empty we just delete the account from the list.
 \end{enumerate}
 
-The two first invariants we define as \texttt{validState}. And the latest we define as follows:
+If a value of \texttt{State} satisfies the first two properties above we call it a \texttt{validState}. And we formalised the third property above as follows:
 
 \begin{verbatim}
 fun positiveMoneyInAccountOrNoAccount
@@ -254,13 +254,13 @@ fun positiveMoneyInAccountOrNoAccount
      | Some x => x > 0)"
 \end{verbatim}
 
-And it must be \texttt{True} independently of the \texttt{AccountId} and \texttt{Token}.
+For a state to have positive accounts, the above function must evaluate to \texttt{True} for any \texttt{AccountId} and \texttt{Token}.
 
-We prove that, if the properties are true for a given input \texttt{State}, then the semantics will preserve the properties in the output \texttt{State}.
+We have proven that if all the three properties are true for a given input \texttt{State}, then the properties will also be true for the resulting output \texttt{State}, when processing any \texttt{Transaction} on any \texttt{Contract}.
 
 \subsubsection{Quiescent result}
 
-There is a class of \texttt{Contract}s that will not evolve when passed to the semantics unless a matching \texttt{Input} is passed as well. We call this state \textit{quiescent} and we define it as follows:
+There is a class of combinations of \texttt{State} and \texttt{Contract} that will not evolve when passed to the semantics unless a matching \texttt{Input} is passed as well. We call these combinations of \texttt{Contract} and \texttt{State} \textit{quiescent}, and we define it as follows:
 
 \begin{verbatim}
 fun isQuiescent :: "Contract => State => bool" where
@@ -269,13 +269,13 @@ fun isQuiescent :: "Contract => State => bool" where
 "isQuiescent _ _ = False"
 \end{verbatim}
 
-We prove that if the input \texttt{State} is valid and all accounts are positive, then the result of a transaction is always quiescent.
+We have proven that, if an input \texttt{State} is valid and all accounts are positive, then the combination of \texttt{State} and \texttt{Contract} resulting from processing any transaction will always be quiescent.
 
 \subsubsection{Money preservation}
 
-One of the dangers of using smart-contracts is that, a badly written one may lock its funds forever. We want to avoid that feature in Marlowe altogether and, with that aim, we proved that Marlowe account system does not create or destroy any money. By the end of the contract, all the money should be distributed back somehow to a subset of the participants.
+One of the dangers of using smart-contracts is that a badly written one can potentially lock its funds forever. We want to avoid that feature in Marlowe altogether and, with that aim, we proved that Marlowe account system does not create or destroy any money. By the end of the contract, all the money paid to the contract must be distributed back, in some way, to a subset of the participants of the contract.
 
-We state the property as follows:
+This requires that money is preserved (not created nor destroyed). We state this property as follows:
 
 \begin{verbatim}
 lemma computeTransaction_preserves_money :

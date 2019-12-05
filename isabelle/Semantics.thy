@@ -800,7 +800,7 @@ fun computeTransaction :: "Transaction \<Rightarrow> State \<Rightarrow> Contrac
      IntervalTrimmed env fixSta \<Rightarrow>
        (case applyAllInputs env fixSta contract inps of
           ApplyAllSuccess warnings payments newState cont \<Rightarrow>
-            if contract = cont
+            if ((contract = cont) \<and> ((contract \<noteq> Close) \<or> (accounts state = [])))
             then TransactionError TEUselessTransaction
             else TransactionOutput \<lparr> txOutWarnings = warnings
                                    , txOutPayments = payments

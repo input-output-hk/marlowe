@@ -143,9 +143,9 @@ data Contract = Close
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 data State = State { accounts    :: Map AccountId Money
-                    , choices     :: Map ChoiceId ChosenNum
-                    , boundValues :: Map ValueId Integer
-                    , minSlot     :: Slot }
+                   , choices     :: Map ChoiceId ChosenNum
+                   , boundValues :: Map ValueId Integer
+                   , minSlot     :: Slot }
   deriving (Eq,Ord,Show,Read)
 
 emptyState :: Slot -> State
@@ -490,7 +490,7 @@ computeTransaction tx state contract = let
     in case fixInterval (txInterval tx) state of
         IntervalTrimmed env fixState -> case applyAllInputs env fixState contract inputs of
             ApplyAllSuccess warnings payments newState cont -> let
-                in  if contract == cont
+                in  if (contract == cont) && ((contract /= Close) || (Map.null $ accounts state))
                     then Error TEUselessTransaction
                     else TransactionOutput { txOutWarnings = warnings
                                             , txOutPayments = payments

@@ -570,7 +570,7 @@ lemma computeTransaction_preserves_money :
     apply (cases "applyAllInputs env fixSta contract (inputs tra)")
     subgoal for newWarn newPay newState newCont
       apply (simp only:ApplyAllResult.simps)
-      apply (cases "contract = newCont")
+      apply (cases "contract = newCont \<and> (contract \<noteq> Close \<or> accounts state = [])")
       apply (simp add:refl)
       apply (simp only:bool.case if_False)
       by (metis TransactionOutputRecord.select_convs(2) TransactionOutputRecord.select_convs(3) applyAllInputs_preserves_money fixInterval_preserves_money fixInterval_preserves_preserves_validAndPositive_state moneyInApplyAllResult.simps(1) moneyInTransactionOutput.simps(1))

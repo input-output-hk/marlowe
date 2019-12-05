@@ -250,10 +250,10 @@ lemma computeTransaction_decreases_maxTransactions :
   subgoal for env fixedState
     apply (cases "applyAllInputs env fixedState cont (inputs tra)")
     subgoal for nwarn npay nstate ncont
-      apply (cases "cont = ncont")
+      apply (cases "cont = ncont \<and> (cont \<noteq> Close \<or> accounts sta = [])")
       apply simp
       apply (simp del:validAndPositive_state.simps fixInterval.simps applyAllInputs.simps maxTransactions.simps)
-      by (metis TransactionOutputRecord.select_convs(3) TransactionOutputRecord.select_convs(4) computeTransaction_decreases_maxTransactions_aux fixInterval_preserves_maxTransactions fixInterval_preserves_preserves_validAndPositive_state)
+      by (metis TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) TransactionOutputRecord.select_convs(4) applyAllInputsIsQuiescent computeTransaction_decreases_maxTransactions_aux fixInterval_preserves_maxTransactions fixInterval_preserves_preserves_validAndPositive_state isQuiescent.simps(1) less_irrefl maxTransactions.simps not_less_eq)
      apply simp
     by simp
   by simp

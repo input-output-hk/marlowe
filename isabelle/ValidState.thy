@@ -175,7 +175,12 @@ lemma computeTransaction_preserves_valid_state_aux2 :
   apply (simp only:computeTransaction.simps Let_def)
   apply (cases "fixInterval (interval \<lparr>interval = intervalI, inputs = inputsI\<rparr>) state")
   apply (simp only:IntervalResult.case)
-  apply (metis (no_types, lifting) computeTransaction_preserves_valid_state_aux fixInterval_preserves_valid_state surj_pair)
+  subgoal for env sta
+    apply (cases "applyAllInputs env sta cont (inputs \<lparr>interval = intervalI, inputs = inputsI\<rparr>)")
+    apply (simp only:ApplyAllResult.case)
+    apply (metis TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) applyAllInputs.simps applyAllLoop_preserves_valid_state fixInterval_preserves_valid_state small_lazy'.cases)
+    apply simp
+    by simp
   by simp
 
 lemma computeTransaction_preserves_valid_state :

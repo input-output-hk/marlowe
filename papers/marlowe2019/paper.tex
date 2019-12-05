@@ -271,11 +271,14 @@ fun isQuiescent :: "Contract => State => bool" where
 
 We have proven that, if an input \texttt{State} is valid and all accounts are positive, then the combination of \texttt{State} and \texttt{Contract} resulting from processing any transaction will always be quiescent.
 
-\subsubsection{Money preservation}
+\subsubsection{Money preservation and contract timeout}
 
 One of the dangers of using smart-contracts is that a badly written one can potentially lock its funds forever. We want to avoid that feature in Marlowe altogether and, with that aim, we proved that Marlowe account system does not create or destroy any money. By the end of the contract, all the money paid to the contract must be distributed back, in some way, to a subset of the participants of the contract.
 
-This requires that money is preserved (not created nor destroyed). We state this property as follows:
+To ensure this is the case we proved two properties:
+
+\paragraph{Money preservation}
+Money is not created or destroyed by the semantics. We state this property as follows:
 
 \begin{verbatim}
 lemma computeTransaction_preserves_money :
@@ -286,6 +289,40 @@ lemma computeTransaction_preserves_money :
 \end{verbatim}
 
 The only consideration is that we only accept positive \texttt{Deposit}s, so we interpret money in \texttt{Deposit} inputs as the maximum of $0$ and the actual value specified in the \texttt{Deposit} input.
+
+\paragraph{Timeout closes a contract}
+
+For every Marlowe \texttt{Contract} there exists a slot number after which an empty transaction can be issued that will close the contract and refund all the money in its accounts.
+
+A conservative upper bound for the expiration slot number can be calculated efficiently by using the function \texttt{maxTime} (or \texttt{maxTimeContract} in the Isabelle semantics).
+
+We proved that this conservative upper bound works for every contract in a property stated as follows:
+
+\begin{verbatim}
+theorem timedOutTransaction_closes_contract :
+  "validAndPositive_state sta
+   ==> iniSlot >= minSlot sta
+   ==> iniSlot >= maxTimeContract cont
+   ==> endSlot >= iniSlot
+   ==> accounts sta ~= []
+   ==> isClosedAndEmpty
+          (computeTransaction (| interval = (iniSlot, endSlot)
+                               , inputs = [] |) sta cont)"
+\end{verbatim}
+
+\noindent
+
+where \texttt{isClosedAndEmpty} is defined as follows:
+
+\begin{verbatim}
+fun isClosedAndEmpty :: "TransactionOutput => bool" where
+"isClosedAndEmpty (TransactionOutput txOut) =
+   (txOutContract txOut = Close
+      /\ accounts (txOutState txOut) = [])" |
+"isClosedAndEmpty _ = False"
+\end{verbatim}
+
+Because the money is preserved and we know that there is an empty transaction that can be sent at any point after \texttt{maxTime} that will empty the accounts of the contract: we know that money will not be locked in the contract forever.
 
 \subsubsection{Bound on the maximum number of transactions\label{subsubsec:bound_max_transaction_number}}
 

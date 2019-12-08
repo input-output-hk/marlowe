@@ -80,11 +80,12 @@ Introduce the main types and informal overview of execution. Contrast with Marlo
 
 \section{Implementation of Marlowe on Cardano}
 
+Marlowe is specified by an executable semantics written in Haskell, but to make it usable in practice to execute financial contracts, it needs to be implemented on a blockchain. In this section we explain how Marlowe is executed on the Cardano blockchain using an interpreter written in the Plutus programming language.
+
 \subsection{Cardano and Plutus}
 
 Cardano is a third-generation blockchain that solves the energy usage
-issue by moving to an energy efficient \emph{Proof of Stake} protocol.
-LINK?
+issue by moving to an energy efficient \emph{Proof of Stake} protocol~\cite{Ouroboros-Genesis}.
 
 Cardano aims to support smart contracs during its Shelley release in 2020.
 Cardano smart contract platform is called \emph{Plutus}, and
@@ -95,8 +96,7 @@ support~\cite[Section 13.3]{ghcusersguide}.
 To implement Marlowe contracts we use the PlutusTx compiler,
 which compiles Haskell code into serialized \emph{Plutus Core} code,
 to create a Cardano \emph{validator script} that ensures the correct execution of the contract.
-This form of implementation relies on the extensions to the UTxO model
-that are described in REFERENCE TO PLUTUS WHAT???.
+This form of implementation relies on the extensions to the UTxO model described in~\cite{PlutusPlatform}.
 
 
 \subsection{Extended UTxO}
@@ -110,7 +110,7 @@ In nutshell, it EUTxO models looks like this:
 
 \begin{figure}[!h]
     \centering
-    \includegraphics[width=1\textwidth]{figures/Marlowe3-Figures-003.jpeg}
+    \includegraphics[width=4in]{figures/Marlowe3-Figures-003.jpeg}
     \caption{Cardano EUTx0 Model}
     \label{fig:eutxo}
 \end{figure}

@@ -41,7 +41,7 @@
 %
 \author{
 Pablo {Lamela Seijas}\inst{1} \and
-Alex Nemish\inst{1} \and
+Alexander Nemish\inst{1} \and
 David Smith\inst{1} \and
 Simon Thompson\inst{1,2}\orcidID{0000-0002-2350-301X}}
 %
@@ -78,9 +78,279 @@ Intro
 
 Introduce the main types and informal overview of execution. Contrast with Marlowe 1.3 (as in ISoLA paper). Embedding in Haskell? [All this stuff is in the tutorial already]
 
-\section{Implementation of Marlowe on the mockchain AN}
+\section{Implementation of Marlowe on Cardano}
 
- [An updated version of the description in the Plutus platform paper]
+\subsection{Cardano and Plutus}
+
+Cardano is a third-generation blockchain that solves the energy usage
+issue by moving to an energy efficient \emph{Proof of Stake} protocol.
+LINK?
+
+Cardano aims to support smart contracs during its Shelley release in 2020.
+Cardano smart contract platform is called \emph{Plutus}, and
+it uses Haskell programming language to generate a form of $System F_{\omega}$,
+called \emph{Plutus Core}, by extending GHC using its plugin
+support~\cite[Section 13.3]{ghcusersguide}.
+
+To implement Marlowe contracts we use the PlutusTx compiler,
+which compiles Haskell code into serialized \emph{Plutus Core} code,
+to create a Cardano \emph{validator script} that ensures the correct execution of the contract.
+This form of implementation relies on the extensions to the UTxO model
+that are described in REFERENCE TO PLUTUS WHAT???.
+
+
+\subsection{Extended UTxO}
+
+Cardano uses so called UTxO (unspent transaction outputs) model, similar to Bitcoin. LINK
+It extends Bitcoin's model by allowing transaction outputs to hold a \emph{Data Script}.
+As it sounds, it's just a serialized data intended to store a contract state.
+This allows us to create complex multitransactional contracts.
+
+In nutshell, it EUTxO models looks like this:
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/Marlowe3-Figures-003.jpeg}
+    \caption{Cardano EUTx0 Model}
+    \label{fig:eutxo}
+\end{figure}
+
+Black circles represent \emph{unspent transaction outputs}, and red lines show \emph{transaction inputs}
+that reference existing \emph{transaction outputs}.
+Each transaction output contains a \emph{Value} it holds, and is protected either by a \emph{public key},
+or by a \emph{Validator}.
+
+In order to spend an existing transaction output protected by a \emph{Validator},
+one must create a transaction (\emph{PendingTx}) that has an \emph{input} that references the transaction output,
+and contains such a \emph{Redeemer}, that
+
+\begin{verbatim}
+    Validator(Data Script, Redeemer, PendingTx)
+\end{verbatim}
+evaluates to $True$.
+
+In order to spend a transaction output protected by a \emph{public key}, one must provide a valid signature
+made with respective private key of the transaction public key.
+
+
+\subsection{Design space}
+
+There are several ways to implement Marlowe contracts on top of Plutus.
+We could write a Marlowe to Plutus compiler that would convert
+a particular Marlowe contract into a specific Plutus script.
+Instead, we chose to implement an interpreter of Marlowe contracts.
+This approach has a number of advantages:
+\begin{itemize}
+\item It is simple: we implement a single Plutus script that can be used for all Marlowe contracts,
+thus making it easier to implement, review, and test what we have done.
+\item It is close to the semantics of Marlowe, as sketched above and in more detail in~\cite{Marlowe:2018},
+so making it easier to validate.
+\item It means that the same implementation can be used for both on- and off-chain (wallet) execution of Marlowe code.
+\item It allows client-side contract evaluation, where we reuse the same code
+to do contract execution emulation (i.g. in IDE), and compile it to WASM/JavaScript on client side
+(e.g.\ in Plutus Playground or Marlowe Playground).
+\item Having a single interpreter for all (or a particular group of) Marlowe contracts allows
+  to monitor the blockchain for these kinds of contract, if desired.
+\item Finally, there is a potential to special-case this sort of script,
+  and implement a specialized, highly effective interpreter in Cardano node itself.
+\end{itemize}
+
+Marlowe contract execution on the blockchain consists of a chain of transactions
+where, at each stage, the remaining contract and its state are passed through the \emph{Data script},
+and actions and inputs (i.e. \emph{choices} and \emph{money deposits}) are passed as
+\emph{Redeemer}.
+Each step in contract execution is a transaction that spends a Marlowe contract transaction output
+by providing a valid input in $Redeemer$, and produces a transaction output
+with a Marlowe contract as continuation (remaining contract).
+
+We store a remaining contract in the \emph{Data script}, which makes it visible to everyone.
+This simplifies contract reflection and retrospection.
+
+\subsection{Contract lifecycle on extended UTxO model}
+
+As we described above, the Marlowe interpreter is realised as a \emph{Validation script}.
+We can divide the execution of a Marlowe Contract into two phases:
+creation, and execution.
+
+\paragraph{Creation}
+
+Contract creation is realised as a transaction
+with at least one script output,
+with the particular Marlowe contract in the data script, and protected by the Marlowe validator script.
+Note that we do not place any restriction on the transaction inputs, which could use any other transaction
+outputs, including other scripts. This gives this model a great flexibility and composability.
+
+\begin{verbatim}
+data MarloweData = MarloweData {
+    marloweState    :: State,
+    marloweContract :: Contract
+}
+\end{verbatim}
+
+Contract has a state
+
+\begin{verbatim}
+data State = State { accounts    :: Map AccountId Ada
+                   , choices     :: Map ChoiceId ChosenNum
+                   , boundValues :: Map ValueId Integer
+                   , minSlot     :: Slot }
+\end{verbatim}
+
+where \emph{accounts} maps account ids to their balances, \emph{choices} stores user made choice values,
+\emph{boundValues} stores evalutated \emph{Value}'s introduced by \emph{Let} expressions,
+and \emph{minSlot} holds a minimal slot number a contract have seen (to avoid 'travels to the past')
+
+It is possible to initialize a contract with a particular state, containing a number of deposits,
+as shown in figure~\ref{fig:marlowe-init}.
+
+\begin{figure}[!h]
+\centering
+\includegraphics[width=1\textwidth]{figures/Marlowe3-Figures-002.jpeg}
+\caption{Marlowe contract initialization}
+\label{fig:marlowe-init}
+\end{figure}
+
+\paragraph{Execution}
+
+Marlowe contract execution consists of a chain of transactions,
+where the remaining contract and state are passed through the \emph{data script},
+and input actions (i.e. \emph{choices}) are passed as \emph{redeemer scripts}.
+
+Each execution step is a transaction that spends a Marlowe contract transaction output by providing
+an expected input in a redeemer script,
+and produces a transaction output with a Marlowe contract as continuation.
+
+The Marlowe interpreter first validates the current contract state.
+That is, we check that the contract locks at least what it should according
+to contract balances (i.e. \emph{accounts} field in \emph{State}),
+and all balances are strictly positive.
+
+We have proven Isabelle proof assistant, that given a state with positive balances,
+it's impossible to result in non-positive balances for all possible contracts and inputs.
+LINK??
+
+Then we compute expected transaction outcomes for given inputs, such as:
+contract continuation, new state, and payments.
+
+\begin{verbatim}
+expectedTxOutputs = computeTransaction txInput marloweState marloweContract
+\end{verbatim}
+
+where
+
+\begin{verbatim}
+data TransactionInput = TransactionInput
+    { txInterval :: SlotInterval
+    , txInputs   :: [Input] }
+
+data TransactionOutput =
+    TransactionOutput
+        { txOutWarnings :: [TransactionWarning]
+        , txOutPayments :: [Payment]
+        , txOutState    :: State
+        , txOutContract :: Contract }
+    | Error TransactionError
+
+computeTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
+\end{verbatim}
+
+Interpreter reduces a contract until it becomes quiescent, meaning it's either evaluates to \emph{Close},
+or it expects a user input in \emph{When} construct.
+This means that all \emph{Pay, If, Let, Close} constructs are evaluated immediately.
+
+The function returns a new contract state, contract continuation, a list of warnings (such as partial payments),
+and a list of expected payments (i.e. all evaluated \emph{Pay} constructs).
+
+On-chain \emph{Validator} code cannot generate transaction outputs,
+but can only validate whatever a user provides in a transaction.
+
+Consider this simple zero coupon bond example.
+
+\begin{verbatim}
+When [ Case (Deposit aliceAccount alicePubKey (Constant 850_000_000))
+    (Pay aliceAccount (Party bobPubKey) (Constant 850_000_000)
+        (When
+            [ Case
+                (Deposit aliceAccount bobPubKey (Constant 1000_000_000))
+                Close
+            ] (Slot 200) Close
+        ))] (Slot 100) Close
+\end{verbatim}
+
+Here we expect Alice to deposit 850 ada (850,000,000 lovelace) into her $aliceAccount$ before slot 100.
+Otherwise, we \emph{Close} the contract.
+
+If Alice deposits the money before slot 100, money immediately go to Bob,
+by requiring a transaction output of 850 ada to Bob's public key address.
+She must produce the following \emph{Redeemer} to satisfy Marlowe validator:
+
+\begin{verbatim}
+[IDeposit aliceAccount alicePubKey 850000000]
+\end{verbatim}
+
+Then Bob is expected to deposit 1000 ada into Alice's account before slot 200.
+If he does, the contract is closed, and all remaining balances must be payed out
+to their respective owners. In our case, 1000 ada must be payed to Alice.
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/Marlowe3-Figures-004.jpeg}
+    \caption{Zero Coupon Bond Contract}
+    \label{fig:zero-coupon-bond}
+\end{figure}
+
+Note, that it's possible to provide multiple inputs at a time,
+allowing to merge as many steps of a contract execution as necessary or possible.
+This gives atomicity of some operations, and saves on transaction fees.
+
+Sometimes it's necessary to just evaluate a contract in a given moment in time,
+and not provide any inputs. Consider the following example:
+
+\begin{verbatim}
+If (SlotIntervalStart `ValueGT' 100)
+    When [] (Slot 200)
+        (Pay aliceAccount (Party bobPubKey) (Constant 1000))
+    Close
+\end{verbatim}
+
+Let's say Alice has 1000 lovelace on her account, and Bob wants to receive the payment.
+The payment could be obtained only after \emph{When} is timed out after slot 200.
+Buy if we evaluate the contract after slot 200, \emph{If} reduces to \emph{Close}, and
+Bob won't receive the payment. So he must evaluate the contract before slot 100 to
+reduce \emph{If} to \emph{When}.
+To do that he can spend the contract transaction output with empty list of inputs in \emph{redeemer}.
+The he should do the same after slot 200 to receive the payment.
+
+
+\paragraph{Ensuring execution validity}
+
+Marlowe validator script checks that a transaction contains a valid continuation
+output in case a contract is not closed, by checking output's validator hash, and state.
+
+The continuation must have the same validator, hence the same hash of the validator script.
+It should contain expected continuation contract and state, evaluated by \emph{computeTransaction}
+function.
+
+\paragraph{Closing a contract}
+
+When a contract evaluates to \emph{Close}, and all remaining balances must payed out
+to respective owners, removing the contract from the set of unspent transaction outputs.
+
+\subsection{Further Work}
+
+Cardano extends its ledger rules to support \emph{forging} of custom currencies and tokens,
+effectively embedding support of Ethereum ERC-20 and ERC-721 contracts.
+We are working on adding this \emph{multicurrency} support to Marlowe.
+
+Simple token creation gives interesting possibilities of representing Marlowe contract parties with tokens.
+Currently, parties are represented as public keys. We expect a valid signature for each input,
+and do payments to respective addresses for party's public key.
+In similar matter, we could check proofs of ownership of a particular token.
+
+This allows us to tokenize contract participants, and abstract away concrete public key into contract \emph{roles}.
+Thus, those roles could be traded independently of a contract.
+Also, we can represent a role with multiple \emph{shares}, allowing automatic distribution of a payment
+proportionally to a number of shares owned.
 
 \section{Analysing Marlowe\label{sec:analysis}}
 
@@ -98,7 +368,7 @@ Our implementation relies on the Haskell library SBV, which in turn relies on ex
 
 \subsubsection{SBV library}
 
-SBV \cite{SBV} (SMT Base Verification) library provides a high-level API that allows developers to automatically prove properties about Haskell programs, among other functionalities. 
+SBV \cite{SBV} (SMT Base Verification) library provides a high-level API that allows developers to automatically prove properties about Haskell programs, among other functionalities.
 The SBV library translates these properties to SMTLib queries, passes them to one or several SMT solvers, and translates the results back to the format in which the queries were written.
 
 \paragraph{\texttt{SBV} monad.}
@@ -117,12 +387,12 @@ can be used both with normal integers and with symbolic parameters, that is, par
 \begin{verbatim}
 *Main> primeFactors 98 314
 False
-*Main> sat primeFactors 
+*Main> sat primeFactors
 Satisfiable. Model:
     s0 = 6353 :: Integer
     s1 = 4049 :: Integer
 *Main> primeFactors 6353 4049
-True    
+True
 \end{verbatim}
 
 \paragraph{Limitations}
@@ -139,7 +409,7 @@ In the following section, we explain how we worked around these limitations and 
 
 Marlowe semantics are designed to use types to prevent many non-sensical contracts from being written. But there are potential problems which are harder to detect until runtime, for example, whether there will be enough money to issue all the payments declared in the contract. At this point it may already be too late to fix them, and particularly so in the case of blockchain. The Marlowe semantics represents these errors that can be found at runtime as \texttt{Warnings}.
 
-The property that we have implemented using SBV library can be enunciated as: ``the given contract will not need to issue warnings at runtime no matter the inputs it receives''. 
+The property that we have implemented using SBV library can be enunciated as: ``the given contract will not need to issue warnings at runtime no matter the inputs it receives''.
 
 In order to achieve this, we implemented a symbolic version of the semantics that returns a list of the warnings produced by a trace (a list of transactions input to the contract):
 
@@ -183,7 +453,7 @@ Because working with nested types is much more error prone than working with the
 
 \paragraph{Returning non-symbolic \texttt{Contract} values}
 
-In the non-symbolic semantics, each step typically takes a \texttt{Contract}, a \texttt{State}, and a set of \texttt{Input}s; and it returns an updated \texttt{State} and a remaining \texttt{Contract}. 
+In the non-symbolic semantics, each step typically takes a \texttt{Contract}, a \texttt{State}, and a set of \texttt{Input}s; and it returns an updated \texttt{State} and a remaining \texttt{Contract}.
 
 This is a problem because values that rely on symbolic values have to be themselves symbolic. Moreover,  the resulting remaining \texttt{Contract} depends on the \texttt{Input}s and \texttt{State}, which are both symbolic.
 
@@ -236,7 +506,7 @@ The way we proved that this is the case was by establishing a measurment for the
 
 \begin{verbatim}
 fun evalBound :: "State ⇒ Contract ⇒ nat" where
-"evalBound sta cont = length (accounts sta) + 2 * (size cont)"    
+"evalBound sta cont = length (accounts sta) + 2 * (size cont)"
 \end{verbatim}
 
 \texttt{size} is a measurement already generated automatically by Isabelle for custom data types.
@@ -364,11 +634,11 @@ Thus, we do not lose generality by only exploring traces with length of at most 
 
 \section{The Marlowe Playground}
 
-For Marlowe to be usable in practice, users need to be able to design and develop Marlowe contracts, and also to understand how contracts will behave once deployed to the blockchain, but without before actually deploying them. 
+For Marlowe to be usable in practice, users need to be able to design and develop Marlowe contracts, and also to understand how contracts will behave once deployed to the blockchain, but without before actually deploying them.
 
 The Marlowe Playground, a web-based tool that supports the interactive construction, revision, and simulation of smart contracts written in Marlowe, provides these facilities, as well as access to a static analysis of contracts (as described in the previous section), an online tutorial for Marlowe and a set of example contracts. The playground is available at \url{https://prod.meadow.marlowe.iohkdev.io/}.\footnote{Development of the playground is rapid, and the latest, unstable, version is also available at \url{https://alpha.marlowe.iohkdev.io/}.}
 
-At the top level, the playground offers three panes: the main \emph{Simulation} pane, as well as panes for developing Marlowe contracts, embedded in \emph{Haskell} or using the \emph{Blockly} visual language. 
+At the top level, the playground offers three panes: the main \emph{Simulation} pane, as well as panes for developing Marlowe contracts, embedded in \emph{Haskell} or using the \emph{Blockly} visual language.
 
 \paragraph{Development}
 
@@ -387,7 +657,7 @@ It is also possible to transfer a Marlowe contract to Blockly for further editin
     \includegraphics[width=0.25\textwidth]{hole_options.png}
 \end{wrapfigure}
 
-The Marlowe editor in the unstable version of the playground has an additional feature to aid writing contracts called holes. If we enter the contract \lstinline{?mycontract} 
+The Marlowe editor in the unstable version of the playground has an additional feature to aid writing contracts called holes. If we enter the contract \lstinline{?mycontract}
 %SJT: enter it where?
 we will be presented with a dropdown list of values that could be used.
 
@@ -409,11 +679,11 @@ Users can at any point save the current contract directly to a Github Gist, as w
 
 Contracts written in the Marlowe editor are parsed in real-time and if there are no errors (and no holes) then the contract is analysed to discover which actions a user could take to progress the contract. These actions are displayed in the ``Input Composer'' above the editor. Consider the following example contract:
 \begin{verbatim}
-    When [Case (Deposit (AccountId 0 "investor") 
-                        "guarantor" 
-                        (Constant 1000)) 
-               Close] 
-         10 
+    When [Case (Deposit (AccountId 0 "investor")
+                        "guarantor"
+                        (Constant 1000))
+               Close]
+         10
          Close
 \end{verbatim}
 In this case, the only action a user can take to progress the contract is to accept a deposit of 1000 ADA
@@ -432,7 +702,7 @@ The user can then choose to add this action to a transaction being prepared. Onc
 \end{figure}
 
 \noindent
-A user can then apply this transaction and in the example above this would result in the state pane showing a single payment and in addition the contract in the Marlowe editor will have been reduced to \lstinline{Close}. 
+A user can then apply this transaction and in the example above this would result in the state pane showing a single payment and in addition the contract in the Marlowe editor will have been reduced to \lstinline{Close}.
 
 At any point in the simulation the user can undo any steps made: in this particular case, they can undo the application of the transaction, and iteratively undo more steps. At any point they can also reset the contract to its initial state. This enables a user to apply transactions, see what the effect is, step back and apply a transaction with different actions and see how these differences affect the end result. They can also change the reduced contract to investigate variants of the original.
 

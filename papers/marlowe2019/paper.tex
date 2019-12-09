@@ -794,11 +794,19 @@ API, containing built-in transaction types and transactions that support some 25
 Our work is inspired by the original work of Peyton Jones and others~\cite{PeytonJones:2000} to describe financial contracts using a DSL embedded in Haskell. The Findel project~\cite{findel} examines financial contracts on the Ethereum platform, and is also based on~\cite{PeytonJones:2000}. The authors note that payments need to be bounded; this is made concrete in our
 account by our notion of commitments. They take no account of commitments or timeouts as our approach does, and so are unable to guarantee some of the properties -- such as a finite lifetime -- built into Marlowe by design.
 
-\paragraph{TO DO}
+BitML~\cite{BitML} is a DSL for specifying Marlowe-like contracts that regulate transfers on the Bitcoin blockchain. BitML is implemented via a compiler that translates contracts into standard Bitcoin transactions. Participants execute a contract by appending these transactions on the Bitcoin blockchain, according to their strategies, which also involve the exchange of bitstrings that guarantee to a very high probability the correctness of contract execution. Marlowe is directly implemented by an interpreter which could also be implemented on a covenant-based~\cite{covenants} extension of the Bitcoin blockchain.
 
-Add stuff on BitML, DAML, \ldots.
+\section{Conclusions and future work}
 
-\section{Future work and conclusions}
+Conclusions (draft)
+\begin{itemize}
+\item
+Using a DSL means that we can d o much better with analysis and proof than a general purpose language.
+\item
+Defining the language by means of an executable reference semantics means that we can, as well as directly executing this semantics, generate an on-chain interpreter for it and simulate it in browser using the Haskell-like languages Plutus and PrueScript. This is made particularly straightforward by working in the subset of Haskell that directly corresponds to what translates directly into these languages.
+\item
+
+\end{itemize}
 
 
 

@@ -217,7 +217,7 @@ theorem timedOutTransaction_closes_contract :
    \<Longrightarrow> iniSlot \<ge> minSlot sta
    \<Longrightarrow> iniSlot \<ge> maxTimeContract cont
    \<Longrightarrow> endSlot \<ge> iniSlot
-   \<Longrightarrow> accounts sta \<noteq> []
+   \<Longrightarrow> accounts sta \<noteq> [] \<or> cont \<noteq> Close
    \<Longrightarrow> isClosedAndEmpty (computeTransaction \<lparr> interval = (iniSlot, endSlot)
                                             , inputs = [] \<rparr> sta cont)"
   apply (simp del:validAndPositive_state.simps reduceContractUntilQuiescent.simps add:Let_def)
@@ -233,7 +233,7 @@ theorem timedOutTransaction_closes_contract :
 
 theorem timeOutTransaction_closes_contract2 :
   "validAndPositive_state sta
-   \<Longrightarrow> accounts sta \<noteq> []
+   \<Longrightarrow> accounts sta \<noteq> [] \<or> cont \<noteq> Close
    \<Longrightarrow> \<exists> inp . isClosedAndEmpty (computeTransaction inp sta cont)"
   by (meson not_less not_less_iff_gr_or_eq timedOutTransaction_closes_contract)
 

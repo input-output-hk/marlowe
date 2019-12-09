@@ -13,7 +13,8 @@
 \usepackage{stmaryrd}
 
 \DeclareUnicodeCharacter{21D2}{$\Rightarrow$}
-\DeclareUnicodeCharacter{2227}{$\wedge$}
+\DeclareUnicodeCharacter{2227}{$\land$}
+\DeclareUnicodeCharacter{2228}{$\lor$}
 \DeclareUnicodeCharacter{2260}{$\neq$}
 \DeclareUnicodeCharacter{2265}{$\geq$}
 \DeclareUnicodeCharacter{2264}{$\leq$}
@@ -596,7 +597,7 @@ theorem timedOutTransaction_closes_contract :
  ⟹ iniSlot ≥ minSlot sta
  ⟹ iniSlot ≥ maxTimeContract cont
  ⟹ endSlot ≥ iniSlot
- ⟹ accounts sta ≠ []
+ ⟹ accounts sta ≠ [] ∨ cont ≠ Close
  ⟹ isClosedAndEmpty
          (computeTransaction ⦇ interval = (iniSlot, endSlot)
                              , inputs = [] ⦈ sta cont)"

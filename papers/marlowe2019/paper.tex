@@ -41,7 +41,7 @@
 %
 \author{
 Pablo {Lamela Seijas}\inst{1} \and
-Alexander Nemish\inst{1} \and
+Alexander Nemish\inst{1} \and \\
 David Smith\inst{1} \and
 Simon Thompson\inst{1,2}}%\orcidID{0000-0002-2350-301X}}
 %
@@ -61,23 +61,21 @@ School of Computing, University of Kent, UK\\
 
 
 \begin{abstract}
-The abstract should briefly summarize the contents of the paper in
-150--250 words.
+Marlowe is a DSL for financial contracts running on the Cardano blockchain. We describe the implementation of Marlowe on blockchain, and the Marlowe Playground web-based development and simulation environment. 
 
-\keywords{First keyword \and Second keyword \and Another keyword.}
+Contracts in Marlowe can be exhaustively analysed prior to running them, thus providing strong guarantees to participants in the contracts. The Marlowe system itself has been formally verified using the Isabelle theorem prover, establishing such properties as the conservation of money. 
+
+\keywords{blockchain \and Cardano \and Haskell \and SMT \and static analysis}
 \end{abstract}
-%
-%
-%
 
 
 \section{Introduction}
 
-Marlowe is a domain-specific language (DSL) for implementing financial contracts on blockchain: our initial target is Cardano, but it can be implemented on most DLT platforms, including Ethereum. Our DSL is embedded in Haskell, allowing users selectively to use aspects of Haskell -- typically definitions of constants and simple functions -- to express contracts more readably and succinctly. Marlowe was introduced in the paper~\cite{isola-marlowe}: Section \ref{sec:overview} here gives an overview of the language, and the changes made to it since the publication of that paper.
+Marlowe is a domain-specific language (DSL) for implementing financial contracts on blockchain: our initial target is Cardano, but it can be implemented on many DLT platforms, including Ethereum. Marlowe is embedded in Haskell, allowing users selectively to use aspects of Haskell -- typically definitions of constants and simple functions -- to express contracts more readably and succinctly. Marlowe was introduced in the paper~\cite{isola-marlowe}: Section \ref{sec:overview} below gives an overview of the language, and the changes made to it since the publication of that paper.
 
-Marlowe is specified by a reference semantics for the language written in Haskell, thus giving us an \emph{executable} semantics for the language, which we can use in a number of ways. Obviously, we can interpret Marlowe contracts in Haskell itself, but we can also use that implementation, translated into Plutus~\cite{PlutusPlatform}, to interpret  Marlowe directly on the Cardano blockchain, as explained in Section \ref{sec:implementation}. Moreover, we can execute that semantics (translated into PureScript) directly in a browser to give an interactive simulation environment, the Meadow Playground, described in Section \ref{sec:playground}.
+Marlowe is specified by a reference semantics for the language written in Haskell, and we can use that  in a number of ways. Obviously, we can interpret Marlowe contracts in Haskell itself, but we can also use that implementation, translated into Plutus~\cite{PlutusPlatform}, to interpret  Marlowe directly on the Cardano blockchain, as explained in Section \ref{sec:implementation}. Moreover, we can execute that semantics -- translated into PureScript -- directly in a browser to give an interactive simulation environment, the Meadow Playground, described in Section \ref{sec:playground}.
 
-DSLs have a number of advantages over general purpose languages. TO COMPLETE. 
+Because Marlowe is a DSL, we are able to build special purpose tools and techniques to support it. Crucially in a financial environment we are able to \emph{exhaustively analyse contracts} without executing them, so that we can, for instance, check whether any particular contract makes all the payments it should: in the case it does not, we get an explicit example of how it can fail. This analysis is built into the Marlowe Playground. We are also able to use program verification techniques to prove guarantees about the implementation of Marlowe, including a guarantee that ``money in $=$ money out'' for all contracts.
 
 \section{Marlowe overview}
 \label{sec:overview}

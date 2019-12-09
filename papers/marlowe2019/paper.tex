@@ -780,21 +780,26 @@ The final feature that we would like to present is the static analysis of contra
 \begin{figure}
     \includegraphics[width=1\textwidth]{static_analysis.png}
 \end{figure}
-\clearpage
-\section{Related work}
 
-Need to update from ISoLA paper \cite{isola-marlowe}.
+\section{Related work}
+\label{sec:related}
+
+An earlier paper~\cite{cryptoeprint:2016:1156} reviews smart contracts on blockchain. Here we look at a number of recent systems that bear direct comparison with Marlowe.
+
+The Ethereum system~\cite{wood2014ethereum} provides an exemplar Turing-complete language for  the EVM virtual machine, and a higher-level programming language, Solidity, that compiles into EVM code. Both these languages are general-purpose, and so have more akin with Plutus~\cite{PlutusPlatform} rather than Marlowe.
+
+On the other hand,  Nxt~\cite{Nxt}, is special-purpose in providing a ``fat'' high-level 
+API, containing built-in transaction types and transactions that support some 250 primitive operations; these can be ``scripted'' in a client (only) using a binding to the API, which is available, for instance, in JavaScript. In providing such specificity this bears comparison with our implementation of contracts from the ACTUS standard~\cite{actus}.
+
+Our work is inspired by the original work of Peyton Jones and others~\cite{PeytonJones:2000} to describe financial contracts using a DSL embedded in Haskell. The Findel project~\cite{findel} examines financial contracts on the Ethereum platform, and is also based on~\cite{PeytonJones:2000}. The authors note that payments need to be bounded; this is made concrete in our 
+account by our notion of commitments. They take no account of commitments or timeouts as our approach does, and so are unable to guarantee some of the properties -- such as a finite lifetime -- built into Marlowe by design.
+
+\paragraph{TO DO} 
+
+Add stuff on BitML, DAML, \ldots.
 
 \section{Future work and conclusions}
 
-\section*{Left in for info \ldots}
-
-\begin{figure}
-% \includegraphics[width=\textwidth]{fig1.eps}
-\caption{A figure caption is always placed below the illustration.
-Please note that short captions are centered, while long ones are
-justified by the macro package automatically.} \label{fig1}
-\end{figure}
 
 
 %

@@ -76,8 +76,8 @@ Marlowe\footnote{The complete Marlowe project, including semantics and implement
 
 Marlowe is specified by a reference semantics for the language written in Haskell, and we can use that  in a number of ways. Obviously, we can interpret Marlowe contracts in Haskell itself, but we can also use that implementation, compiled into Plutus~\cite{PlutusPlatform}, to interpret  Marlowe directly on the Cardano blockchain, as explained in Section \ref{sec:implementation}. Moreover, we can execute that semantics -- translated into PureScript -- directly in a browser, to give an interactive simulation environment, the Meadow Playground, described in Section \ref{sec:playground}.
 
-Because Marlowe is a DSL, we are able to build special purpose tools and techniques to support it. Crucially, in a financial environment we are able to \emph{exhaustively analyse contracts} without executing them, so that we can, for instance, check whether any particular contract is able to make all the payments it should: in the case it is not, we get an explicit example of how it can fail. This analysis, reported in Section \ref{sec:analysis}, is built into the Marlowe Playground. This section also covers our use of formal verification to prove properties of the implementation of Marlowe, including a guarantee that ``money in $=$ money out'' for all contracts. 
-% PLS: Should we divide the analysis/formalisation section in two?
+Because Marlowe is a DSL, we are able to build special purpose tools and techniques to support it. Crucially, in a financial environment we are able to \emph{exhaustively analyse contracts} without executing them, so that we can, for instance, check whether any particular contract is able to make all the payments it should: in the case it is not, we get an explicit example of how it can fail. This analysis, reported in Section \ref{sec:static}, is built into the Marlowe Playground. We are also able to use formal verification to prove properties of the implementation of Marlowe, including a guarantee that ``money in $=$ money out'' for all contracts; this is covered in Section~\ref{sec:verification}. 
+% PLS: Should we divide the analysis/formalisation section in two? SJT: done
 
 \section{Marlowe overview}
 \label{sec:overview}
@@ -296,7 +296,7 @@ and all balances are strictly positive.
 \footnote{
 Using the Isabelle proof assistant, we have formally verified that given a state with positive balances,
 it is impossible for any possible contract and inputs to result in non-positive balances.
-This is described in more detail in Section \ref{sec:analysis}.}
+This is described in more detail in Section \ref{sec:static}.}
 
 We then compute expected transaction outcomes for given inputs, such as:
 contract continuation, new state, and payments.
@@ -423,13 +423,11 @@ Thus, those roles could be traded independently of a contract.
 Also, we can represent a role with multiple \emph{shares}, allowing automatic distribution of a payment
 proportionally to a number of shares owned.
 
-\section{Analysing Marlowe\label{sec:analysis}}
 
-In this section, we give an overview of some of the work we have carried out with the aim of helping users be more confident that the Marlowe contracts they write do what they expect them to do.
+\section{Static analysis of contracts\label{sec:static}}
 
-We look at two complementary approaches: static analysis of concrete contracts (Section~\ref{subsec:static}) and formal verification of general properties about Marlowe (Section~\ref{subsec:verification}).
-
-\subsection{Static analysis of contracts\label{subsec:static}}
+In the next two sections we give an overview of some of the work we have carried out with the aim of helping users be more confident that the Marlowe contracts they write do what they expect them to do.
+We look at two complementary approaches: static analysis of concrete contracts in this section,  and formal verification of general properties about Marlowe in the next.
 
 For some properties, given a particular contract, a computer can decidably determine whether the contract satisfies the property and, in the cases when it does not, it can provide a counter-example.
 
@@ -559,7 +557,7 @@ With the current semantics of Marlowe, all the lists/maps in \texttt{State} and 
 
 It is less obvious that we can also set a bound for the input \texttt{Transaction} list as the maximum number of nested \texttt{When}s in the contract (for all the execution paths) plus one. We also provide a proof in Isabelle that shows that any longer list of transactions will result in an error (we discuss this in Section~\ref{subsubsec:bound_max_transaction_number}).
 
-\subsection{Formal verification of semantics\label{subsec:verification}}
+\section{Formal verification of semantics\label{sec:verification}}
 
 We can also use proof assistants to demonstrate that Marlowe semantics present certain desirable properties (like that money is preserved and returned to users by the end of the execution of any contract). In the same way, we can also use this technique to prove properties for particular contracts, or for particular contract snippets, templates, or classes of contracts.
 
@@ -683,7 +681,7 @@ Another property of Marlowe is that any given finite \texttt{Contract} has an im
 
 \begin{itemize}
     \item It reduces the danger of Denegation of Service (DoS) attacks: because the number of valid inputs is limited, an attacker partcipant cannot arbitrarily block the contract by issuing an unbounded amount of useless \texttt{Transaction}s.
-    \item It bounds the length of traces (the number of transactions) that symbolic execution (see Section~\ref{subsec:static}) needs to explore (more on this below).
+    \item It bounds the length of traces (the number of transactions) that symbolic execution (see Section~\ref{sec:static}) needs to explore (more on this below).
 \end{itemize}
 
 We state the property as follows:

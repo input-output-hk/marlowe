@@ -377,25 +377,21 @@ If (SlotIntervalStart `ValueGT' 100)
 
 Let us say that Alice has 1000 Lovelace on her account, and Bob wants to receive the payment.
 The payment could be obtained only after \emph{When} has timed out after slot 200.
-Buy if we evaluate the contract after slot 200, \emph{If} reduces to \emph{Close}, and
+But if we evaluate the contract after slot 200, \emph{If} reduces to \emph{Close}, and
 Bob will not receive the payment. So he must evaluate the contract before slot 100 to
 reduce \emph{If} to \emph{When}.
-To do that he can spend the contract transaction output with empty list of inputs in \emph{redeemer}.
-He should then do the same after slot 200 to receive the payment.
-
+To achieve that, Bob must spend the contract transaction output with an empty list of inputs in the \emph{Redeemer}.
+He can then do the same after slot 200 to receive the payment.
 
 \paragraph{Ensuring execution validity}
 
-The Marlowe validator script checks that a transaction contains a valid continuation
-output in case a contract is not closed, by checking the hash of the output validator and state.
-The continuation must have the same validator, hence the same hash of the validator script.
-It should contain both the expected continuation contract and the state, evaluated by the \emph{computeTransaction}
-function.
+Except for the transaction that closes a Marlowe contract, the Marlowe validator script checks that a spending transaction contains a valid continuation
+output, i.e: the hash of the output validator is the same (same hash), and the new state and contract are the expected ones: the ones resulting from applying the \emph{computeTransaction} to the given inputs.
 
 \paragraph{Closing a contract}
 
-When a contract evaluates to \emph{Close}, all remaining balances must payed out
-to respective owners, removing the contract from the set of unspent transaction outputs.
+When a contract evaluates to \emph{Close}, all remaining balances the accounts of the contract are payed out
+to the respective owners of each account, and the contract is removed from the set of unspent transaction outputs.
 
 \subsection{Further Work}
 
@@ -405,14 +401,13 @@ We are working on adding this \emph{multicurrency} support to Marlowe.
 
 Simple token creation gives interesting possibilities of representing Marlowe contract parties by tokens.
 Currently parties are represented as public keys. We expect a valid signature for each input,
-and make payments to  addresses for the public key of a party.
-In similar matter, we could check proofs of ownership of a particular token.
+and make payments to addresses for the public key of a party.
+Analogously, we could instead check proofs of ownership of a particular token.
 
-This allows us to tokenize contract participants, and abstract away concrete public keys into contract \emph{roles}.
-Thus, those roles could be traded independently of a contract.
-Also, we can represent a role with multiple \emph{shares}, allowing automatic distribution of a payment
-proportionally to a number of shares owned.
-
+This would allows us to tokenize contract participants, and abstract away concrete public keys into contract \emph{roles}.
+In turn, those roles could be traded independently of a contract.
+Additionally, we can split a role in multiple \emph{shares}, which would allow automatic distribution of a payment
+proportionally to the number of shares owned.
 
 \section{Static analysis of contracts\label{sec:static}}
 

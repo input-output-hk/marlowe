@@ -51,17 +51,14 @@ Simon Thompson\inst{1,2}}%\orcidID{0000-0002-2350-301X}}
 % First names are abbreviated in the running head.
 % If there are more than two authors, 'et al.' is used.
 %
-\institute{IOHK, Hong Kong, \\
-\email{\{alexander.nemish, pablo.lamela, simon.thompson\}@iohk.io}, david.smith@tweag.io \and
-School of Computing, University of Kent, UK\\
-\email{s.j.thompson@kent.ac.uk}
-}
+\institute{IOHK, Hong Kong, 
+\email{alexander.nemish@iohk.io, pablo.lamela@iohk.io, simon.thompson@iohk.io,~david.smith@tweag.io},  \and
+School of Computing, University of Kent, UK, 
+\email{s.j.thompson@kent.ac.uk}}
 %
 \maketitle              % typeset the header of the contribution
-%
 
-
-
+\vspace{-4mm}
 \begin{abstract}
 Marlowe is a DSL for financial contracts. We describe the implementation of Marlowe on the Cardano blockchain, and the Marlowe Playground web-based development and simulation environment.
 
@@ -75,7 +72,7 @@ Contracts in Marlowe can be exhaustively analysed prior to running them, thus pr
 
 Marlowe\footnote{The complete Marlowe project, including semantics and implementation, is available at \url{https://github.com/input-output-hk/marlowe}.} is a domain-specific language (DSL) for implementing financial contracts on blockchain: our initial target is Cardano, but it could be implemented on many distributed ledgers (DLT platforms), including Ethereum. Marlowe is embedded in Haskell, allowing users selectively to use aspects of Haskell -- typically definitions of constants and simple functions -- to express contracts more readably and succinctly. Section \ref{sec:overview} gives an overview of the language, and the changes made to it since it was originally introduced in ~\cite{isola-marlowe}.
 
-Marlowe is specified by a reference semantics for the language written in Haskell, and we can use that in a number of ways. We can interpret Marlowe contracts in Haskell itself, but we can also use that implementation, compiled into Plutus~\cite{PlutusPlatform}, to interpret Marlowe directly on the Cardano blockchain, see Section \ref{sec:implementation}. We can also execute the semantics -- translated into PureScript -- directly in a browser, to give an interactive simulation environment, see Section~\ref{sec:playground}.
+Marlowe is specified by a reference semantics f or the language written in Haskell, and we can use that in a number of ways. We can interpret Marlowe contracts in Haskell itself, but we can also use that implementation, compiled into Plutus~\cite{PlutusPlatform}, to interpret Marlowe directly on the Cardano blockchain, see Section \ref{sec:implementation}. We can also execute the semantics -- translated into PureScript -- directly in a browser, to give an interactive simulation environment, see Section~\ref{sec:playground}.
 
 Because Marlowe is a DSL, we are able to build special purpose tools and techniques to support it. Crucially in a financial environment, we are able to \emph{exhaustively analyse contracts} without executing them, so that we can, for instance, check whether any particular contract is able to make all the payments it should: in the case it is not, we get an explicit example of how it can fail. This analysis, reported in Section \ref{sec:static}, is built into the Marlowe Playground. Finally, we are able to use formal verification to prove properties of the implementation of Marlowe, including a guarantee that ``money in $=$ money out'' for all contracts; see Section~\ref{sec:verification}.
 

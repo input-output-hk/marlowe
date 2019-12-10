@@ -83,7 +83,7 @@ Because Marlowe is a DSL, we are able to build special purpose tools and techniq
 \section{Marlowe overview}
 \label{sec:overview}
 
-Since the first publication we have revised the language design: this section gives a brief overview of the current (3.0) version of the language and its semantics.
+Since the first publication, we have revised the language design: this section gives a brief overview of the current (3.0) version of the language and its semantics.
 
 
 \subsubsection*{The Marlowe model}
@@ -105,39 +105,38 @@ It is through their wallets that users are able to interact with Marlowe contrac
 
 
 \subsubsection*{Marlowe step by step}
-Marlowe has five ways of building contracts. Four of these -- \texttt{Pay}, \texttt{Let}, \texttt{If} and \texttt{When} -- build a complex contract from simpler contracts, and the fifth, \texttt{Close}, is a simple contract. At each step of execution, as well as returning a new state and continuation contract, it is possible that effects, e.g.\ payments, and warnings can be generated too. We also explain Marlowe values, observations and actions, which are used to supply external information and inputs to a running contract to control how it will evolve.
 
-\paragraph{Pay}
-A payment contract \texttt{Pay a p v cont} will make a payment of value \texttt{v} from the account \texttt{a} to a payee \texttt{p}, which will be one of the contract participants or another account in the contract. Warnings will be generated if the value \texttt{v} is not positive, or if there is not enough in the account to make the payment in full. In the first case, nothing will be transferred; in the later case, a partial payment (of all the money available) is made. The contract will continue as specified by \texttt{cont}.
+Marlowe has five ways of building contracts, we call these \emph{contract constructs}. \emph{Contract constructs}, in turn, can also contain \emph{values}, \emph{observations} and \emph{actions}.
 
-\paragraph{Close}
-A contract \texttt{Close} provides for the contract to be closed (or terminated). The only action that is performed is to refund the contents of each account to their respective owners. This is performed one account per step, but all accounts will be refunded in a single transaction.
+\paragraph{Values, observations and actions} are used to supply external information and inputs to a running contract to control how it will evolve.
+
+\texttt{Value}s include some quantities that change with time, including the current slot number, the current balance of an account (in Lovelace), and any choices that have already been made. % ; we call these volatile values. - PLS: this definition is no longer used
+Values can also be combined using addition, subtraction and negation.
+
+\texttt{Observation}s are Boolean expressions that compare values, and can be combined using the standard Boolean operators. It is also possible to observe whether any choice has been made (for a particular identified choice).
+
+\texttt{Action}s, unlike \texttt{Observation}s, which have a value at every step of execution, happen at particular points during execution and can be:
+(i) depositing money, (ii)
+making a choice between various alternatives, or (iii)
+notifying the contract that a certain observation has become true.
+
+\paragraph{Contract constructs} are the main building block of contracts, and there are five of them: four of these -- \texttt{Pay}, \texttt{Let}, \texttt{If} and \texttt{When} -- build a complex contract from simpler contracts, and the fifth, \texttt{Close}, is a simple contract. At each step of execution we will obtain a new state and continuation contract and, in some it is possible that effects, like payments and warnings, can be generated too.
+
+\texttt{Pay}: A payment contract \texttt{Pay a p v cont} will make a payment of value \texttt{v} from the account \texttt{a} to a payee \texttt{p}, which will be one of the contract participants or another account in the contract. Warnings will be generated if the value \texttt{v} is not positive, or if there is not enough in the account to make the payment in full. In the first case, nothing will be transferred; in the later case, a partial payment (of all the money available) is made. The contract will continue as specified by \texttt{cont}.
+
+\texttt{Close}: A contract \texttt{Close} provides for the contract to be closed (or terminated). The only action that is performed is to refund the contents of each account to their respective owners. This is performed one account per step, but all accounts will be refunded in a single transaction.
 
 %Before discussing other forms of contracts, we need to describe values, observations and actions.
 
-\paragraph{Values, observations and actions}
-\emph{Values} include some quantities that change with time, including the current slot number, the current balance of an account (in Lovelace), and any choices that have already been made. % ; we call these volatile values. - PLS: this definition is no longer used
-Values can also be combined using addition, subtraction and negation.
+\texttt{If}: The conditional \texttt{If obs cont1 cont2} will continue as \texttt{cont1} or \texttt{cont2}, depending on the Boolean value of the observation \texttt{obs} on execution.
 
-\emph{Observations} are Boolean values derived by comparing values, and can be combined using the standard Boolean operators. It is also possible to observe whether any choice has been made (for a particular identified choice).
-
-Observations will have a value at every step of execution. On the other hand, \emph{actions} happen at particular points during execution and can be
-(i) depositing money, (ii)
-making a choice between various alternatives, or (iii)
-notifying an external or oracle value, such as the current price of a particular commodity.
-
-\paragraph{If}
-The conditional \texttt{If obs cont1 cont2} will continue as \texttt{cont1} or \texttt{cont2}, depending on the Boolean value of the observation \texttt{obs} on execution.
-
-\paragraph{When}
-This is the most complex constructor for contracts, with the form \texttt{When cases timeout cont}. It is a contract that is triggered on actions, which may or may not happen at any particular slot: the permitted actions and their consequences are described by \texttt{cases}.
+\texttt{When}: This is the most complex constructor for contracts, with the form \texttt{When cases timeout cont}. It is a contract that is triggered on actions, which may or may not happen at any particular slot: the permitted actions and their consequences are described by \texttt{cases}.
 
 The list \texttt{cases} contains a collection of cases of the form \texttt{Case ac co}, where \texttt{ac} is an action and \texttt{co} a continuation (another contract). When the action \texttt{ac} is performed, the state is updated accordingly and the contract will continue as described by \texttt{co}.
 
 In order to make sure that the contract makes progress eventually, the contract \texttt{When cases timeout cont} will continue as \texttt{cont} as soon as any valid transaction is issued after the \texttt{timeout} (a slot number) is reached.
 
-\paragraph{Let}
-A let contract \texttt{Let id val cont} causes the expression \texttt{val} to be evaluated, and stored with the name \texttt{id}. The contract then continues as \texttt{cont}.
+\texttt{Let}: A let contract \texttt{Let id val cont} causes the expression \texttt{val} to be evaluated, and stored with the name \texttt{id}. The contract then continues as \texttt{cont}.
 
 %As well as allowing us to use abbreviations, this mechanism also means that we can capture and save volatile values that might be changing with time, e.g. the current price of oil, or the current slot number, at a particular point in the execution of the contract, to be used later on in contract execution.
 

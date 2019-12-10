@@ -201,16 +201,15 @@ This approach has a number of advantages:
 \begin{itemize}
 \item It is simple: having a single Plutus script that implements all Marlowe contracts
 makes it easier to implement, review, and test what we have done.
-\item It is close to the semantics of Marlowe, as sketched above and in more detail in~\cite{isola-marlowe},
-so making it easier to validate.
-\item It means that the same implementation can be used for both on- and off-chain (wallet) execution of Marlowe code.
-\item It allows client-side contract evaluation, where we reuse the same code
+\item Implementation is close to the semantics of Marlowe, as sketched above and in more detail in~\cite{isola-marlowe},
+which makes it easier to validate.
+\item The same implementation can be used for both on- and off-chain (wallet) execution of Marlowe code.
+\item It facilitates client-side contract evaluation, where we reuse the same code
 to do contract execution emulation in an IDE, and compile it to WASM/JavaScript on the client side,
 e.g.\ in the Marlowe Playground.
 \item Having a single interpreter for all (or a particular group of) Marlowe contracts allows us
   to monitor the blockchain for these contracts, if required.
-\item Finally, there is a potential to special-case this sort of script,
-  and implement a specialized, highly effective interpreter in the Cardano node itself.
+\item Finally, Cardano nodes could potentially use an optimised interpreter (e.g:~native) just for Marlowe contracts, which would save processing time.
 \end{itemize}
 
 \noindent
@@ -219,8 +218,8 @@ where, at each stage, the remaining contract and its state are passed through th
 and actions and inputs (i.e. \emph{choices} and \emph{money deposits}) are passed to the %SJT: is this irght?
 \emph{Redeemer}.
 Each step in contract execution is a transaction that spends a Marlowe contract transaction output
-by providing a valid input in $Redeemer$, and produces a transaction output
-with a Marlowe contract as continuation (remaining contract).
+by providing a valid input as \emph{Redeemer}, and produces a transaction output
+with a the remaining Marlowe contract and the updated state.
 
 We store the remaining contract in the \emph{Data script}, which makes it visible to everyone.
 This simplifies contract reflection and retrospection.
@@ -281,9 +280,9 @@ an expected input in a redeemer script,
 and produces a transaction output with a Marlowe contract as continuation.
 
 The Marlowe interpreter first validates the current contract state: i.e.\
-we check that the contract locks at least what it should according
+we check that the contract locks at least what it should, according
 to contract balances (the \emph{accounts} field in \emph{State}),
-and all balances are strictly positive.
+and that all balances are strictly positive.
 \footnote{
 Using the Isabelle proof assistant, we have formally verified that given a state with positive balances,
 it is impossible for any possible contract and inputs to result in non-positive balances.
@@ -316,12 +315,12 @@ computeTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
 \end{verbatim}
 
 \noindent
-The interpreter reduces a contract until it becomes quiescent, meaning that either it evaluates to \emph{Close},
-or it expects a user input in \emph{When} construct.
-This means that all \emph{Pay, If, Let, Close} constructs are evaluated immediately.
+The interpreter reduces a contract until it becomes quiescent: either it evaluates to \emph{Close},
+or it expects a user input in a \emph{When} construct.
+All \emph{Pay, If, Let, Close} constructs are evaluated immediately.
 
-The function returns a new contract state, contract continuation, a list of warnings (such as partial payments),
-and a list of expected payments (i.e. all the evaluated \emph{Pay} constructs).
+The evaluation function returns a new contract state, contract continuation, a list of warnings (such as partial payments),
+and a list of expected payments (i.e. one for each of the \emph{Pay} constructs evaluated).
 
 The on-chain \emph{Validator} code cannot generate transaction outputs,
 but can only validate whatever a user provides in a transaction.
@@ -339,7 +338,7 @@ When [ Case (Deposit aliceAccount alicePubKey (Constant 850_000_000))
 \end{verbatim}
 
 \noindent
-Here we expect Alice to deposit 850 Ada (850,000,000 Lovelace) into her $aliceAccount$ before slot 100.
+Here we expect Alice to deposit 850 Ada (850,000,000 Lovelace) into her \texttt{aliceAccount} before slot 100.
 Otherwise, we \emph{Close} the contract.
 
 If Alice deposits the money before slot 100, money immediately goes to Bob,
@@ -351,7 +350,7 @@ Alice must produce the following \emph{Redeemer} to satisfy the Marlowe validato
 \end{verbatim}
 
 \noindent
-Bob is then is expected to deposit 1000 Ada into Alice's account before slot 200.
+Bob is then expected to deposit 1000 Ada into Alice's account before slot 200.
 If he does, the contract is closed, and all remaining balances must be paid out
 to their respective owners. In our case, 1000 Ada must be paid to Alice.
 
@@ -364,10 +363,10 @@ to their respective owners. In our case, 1000 Ada must be paid to Alice.
 
 Note, that it is possible to provide multiple inputs at a time,
 allowing as many steps of a contract execution as necessary to be merged.
-This gives atomicity of some operations, and saves on transaction fees.
+This gives atomicity to some operations, and saves on transaction fees.
 
 Sometimes it is necessary to just evaluate a contract in a given moment in time,
-and not provide any inputs. Consider the following example:
+without providing any inputs. Consider the following example:
 
 \begin{verbatim}
 If (SlotIntervalStart `ValueGT' 100)

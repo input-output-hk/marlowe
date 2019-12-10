@@ -63,9 +63,9 @@ School of Computing, University of Kent, UK\\
 
 
 \begin{abstract}
-Marlowe is a DSL for financial contracts running on the Cardano blockchain. We describe the implementation of Marlowe on blockchain, and the Marlowe Playground web-based development and simulation environment.
+Marlowe is a DSL for financial contracts. We describe the implementation of Marlowe on the Cardano blockchain, and the Marlowe Playground web-based development and simulation environment.
 
-Contracts in Marlowe can be exhaustively analysed prior to running them, thus providing strong guarantees to participants in the contracts. The Marlowe system itself has been formally verified using the Isabelle theorem prover, establishing such properties as the conservation of money.
+Contracts in Marlowe can be exhaustively analysed prior to running them, thus providing strong guarantees to participants in the contract. The Marlowe system itself has been formally verified using the Isabelle theorem prover, establishing such properties as the conservation of money.
 
 \keywords{blockchain \and Cardano \and Haskell \and SMT \and static analysis}
 \end{abstract}
@@ -73,12 +73,11 @@ Contracts in Marlowe can be exhaustively analysed prior to running them, thus pr
 
 \section{Introduction}
 
-Marlowe\footnote{The complete Marlowe project, including semantics and implementation, is available at \url{https://github.com/input-output-hk/marlowe}.} is a domain-specific language (DSL) for implementing financial contracts on blockchain: our initial target is Cardano, but it can be implemented on many DLT platforms, including Ethereum. Marlowe is embedded in Haskell, allowing users selectively to use aspects of Haskell -- typically definitions of constants and simple functions -- to express contracts more readably and succinctly. Marlowe was introduced in the paper~\cite{isola-marlowe}: Section \ref{sec:overview} below gives an overview of the language, and the changes made to it since the publication of that paper.
+Marlowe\footnote{The complete Marlowe project, including semantics and implementation, is available at \url{https://github.com/input-output-hk/marlowe}.} is a domain-specific language (DSL) for implementing financial contracts on blockchain: our initial target is Cardano, but it could be implemented on many DLT platforms, including Ethereum. Marlowe is embedded in Haskell, allowing users selectively to use aspects of Haskell -- typically definitions of constants and simple functions -- to express contracts more readably and succinctly. Section \ref{sec:overview} gives an overview of the language, and the changes made to it since it was originally introduced in ~\cite{isola-marlowe}.
 
-Marlowe is specified by a reference semantics for the language written in Haskell, and we can use that  in a number of ways. Obviously, we can interpret Marlowe contracts in Haskell itself, but we can also use that implementation, compiled into Plutus~\cite{PlutusPlatform}, to interpret  Marlowe directly on the Cardano blockchain, as explained in Section \ref{sec:implementation}. Moreover, we can execute that semantics -- translated into PureScript -- directly in a browser, to give an interactive simulation environment, the Meadow Playground, described in Section \ref{sec:playground}.
+Marlowe is specified by a reference semantics for the language written in Haskell, and we can use that in a number of ways. We can interpret Marlowe contracts in Haskell itself, but we can also use that implementation, compiled into Plutus~\cite{PlutusPlatform}, to interpret Marlowe directly on the Cardano blockchain, see Section \ref{sec:implementation}. We can also execute the semantics -- translated into PureScript -- directly in a browser, to give an interactive simulation environment, see Section \ref{sec:playground}.
 
-Because Marlowe is a DSL, we are able to build special purpose tools and techniques to support it. Crucially in a financial environment, we are able to \emph{exhaustively analyse contracts} without executing them, so that we can, for instance, check whether any particular contract is able to make all the payments it should: in the case it is not, we get an explicit example of how it can fail. This analysis, reported in Section \ref{sec:static}, is built into the Marlowe Playground. We are also able to use formal verification to prove properties of the implementation of Marlowe, including a guarantee that ``money in $=$ money out'' for all contracts; this is covered in Section~\ref{sec:verification}. 
-% PLS: Should we divide the analysis/formalisation section in two? SJT: done
+Because Marlowe is a DSL, we are able to build special purpose tools and techniques to support it. Crucially in a financial environment, we are able to \emph{exhaustively analyse contracts} without executing them, so that we can, for instance, check whether any particular contract is able to make all the payments it should: in the case it is not, we get an explicit example of how it can fail. This analysis, reported in Section \ref{sec:static}, is built into the Marlowe Playground. Finally, we are able to use formal verification to prove properties of the implementation of Marlowe, including a guarantee that ``money in $=$ money out'' for all contracts; see Section~\ref{sec:verification}.
 
 \section{Marlowe overview}
 \label{sec:overview}
@@ -88,7 +87,7 @@ Since the first publication, we have revised the language design: this section g
 
 \subsubsection*{The Marlowe model}
 
-Marlowe is designed to support the execution of financial contracts on blockchain, and specifically to work on Cardano. Contracts are built by putting together a small number of constructs that in combination can be used to describe many different kinds of financial contract.
+Contracts are built by putting together a small number of constructs that in combination can be used to describe many different kinds of financial contract.
 
 Contracts in Marlowe run on a blockchain, but need to interact with the off-chain world. The parties to the contract, also called the participants, can engage in various actions: they can be asked to deposit money, or to make a choice between various alternatives. In some cases, any party will be able to trigger the contract just to notify it that some condition has become true (for example, a timeout has occurred).
 
@@ -113,18 +112,15 @@ Marlowe has five ways of building contracts, we call these \emph{contract constr
 \texttt{Value}s include some quantities that change with time, including the current slot number, the current balance of an account (in Lovelace), and any choices that have already been made. % ; we call these volatile values. - PLS: this definition is no longer used
 Values can also be combined using addition, subtraction and negation.
 
-\texttt{Observation}s are Boolean expressions that compare values, and can be combined using the standard Boolean operators. It is also possible to observe whether any choice has been made (for a particular identified choice).
+\texttt{Observation}s are Boolean expressions that compare values, and can be combined using the standard Boolean operators. It is also possible to observe whether any choice has been made (for a particular identified choice). Observations will have a value at every step of execution.
 
-\texttt{Action}s, unlike \texttt{Observation}s, which have a value at every step of execution, happen at particular points during execution and can be:
-(i) depositing money, (ii)
-making a choice between various alternatives, or (iii)
-notifying the contract that a certain observation has become true.
+\texttt{Action}s happen at particular points during execution and can be (i) depositing money, (ii) making a choice between various alternatives, or (iii) notifying the contract that a certain observation has become true.
 
 \paragraph{Contract constructs} are the main building block of contracts, and there are five of them: four of these -- \texttt{Pay}, \texttt{Let}, \texttt{If} and \texttt{When} -- build a complex contract from simpler contracts, and the fifth, \texttt{Close}, is a simple contract. At each step of execution we will obtain a new state and continuation contract and, in some it is possible that effects, like payments and warnings, can be generated too.
 
 \texttt{Pay}: A payment contract \texttt{Pay a p v cont} will make a payment of value \texttt{v} from the account \texttt{a} to a payee \texttt{p}, which will be one of the contract participants or another account in the contract. Warnings will be generated if the value \texttt{v} is not positive, or if there is not enough in the account to make the payment in full. In the first case, nothing will be transferred; in the later case, a partial payment (of all the money available) is made. The contract will continue as specified by \texttt{cont}.
 
-\texttt{Close}: A contract \texttt{Close} provides for the contract to be closed (or terminated). The only action that is performed is to refund the contents of each account to their respective owners. This is performed one account per step, but all accounts will be refunded in a single transaction.
+\texttt{Close}: A contract \texttt{Close} provides for the contract to be closed (or terminated). The only action that is performed is to refund the contents of each account to their respective owners. This is performed one account per step, but all accounts will be refunded in a single transaction. All contracts eventually reduce to \texttt{Close}.
 
 %Before discussing other forms of contracts, we need to describe values, observations and actions.
 
@@ -190,12 +186,7 @@ or by a \emph{Validator}.
 
 In order to spend an existing transaction output protected by a \emph{Validator},
 one must create a transaction (a \emph{PendingTx}) that has an \emph{input} that references the transaction output,
-and contains a \emph{Redeemer}, such that
-
-\begin{verbatim}
-    Validator(Data Script, Redeemer, PendingTx)
-\end{verbatim}
-evaluates to $True$.
+and contains a \emph{Redeemer}, such that \texttt{Validator(Data Script, Redeemer, PendingTx)} evaluates to $True$.
 In order to spend a transaction output protected by a \emph{public key}, one must provide a valid signature
 made with the private key corresponding to the transaction public key.
 
@@ -399,12 +390,12 @@ He should then do the same after slot 200 to receive the payment.
 The Marlowe validator script checks that a transaction contains a valid continuation
 output in case a contract is not closed, by checking the hash of the output validator and state.
 The continuation must have the same validator, hence the same hash of the validator script.
-It should contain both the expected continuation contract and then state, evaluated by the \emph{computeTransaction}
+It should contain both the expected continuation contract and the state, evaluated by the \emph{computeTransaction}
 function.
 
 \paragraph{Closing a contract}
 
-When a contract evaluates to \emph{Close}, and all remaining balances must payed out
+When a contract evaluates to \emph{Close}, all remaining balances must payed out
 to respective owners, removing the contract from the set of unspent transaction outputs.
 
 \subsection{Further Work}

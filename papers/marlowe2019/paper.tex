@@ -141,7 +141,7 @@ In order to make sure that the contract makes progress eventually, the contract 
 \section{Implementation of Marlowe on Cardano}
 \label{sec:implementation}
 
-Marlowe is specified by an executable semantics written in Haskell, but to make it usable in practice to execute financial contracts, it needs to be implemented on a blockchain. In this section, we explain how Marlowe is executed on the Cardano blockchain using an interpreter written in the Plutus programming language.
+Marlowe is specified by an executable semantics written in Haskell, but to make it usable in practice to execute financial contracts, it needs to be implemented on a blockchain. In this section, we explain how Marlowe is executed on the Cardano blockchain using an interpreter \footnote{The implementation is available at \url{https://github.com/input-output-hk/plutus/blob/0ca9af4f6614d591de7ebbe4dd759ce122d74efd/marlowe/src/Language/Marlowe/Semantics.hs}.} written in the Plutus programming language.
 
 \subsection{Cardano and Plutus}
 
@@ -252,25 +252,15 @@ data State = State { accounts    :: Map AccountId Ada
 \end{verbatim}
 
 \noindent%SJT: **general question** using \emph for inline code: why not \texttt ?
-where \emph{accounts} maps account ids to their balances, \emph{choices} stores user made choice values,
-\emph{boundValues} stores evalutated \emph{Value}'s introduced by \emph{Let} expressions,
-and \emph{minSlot} holds a minimal slot number that a contract has seen, to avoid `time travel to the past'.
-
-It is possible to initialize a contract with a particular state, containing a number of deposits,
-as shown in figure~\ref{fig:marlowe-init}.
-
-\begin{figure}[!h]
-\centering
-\includegraphics[width=1\textwidth]{figures/Marlowe3-Figures-002.jpeg}
-\caption{Marlowe contract initialization}
-\label{fig:marlowe-init}
-\end{figure}
+where \texttt{accounts} maps account ids to their balances, \texttt{choices} stores user made choice values,
+\texttt{boundValues} stores evalutated \texttt{Value}'s introduced by \texttt{Let} expressions,
+and \texttt{minSlot} holds a minimal slot number that a contract has seen, to avoid `time travel to the past'.
 
 \paragraph{Execution}
 
 Marlowe contract execution consists of a chain of transactions,
 where the remaining contract and state are passed through the \emph{data script},
-and input actions (i.e. \emph{choices}) are passed as \emph{redeemer scripts}.
+and input actions (i.e. \texttt{choices}) are passed as \emph{redeemer scripts}.
 
 Each execution step is a transaction that spends a Marlowe contract transaction output by providing
 an expected input in a redeemer script,
@@ -278,7 +268,7 @@ and produces a transaction output with a Marlowe contract as continuation.
 
 The Marlowe interpreter first validates the current contract state: i.e.\
 we check that the contract locks at least what it should, according
-to contract balances (the \emph{accounts} field in \emph{State}),
+to contract balances (the \texttt{accounts} field in \texttt{State}),
 and that all balances are strictly positive.
 \footnote{
 Using the Isabelle proof assistant, we have formally verified that given a state with positive balances,
@@ -312,12 +302,12 @@ computeTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
 \end{verbatim}
 
 \noindent
-The interpreter reduces a contract until it becomes quiescent: either it evaluates to \emph{Close},
-or it expects a user input in a \emph{When} construct.
-All \emph{Pay, If, Let, Close} constructs are evaluated immediately.
+The interpreter reduces a contract until it becomes quiescent: either it evaluates to \texttt{Close},
+or it expects a user input in a \texttt{When} construct.
+All \texttt{Pay, If, Let, Close} constructs are evaluated immediately.
 
 The evaluation function returns a new contract state, contract continuation, a list of warnings (such as partial payments),
-and a list of expected payments (i.e. one for each of the \emph{Pay} constructs evaluated).
+and a list of expected payments (i.e. one for each of the \texttt{Pay} constructs evaluated).
 
 The on-chain \emph{Validator} code cannot generate transaction outputs,
 but can only validate whatever a user provides in a transaction.
@@ -336,7 +326,7 @@ When [ Case (Deposit aliceAccount alicePubKey (Constant 850_000_000))
 
 \noindent
 Here we expect Alice to deposit 850 Ada (850,000,000 Lovelace) into her \texttt{aliceAccount} before slot 100.
-Otherwise, we \emph{Close} the contract.
+Otherwise, we \texttt{Close} the contract.
 
 If Alice deposits the money before slot 100, money immediately goes to Bob,
 by requiring a transaction output of 850 Ada to Bob's public key address.
@@ -373,44 +363,38 @@ If (SlotIntervalStart `ValueGT' 100)
 \end{verbatim}
 
 Let us say that Alice has 1000 Lovelace on her account, and Bob wants to receive the payment.
-The payment could be obtained only after \emph{When} has timed out after slot 200.
-But if we evaluate the contract after slot 200, \emph{If} reduces to \emph{Close}, and
+The payment could be obtained only after \texttt{When} has timed out after slot 200.
+But if we evaluate the contract after slot 200, \texttt{If} reduces to \texttt{Close}, and
 Bob will not receive the payment. So he must evaluate the contract before slot 100 to
-reduce \emph{If} to \emph{When}.
+reduce \texttt{If} to \texttt{When}.
 To achieve that, Bob must spend the contract transaction output with an empty list of inputs in the \emph{Redeemer}.
 He can then do the same after slot 200 to receive the payment.
 
 \paragraph{Ensuring execution validity}
 
 Except for the transaction that closes a Marlowe contract, the Marlowe validator script checks that a spending transaction contains a valid continuation
-output, i.e: the hash of the output validator is the same (same hash), and the new state and contract are the expected ones: the ones resulting from applying the \emph{computeTransaction} to the given inputs.
+output, i.e: the hash of the output validator is the same (same hash), and the new state and contract are the expected ones: the ones resulting from applying the \texttt{computeTransaction} to the given inputs.
 
 \paragraph{Closing a contract}
 
-When a contract evaluates to \emph{Close}, all remaining balances the accounts of the contract are payed out
+When a contract evaluates to \texttt{Close}, all remaining balances the accounts of the contract are payed out
 to the respective owners of each account, and the contract is removed from the set of unspent transaction outputs.
 
 \subsection{Further Work}
 
 Cardano extends its ledger rules to support \emph{forging} of custom currencies and tokens,
-effectively embedding support of Ethereum ERC-20 and ERC-721 contracts.
-We are working on adding this \emph{multicurrency} support to Marlowe.
-
+effectively embedding support of Ethereum ERC-20 and ERC-721 contracts. 
 Simple token creation gives interesting possibilities of representing Marlowe contract parties by tokens.
-Currently parties are represented as public keys. We expect a valid signature for each input,
-and make payments to addresses for the public key of a party.
-Analogously, we could instead check proofs of ownership of a particular token.
-
-This would allows us to tokenize contract participants, and abstract away concrete public keys into contract \emph{roles}.
+This tokenization of contract participants abstracts away concrete public keys into contract \emph{roles}.
 In turn, those roles could be traded independently of a contract.
-Additionally, we can split a role in multiple \emph{shares}, which would allow automatic distribution of a payment
-proportionally to the number of shares owned.
+
+We are working on adding \emph{multicurrency} or \emph{roles} support to Marlowe.
 
 \section{Static analysis of contracts\label{sec:static}}
 
 Marlowe semantics use types to prevent many non-sensical contracts from being written. But there are potential problems which are harder to detect until runtime, for example, whether there will be enough money to issue all the payments declared in the contract. At that point, it may already be too late to fix them, particularly in the case of blockchain.
 
-Fortunately, in the case of Marlowe, a computer can decidably determine whether a particular contract satisfies certain property before executing it, and it can provide a counter-example when it does not.
+Fortunately, in the case of Marlowe, a computer can decidedly determine whether a particular contract satisfies certain property before executing it, and it can provide a counter-example when it does not.
 
 Our implementation relies on the Haskell library SBV, which in turn relies on existing SMT solvers to check satisfiability of properties or finding counter-examples.
 

@@ -211,7 +211,10 @@ e.g.\ in the Marlowe Playground.
 \noindent
 Marlowe contract execution on the blockchain consists of a chain of transactions
 where, at each stage, the remaining contract and its state are passed through the \emph{Data script},
-and actions and inputs (i.e. \emph{choices} and \emph{money deposits}) are passed to the %SJT: is this irght?
+and actions/inputs (i.e. \emph{choices} and \emph{money deposits}) are passed via the 
+%SJT: is this right?
+%AN: yes. [Input] is precisely the redeemer script. We could say that Value and SlotInterval are parts of PendingTx,
+% but I think it's not that important here.
 \emph{Redeemer}.
 Each step in contract execution is a transaction that spends a Marlowe contract transaction output
 by providing a valid input as \emph{Redeemer}, and produces a transaction output
@@ -533,8 +536,8 @@ Because of this property and \emph{Money preservation}, we can conclude that mon
 
 Another property of Marlowe is that any given finite \texttt{Contract} has an implicit finite bound on the maximum number of \texttt{Transaction}s that it accepts. This is a convenient property because:
 
-\begin{itemize}%SJT: DoS usually means denial of service?
-    \item It reduces the danger of Denegation of Service (DoS) attacks: because the number of valid inputs is limited, an attacker participant cannot arbitrarily block the contract by issuing an unbounded amount of useless \texttt{Transaction}s.
+\begin{itemize}
+    \item It reduces the danger of Denial of Service (DoS) attacks: because the number of valid inputs is limited, an attacker participant cannot arbitrarily block the contract by issuing an unbounded amount of useless \texttt{Transaction}s.
     \item The number of transactions bounds the length of traces that symbolic execution (see Section~\ref{sec:static}) needs to explore (more on this below).%SJT: is this really below? Or above?
 \end{itemize}
 
@@ -602,10 +605,9 @@ Users can at any point save the current contract directly to a Github Gist, as w
 Contracts written in the Marlowe editor are parsed in real-time and if there are no errors (and no holes) then the contract is analysed to discover which actions a user could take to progress the contract. These actions are displayed in the ``Input Composer'' above the editor. Consider the following example contract:
 \begin{verbatim}
     When [Case (Deposit (AccountId 0 "investor") 
-               "guarantor" (Constant 1000)) Close] 10 Close
+               "guarantor" (Constant 1000_000000)) Close] 10 Close
 \end{verbatim}
 In this case, the only action a user can take to progress the contract is to accept a deposit of 1000 ADA
-%SJT: we need to sort out the Ada/Lovelance mismatch.
 from the guarantor to the investor's account. Because of this, the playground can display this action in the input composer.
 
 \begin{wrapfigure}[6]{l}{0.5\textwidth}

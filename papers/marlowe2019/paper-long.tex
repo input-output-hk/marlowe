@@ -454,7 +454,7 @@ Firstly, calls to recursive functions that are unbounded cannot be translated. A
 
 Secondly, to the best our knowledge, SBV does not currently directly provide support for representing custom data types symbolically, except for zero-ary datatypes, i.e: enumerations.
 
-In the following sections, we explain how we worked around these limitations and give an overview of how we use SBV to avoid runtime problems with Marlowe contracts.
+In the following section, we explain how we worked around these limitations and give an overview of how we use SBV to avoid runtime problems with Marlowe contracts.
 
 \subsection{Using SBV to analyse Marlowe Contracts}
 
@@ -502,7 +502,7 @@ type NTransactionResult =
 \noindent
 Because working with nested types is much more error prone than working with the original data-types, we used Template Haskell \cite{sheard2002template} to implement functions that transform the custom datatypes into nested types and generate the appropriate conversion functions.
 
-\paragraph{Returning non-symbolic \texttt{Contract} values}
+\subsubsection{Returning non-symbolic \texttt{Contract} values}
 
 In the non-symbolic semantics, each step typically takes a \texttt{Contract}, a \texttt{State}, and a set of \texttt{Input}s; and it returns an updated \texttt{State} and a remaining \texttt{Contract}.
 
@@ -528,7 +528,7 @@ apply :: SymVal a => Bounds
 \noindent
 where \texttt{DetApplyResult} contains the parts of \texttt{ApplyResult} that are not symbolic (like the \texttt{Contract}).
 
-\paragraph{Bounds for the state and the inputs}
+\subsubsection{Bounds for the state and the inputs}
 
 The recursion in the execution of the semantics is bounded by the \texttt{Contract}, and because the \texttt{Contract} is not a symbolic parameter, the translation will terminate.
 

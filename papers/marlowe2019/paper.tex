@@ -458,7 +458,7 @@ In the following section, we explain how we worked around these limitations and 
 
 \subsection{Using SBV to analyse Marlowe Contracts}
 
-Marlowe semantics are designed to use types to prevent many non-sensical contracts from being written. But there are potential problems which are harder to detect until runtime, for example, whether there will be enough money to issue all the payments declared in the contract. At this point it may already be too late to fix them, and particularly so in the case of blockchain. The Marlowe semantics represents these errors that can be found at runtime as \texttt{Warnings}.
+Marlowe semantics are designed to use types to prevent many non-sensical contracts from being written. But there are potential problems which are harder to detect until runtime, for example, whether there will be enough money to issue all the payments declared in the contract. At this point, it may already be too late to fix them, and particularly so in the case of blockchain. The Marlowe semantics represents these errors that can be found at runtime as \texttt{Warnings}.
 
 The property that we have implemented using SBV library can be enunciated as: ``the given contract will not need to issue warnings at runtime no matter the inputs it receives''.
 

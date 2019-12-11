@@ -575,7 +575,7 @@ Thus, we do not lose generality by only exploring traces with length of at most 
 \section{The Marlowe Playground}
 \label{sec:playground}
 
-For Marlowe to be usable in practice, users need to be able to design and develop Marlowe contracts, and also to understand how contracts will behave once deployed to the blockchain, but without before actually deploying them.
+For Marlowe to be usable in practice, users need to be able to design and develop Marlowe contracts, and also to understand how contracts will behave once deployed to the blockchain, but without actually deploying them.
 
 The Marlowe Playground, a web-based tool that supports the interactive construction, revision, and simulation of smart contracts written in Marlowe, provides these facilities, as well as access to a static analysis of contracts (as described in the previous section), an online tutorial for Marlowe and a set of example contracts. The playground is available at \url{https://prod.meadow.marlowe.iohkdev.io/}.\footnote{Development of the playground is rapid, and the latest, unstable, version is also available at \url{https://alpha.marlowe.iohkdev.io/}.}
 
@@ -620,37 +620,32 @@ Users can at any point save the current contract directly to a Github Gist, as w
 
 Contracts written in the Marlowe editor are parsed in real-time and if there are no errors (and no holes) then the contract is analysed to discover which actions a user could take to progress the contract. These actions are displayed in the ``Input Composer'' above the editor. Consider the following example contract:
 \begin{verbatim}
-    When [Case (Deposit (AccountId 0 "investor")
-                        "guarantor"
-                        (Constant 1000))
-               Close]
-         10
-         Close
+    When [Case (Deposit (AccountId 0 "investor") 
+               "guarantor" (Constant 1000)) Close] 10 Close
 \end{verbatim}
 In this case, the only action a user can take to progress the contract is to accept a deposit of 1000 ADA
 %SJT: we need to sort out the Ada/Lovelance mismatch.
 from the guarantor to the investor's account. Because of this, the playground can display this action in the input composer.
 
-\begin{figure}[]
-    \includegraphics[width=1\textwidth]{input_composer.png}
-\end{figure}
+\begin{wrapfigure}[6]{l}{0.5\textwidth}
+    \vspace*{-0.1in}
+    \includegraphics[scale=0.15]{input_composer.png}
+\end{wrapfigure}
 
 \noindent
 The user can then choose to add this action to a transaction being prepared. Once the action is added other inputs become possible; these are displayed in the input composer, and again they can be added to the transaction being composed. In this way, multiple actions can be added to a transaction before it is applied.
 
-\begin{figure}[]
-    \includegraphics[width=0.8\textwidth]{tx_composer.png}
-\end{figure}
+\begin{wrapfigure}[6]{l}{0.5\textwidth}
+    \vspace*{-0.2in}
+    \includegraphics[scale=0.15]{tx_composer.png}
+\end{wrapfigure}
 
 \noindent
 A user can then apply this transaction and in the example above this would result in the state pane showing a single payment and in addition the contract in the Marlowe editor will have been reduced to \lstinline{Close}.
 
 At any point in the simulation the user can undo any steps made: in this particular case, they can undo the application of the transaction, and iteratively undo more steps. At any point they can also reset the contract to its initial state. This enables a user to apply transactions, see what the effect is, step back and apply a transaction with different actions and see how these differences affect the end result. They can also change the reduced contract to investigate variants of the original.
 
-The final feature that we would like to present is the static analysis of contracts. As described in the previous section, it is possible to carry out a symbolic execution of a contract and then use a SMT solver to look for cases that could cause unwanted situations. The playground uses this to search for situations where contract execution would cause warnings. For example, suppose you write a contract that causes a payment of 450 Lovelace from Alice to Bob but the contract allows a situation where Alice has only deposited 350 Lovelace then the static analysis will find this and report it to the playground user.
-\begin{figure}
-    \includegraphics[width=1\textwidth]{static_analysis.png}
-\end{figure}
+The final feature that we would like to present is the static analysis of contracts. As described in the previous section, it is possible to carry out a symbolic execution of a contract and then use a SMT solver to look for cases that could cause unwanted situations. The playground uses this to search for situations where contract execution would cause warnings. For example, suppose you write a contract that causes a payment of 450 Lovelace from Alice to Bob but the contract allows a situation where Alice has only deposited 350 Lovelace. The the static analysis will find this partial payment case and report it to the playground user with an example of how it could occur.
 
 \section{Related work}
 \label{sec:related}

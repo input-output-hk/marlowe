@@ -59,7 +59,6 @@ School of Computing, University of Kent, UK,
 \maketitle              % typeset the header of the contribution
 
 \vspace{-4mm}
-
 \begin{abstract}
 Marlowe is a DSL for financial contracts. We describe the implementation of Marlowe on the Cardano blockchain, and the Marlowe Playground web-based development and simulation environment.
 
@@ -418,12 +417,12 @@ For Turing-complete languages, this process is usually undecidable in the genera
 
 Our implementation relies on the Haskell library SBV, which in turn relies on existing SMT solvers to check satisfiability of properties or finding counter-examples.
 
-\subsubsection{SBV library}
+\subsection{SBV library}
 
-SBV \cite{SBV} (SMT Base Verification) library provides a high-level API that allows developers to automatically prove properties about Haskell programs, among other functionalities.
+SBV \cite{SBV} (SMT Based Verification) library provides a high-level API that allows developers to automatically prove properties about Haskell programs, among other functionalities.
 The SBV library translates these properties to SMTLib queries, passes them to one or several SMT solvers, and translates the results back to the format in which the queries were written.
 
-\paragraph{\texttt{SBV} monad.}
+\subsubsection{\texttt{SBV} monad}
 
 SBV provides a monad called \texttt{SBV} which encapsulates potentially unknown values to the program. A program that takes arguments wrapped with the \texttt{SBV} monad can be used with normal arguments and it can also be passed symbolic parameters when used as part of a property that is passed to the solver.
 For example, the following function:
@@ -447,7 +446,7 @@ Satisfiable. Model:
 True
 \end{verbatim}
 
-\paragraph{Limitations}
+\subsubsection{Limitations}
 
 At the time of writing, there are some types of functions and data-types that SBV cannot translate to \texttt{SMTLib}. In particular, there are two that affected the way in which we use SBV with Marlowe and that prevent us from using the same version of the semantics for symbolic execution and normal execution.
 
@@ -457,7 +456,7 @@ Secondly, to the best our knowledge, SBV does not currently directly provide sup
 
 In the following section, we explain how we worked around these limitations and give an overview of how we use SBV to avoid runtime problems with Marlowe contracts.
 
-\subsubsection{Using SBV to analyse Marlowe Contracts}
+\subsection{Using SBV to analyse Marlowe Contracts}
 
 Marlowe semantics are designed to use types to prevent many non-sensical contracts from being written. But there are potential problems which are harder to detect until runtime, for example, whether there will be enough money to issue all the payments declared in the contract. At this point it may already be too late to fix them, and particularly so in the case of blockchain. The Marlowe semantics represents these errors that can be found at runtime as \texttt{Warnings}.
 
@@ -476,7 +475,7 @@ The types that begin with \texttt{N} are \textit{nested} types, which we explain
 
 We can see that this version of the implementation takes two concrete parameters: \texttt{Bounds} (see \textit{Bounds for the state and the inputs} section below) and \texttt{Contract} (the contract we want to analyse); and two symbolic parameters: \texttt{SSlotNumber} (the initial slot number) and \texttt{SList NTransaction} (the input list of transactions); and it returns \texttt{SList NTransactionWarning} (a symbolic list of transaction warnings).
 
-\paragraph{Custom datatypes}
+\subsubsection{Custom datatypes}
 
 As we mentioned before, SBV does not currently seem to support in general the use of custom datatypes. We do not need to represent the \texttt{Contract} type symbolically because we know its value at the time of analysis, but we still have a number of other types like \texttt{TransactionWarning} that are custom datatypes and we need to use.
 
@@ -550,7 +549,7 @@ Currently, we have translated the Haskell Marlowe semantics to Isabelle as close
     \item We use a \emph{custom implementation of maps and sets} that uses lists of tuples and lists of elements respectively. We do this because Isabelle already provides many theorems that are proved for lists, so it considerably facilitates the automation of certain proofs.
 \end{itemize}
 
-\subsubsection{Termination proof}
+\subsection{Termination proof}
 
 As part of the formalisation process, Isabelle requires functions to be terminating. While  Isabelle proves termination automatically for most functions in the semantics, that is not the case for \texttt{reductionLoop}. The reason why Isabelle cannot infer termination for this function is that it repeatedly calls \texttt{reduceContractStep} until it returns \texttt{NotReduced}, so proving overall termination  requires a proof that \texttt{reduceContractStep} will eventually do that.
 
@@ -567,7 +566,7 @@ The reason that we need the number of accounts in the \texttt{State} as part of 
 
 The reason that we also multiply the size of the \texttt{Contract} by two is that the primitive \texttt{Deposit} may increase the number of accounts in the \texttt{State} by one, but it will also reduce the size of \texttt{Contract} by at least one. By multiplying the size of the \texttt{Contract} by two, the decrease in the \texttt{size} of the \texttt{Contract} compensates the increase in the \texttt{length} of the list of accounts and, thus, it ensures that the overall measure \texttt{evalBound} will decrease even in that scenario.
 
-\subsubsection{Valid state and positive account preservation}
+\subsection{Valid state and positive account preservation}
 
 Since we use lists of pairs of integers as maps in our \texttt{State}, there are some values that are allowed by the type definition of \texttt{State} that make no sense as maps:
 
@@ -605,12 +604,12 @@ fun isQuiescent :: "Contract ⇒ State ⇒ bool" where
 \noindent
 We have proved that, if an input \texttt{State} is valid and all accounts are positive, then the combination of \texttt{State} and \texttt{Contract} resulting from processing any transaction will always be quiescent.
 
-\subsubsection{Money preservation and contract timeout}
+\subsection{Money preservation and contract timeout}
 
 One of the dangers of using smart contracts is that a badly written one can potentially lock its funds forever. We want to avoid that feature in Marlowe altogether and, with that aim, we proved that Marlowe account system does not create or destroy any money. By the end of the contract, all the money paid to the contract must be distributed back, in some way, to a subset of the participants of the contract.
 To ensure this is the case we proved two properties:
 
-\paragraph{Money preservation}
+\subsubsection{Money preservation}
 Money is not created or destroyed by the semantics. We state this property as follows:
 
 \begin{verbatim}
@@ -623,7 +622,7 @@ lemma computeTransaction_preserves_money :
 \noindent
 The only consideration is that we only accept positive \texttt{Deposit}s, so we interpret money in \texttt{Deposit} inputs as the maximum of $0$ and the actual value specified in the \texttt{Deposit} input.
 
-\paragraph{Timeout closes a contract}
+\subsubsection{Timeout closes a contract}
 
 For every Marlowe \texttt{Contract} there is a slot number after which an empty transaction can be issued that will close the contract and refund all the money in its accounts.
 
@@ -656,7 +655,7 @@ fun isClosedAndEmpty :: "TransactionOutput ⇒ bool" where
 \noindent
 Because the money is preserved and we know that there is an empty transaction that can be sent at any point after \texttt{maxTime} that will empty the accounts of the contract, we can conclude that money will not be locked in the contract forever.
 
-\subsubsection{Bound on the maximum number of transactions\label{subsubsec:bound_max_transaction_number}}
+\subsection{Bound on the maximum number of transactions\label{subsubsec:bound_max_transaction_number}}
 
 Another property of Marlowe is that any given finite \texttt{Contract} has an implicit finite bound on the maximum number of \texttt{Transaction}s that it accepts. This is a convenient property because:
 

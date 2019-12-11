@@ -106,8 +106,8 @@ Marlowe has five ways of building contracts, we call these \emph{contract constr
 
 \paragraph{Values, observations and actions} are used to supply external information and inputs to a running contract to control how it will evolve.
 
-\texttt{Value}s include some quantities that change with time, including the current slot number, the current balance of an account (in Lovelace), and any choices that have already been made. % ; we call these volatile values. - PLS: this definition is no longer used
-Values can also be combined using addition, subtraction and negation.
+\texttt{Value}s include some quantities that change with time, like the current slot number, the current balance of an account, and any choices that have already been made. % ; we call these volatile values. - PLS: this definition is no longer used
+Values can be combined using addition, subtraction and negation.
 
 \texttt{Observation}s are Boolean expressions that compare values, and can be combined using the standard Boolean operators. It is also possible to observe whether any choice has been made (for a particular identified choice). Observations will have a value at every step of execution.
 
@@ -115,7 +115,7 @@ Values can also be combined using addition, subtraction and negation.
 
 \paragraph{Contract constructs} are the main building block of contracts, and there are five of them: four of these -- \texttt{Pay}, \texttt{Let}, \texttt{If} and \texttt{When} -- build a complex contract from simpler contracts, and the fifth, \texttt{Close}, is a simple contract. At each step of execution we will obtain a new state and continuation contract and, in some it is possible that effects, like payments and warnings, can be generated too.
 
-\texttt{Pay}: A payment contract \texttt{Pay a p v cont} will make a payment of value \texttt{v} from the account \texttt{a} to a payee \texttt{p}, which will be one of the contract participants or another account in the contract. Warnings will be generated if the value \texttt{v} is not positive, or if there is not enough in the account to make the payment in full. In the first case, nothing will be transferred; in the later case, a partial payment (of all the money available) is made. The contract will continue as specified by \texttt{cont}.
+\texttt{Pay}: A payment contract \texttt{Pay a p v cont} will make a payment of value \texttt{v} from the account \texttt{a} to a payee \texttt{p}, which will be one of the contract participants or another account in the contract. Warnings will be generated if the value \texttt{v} is not positive, or if there is not enough in the account to make the payment in full. In the first case, nothing will be transferred; in the later case, a partial payment (of all the money available) is made. The contract will continue as \texttt{cont}.
 
 \texttt{Close}: A contract \texttt{Close} provides for the contract to be closed (or terminated). The only action that is performed is to refund the contents of each account to their respective owners. This is performed one account per step, but all accounts will be refunded in a single transaction. All contracts eventually reduce to \texttt{Close}.
 
@@ -141,7 +141,7 @@ In order to make sure that the contract makes progress eventually, the contract 
 \section{Implementation of Marlowe on Cardano}
 \label{sec:implementation}
 
-Marlowe is specified by an executable semantics written in Haskell, but to make it usable in practice to execute financial contracts, it needs to be implemented on a blockchain. In this section, we explain how Marlowe is executed on the Cardano blockchain using an interpreter \footnote{The implementation is available at \url{https://github.com/input-output-hk/plutus/blob/0ca9af4f6614d591de7ebbe4dd759ce122d74efd/marlowe/src/Language/Marlowe/Semantics.hs}.} written in the Plutus programming language.
+Marlowe is specified by an executable semantics written in Haskell, but to make it usable in practice with financial contracts, it needs to be implemented on a blockchain. In this section, we explain how Marlowe is executed on the Cardano blockchain using an interpreter \footnote{The implementation is available at \url{https://github.com/input-output-hk/plutus/blob/0ca9af4f6614d591de7ebbe4dd759ce122d74efd/marlowe/src/Language/Marlowe/Semantics.hs}.} written in the Plutus programming language.
 
 \subsection{Cardano and Plutus}
 
@@ -192,7 +192,7 @@ A valid signature is required to spend a \emph{public key} transaction output.
 There are several ways to implement Marlowe contracts on top of Plutus.
 We could write a Marlowe to Plutus compiler that would convert
 each Marlowe contract into a specific Plutus script.
-Instead, we chose to implement an interpreter of Marlowe contracts as a single Plutus script.
+Instead, we chose to implement a Marlowe interpreter as a single Plutus script.
 This approach has a number of advantages:
 \begin{itemize}
 \item It is simple: having a single Plutus script that implements all Marlowe contracts
@@ -269,13 +269,13 @@ an expected input in a redeemer script,
 and produces a transaction output with a Marlowe contract as continuation.
 
 The Marlowe interpreter first validates the current contract state: i.e.\
-we check that the contract locks at least what it should, according
-to contract balances (the \texttt{accounts} field in \texttt{State}),
-and that all balances are strictly positive.
+we check that the contract locks at least as much as specified by the
+contract balances (the \texttt{accounts} field in \texttt{State}),
+and that balances are strictly positive.
 \footnote{
 Using the Isabelle proof assistant, we have formally verified that given a state with positive balances,
 it is impossible for any possible contract and inputs to result in non-positive balances.
-This is described in more detail in Section \ref{sec:static}.}
+This is described in more detail in Section \ref{subsec:valid_state}.}
 
 We then compute expected transaction outcomes for given inputs, such as:
 contract continuation, new state, and payments.
@@ -380,7 +380,7 @@ Marlowe semantics use types to prevent many non-sensical contracts from being wr
 
 Fortunately, in the case of Marlowe, a computer can decidedly determine whether a particular contract satisfies certain property before executing it, and it can provide a counter-example when it does not.
 
-Our implementation relies on the Haskell library SBV, which in turn relies on existing SMT solvers to check satisfiability of properties or finding counter-examples.
+Our implementation relies on the Haskell library SBV, which in turn relies on existing SMT solvers to check satisfiability of properties.
 
 \subsection{SBV library}
 
@@ -389,7 +389,7 @@ The SBV library translates these properties to SMTLib queries, passes them to on
 
 \subsubsection{\texttt{SBV} monad}
 
-SBV provides a monad called \texttt{SBV}, a function can use parameters wrapped in this monad to represent symbolic values. Functions that take symbolic values can be used as properties and passed to the solver; the solver will then try to replace the symbolic values with concrete values that satisfy or falsify the property.
+SBV provides a monad called \texttt{SBV}, a function can use parameters wrapped in this monad to represent symbolic values. Functions that take symbolic values can be used as properties and passed to the solver; which will replace the symbolic values with concrete values that satisfy or falsify the property.
 
 \subsection{Using SBV to analyse Marlowe Contracts}
 
@@ -479,29 +479,27 @@ Currently, we have translated the Haskell Marlowe semantics to Isabelle while ke
 
 \subsection{Termination proof}
 
-Isabelle automatically proves termination for most function. This is not the case for \texttt{reductionLoop}. This function repeatedly calls \texttt{reduceContractStep} until it returns \texttt{NotReduced}, so proving overall termination requires a proof that \texttt{reduceContractStep} will eventually do that.
-
-We proved that by establishing a measure for the size of a pair of \texttt{Contract} and \texttt{State}:
+Isabelle automatically proves termination for most function. This is not the case for \texttt{reductionLoop}. This function repeatedly calls \texttt{reduceContractStep} until it returns \texttt{NotReduced}, so proving overall termination requires a proof that \texttt{reduceContractStep} will eventually do that. In order to prove this, we defined a measure for the size of a pair of \texttt{Contract} and \texttt{State}:
 
 \begin{verbatim}
 fun evalBound :: "State ⇒ Contract ⇒ nat" where
 "evalBound sta cont = length (accounts sta) + 2 * (size cont)"
 \end{verbatim}
 \noindent
-where \texttt{size} is a measure already generated automatically by Isabelle for custom data types.
+where \texttt{size} is a measure already generated automatically by Isabelle.
 
 We need the number of accounts in the \texttt{State} because the size of the contract \texttt{Close} will not decrease when calling \texttt{reduceContractStep}, but the number of accounts will, unless they are all empty.
 
 And we needed to multiply the size of the \texttt{Contract} by two because the primitive \texttt{Deposit} may increase the number of accounts by one, so we need to multiply the effect of the reduction of the size of the contract in order to compensate that.
 
-\subsection{Valid state and positive account preservation}
+\subsection{Valid state and positive account preservation\label{subsec:valid_state}}
 
-There are some values for \texttt{State} that are allowed by its type but make no sense, especially in the case of Isabelle semantics where we use lists instead of maps and sets:
+There are some values for \texttt{State} that are allowed by its type but make no sense, especially in the case of Isabelle semantics where we use lists instead of maps:
 
 \begin{enumerate}
     \item The lists represent maps, so they should have no repeated keys.
     \item We want two maps that are equal to be represented the same, so we force keys to be in ascending order.
-    \item For the map of accounts, we only want to record those that have positive amounts.
+    \item We only want to record those accounts that have positive amount.
 \end{enumerate}
 \noindent
 We call a value for \texttt{State} \emph{valid} if the first two properties are true. And we say it has \emph{positive accounts} if the third property is true.
@@ -510,9 +508,7 @@ We have proved that functions in the semantics preserve all three properties.
 
 \subsubsection{Quiescent result}
 
-A contract is \emph{quiescent} if and only if the root construct \texttt{When}, or if the contract is \texttt{Close} and all accounts are empty.
-
-We have proved that, if an input \texttt{State} is valid and all accounts are positive, then the result from processing any transaction will always be quiescent.
+A contract is \emph{quiescent} if and only if the root construct \texttt{When}, or if the contract is \texttt{Close} and all accounts are empty. We have proved that, if an input \texttt{State} is valid and accounts are positive, then the output will be quiescent.
 
 \subsection{Money preservation and contract timeout}
 
@@ -520,7 +516,7 @@ One of the dangers of using smart contracts is that a badly written one can pote
 To ensure this is the case we proved two properties:
 
 \subsubsection{Money preservation}
-Money is not created or destroyed by the semantics. More specifically, the money that comes in plust the money in the contract before the transaction must be equal to the money that comes out plus the contract after the transaction, except in the case of an error, when the contract stays unaltered.
+Money is not created or destroyed by the semantics. More specifically, the money that comes in plus the money in the contract before the transaction must be equal to the money that comes out plus the contract after the transaction, except in the case of an error.
 
 \subsubsection{Timeout closes a contract}
 
@@ -528,9 +524,7 @@ For every Marlowe \texttt{Contract} there is a slot number after which an empty 
 
 A conservative upper bound for the expiration slot number can be calculated efficiently by using the function \texttt{maxTime} (or \texttt{maxTimeContract} in the Isabelle semantics), essentially by taking the maximum of all the timeouts in the contract.
 
-We proved that this conservative upper bound is general enough for every contract, by showing that, if the contract is not closed and empty, then an empty transaction sent after \texttt{maxTime} will close the contract and leave the accounts empty.
-
-Because of this property and \emph{Money preservation}, we can conclude that money will not be locked in the contract forever.
+We proved that this conservative upper bound is general enough for every contract, by showing that, if the contract is not closed and empty, then an empty transaction sent after \texttt{maxTime} will close the contract and empty the accounts.
 
 \subsection{Bound on the maximum number of transactions\label{subsubsec:bound_max_transaction_number}}
 
@@ -553,8 +547,7 @@ lemma playTrace_only_accepts_maxTransactionsInitialState :
 where \texttt{maxTransactionsInitialState} is essentially the maximum number of nested \texttt{When} constructs in the contract plus one.
 
 This property implies that any trace that is longer than this is guaranteed to produce at least one error. Because transactions that produce an error do not alter the state of the contract, such a list of transactions (a trace) will be equivalent to a list of transactions that does not have the erroneous transaction.
-
-Thus, we do not lose generality by only exploring traces with length of at most \texttt{maxTransactionsInitialState}, because any longer traces produce the same effect.
+Thus, we do not lose generality by only exploring shorter traces.
 
 \section{The Marlowe Playground}
 \label{sec:playground}
@@ -567,22 +560,21 @@ At the top level, the playground offers three panes: the main \emph{Simulation} 
 
 \paragraph{Development}
 
-On the simulation pane, ``pure'' Marlowe contacts can be developed: that is, contracts not embedded in a host language. The reason for doing this is two-fold:
+On the simulation pane, ``pure'' Marlowe contacts can be developed: that is, contracts not embedded. Two reasons for doing this are:
 \begin{itemize}
     \item There is a shallower learning curve for users who are new to Haskell or programming languages in general. The Marlowe constructs are quite simple, and there is no need, at least initially, to learn about Haskell syntax or even variables, functions etc.
     \item As we step through the execution of a contract in a simulation, the contract is reduced; it is very useful to be able to view, or even edit, the reduced contract during this execution.
 \end{itemize}
 As contracts become larger it makes sense to use another editor in the \emph{Haskell} pane. Here contracts can be written using facilities from \emph{Haskell} to abbreviate and make more readable the description of the contracts. These contracts can then be transferred as a pure Marlowe data structure into the simulation pane.
 
-Contracts can also be written using Google's \emph{Blockly} visual programming language, as was earlier described in Meadow~\cite{isola-marlowe}. Blockly gives an easy way to introduce the concepts of Marlowe to users who have no programming knowledge, and in particular the editor gives users a set of options for each construct as the contract is built. Once a contract has been constructed in Blockly it is possible to transfer that contract to the simulation pane.%SJT Changed from "Marlowe editor".
-It is also possible to transfer a Marlowe contract to Blockly for further editing.
+Contracts can also be written using Google's \emph{Blockly} visual programming language, as was earlier described in Meadow~\cite{isola-marlowe}. Blockly gives an easy way to introduce the concepts of Marlowe to users who have no programming knowledge, and in particular the editor gives users a set of options for each construct as the contract is built. Once a contract has been constructed in Blockly it is possible to transfer that contract to the simulation pane. It is also possible to transfer a Marlowe contract to Blockly for further editing.
 
 \begin{wrapfigure}[9]{l}{0.25\textwidth}
-    \vspace*{-0.3in}
+    \vspace*{-0.28in}
     \includegraphics[width=0.25\textwidth]{hole_options.png}
 \end{wrapfigure}
 
-The Marlowe editor in the unstable version of the playground has an additional feature to aid writing contracts called holes. If we enter the contract \lstinline{?mycontract}
+The Marlowe editor in the unstable version of the playground has a feature called \emph{holes} to aid writing contracts. If we enter the contract \lstinline{?mycontract}
 %SJT: enter it where?
 we will be presented with a dropdown list of values that could be used.
 
@@ -593,7 +585,7 @@ In our case \lstinline{?mycontract} must be a \lstinline{Contract} of some sort,
 New options will be presented, one for each hole, and each will have a dropdown list of all the possible values.
 
 \begin{wrapfigure}[6]{l}{0.25\textwidth}
-    \vspace*{-0in}
+    \vspace*{-0.00in}
     \includegraphics[scale=0.2]{hole_options_2.png}
 \end{wrapfigure}
 A complete contract can be written in this guided way with the user needing only to fill in strings and numbers by hand. This approach to writing holes in your code and ``asking'' the compiler what you could put in there is easy to implement in a DSL because there are very limited options, however is is also becoming popular with more complex languages such as Haskell and Idris.
@@ -610,8 +602,8 @@ Contracts written in the Marlowe editor are parsed in real-time and if there are
 In this case, the only action a user can take to progress the contract is to accept a deposit of 1000 ADA
 from the guarantor to the investor's account. Because of this, the playground can display this action in the input composer.
 
-\begin{wrapfigure}[6]{l}{0.5\textwidth}
-    \vspace*{-0.1in}
+\begin{wrapfigure}[5]{l}{0.5\textwidth}
+    \vspace*{-0.2in}
     \includegraphics[scale=0.15]{input_composer.png}
 \end{wrapfigure}
 
@@ -626,7 +618,7 @@ The user can then choose to add this action to a transaction being prepared. Onc
 \noindent
 A user can then apply this transaction and in the example above this would result in the state pane showing a single payment and in addition the contract in the Marlowe editor will have been reduced to \lstinline{Close}.
 
-At any point in the simulation the user can undo any steps made: in this particular case, they can undo the application of the transaction, and iteratively undo more steps. At any point they can also reset the contract to its initial state. This enables a user to apply transactions, see what the effect is, step back and apply a transaction with different actions and see how these differences affect the end result. They can also change the reduced contract to investigate variants of the original.
+At any point in the simulation, the user can undo any steps made: in this particular case, they can undo the application of the transaction, and iteratively undo more steps. At any point, they can also reset the contract to its initial state. This enables users to apply transactions, see their effects, step back, and try different transactions to see the effects of the changes on the result. They can also change the reduced contract to investigate variants of the original.
 
 The final feature that we would like to present is the static analysis of contracts. As described in the previous section, it is possible to carry out a symbolic execution of a contract and then use a SMT solver to look for cases that could cause unwanted situations. The playground uses this to search for situations where contract execution would cause warnings. For example, suppose you write a contract that causes a payment of 450 Lovelace from Alice to Bob but the contract allows a situation where Alice has only deposited 350 Lovelace. The the static analysis will find this partial payment case and report it to the playground user with an example of how it could occur.
 
@@ -649,7 +641,7 @@ BitML~\cite{BitML} is a DSL for specifying Marlowe-like contracts that regulate 
 
 Rather than aiming to be general-purpose, Marlowe is a DSL designed to support financial contracts on blockchain. We leverage its specificity in our work on static analysis and verification, where we are able to deliver much greater impact and focus than we could for a general-purpose language. We are able to shape the development and simulation environment to give stronger user support too. Moreover, Marlowe  presents a model for how other DSLs can be built in this space, supporting different domains such as provenance in the supply chain. 
 
-Defining the language by means of an executable reference semantics means that we can, as well as directly executing this semantics, generate an on-chain interpreter for it and simulate it in browser using the Haskell-like languages Plutus and PureScript. This is made particularly straightforward by working in the subset of Haskell that directly corresponds to what translates directly into these languages.
+Defining the language by means of an executable reference semantics means that we can, as well as directly executing this semantics, generate an on-chain interpreter for it and simulate it in browser using the Haskell-like languages Plutus and PureScript. This is particularly straightforward when working with a subset of Haskell that is represented in the same way on these languages.
 
 Our medium term aim is launching on Cardano blockchain itself, by which time we expect to have added multiple currencies to Marlowe, as well as making (roles in) Marlowe contracts tradeable, through tokenising contract roles.
 

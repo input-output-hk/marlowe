@@ -389,7 +389,7 @@ The SBV library translates these properties to SMTLib queries, passes them to on
 
 \subsubsection{\texttt{SBV} monad}
 
-SBV provides a monad called \texttt{SBV}, a function can use parameters wrapped in this monad to represent symbolic values. Functions that take symbolic values can be used as properties and passed to the solver; which will replace the symbolic values with concrete values that satisfy or falsify the property.
+SBV provides a monad called \texttt{SBV}, a function can use parameters wrapped in this monad to represent symbolic values. Functions that take symbolic values can be used as properties and passed to the solver, which will replace the symbolic values with concrete values that satisfy or falsify the property.
 
 \subsection{Using SBV to analyse Marlowe Contracts}
 
@@ -499,7 +499,7 @@ There are some values for \texttt{State} that are allowed by its type but make n
 \begin{enumerate}
     \item The lists represent maps, so they should have no repeated keys.
     \item We want two maps that are equal to be represented the same, so we force keys to be in ascending order.
-    \item We only want to record those accounts that have positive amount.
+    \item We only want to record those accounts that contain a positive amount.
 \end{enumerate}
 \noindent
 We call a value for \texttt{State} \emph{valid} if the first two properties are true. And we say it has \emph{positive accounts} if the third property is true.
@@ -560,7 +560,7 @@ At the top level, the playground offers three panes: the main \emph{Simulation} 
 
 \paragraph{Development}
 
-On the simulation pane, ``pure'' Marlowe contacts can be developed: that is, contracts not embedded. Two reasons for doing this are:
+On the simulation pane, ``pure'' Marlowe contacts can be developed directly, not embedded in another language. Two reasons for doing this are:
 \begin{itemize}
     \item There is a shallower learning curve for users who are new to Haskell or programming languages in general. The Marlowe constructs are quite simple, and there is no need, at least initially, to learn about Haskell syntax or even variables, functions etc.
     \item As we step through the execution of a contract in a simulation, the contract is reduced; it is very useful to be able to view, or even edit, the reduced contract during this execution.

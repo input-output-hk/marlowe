@@ -170,7 +170,7 @@ In a nutshell, the EUTxO model looks like this:
 
 \begin{figure}[!h]
     \centering
-    \includegraphics[width=4in]{figures/Marlowe3-Figures-003.jpeg}
+    \includegraphics[width=4in]{figures/Marlowe3-Figure-1-crop.pdf}
     \caption{Cardano EUTx0 Model}
     \label{fig:eutxo}
 \end{figure}
@@ -251,7 +251,7 @@ data State = State { accounts    :: Map AccountId Ada
                    , minSlot     :: Slot }
 \end{verbatim}
 
-\noindent%SJT: **general question** using \emph for inline code: why not \texttt ?
+\noindent
 where \texttt{accounts} maps account ids to their balances, \texttt{choices} stores user made choice values,
 \texttt{boundValues} stores evalutated \texttt{Value}'s introduced by \texttt{Let} expressions,
 and \texttt{minSlot} holds a minimal slot number that a contract has seen, to avoid `time travel to the past'.
@@ -343,7 +343,7 @@ to their respective owners. In our case, 1000 Ada must be paid to Alice.
 
 \begin{figure}[!h]
     \centering
-    \includegraphics[width=0.7\textwidth]{figures/Marlowe3-Figures-004.jpeg}
+    \includegraphics[width=4in]{figures/Marlowe3-Figure-2-crop.pdf}
     \caption{Zero Coupon Bond Contract}
     \label{fig:zero-coupon-bond}
 \end{figure}

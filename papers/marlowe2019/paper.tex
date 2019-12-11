@@ -184,8 +184,7 @@ or by a \emph{Validator}.
 In order to spend an existing transaction output protected by a \emph{Validator},
 one must create a transaction (a \emph{PendingTx}) that has an \emph{input} that references the transaction output,
 and contains a \emph{Redeemer}, such that \texttt{Validator(Data Script, Redeemer, PendingTx)} evaluates to $True$.
-In order to spend a transaction output protected by a \emph{public key}, one must provide a valid signature
-made with the private key corresponding to the transaction public key.
+A valid signature is required to spend a \emph{public key} transaction output.
 
 
 \subsection{Design space}
@@ -253,7 +252,7 @@ data State = State { accounts    :: Map AccountId Ada
 
 \noindent
 where \texttt{accounts} maps account ids to their balances, \texttt{choices} stores user made choice values,
-\texttt{boundValues} stores evalutated \texttt{Value}'s introduced by \texttt{Let} expressions,
+\texttt{boundValues} stores evaluated \texttt{Value}'s introduced by \texttt{Let} expressions,
 and \texttt{minSlot} holds a minimal slot number that a contract has seen, to avoid `time travel to the past'.
 
 \paragraph{Execution}
@@ -286,6 +285,8 @@ expectedTxOutputs = computeTransaction txInput marloweState marloweContract
 where
 
 \begin{verbatim}
+computeTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
+
 data TransactionInput = TransactionInput
     { txInterval :: SlotInterval
     , txInputs   :: [Input] }
@@ -297,12 +298,10 @@ data TransactionOutput =
         , txOutState    :: State
         , txOutContract :: Contract }
     | Error TransactionError
-
-computeTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
 \end{verbatim}
 
 \noindent
-The interpreter reduces a contract until it becomes quiescent: either it evaluates to \texttt{Close},
+Given a list of \texttt{Input}'s from \emph{Redeemer}, the interpreter reduces a contract until it becomes quiescent: either it evaluates to \texttt{Close},
 or it expects a user input in a \texttt{When} construct.
 All \texttt{Pay, If, Let, Close} constructs are evaluated immediately.
 
@@ -351,24 +350,6 @@ to their respective owners. In our case, 1000 Ada must be paid to Alice.
 Note, that it is possible to provide multiple inputs at a time,
 allowing as many steps of a contract execution as necessary to be merged.
 This gives atomicity to some operations, and saves on transaction fees.
-
-Sometimes it is necessary to just evaluate a contract in a given moment in time,
-without providing any inputs. Consider the following example:
-
-\begin{verbatim}
-If (SlotIntervalStart `ValueGT' 100)
-    When [] (Slot 200)
-        (Pay aliceAccount (Party bobPubKey) (Constant 1000))
-    Close
-\end{verbatim}
-
-Let us say that Alice has 1000 Lovelace on her account, and Bob wants to receive the payment.
-The payment could be obtained only after \texttt{When} has timed out after slot 200.
-But if we evaluate the contract after slot 200, \texttt{If} reduces to \texttt{Close}, and
-Bob will not receive the payment. So he must evaluate the contract before slot 100 to
-reduce \texttt{If} to \texttt{When}.
-To achieve that, Bob must spend the contract transaction output with an empty list of inputs in the \emph{Redeemer}.
-He can then do the same after slot 200 to receive the payment.
 
 \paragraph{Ensuring execution validity}
 

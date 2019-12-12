@@ -70,7 +70,7 @@ Contracts in Marlowe can be exhaustively analysed prior to running them, thus pr
 
 \section{Introduction}
 
-Marlowe\footnote{The complete Marlowe project, including semantics and implementation, is available at \url{https://github.com/input-output-hk/marlowe}.} is a domain-specific language (DSL) for implementing financial contracts on blockchain: our initial target is Cardano, but it could be implemented on many distributed ledgers (DLT platforms), including Ethereum. Marlowe is embedded in Haskell, allowing users selectively to use aspects of Haskell -- typically definitions of constants and simple functions -- to express contracts more readably and succinctly. Section \ref{sec:overview} gives an overview of the language, and the changes made to it since it was originally introduced in ~\cite{isola-marlowe}.
+Marlowe\footnote{see \url{https://github.com/input-output-hk/marlowe} for complete project} is a domain-specific language (DSL) for implementing financial contracts on blockchain: our initial target is Cardano, but it could be implemented on many distributed ledgers (DLT platforms), including Ethereum. Marlowe is embedded in Haskell, allowing users selectively to use aspects of Haskell -- typically definitions of constants and simple functions -- to express contracts more readably and succinctly. Section \ref{sec:overview} gives an overview of the language, and the changes made to it since it was originally introduced in ~\cite{isola-marlowe}.
 
 Marlowe is specified by a reference semantics for the language written in Haskell, and we can use that in a number of ways. We can interpret Marlowe contracts in Haskell itself, but we can also use that implementation, compiled into Plutus~\cite{PlutusPlatform}, to interpret Marlowe directly on the Cardano blockchain, see Section \ref{sec:implementation}. We can also execute the semantics -- translated into PureScript -- directly in a browser, to give an interactive simulation environment, see Section~\ref{sec:playground}.
 
@@ -84,9 +84,10 @@ Since the first publication, we have revised the language design: this section g
 
 \subsubsection*{The Marlowe model}
 
-Contracts are built by putting together a small number of constructs that in combination can be used to describe many different kinds of financial contract.
+Contracts are built by putting together a small number of constructs that in combination can  describe many different financial contracts.
 
-Contracts in Marlowe run on a blockchain, but need to interact with the off-chain world. The parties to the contract, also called the participants, can engage in various actions: they can be asked to deposit money, or to make a choice between various alternatives. In some cases, any party will be able to trigger the contract just to notify it that some condition has become true (for example, a timeout has occurred).
+%Contracts in Marlowe run on a blockchain, but need to interact with the off-chain world. 
+The parties to the contract, also called the participants, can engage in various actions: they can be asked to deposit money, or to make a choice between various alternatives. In some cases, any party will be able to trigger the contract just to notify it that some condition has become true (e.g., a timeout has occurred).
 
 The Marlowe model allows for a contract to control money in a number of disjoint accounts: this allows for more explicit control of how the money flows in the contract. Each account is owned by a particular party to the contract, and that party receives a refund of any remaining funds in the account when the contract is closed. %These accounts are local, in that they only exist as during the execution of the contract, and during that time they are only accessible by parties to the contract.
 
@@ -148,7 +149,7 @@ Marlowe is specified by an executable semantics written in Haskell, but to make 
 Cardano is a third-generation blockchain that solves the energy usage
 issue by moving to an energy efficient \emph{Proof of Stake} protocol~\cite{Ouroboros-Genesis}.
 
-Cardano aims to support smart contracs during its Shelley release in 2020.
+Cardano aims to support smart contracts during its Shelley release in 2020.
 Cardano smart contract platform is called \emph{Plutus}, and
 it uses Haskell programming language to generate a form of $System F_{\omega}$,
 called \emph{Plutus Core}, by extending GHC using its plugin
@@ -171,8 +172,8 @@ In a nutshell, the EUTxO model looks like this:
 \begin{figure}[!h]
     \centering
     \includegraphics[width=4in]{figures/Marlowe3-Figure-1-crop.pdf}
-    \caption{Cardano EUTx0 Model}
-    \label{fig:eutxo}
+    %\caption{Cardano EUTx0 Model}
+    %\label{fig:eutxo}
 \end{figure}
 
 \noindent
@@ -240,8 +241,7 @@ outputs, including other scripts. This gives this model optimal flexibility and 
 \begin{verbatim}
 data MarloweData = MarloweData {
     marloweState    :: State,
-    marloweContract :: Contract
-}
+    marloweContract :: Contract }
 \end{verbatim}
 \noindent
 The contract has a state
@@ -277,33 +277,36 @@ Using the Isabelle proof assistant, we have formally verified that given a state
 it is impossible for any possible contract and inputs to result in non-positive balances.
 This is described in more detail in Section \ref{subsec:valid_state}.}
 
-We then compute expected transaction outcomes for given inputs, such as:
-contract continuation, new state, and payments.
-
+We then apply  \texttt{computeTransaction}  to the contract inputs, the contract continuation, and new state to compute the expected transaction outcomes:
 \begin{verbatim}
-expectedTxOutputs = computeTransaction txInput marloweState marloweContract
+computeTransaction :: 
+  TransactionInput -> State -> Contract -> TransactionOutput
 \end{verbatim}
-
+%\begin{verbatim}
+%expectedTxOutputs = computeTransaction txInput marloweState marloweContract
+%\end{verbatim}
+%
+%\noindent
+%where
+%
+%\begin{verbatim}
+%computeTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
+%
+%data TransactionInput = TransactionInput
+%    { txInterval :: SlotInterval
+%    , txInputs   :: [Input] }
+%
+%data TransactionOutput =
+%    TransactionOutput
+%        { txOutWarnings :: [TransactionWarning]
+%        , txOutPayments :: [Payment]
+%        , txOutState    :: State
+%        , txOutContract :: Contract }
+%    | Error TransactionError
+%\end{verbatim}
 \noindent
-where
+where a \texttt{TransactionInput} consists of the current slot interval, together with other ontract inputs, and the outputs combine any payments and warnings with the resulting output state and contract.
 
-\begin{verbatim}
-computeTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
-
-data TransactionInput = TransactionInput
-    { txInterval :: SlotInterval
-    , txInputs   :: [Input] }
-
-data TransactionOutput =
-    TransactionOutput
-        { txOutWarnings :: [TransactionWarning]
-        , txOutPayments :: [Payment]
-        , txOutState    :: State
-        , txOutContract :: Contract }
-    | Error TransactionError
-\end{verbatim}
-
-\noindent
 Given a list of \texttt{Input}'s from \emph{Redeemer}, the interpreter reduces a contract until it becomes quiescent: either it evaluates to \texttt{Close},
 or it expects a user input in a \texttt{When} construct.
 All \texttt{Pay, If, Let, Close} constructs are evaluated immediately.
@@ -346,8 +349,8 @@ to their respective owners. In our case, 1000 Ada must be paid to Alice.
 \begin{figure}[!h]
     \centering
     \includegraphics[width=4in]{figures/Marlowe3-Figure-2-crop.pdf}
-    \caption{Zero Coupon Bond Contract}
-    \label{fig:zero-coupon-bond}
+    %\caption{Zero Coupon Bond Contract}
+    %\label{fig:zero-coupon-bond}
 \end{figure}
 
 Note, that it is possible to provide multiple inputs at a time,
@@ -364,14 +367,12 @@ output, i.e: the hash of the output validator is the same (same hash), and the n
 When a contract evaluates to \texttt{Close}, all remaining balances the accounts of the contract are payed out
 to the respective owners of each account, and the contract is removed from the set of unspent transaction outputs.
 
-\subsection{Further Work}
+\paragraph{Future Work}
 
-Cardano extends its ledger rules to support \emph{forging} of custom currencies and tokens,
-effectively embedding support of Ethereum ERC-20 and ERC-721 contracts. 
+Cardano extends its ledger rules to support \emph{forging} of custom currencies and tokens.%effectively embedding support of Ethereum ERC-20 and ERC-721 contracts. 
 Simple token creation gives interesting possibilities of representing Marlowe contract parties by tokens.
 This tokenization of contract participants abstracts away concrete public keys into contract \emph{roles}.
-In turn, those roles could be traded independently of a contract.
-
+In turn, those roles could be traded independently of a contract. 
 We are working on adding \emph{multicurrency} or \emph{roles} support to Marlowe.
 
 \section{Static analysis of contracts\label{sec:static}}
@@ -528,13 +529,10 @@ We proved that this conservative upper bound is general enough for every contrac
 
 \subsection{Bound on the maximum number of transactions\label{subsubsec:bound_max_transaction_number}}
 
-Another property of Marlowe is that any given finite \texttt{Contract} has an implicit finite bound on the maximum number of \texttt{Transaction}s that it accepts. This is a convenient property because:
+Another property of Marlowe is that any given \texttt{Contract} has an implicit finite bound on the maximum number of \texttt{Transaction}s that it accepts. 
+This is a convenient property for two reasons. 
 
-\begin{itemize}
-    \item It reduces the danger of Denial of Service (DoS) attacks: because the number of valid inputs is limited, an attacker participant cannot arbitrarily block the contract by issuing an unbounded amount of useless \texttt{Transaction}s.
-    \item The number of transactions bounds the length of traces that symbolic execution (see Section~\ref{sec:static}) needs to explore (more on this below).%SJT: is this really below? Or above?
-\end{itemize}
-
+First, it reduces the danger of Denial of Service (DoS) attacks, because the number of valid inputs is limited, an attacker participant cannot arbitrarily block the contract by issuing an unbounded amount of useless \texttt{Transaction}s. Secondly, the number of transactions bounds the length of traces that symbolic execution (see Section~\ref{sec:static}) needs to explore.% (more on this below).%SJT: is this really below? Or above?
 We state the property as follows:
 
 \begin{verbatim}
@@ -570,7 +568,7 @@ As contracts become larger it makes sense to use another editor in the \emph{Has
 Contracts can also be written using Google's \emph{Blockly} visual programming language, as was earlier described in Meadow~\cite{isola-marlowe}. Blockly gives an easy way to introduce the concepts of Marlowe to users who have no programming knowledge, and in particular the editor gives users a set of options for each construct as the contract is built. Once a contract has been constructed in Blockly it is possible to transfer that contract to the simulation pane. It is also possible to transfer a Marlowe contract to Blockly for further editing.
 
 \begin{wrapfigure}[9]{l}{0.25\textwidth}
-    \vspace*{-0.28in}
+    %\vspace*{-0.28in}
     \includegraphics[width=0.25\textwidth]{hole_options.png}
 \end{wrapfigure}
 
@@ -585,7 +583,7 @@ In our case \lstinline{?mycontract} must be a \lstinline{Contract} of some sort,
 New options will be presented, one for each hole, and each will have a dropdown list of all the possible values.
 
 \begin{wrapfigure}[6]{l}{0.25\textwidth}
-    \vspace*{-0.00in}
+    \vspace*{-0.25in}
     \includegraphics[scale=0.2]{hole_options_2.png}
 \end{wrapfigure}
 A complete contract can be written in this guided way with the user needing only to fill in strings and numbers by hand. This approach to writing holes in your code and ``asking'' the compiler what you could put in there is easy to implement in a DSL because there are very limited options, however is is also becoming popular with more complex languages such as Haskell and Idris.
@@ -608,14 +606,15 @@ from the guarantor to the investor's account. Because of this, the playground ca
 \end{wrapfigure}
 
 \noindent
-The user can then choose to add this action to a transaction being prepared. Once the action is added other inputs become possible; these are displayed in the input composer, and again they can be added to the transaction being composed. In this way, multiple actions can be added to a transaction before it is applied.
+The user can then choose to add this action to a transaction being prepared. Once the action is added other inputs become possible; these are displayed in the input composer, and again they can be added to the transaction being composed. In this way, multiple %actions can be added to a transaction before it is applied.
 
-\begin{wrapfigure}[6]{l}{0.5\textwidth}
+\begin{wrapfigure}[5]{l}{0.5\textwidth}
     \vspace*{-0.2in}
     \includegraphics[scale=0.15]{tx_composer.png}
 \end{wrapfigure}
 
 \noindent
+actions can be added to a transaction before it is applied.
 A user can then apply this transaction and in the example above this would result in the state pane showing a single payment and in addition the contract in the Marlowe editor will have been reduced to \lstinline{Close}.
 
 At any point in the simulation, the user can undo any steps made: in this particular case, they can undo the application of the transaction, and iteratively undo more steps. At any point, they can also reset the contract to its initial state. This enables users to apply transactions, see their effects, step back, and try different transactions to see the effects of the changes on the result. They can also change the reduced contract to investigate variants of the original.
@@ -625,17 +624,14 @@ The final feature that we would like to present is the static analysis of contra
 \section{Related work}
 \label{sec:related}
 
-An earlier paper~\cite{cryptoeprint:2016:1156} reviews smart contracts on blockchain. Here we look at a number of recent systems that bear direct comparison with Marlowe.
-
-The Ethereum system~\cite{wood2014ethereum} provides an exemplar Turing-complete language for  the EVM virtual machine, and a higher-level programming language, Solidity, that compiles into EVM code. Both these languages are general-purpose, and so have more akin with Plutus~\cite{PlutusPlatform} rather than Marlowe.
-
-On the other hand,  Nxt~\cite{Nxt}, is special-purpose in providing a ``fat'' high-level
+An earlier paper~\cite{cryptoeprint:2016:1156} reviews smart contracts on blockchain. Here we look at a number of recent systems that bear direct comparison with Marlowe, rather than general purpose languages.
+Nxt~\cite{Nxt}, is special-purpose in providing a ``fat'' high-level
 API, containing built-in transaction types and transactions that support some 250 primitive operations; these can be ``scripted'' in a client (only) using a binding to the API, which is available, for instance, in JavaScript. In providing such specificity this bears comparison with our implementation of contracts from the ACTUS standard~\cite{actus}.
 
 Our work is inspired by the original work of Peyton Jones and others~\cite{PeytonJones:2000} to describe financial contracts using a DSL embedded in Haskell. The Findel project~\cite{findel} examines financial contracts on the Ethereum platform, and is also based on~\cite{PeytonJones:2000}. The authors note that payments need to be bounded; this is made concrete in our
-account by our notion of commitments. They take no account of commitments or timeouts as our approach does, and so are unable to guarantee some of the properties -- such as a finite lifetime -- built into Marlowe by design.
+account by our notion of commitments. They take no account of commitments or timeouts as our approach does, and so are unable to guarantee some properties -- such as a finite lifetime -- built into Marlowe by design.
 
-BitML~\cite{BitML} is a DSL for specifying Marlowe-like contracts that regulate transfers on the Bitcoin blockchain. BitML is implemented via a compiler that translates contracts into standard Bitcoin transactions. Participants execute a contract by appending these transactions on the Bitcoin blockchain, according to their strategies, which also involve the exchange of bitstrings that guarantee to a very high probability the correctness of contract execution. Marlowe is directly implemented by an interpreter which could also be implemented on a covenant-based~\cite{covenants} extension of the Bitcoin blockchain.
+BitML~\cite{BitML} is a DSL for specifying Marlowe-like contracts that regulate transfers on the Bitcoin blockchain, and is implemented via a compiler that translates contracts into  Bitcoin transactions plus strategies. Participants execute a contract by appending these transactions on the Bitcoin blockchain, according to their strategies, which involve the exchange of bitstrings that guarantee to a very high probability the correctness of contract execution. Marlowe is directly implemented by an interpreter which could also be implemented on a covenant-based~\cite{covenants} extension of the Bitcoin blockchain.
 
 \section{Conclusions and future work}
 

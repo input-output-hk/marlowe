@@ -475,7 +475,173 @@ lemma computeTransactionIterative :
     by simp_all
   by simp
 
+lemma expandSingleton : "[a] = Cons a Nil"
+  by simp
+
+lemma playTraceAuxIterative_base_case :
+  "playTraceAux \<lparr> txOutWarnings = iwa
+                , txOutPayments = ipa
+                , txOutState = ista
+                , txOutContract = icont\<rparr> (Cons \<lparr> interval = inte
+                                               , inputs = [h] \<rparr> (Cons \<lparr> interval = inte
+                                                                      , inputs = t \<rparr> Nil))
+          = TransactionOutput \<lparr> txOutWarnings = wa
+                              , txOutPayments = pa
+                              , txOutState = nsta
+                              , txOutContract = ncont \<rparr> \<Longrightarrow>
+   playTraceAux \<lparr> txOutWarnings = iwa
+                , txOutPayments = ipa
+                , txOutState = ista
+                , txOutContract = icont\<rparr> (Cons \<lparr> interval = inte
+                                               , inputs = h#t \<rparr> Nil)
+          = TransactionOutput \<lparr> txOutWarnings = wa
+                              , txOutPayments = pa
+                              , txOutState = nsta
+                              , txOutContract = ncont \<rparr>"
+  apply (cases "computeTransaction \<lparr>interval = inte, inputs = [h]\<rparr> ista icont")
+  subgoal for to1
+    apply (cases "computeTransaction \<lparr>interval = inte, inputs = h # t\<rparr> ista icont")
+    subgoal for to2
+      apply (simp del:computeTransaction.simps add:Let_def)
+      apply (cases to1)
+      subgoal for txOutWarningsa txOutPaymentsa txOutState txOutContract
+        apply (cases "computeTransaction \<lparr>interval = inte, inputs = t\<rparr> txOutState txOutContract")
+        apply (simp del:computeTransaction.simps add:Let_def)
+        subgoal for x1
+          by (smt TransactionOutput.inject(1) TransactionOutputRecord.ext_inject TransactionOutputRecord.surjective TransactionOutputRecord.update_convs(1) TransactionOutputRecord.update_convs(2) TransactionOutputRecord_ext_def append.assoc append.right_neutral append_Nil2 append_assoc computeTransactionIterative)
+        by simp
+      done
+    subgoal for to2
+      apply (simp del:computeTransaction.simps add:Let_def)
+      apply (cases to1)
+      subgoal for txOutWarningsa txOutPaymentsa txOutState txOutContract
+        apply (cases "computeTransaction \<lparr>interval = inte, inputs = t\<rparr> txOutState txOutContract")
+        apply (simp del:computeTransaction.simps add:Let_def)
+        subgoal for x1
+          by (metis TransactionOutput.simps(4) TransactionOutputRecord.ext_inject TransactionOutputRecord.surjective TransactionOutputRecord.update_convs(1) TransactionOutputRecord.update_convs(2) computeTransactionIterative)
+        by simp
+      done
+    done
+  by simp
+
+lemma playTraceAuxIterative :
+  "playTraceAux \<lparr> txOutWarnings = iwa
+                , txOutPayments = ipa
+                , txOutState = ista
+                , txOutContract = icont\<rparr> (Cons \<lparr> interval = inte
+                                               , inputs = [h] \<rparr> (Cons \<lparr> interval = inte
+                                                                      , inputs = t \<rparr> rest))
+          = TransactionOutput \<lparr> txOutWarnings = wa
+                              , txOutPayments = pa
+                              , txOutState = nsta
+                              , txOutContract = ncont \<rparr> \<Longrightarrow>
+   playTraceAux \<lparr> txOutWarnings = iwa
+                , txOutPayments = ipa
+                , txOutState = ista
+                , txOutContract = icont\<rparr> (Cons \<lparr> interval = inte
+                                               , inputs = h#t \<rparr> rest)
+          = TransactionOutput \<lparr> txOutWarnings = wa
+                              , txOutPayments = pa
+                              , txOutState = nsta
+                              , txOutContract = ncont \<rparr>"
+  apply (induction rest arbitrary: iwa ipa ista icont inte h t wa pa nsta ncont)
+  using playTraceAuxIterative_base_case apply blast
+  subgoal for restHead restTail iwa ipa ista icont inte h t wa pa nsta ncont
+    sorry
+  done
+
+lemma playTraceEquivalentWhenError :
+  "playTraceAux acc (\<lparr>interval = inte, inputs = h # t\<rparr>#rest) = TransactionError traOut \<Longrightarrow>
+   playTraceAux acc (\<lparr>interval = inte, inputs = [h]\<rparr>#\<lparr>interval = inte, inputs = t\<rparr>#rest) = TransactionError traOut"
+  sorry
+
+(*
+(* Counter example for empty list playTraceEquivalentWhenError_rev *)
+value "let acc =
+      \<lparr>txOutWarnings = [], txOutPayments = [],
+         txOutState = \<lparr>accounts = [], choices = [(ChoiceId 1 1, - 1)], boundValues = [(ValueId 1, 1)], minSlot = - 1\<rparr>,
+         txOutContract = When [Case (Choice (ChoiceId 1 1) [(- 1, 1)]) Close] 0 Close\<rparr>;
+    h = IChoice (ChoiceId 1 1) 1;
+    inte = (- 1, - 1);
+    t = [];
+    rest = [];
+    traOut = TEUselessTransaction in
+    (playTraceAux acc (\<lparr>interval = inte, inputs = [h]\<rparr>#\<lparr>interval = inte, inputs = t\<rparr>#rest) = TransactionError traOut \<longrightarrow>
+     playTraceAux acc (\<lparr>interval = inte, inputs = h # t\<rparr>#rest) = TransactionError traOut)
+  " *)
+
+
+lemma playTraceEquivalentWhenError_rev :
+  "t \<noteq> [] \<Longrightarrow>
+   playTraceAux acc (\<lparr>interval = inte, inputs = [h]\<rparr>#\<lparr>interval = inte, inputs = t\<rparr>#rest) = TransactionError traOut \<Longrightarrow>
+   playTraceAux acc (\<lparr>interval = inte, inputs = h # t\<rparr>#rest) = TransactionError traOut"
+  sorry
+
+lemma playTraceAuxSingleInputIsEquivalent_base_case :
+  "t \<noteq> [] \<Longrightarrow>
+   playTraceAux acc (Cons \<lparr> interval = inte
+                          , inputs = [h] \<rparr> (Cons \<lparr> interval = inte
+                                                 , inputs = t \<rparr> Nil))
+          =
+   playTraceAux acc (Cons \<lparr> interval = inte
+                          , inputs = h#t \<rparr> Nil)"
+  apply (cases "playTraceAux acc (Cons \<lparr> interval = inte
+                          , inputs = [h] \<rparr> (Cons \<lparr> interval = inte
+                                                 , inputs = t \<rparr> Nil))")
+  subgoal for traOut
+    apply (cases "playTraceAux acc (Cons \<lparr> interval = inte
+                                         , inputs = h#t \<rparr> Nil)")
+    subgoal for traOut2
+      apply (cases acc)
+      subgoal for accOutWarnings accOutPayments accOutState accOutContract
+        apply (cases traOut)
+        subgoal for traOutWarnings traOutPayments traOutState traOutContract
+          apply (cases traOut2)
+          subgoal for traOut2Warnings traOut2Payments traOut2State traOut2Contract
+            apply (simp del:playTraceAux.simps)
+            by (metis TransactionOutput.inject(1) TransactionOutputRecord.ext_inject playTraceAuxIterative)
+          done
+        done
+      done
+    subgoal for traOut2
+      by (simp add: playTraceEquivalentWhenError)
+    done
+  by (simp add: playTraceEquivalentWhenError_rev)
+
+
+lemma playTraceAuxToSingleInputIsEquivalent_induction_step :
+  "(\<And>acc. playTraceAux acc tral = playTraceAux acc (traceListToSingleInput tral)) \<Longrightarrow>
+    playTraceAux acc ( \<lparr>interval = interv, inputs = inps\<rparr> # tral)
+      = playTraceAux acc (traceListToSingleInput ( \<lparr>interval = interv, inputs = inps\<rparr> # tral))"
+  apply (induction inps arbitrary:acc tral)
+  apply simp
+  subgoal for acc tral
+    apply (cases acc)
+    subgoal for txOutWarnings txOutPayments txOutState txOutContract
+      apply (simp only:playTraceAux.simps)
+      done
+    done
+  subgoal for head tail acc tral
+    apply (cases acc)
+    subgoal for txOutWarnings txOutPayments txOutState txOutContract
+      apply (cases tail)
+      apply (simp only:traceListToSingleInput.simps inputsToTransactions.simps playTraceAux.simps)
+       apply simp
+      subgoal for tailHead tailTail
+        apply (simp only:traceListToSingleInput.simps inputsToTransactions.simps)
+        sledgehammer
+      sorry
+    done
+  done
+
+lemma playTraceAuxToSingleInputIsEquivalent :
+  "playTraceAux acc tral = playTraceAux acc (traceListToSingleInput tral)"
+  apply (induction tral arbitrary:acc)
+  apply simp
+  by (metis Transaction.cases playTraceAuxToSingleInputIsEquivalent_induction_step)
+
 theorem traceToSingleInputIsEquivalent : "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
-      oops
+  apply (simp only:playTrace.simps)
+  using playTraceAuxToSingleInputIsEquivalent by blast
 
 end

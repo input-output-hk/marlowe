@@ -777,10 +777,82 @@ lemma computeTransactionStepEquivalence :
        by simp
      by simp
 
+lemma applyAllInputs_prefix_error :
+  "a = ApplyAllAmbiguousSlotIntervalError \<or> a = ApplyAllNoMatchError \<Longrightarrow>
+   applyAllInputs env fixSta txOutCont [head] = a \<Longrightarrow>
+   applyAllInputs env fixSta txOutCont (head # tail) = a"
+  apply (simp only:applyAllInputs.simps applyAllLoop.simps[of env fixSta txOutCont])
+  apply (cases "reduceContractUntilQuiescent env fixSta txOutCont")
+  subgoal for reduceWarns pays curState cont
+    apply (simp only:ReduceResult.case list.case)
+    apply (cases "applyInput env curState head cont")
+    subgoal for applyWarn newState cont2
+      apply (simp only:ApplyResult.case)
+      apply (simp only:applyAllLoop.simps[of env newState cont2])
+      apply (cases "reduceContractUntilQuiescent env newState cont2")
+      subgoal for reduceWarns3 pays3 curState3 cont3
+        apply (simp only:ReduceResult.case list.case)
+        by blast
+      by simp
+    by simp
+  by simp
+
+lemma applyInput_success_changes_contract :
+  "applyInput env reduceState head txOutCont = Applied applyWarn applyState applyCont \<Longrightarrow> txOutCont \<noteq> applyCont"
+  apply (cases txOutCont)
+  apply simp_all
+  subgoal for caselist timeout contract
+    using applyCases_only_makes_smaller by fastforce
+  done
+
+lemma applyAllInputs_noEmpty_changes_contract :
+ "applyAllInputs env fixSta txOutCont (head # []) = ApplyAllSuccess warnings payments newState cont \<Longrightarrow>
+  txOutCont \<noteq> cont"
+  apply (simp del:reduceContractUntilQuiescent.simps)
+  apply (cases "reduceContractUntilQuiescent env fixSta txOutCont")
+  subgoal for reduceWarns reducePays reduceState reduceCont
+  apply (simp only:ReduceResult.case list.case)
+    apply (cases "reduceCont = txOutCont")
+    apply (cases "applyInput env reduceState head reduceCont")
+    subgoal for applyWarn applyState applyCont
+      apply (simp only:ApplyResult.case)
+      by (metis applyAllLoop_only_makes_smaller applyInput_only_makes_smaller applyInput_success_changes_contract not_less_iff_gr_or_eq)
+     apply simp
+    apply (cases "applyInput env reduceState head reduceCont")
+    subgoal for applyWarn applyState applyCont
+      apply (simp only:ApplyResult.case)
+      apply (drule reduceContractUntilQuiescent_only_makes_smaller[of reduceCont txOutCont env fixSta reduceWarns reducePays reduceState])
+       apply simp
+      apply (rule not_sym)
+      apply (rule smallerSize_implies_different)
+      by (metis applyAllLoop_only_makes_smaller applyInput_only_makes_smaller dual_order.strict_trans)
+    by simp
+  by simp
+
 lemma computeTransaction_prefix_error :
  "computeTransaction \<lparr>interval = interv, inputs = [head]\<rparr> txOutStat txOutCont = TransactionError x \<Longrightarrow>
   computeTransaction \<lparr>interval = interv, inputs = head # tail\<rparr> txOutStat txOutCont = TransactionError x"
-  sorry
+  apply (simp del:fixInterval.simps applyAllInputs.simps)
+  apply (cases "fixInterval interv txOutStat")
+  subgoal for env fixSta
+  apply (simp only:IntervalResult.case Let_def)
+    apply (cases "applyAllInputs env fixSta txOutCont [head]")
+    subgoal for warnings payments newState cont
+      apply (simp only:ApplyAllResult.case)
+    apply (cases "applyAllInputs env fixSta txOutCont (head # tail)")
+    subgoal for warnings2 payments2 newState2 cont2
+      apply (simp only:ApplyAllResult.case)
+      apply (cases "txOutCont = cont \<and> (txOutCont \<noteq> Close \<or> accounts txOutStat = [])")
+      apply (cases "txOutCont = cont2 \<and> (txOutCont \<noteq> Close \<or> accounts txOutStat = [])")
+      apply simp
+    apply (simp only:if_False)
+    using applyAllInputs_noEmpty_changes_contract apply blast
+    by auto
+   apply (simp add: applyAllInputs_noEmpty_changes_contract)
+  by (simp add: applyAllInputs_noEmpty_changes_contract)
+  apply (metis (no_types, lifting) applyAllInputs_prefix_error)
+  by (metis (no_types, lifting) applyAllInputs_prefix_error)
+  by simp
 
 lemma computeTransactionStepEquivalence_error :
   "rest \<noteq> [] \<Longrightarrow>

@@ -152,24 +152,146 @@ lemma applyAllIterative :
   apply (simp only:applyAllInputs.simps)
   using applyLoopIdempotent by blast
 
- lemma applyAllIterative2 :
-   "applyAllInputs env sta cont [h] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
-   applyAllInputs env nsta ncont t = ApplyAllSuccess nwa npa fsta fcont \<Longrightarrow>
-   applyAllInputs env sta cont (h#t) = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont"
-   apply (simp only:applyAllInputs.simps)
-   using applyLoopIdempotent2 by blast
+lemma applyAllIterative2 :
+  "applyAllInputs env sta cont [h] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
+  applyAllInputs env nsta ncont t = ApplyAllSuccess nwa npa fsta fcont \<Longrightarrow>
+  applyAllInputs env sta cont (h#t) = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont"
+  apply (simp only:applyAllInputs.simps)
+  using applyLoopIdempotent2 by blast
+
+lemma applyAllInputsPrefix1:
+  "applyAllLoop env sta cont l iwa ipa = ApplyAllSuccess fwa fpa nsta ncont \<Longrightarrow>
+   \<exists>nwa. fwa = iwa @ nwa"
+  apply (induction env sta cont l iwa ipa arbitrary:fwa fpa nsta ncont rule:applyAllLoop.induct)
+  subgoal for env state contract inputs warnings payments fwa fpa nsta ncont
+    apply (simp only:applyAllLoop.simps[of env state contract inputs warnings payments])
+    apply (cases "reduceContractUntilQuiescent env state contract")
+    subgoal for reduceWarns reducePays reduceState reduceCont
+      apply (simp only:ReduceResult.case)
+      apply (cases inputs)
+      apply (simp only:list.case)
+      apply blast
+      subgoal for h t
+        apply (simp only:list.case)
+        apply (cases "applyInput env reduceState h reduceCont")
+        subgoal for applyWarn applyState applyCont
+        apply (simp only:ApplyResult.case)
+          using append.assoc by blast
+        by simp
+      done
+    by simp
+  done
+
+lemma applyAllInputsPrefix2:
+  "applyAllLoop env sta cont l iwa ipa = ApplyAllSuccess fwa fpa nsta ncont \<Longrightarrow>
+   \<exists>npa. fpa = ipa @ npa"
+  apply (induction env sta cont l iwa ipa arbitrary:fwa fpa nsta ncont rule:applyAllLoop.induct)
+  subgoal for env state contract inputs warnings payments fwa fpa nsta ncont
+    apply (simp only:applyAllLoop.simps[of env state contract inputs warnings payments])
+    apply (cases "reduceContractUntilQuiescent env state contract")
+    subgoal for reduceWarns reducePays reduceState reduceCont
+      apply (simp only:ReduceResult.case)
+      apply (cases inputs)
+      apply (simp only:list.case)
+      apply blast
+      subgoal for h t
+        apply (simp only:list.case)
+        apply (cases "applyInput env reduceState h reduceCont")
+        subgoal for applyWarn applyState applyCont
+        apply (simp only:ApplyResult.case)
+          using append.assoc by blast
+        by simp
+      done
+    by simp
+  done
+
+lemma beforeApplyAllLoopIsUseless:
+  "iwa @ convertReduceWarnings x11 = wa \<Longrightarrow>
+   ipa @ x12 = pa \<Longrightarrow>
+   applyAllLoop env applyState applyCont t iwa ipa = ApplyAllSuccess fwa fpa fsta fcont \<Longrightarrow>
+   reduceContractUntilQuiescent env applyState applyCont = ContractQuiescent x11 x12 nsta ncont \<Longrightarrow>
+   ApplyAllSuccess fwa fpa fsta fcont = applyAllLoop env nsta ncont t wa pa"
+  apply (simp only:applyAllLoop.simps[of env applyState])
+  apply (simp only:applyAllLoop.simps[of env nsta])
+  apply (cases "reduceContractUntilQuiescent env nsta ncont")
+  subgoal for x11a x12a x13 x14
+  apply (simp only:ReduceResult.case)
+  apply (cases t)
+    apply (simp only:list.case)
+    using reduceContractUntilQuiescentIdempotent apply auto[1]
+    subgoal for h t
+      apply (simp only:list.case)
+      apply (simp only:reduceContractUntilQuiescentIdempotent)
+      apply (cases "applyInput env nsta h ncont")
+      apply force
+      by simp
+    done
+  using reduceContractUntilQuiescentIdempotent by auto
+
+lemma applyAllInputsPrefix_aux:
+  "applyAllLoop env sta cont [h] [] [] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
+   applyAllLoop env sta cont (h # t) [] [] = ApplyAllSuccess fwa fpa fsta fcont \<Longrightarrow>
+   (\<exists> twa x11 x12 applyState applyCont reducePays reduceState reduceCont.
+    twa @ convertReduceWarnings x11 = wa \<and>
+    reducePays @ x12 = pa \<and>
+    applyAllLoop env applyState applyCont t twa reducePays = ApplyAllSuccess fwa fpa fsta fcont \<and>
+    reduceContractUntilQuiescent env applyState applyCont = ContractQuiescent x11 x12 nsta ncont)"
+    apply (subst (asm) applyAllLoop.simps[of env sta cont "[h]"])
+    apply (cases "reduceContractUntilQuiescent env sta cont")
+    subgoal for reduceWarns reducePays reduceState reduceCont
+      apply (simp only:ReduceResult.case)
+      apply (simp only:list.case)
+      apply (cases "applyInput env reduceState h reduceCont")
+      subgoal for applyWarn applyState applyCont
+        apply (simp only:ApplyResult.case)
+    apply (subst (asm) applyAllLoop.simps[of env sta cont "(h # t)"])
+    apply (cases "reduceContractUntilQuiescent env sta cont")
+    subgoal for reduceWarns2 reducePays2 reduceState2 reduceCont2
+      apply (simp only:ReduceResult.case)
+      apply (simp only:list.case)
+      apply (cases "applyInput env reduceState h reduceCont")
+      subgoal for applyWarn2 applyState2 applyCont2
+        apply (simp only:ApplyResult.case)
+        apply (subst (asm) applyAllLoop.simps[of env applyState applyCont "[]"])
+        apply (cases "reduceContractUntilQuiescent env applyState applyCont")
+        subgoal for x11 x12 x13 x14
+          apply (simp only:ReduceResult.case list.case)
+          apply (simp del:applyAllLoop.simps reduceContractUntilQuiescent.simps applyInput.simps)
+          using append_assoc by blast
+        by simp
+      by simp
+    by simp
+  by simp
+  by simp
+
+lemma applyAllInputsPrefix1_aux2:
+  "applyAllLoop env sta cont [h] [] [] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
+   applyAllLoop env sta cont (h # t) [] [] = ApplyAllSuccess fwa fpa fsta fcont \<Longrightarrow>
+   \<exists>nwa. fwa = wa @ nwa"
+  apply (frule applyAllInputsPrefix_aux[of env sta cont h wa pa nsta ncont t fwa fpa fsta fcont])
+  apply simp
+  by (metis applyAllInputsPrefix1 beforeApplyAllLoopIsUseless)
 
 lemma applyAllPrefix1:
   "applyAllInputs env sta cont [h] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
    applyAllInputs env sta cont (h#t) = ApplyAllSuccess fwa fpa fsta fcont \<Longrightarrow>
    (\<exists> nwa. fwa = wa @ nwa)"
-  sorry
+  apply (simp only:applyAllInputs.simps)
+  by (simp add: applyAllInputsPrefix1_aux2)
+
+lemma applyAllInputsPrefix2_aux2:
+  "applyAllLoop env sta cont [h] [] [] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
+   applyAllLoop env sta cont (h # t) [] [] = ApplyAllSuccess fwa fpa fsta fcont \<Longrightarrow>
+   \<exists>npa. fpa = pa @ npa"
+  apply (frule applyAllInputsPrefix_aux[of env sta cont h wa pa nsta ncont t fwa fpa fsta fcont])
+  apply simp
+  by (metis applyAllInputsPrefix2 beforeApplyAllLoopIsUseless)
 
 lemma applyAllPrefix2:
   "applyAllInputs env sta cont [h] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
    applyAllInputs env sta cont (h#t) = ApplyAllSuccess fwa fpa fsta fcont \<Longrightarrow>
    (\<exists> npa. fpa = pa @ npa)"
-  sorry
+  by (simp add: applyAllInputsPrefix2_aux2)
 
 lemma computeAllPrefix1:
   "computeTransaction \<lparr>interval = interv, inputs = [head]\<rparr> sta cont =

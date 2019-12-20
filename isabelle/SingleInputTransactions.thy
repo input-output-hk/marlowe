@@ -70,8 +70,8 @@ lemma applyAllLoopJustAppendsWarningsAndEffects :
 
 lemma applyLoopIdempotent_base_case :
   "applyAllLoop env sta cont [] twa tef = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
-   applyAllLoop env nsta ncont t [] [] = ApplyAllSuccess nwa npa fsta fcont \<Longrightarrow>
-   applyAllLoop env sta cont t twa tef = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont"
+   applyAllLoop env sta cont t twa tef = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont \<Longrightarrow>
+   applyAllLoop env nsta ncont t [] [] = ApplyAllSuccess nwa npa fsta fcont"
   apply (simp only:applyAllLoop.simps[of env sta cont])
   apply (cases "reduceContractUntilQuiescent env sta cont")
   apply (simp only:ReduceResult.case list.case)
@@ -88,14 +88,14 @@ lemma applyLoopIdempotent_base_case :
     apply (simp only:ApplyResult.case)
     apply (smt ApplyAllResult.inject ApplyResult.inject ReduceResult.inject append.right_neutral append_assoc applyAllLoopJustAppendsWarningsAndEffects convertReduceWarnings.simps(1) reduceContractUntilQuiescentIdempotent self_append_conv2)
     using reduceContractUntilQuiescentIdempotent apply auto[1]
-    by simp
-   apply simp
-  by simp
+    using reduceContractUntilQuiescentIdempotent by auto
+  using reduceContractUntilQuiescentIdempotent apply auto[1]
+  by auto
 
 lemma applyLoopIdempotent :
   "applyAllLoop env sta cont [h] [] [] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
-   applyAllLoop env nsta ncont t [] [] = ApplyAllSuccess nwa npa fsta fcont \<Longrightarrow>
-   applyAllLoop env sta cont (h # t) [] [] = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont"
+   applyAllLoop env sta cont (h # t) [] [] = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont \<Longrightarrow>
+   applyAllLoop env nsta ncont t [] [] = ApplyAllSuccess nwa npa fsta fcont"
   apply (simp only:applyAllLoop.simps[of env sta cont])
   apply (cases "reduceContractUntilQuiescent env sta cont")
   apply (simp only:ReduceResult.case Let_def list.case)
@@ -105,13 +105,109 @@ lemma applyLoopIdempotent :
       using applyLoopIdempotent_base_case by auto
     by simp
   by simp
+ 
+ lemma applyLoopIdempotent_base_case2 :
+   "applyAllLoop env sta cont [] twa tef = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
+   applyAllLoop env nsta ncont t [] [] = ApplyAllSuccess nwa npa fsta fcont \<Longrightarrow>
+   applyAllLoop env sta cont t twa tef = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont"
+   apply (simp only:applyAllLoop.simps[of env sta cont])
+   apply (cases "reduceContractUntilQuiescent env sta cont")
+   apply (simp only:ReduceResult.case list.case)
+   apply (simp only:applyAllLoop.simps[of env nsta ncont])
+   apply (cases "reduceContractUntilQuiescent env nsta ncont")
+   apply (simp only:ReduceResult.case list.case)
+   apply (cases t)
+   apply (simp only:list.case)
+   using reduceContractUntilQuiescentIdempotent apply auto[1]
+   apply (simp only:list.case)
+   subgoal for x11 x12 x13 x14 x11a x12a x13a x14a a list
+     apply (cases "applyInput env x13a a x14a")
+     apply (cases "applyInput env x13 a x14")
+     apply (simp only:ApplyResult.case)
+     apply (smt ApplyAllResult.inject ApplyResult.inject ReduceResult.inject append.right_neutral append_assoc applyAllLoopJustAppendsWarningsAndEffects convertReduceWarnings.simps(1) reduceContractUntilQuiescentIdempotent self_append_conv2)
+     using reduceContractUntilQuiescentIdempotent apply auto[1]
+    by simp
+   apply simp
+  by simp
+ 
+ lemma applyLoopIdempotent2 :
+   "applyAllLoop env sta cont [h] [] [] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
+   applyAllLoop env nsta ncont t [] [] = ApplyAllSuccess nwa npa fsta fcont \<Longrightarrow>
+   applyAllLoop env sta cont (h # t) [] [] = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont"
+   apply (simp only:applyAllLoop.simps[of env sta cont])
+   apply (cases "reduceContractUntilQuiescent env sta cont")
+   apply (simp only:ReduceResult.case Let_def list.case)
+   subgoal for x11 x12 x13 x14
+     apply (cases "applyInput env x13 h x14")
+     subgoal for x11a x12a x13a
+       using applyLoopIdempotent_base_case2 by auto
+     by simp
+   by simp
+
 
 lemma applyAllIterative :
   "applyAllInputs env sta cont [h] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
-   applyAllInputs env nsta ncont t = ApplyAllSuccess nwa npa fsta fcont \<Longrightarrow>
-   applyAllInputs env sta cont (h#t) = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont"
+   applyAllInputs env sta cont (h#t) = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont \<Longrightarrow>
+   applyAllInputs env nsta ncont t = ApplyAllSuccess nwa npa fsta fcont"
   apply (simp only:applyAllInputs.simps)
   using applyLoopIdempotent by blast
+
+ lemma applyAllIterative2 :
+   "applyAllInputs env sta cont [h] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
+   applyAllInputs env nsta ncont t = ApplyAllSuccess nwa npa fsta fcont \<Longrightarrow>
+   applyAllInputs env sta cont (h#t) = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont"
+   apply (simp only:applyAllInputs.simps)
+   using applyLoopIdempotent2 by blast
+
+lemma applyAllPrefix1:
+  "applyAllInputs env sta cont [h] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
+   applyAllInputs env sta cont (h#t) = ApplyAllSuccess fwa fpa fsta fcont \<Longrightarrow>
+   (\<exists> nwa. fwa = wa @ nwa)"
+  sorry
+
+lemma applyAllPrefix2:
+  "applyAllInputs env sta cont [h] = ApplyAllSuccess wa pa nsta ncont \<Longrightarrow>
+   applyAllInputs env sta cont (h#t) = ApplyAllSuccess fwa fpa fsta fcont \<Longrightarrow>
+   (\<exists> npa. fpa = pa @ npa)"
+  sorry
+
+lemma computeAllPrefix1:
+  "computeTransaction \<lparr>interval = interv, inputs = [head]\<rparr> sta cont =
+    TransactionOutput \<lparr>txOutWarnings = wa, txOutPayments = pa, txOutState = nsta, txOutContract = ncont\<rparr> \<Longrightarrow>
+   computeTransaction \<lparr>interval = interv, inputs = head # tail\<rparr> sta cont =
+    TransactionOutput \<lparr>txOutWarnings = fwa, txOutPayments = fpa, txOutState = fsta, txOutContract = fcont\<rparr> \<Longrightarrow>
+   (\<exists> nwa. fwa = wa @ nwa)"
+  apply (simp only:computeTransaction.simps)
+  apply (cases "fixInterval (interval \<lparr>interval = interv, inputs = [head]\<rparr>) sta")
+  subgoal for env fixSta
+    apply (cases "applyAllInputs env fixSta cont [head]")
+    subgoal for warnings payments newState conta
+      apply (cases "applyAllInputs env fixSta cont (head # tail)")
+      subgoal for warnings2 payments2 newState2 conta2
+        apply (simp del:applyAllInputs.simps fixInterval.simps)
+        by (metis TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllPrefix1)
+      by simp_all
+    by simp_all
+  by simp
+
+lemma computeAllPrefix2:
+  "computeTransaction \<lparr>interval = interv, inputs = [head]\<rparr> sta cont =
+    TransactionOutput \<lparr>txOutWarnings = wa, txOutPayments = pa, txOutState = nsta, txOutContract = ncont\<rparr> \<Longrightarrow>
+   computeTransaction \<lparr>interval = interv, inputs = head # tail\<rparr> sta cont =
+    TransactionOutput \<lparr>txOutWarnings = fwa, txOutPayments = fpa, txOutState = fsta, txOutContract = fcont\<rparr> \<Longrightarrow>
+   (\<exists> npa. fpa = pa @ npa)"
+  apply (simp only:computeTransaction.simps)
+  apply (cases "fixInterval (interval \<lparr>interval = interv, inputs = [head]\<rparr>) sta")
+  subgoal for env fixSta
+    apply (cases "applyAllInputs env fixSta cont [head]")
+    subgoal for warnings payments newState conta
+      apply (cases "applyAllInputs env fixSta cont (head # tail)")
+      subgoal for warnings2 payments2 newState2 conta2
+        apply (simp del:applyAllInputs.simps fixInterval.simps)
+        by (metis TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllPrefix2)
+      by simp_all
+    by simp_all
+  by simp
 
 lemma fixIntervalOnlySummary :
   "minSlot state = low \<Longrightarrow> low \<le> high \<Longrightarrow>
@@ -246,6 +342,11 @@ lemma fixIntervalIdempotentThroughApplyAllInputs :
       done
     done
   done
+lemma fixIntervalIdempotentThroughApplyAllInputs2 :
+  "fixInterval interv sta = IntervalTrimmed fIenv1 fIsta1 \<Longrightarrow>
+   applyAllInputs fIenv1 fIsta1 con [head] = ApplyAllSuccess iwa ipa ista con3 \<Longrightarrow>
+   fixInterval interv ista = IntervalTrimmed fIenv1 ista"
+  using fixIntervalIdempotentThroughApplyAllInputs by blast
 
 lemma smallerSize_implies_different :
   "size cont1 < size cont \<Longrightarrow> cont1 \<noteq> cont"
@@ -412,7 +513,7 @@ lemma computeTransactionIterative_aux :
    fixInterval inte tsta = IntervalTrimmed nenv nsta \<Longrightarrow>
    applyAllInputs nenv nsta ncont t = ApplyAllSuccess nwa npa fsta fcont \<Longrightarrow>
    applyAllInputs env sta cont (h # t) = ApplyAllSuccess (wa @ nwa) (pa @ npa) fsta fcont"
-  using applyAllIterative fixIntervalIdempotentThroughApplyAllInputs by auto
+  using applyAllIterative2 fixIntervalIdempotentThroughApplyAllInputs2 by auto
 
 lemma computeTransactionIterative_aux2 :
   "fixInterval inte sta = IntervalTrimmed fIenv1 fIsta1 \<Longrightarrow>
@@ -440,7 +541,7 @@ lemma computeTransactionIterative :
                                                                     , txOutContract = fcont \<rparr>"
   apply (simp only:computeTransaction.simps)
   apply (cases "fixInterval (interval \<lparr>interval = inte, inputs = [h]\<rparr>) sta")
-  subgoal for fIenv1 fIsta1
+   subgoal for fIenv1 fIsta1
     apply (simp only:IntervalResult.case Let_def)
     apply (cases "applyAllInputs fIenv1 fIsta1 cont (inputs \<lparr>interval = inte, inputs = [h]\<rparr>)")
     apply (simp only:ApplyAllResult.case)
@@ -466,7 +567,7 @@ lemma computeTransactionIterative :
               apply (cases "(cont = con3) \<and> (cont \<noteq> Close \<or> accounts sta = [])")
               apply (metis IntervalResult.inject(1) Transaction.select_convs(1) Transaction.select_convs(2) computeTransactionIterative_aux2)
               apply (simp only:if_False)
-              by (metis ApplyAllResult.inject IntervalResult.inject(1) Transaction.select_convs(1) Transaction.select_convs(2) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllInputs.simps applyLoopIdempotent fixIntervalIdempotentThroughApplyAllInputs)
+              by (metis ApplyAllResult.inject IntervalResult.inject(1) Transaction.select_convs(1) Transaction.select_convs(2) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllInputs.simps applyLoopIdempotent2 fixIntervalIdempotentThroughApplyAllInputs)
             apply (metis (no_types, lifting) ApplyAllResult.distinct(1) IntervalResult.inject(1) Transaction.select_convs(1) Transaction.select_convs(2) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject computeTransactionIterative_aux)
             by (metis (no_types, lifting) ApplyAllResult.distinct(3) IntervalResult.inject(1) Transaction.select_convs(1) Transaction.select_convs(2) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject computeTransactionIterative_aux)
           by simp
@@ -475,8 +576,102 @@ lemma computeTransactionIterative :
     by simp_all
   by simp
 
-lemma expandSingleton : "[a] = Cons a Nil"
-  by simp
+lemma fixIntervalPreservesAccounts :
+  "fixInterval interv sta = IntervalTrimmed interv2 sta2 \<Longrightarrow> accounts sta = accounts sta2"
+  apply (cases "sta")
+  apply (cases "interv")
+  subgoal for accounts choices boundValues minSlot low high
+    apply simp
+    apply (cases "high < low")
+    apply simp
+    apply (cases "high < minSlot")
+    by (auto simp add:Let_def)
+  done
+
+lemma computeTransactionEquivalence_aux3 :
+  "rest \<noteq> [] \<Longrightarrow>
+   applyAllInputs fIenv3 fIsta1 con [head] = ApplyAllSuccess iwa ipa fIsta3 con3 \<Longrightarrow>
+   \<not> applyAllInputs fIenv3 fIsta1 con (head # rest) = ApplyAllSuccess fwa fpa sta3 con3"
+  sorry
+
+lemma computeTransactionStepEquivalence :
+  "rest \<noteq> [] \<Longrightarrow>
+   computeTransaction \<lparr>interval = interv, inputs = [head]\<rparr> sta con
+      = TransactionOutput \<lparr> txOutWarnings = iwa
+                          , txOutPayments = ipa
+                          , txOutState = ista
+                          , txOutContract = icont \<rparr> \<Longrightarrow>
+   computeTransaction \<lparr>interval = interv, inputs = head # rest\<rparr> sta con
+      = TransactionOutput \<lparr> txOutWarnings = iwa @ iwa2
+                          , txOutPayments = ipa @ ipa2
+                          , txOutState = ista2
+                          , txOutContract = icont2 \<rparr> \<Longrightarrow>
+   computeTransaction \<lparr>interval = interv, inputs = rest\<rparr> ista icont
+      = TransactionOutput \<lparr> txOutWarnings = iwa2
+                          , txOutPayments = ipa2
+                          , txOutState = ista2
+                          , txOutContract = icont2 \<rparr>"
+  apply (simp only:computeTransaction.simps)
+ apply (simp del:fixInterval.simps computeTransaction.simps applyAllInputs.simps)
+  apply (cases "fixInterval interv sta")
+  subgoal for fIenv1 fIsta1
+    apply (simp del:fixInterval.simps computeTransaction.simps applyAllInputs.simps)
+    apply (cases "applyAllInputs fIenv1 fIsta1 con [head]")
+      apply (simp only:ApplyAllResult.case)
+      subgoal for cwa1 pa1 sta1 con1
+        apply (cases "con = con1 \<and> (con \<noteq> Close \<or> accounts sta = [])")
+        apply (simp del:fixInterval.simps computeTransaction.simps applyAllInputs.simps)
+        apply (cases "fixInterval interv ista2")
+        subgoal for fIenv2 fIsta2
+          apply (cases "applyAllInputs fIenv1 fIsta1 con (head # rest)")
+          apply (simp only:ApplyAllResult.case if_False)
+          subgoal for cwa2 pa2 sta2 con2
+            apply (cases "con = con2 \<and> (con \<noteq> Close \<or> accounts sta = [])")
+            apply simp
+            apply (simp only:if_False)
+            apply (cases "fixInterval interv ista")
+            apply (simp only:IntervalResult.case Let_def)
+            subgoal for fIenv3 fIsta3
+              apply (cases "applyAllInputs fIenv3 fIsta3 icont rest")
+              apply (simp only:ApplyAllResult.case) 
+              subgoal for cwa3 pa3 sta3 con3
+                apply (cases "icont = con3 \<and> (icont \<noteq> Close \<or> accounts ista = [])")
+                apply (simp only:bool.case refl if_True)
+                 apply (metis IntervalResult.inject(1) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllInputs.simps applyLoopIdempotent2 computeTransactionEquivalence_aux3 fixIntervalIdempotentThroughApplyAllInputs)
+                using computeTransactionIterative_aux by auto
+               apply (metis (no_types, lifting) ApplyAllResult.simps(3) IntervalResult.inject(1) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllInputs.simps applyAllPrefix1 applyAllPrefix2 applyLoopIdempotent fixIntervalIdempotentThroughApplyAllInputs2)
+               by (metis (no_types, lifting) ApplyAllResult.simps(5) IntervalResult.inject(1) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllInputs.simps applyAllPrefix1 applyAllPrefix2 applyLoopIdempotent fixIntervalIdempotentThroughApplyAllInputs2)
+             by (simp add: fixIntervalIdempotentThroughApplyAllInputs)
+            apply simp
+           by simp
+         subgoal for err2
+           apply (cases "applyAllInputs fIenv1 fIsta1 con (head # rest)")
+           apply (simp del:fixInterval.simps computeTransaction.simps applyAllInputs.simps)
+           apply (metis (no_types, lifting) IntervalResult.distinct(1) TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) fixIntervalIdempotentThroughApplyAllInputs)
+           apply simp
+           by simp
+         done
+        apply simp
+       by simp
+     by simp
+
+lemma computeTransaction_prefix_error :
+ "computeTransaction \<lparr>interval = interv, inputs = [head]\<rparr> txOutStat txOutCont = TransactionError x \<Longrightarrow>
+  computeTransaction \<lparr>interval = interv, inputs = head # tail\<rparr> txOutStat txOutCont = TransactionError x"
+  sorry
+
+lemma computeTransactionStepEquivalence_error :
+  "rest \<noteq> [] \<Longrightarrow>
+   computeTransaction \<lparr>interval = interv, inputs = [head]\<rparr> sta con
+      = TransactionOutput \<lparr> txOutWarnings = iwa
+                          , txOutPayments = ipa
+                          , txOutState = ista
+                          , txOutContract = icont \<rparr> \<Longrightarrow>
+   computeTransaction \<lparr>interval = interv, inputs = head # rest\<rparr> sta con
+      = TransactionError x \<Longrightarrow>
+   computeTransaction \<lparr>interval = interv, inputs = rest\<rparr> ista icont
+      = TransactionError x"
+  sorry
 
 lemma playTraceAuxIterative_base_case :
   "playTraceAux \<lparr> txOutWarnings = iwa
@@ -518,96 +713,61 @@ lemma playTraceAuxIterative_base_case :
         apply (cases "computeTransaction \<lparr>interval = inte, inputs = t\<rparr> txOutState txOutContract")
         apply (simp del:computeTransaction.simps add:Let_def)
         subgoal for x1
-          by (metis TransactionOutput.simps(4) TransactionOutputRecord.ext_inject TransactionOutputRecord.surjective TransactionOutputRecord.update_convs(1) TransactionOutputRecord.update_convs(2) computeTransactionIterative)
+          by (metis TransactionOutput.distinct(1) computeTransactionStepEquivalence_error)
         by simp
       done
     done
   by simp
 
-lemma playTraceAuxIterative :
-  "playTraceAux \<lparr> txOutWarnings = iwa
-                , txOutPayments = ipa
-                , txOutState = ista
-                , txOutContract = icont\<rparr> (Cons \<lparr> interval = inte
-                                               , inputs = [h] \<rparr> (Cons \<lparr> interval = inte
-                                                                      , inputs = t \<rparr> rest))
-          = TransactionOutput \<lparr> txOutWarnings = wa
-                              , txOutPayments = pa
-                              , txOutState = nsta
-                              , txOutContract = ncont \<rparr> \<Longrightarrow>
-   playTraceAux \<lparr> txOutWarnings = iwa
-                , txOutPayments = ipa
-                , txOutState = ista
-                , txOutContract = icont\<rparr> (Cons \<lparr> interval = inte
-                                               , inputs = h#t \<rparr> rest)
-          = TransactionOutput \<lparr> txOutWarnings = wa
-                              , txOutPayments = pa
-                              , txOutState = nsta
-                              , txOutContract = ncont \<rparr>"
-  apply (induction rest arbitrary: iwa ipa ista icont inte h t wa pa nsta ncont)
-  using playTraceAuxIterative_base_case apply blast
-  subgoal for restHead restTail iwa ipa ista icont inte h t wa pa nsta ncont
-    sorry
-  done
-
-lemma playTraceEquivalentWhenError :
-  "playTraceAux acc (\<lparr>interval = inte, inputs = h # t\<rparr>#rest) = TransactionError traOut \<Longrightarrow>
-   playTraceAux acc (\<lparr>interval = inte, inputs = [h]\<rparr>#\<lparr>interval = inte, inputs = t\<rparr>#rest) = TransactionError traOut"
-  sorry
-
-(*
-(* Counter example for empty list playTraceEquivalentWhenError_rev *)
-value "let acc =
-      \<lparr>txOutWarnings = [], txOutPayments = [],
-         txOutState = \<lparr>accounts = [], choices = [(ChoiceId 1 1, - 1)], boundValues = [(ValueId 1, 1)], minSlot = - 1\<rparr>,
-         txOutContract = When [Case (Choice (ChoiceId 1 1) [(- 1, 1)]) Close] 0 Close\<rparr>;
-    h = IChoice (ChoiceId 1 1) 1;
-    inte = (- 1, - 1);
-    t = [];
-    rest = [];
-    traOut = TEUselessTransaction in
-    (playTraceAux acc (\<lparr>interval = inte, inputs = [h]\<rparr>#\<lparr>interval = inte, inputs = t\<rparr>#rest) = TransactionError traOut \<longrightarrow>
-     playTraceAux acc (\<lparr>interval = inte, inputs = h # t\<rparr>#rest) = TransactionError traOut)
-  " *)
-
-
-lemma playTraceEquivalentWhenError_rev :
-  "t \<noteq> [] \<Longrightarrow>
-   playTraceAux acc (\<lparr>interval = inte, inputs = [h]\<rparr>#\<lparr>interval = inte, inputs = t\<rparr>#rest) = TransactionError traOut \<Longrightarrow>
-   playTraceAux acc (\<lparr>interval = inte, inputs = h # t\<rparr>#rest) = TransactionError traOut"
-  sorry
-
-lemma playTraceAuxSingleInputIsEquivalent_base_case :
-  "t \<noteq> [] \<Longrightarrow>
-   playTraceAux acc (Cons \<lparr> interval = inte
-                          , inputs = [h] \<rparr> (Cons \<lparr> interval = inte
-                                                 , inputs = t \<rparr> Nil))
-          =
-   playTraceAux acc (Cons \<lparr> interval = inte
-                          , inputs = h#t \<rparr> Nil)"
-  apply (cases "playTraceAux acc (Cons \<lparr> interval = inte
-                          , inputs = [h] \<rparr> (Cons \<lparr> interval = inte
-                                                 , inputs = t \<rparr> Nil))")
-  subgoal for traOut
-    apply (cases "playTraceAux acc (Cons \<lparr> interval = inte
-                                         , inputs = h#t \<rparr> Nil)")
-    subgoal for traOut2
-      apply (cases acc)
-      subgoal for accOutWarnings accOutPayments accOutState accOutContract
-        apply (cases traOut)
-        subgoal for traOutWarnings traOutPayments traOutState traOutContract
-          apply (cases traOut2)
-          subgoal for traOut2Warnings traOut2Payments traOut2State traOut2Contract
-            apply (simp del:playTraceAux.simps)
-            by (metis TransactionOutput.inject(1) TransactionOutputRecord.ext_inject playTraceAuxIterative)
+lemma playTraceAuxToSingleInputIsEquivalent_induction_step_aux :
+  "(\<And>acc. playTraceAux acc (\<lparr>interval = interv, inputs = a # list\<rparr> # tral) =
+               playTraceAux acc (inputsToTransactions interv (a # list) @ traceListToSingleInput tral)) \<Longrightarrow>
+   playTraceAux acc3 (\<lparr>interval = interv, inputs = head # a # list\<rparr> # tral) =
+   playTraceAux acc3 ((\<lparr>interval = interv, inputs = [head]\<rparr> # inputsToTransactions interv (a # list)) @ traceListToSingleInput tral)"
+  apply (cases acc3)
+  apply (simp del:computeTransaction.simps add:Let_def)
+  subgoal for txOutWarningsa txOutPaymentsa txOutState txOutContract
+    apply (cases "computeTransaction \<lparr>interval = interv, inputs = head # a # list\<rparr> txOutState txOutContract")
+     apply (simp only:TransactionOutput.case)
+     apply (cases "computeTransaction \<lparr>interval = interv, inputs = [head]\<rparr> txOutState txOutContract")
+      apply (simp only:TransactionOutput.case)
+    subgoal for transRes1 transRes2
+      apply (cases transRes1)
+      subgoal for txOutWarnings1 txOutPayments1 txOutState1 txOutContract1
+        apply (cases transRes2)
+        subgoal for txOutWarnings2 txOutPayments2 txOutState2 txOutContract2
+          apply (simp del:computeTransaction.simps playTraceAux.simps)
+          apply (subst exE[of "\<lambda> nwa . txOutWarnings1 = txOutWarnings2 @ nwa"])
+          using computeAllPrefix1 apply blast
+          apply (subst exE[of "\<lambda> npa . txOutPayments1 = txOutPayments2 @ npa"])
+          using computeAllPrefix2 apply blast
+          apply (simp del:computeTransaction.simps playTraceAux.simps)
+          apply (smt TransactionOutput.case(1) TransactionOutputRecord.simps(1) TransactionOutputRecord.simps(2) TransactionOutputRecord.update_convs(1) TransactionOutputRecord.update_convs(2) append_assoc computeTransactionStepEquivalence list.simps(3) playTraceAux.simps(2))
+          apply blast
+          by blast
           done
         done
-      done
-    subgoal for traOut2
-      by (simp add: playTraceEquivalentWhenError)
+    using computeTransaction_prefix_error apply fastforce
+    apply (cases "computeTransaction \<lparr>interval = interv, inputs = [head]\<rparr> txOutState txOutContract")
+    apply (simp only:TransactionOutput.case)
+    subgoal for transRes1 transRes2
+        apply (cases transRes2)
+        subgoal for txOutWarnings2 txOutPayments2 txOutState2 txOutContract2
+          apply (simp del:computeTransaction.simps playTraceAux.simps)
+          subgoal premises facts
+            apply(subst facts(1)[symmetric])
+            apply (simp only:playTraceAux.simps Let_def)
+            apply (subst computeTransactionStepEquivalence_error)
+            apply simp
+            apply (subst facts(4))
+            apply simp
+            apply (subst facts(3))
+            apply simp
+            by (metis (no_types, lifting) TransactionOutput.simps(6) computeTransactionStepEquivalence_error facts(3) facts(4) list.distinct(1))
+          done
+        done
+      using computeTransaction_prefix_error by fastforce
     done
-  by (simp add: playTraceEquivalentWhenError_rev)
-
 
 lemma playTraceAuxToSingleInputIsEquivalent_induction_step :
   "(\<And>acc. playTraceAux acc tral = playTraceAux acc (traceListToSingleInput tral)) \<Longrightarrow>
@@ -622,15 +782,17 @@ lemma playTraceAuxToSingleInputIsEquivalent_induction_step :
       done
     done
   subgoal for head tail acc tral
-    apply (cases acc)
+    apply (simp only:traceListToSingleInput.simps)
+    apply (cases tail)
+     apply (cases acc)
     subgoal for txOutWarnings txOutPayments txOutState txOutContract
-      apply (cases tail)
       apply (simp only:traceListToSingleInput.simps inputsToTransactions.simps playTraceAux.simps)
-       apply simp
-      subgoal for tailHead tailTail
-        apply (simp only:traceListToSingleInput.simps inputsToTransactions.simps)
-        sledgehammer
-      sorry
+      by simp
+    apply (simp only:inputsToTransactions.simps)
+    apply (cases acc)
+    subgoal for tailHead tailTail txOutWarnings txOutPayments txOutState txOutContract
+      apply (rule playTraceAuxToSingleInputIsEquivalent_induction_step_aux)
+      by blast
     done
   done
 

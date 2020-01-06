@@ -710,11 +710,41 @@ lemma fixIntervalPreservesAccounts :
     by (auto simp add:Let_def)
   done
 
+lemma applyInput_reducesContract :
+  "applyInput fIenv3 curState2 head cont3 = Applied applyWarna newState2 cont4 \<Longrightarrow> size cont3 > size cont4"
+  apply (cases cont3)
+  apply auto
+  by (simp add: add.commute applyCases_only_makes_smaller less_SucI trans_less_add2)
+
 lemma computeTransactionEquivalence_aux3 :
   "rest \<noteq> [] \<Longrightarrow>
    applyAllInputs fIenv3 fIsta1 con [head] = ApplyAllSuccess iwa ipa fIsta3 con3 \<Longrightarrow>
    \<not> applyAllInputs fIenv3 fIsta1 con (head # rest) = ApplyAllSuccess fwa fpa sta3 con3"
-  sorry
+  apply (simp only:applyAllInputs.simps)
+  apply (simp only:applyAllLoop.simps[of fIenv3 fIsta1])
+  apply (cases "reduceContractUntilQuiescent fIenv3 fIsta1 con")
+  apply (simp only:ReduceResult.case list.case)
+  subgoal for reduceWarns pays curState cont
+    apply (cases "applyInput fIenv3 curState head cont")
+    subgoal for applyWarn newState cont2
+      apply (simp del:reduceContractUntilQuiescent.simps applyInput.simps applyAllLoop.simps)
+      apply (cases rest)
+      apply blast
+      subgoal for head tail
+        apply (simp del:reduceContractUntilQuiescent.simps applyInput.simps applyAllLoop.simps)
+        apply (simp only:applyAllLoop.simps[of fIenv3 newState])
+        apply (cases "reduceContractUntilQuiescent fIenv3 newState cont2")
+        subgoal for reduceWarnsa paysa curState2 cont3
+          apply (simp only:ReduceResult.case list.case)
+          apply (cases "applyInput fIenv3 curState2 head cont3")
+          apply (simp only:ApplyResult.case)
+          subgoal for applyWarna newState2 cont4
+            by (metis ApplyAllResult.inject applyAllLoop_only_makes_smaller applyInput_reducesContract order.asym)
+          by simp
+        by simp
+      done
+      by simp
+    by simp
 
 lemma computeTransactionStepEquivalence :
   "rest \<noteq> [] \<Longrightarrow>

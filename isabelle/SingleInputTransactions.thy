@@ -884,6 +884,54 @@ lemma computeTransaction_prefix_error :
   by (metis (no_types, lifting) applyAllInputs_prefix_error)
   by simp
 
+lemma fixInterval_doesnt_care_about_inputs :
+  "fixInterval (interval \<lparr>interval = interv, inputs = inp1\<rparr>) sta = IntervalTrimmed env fixSta \<Longrightarrow>
+   fixInterval (interval \<lparr>interval = interv, inputs = inp2\<rparr>) sta = IntervalTrimmed env fixSta"
+  by simp
+
+lemma reduceContractUntilQuiescent_idempotent :
+  "reduceContractUntilQuiescent env newState cont2 = ContractQuiescent reduceWarns2 pays2 ista icont \<Longrightarrow>
+   reduceContractUntilQuiescent env ista icont = ContractQuiescent [] [] ista icont"
+  using reductionLoopIdempotent by auto
+
+lemma fixInterval_idemp_on_same_minSlot :
+  "fixInterval interv sta = IntervalTrimmed env fixSta \<Longrightarrow>
+   minSlot fixSta = minSlot ista \<Longrightarrow>
+   fixInterval interv ista = IntervalTrimmed env ista"
+  apply (cases sta)
+  apply (cases ista)
+  apply (cases interv)
+  apply simp
+  by (smt IntervalResult.distinct(1) IntervalResult.inject(1) State.select_convs(4))
+
+lemma fixInterval_idemp_after_computeTransaction :
+  "fixInterval interv sta = IntervalTrimmed env fixSta \<Longrightarrow>
+   reduceContractUntilQuiescent env fixSta con = ContractQuiescent reduceWarns pays curState cont \<Longrightarrow>
+   applyInput env curState head cont = Applied applyWarn newState cont2 \<Longrightarrow>
+   reduceContractUntilQuiescent env newState cont2 = ContractQuiescent reduceWarns2 pays2 ista icont \<Longrightarrow>
+   fixInterval interv ista = IntervalTrimmed env ista"
+  by (simp add: applyInput_preserves_minSlot fixInterval_idemp_on_same_minSlot reductionLoop_preserves_minSlot)
+
+lemma applyAllLoop_independet_of_acc_error1 :
+  "applyAllLoop env sta cont htail wa pa = ApplyAllNoMatchError \<Longrightarrow>
+   applyAllLoop env sta cont htail wa2 pa2 = ApplyAllNoMatchError"
+  apply (induction htail arbitrary: env sta cont wa pa wa2 pa2)
+  apply (force split:ReduceResult.split)
+  subgoal for head tail env sta cont wa pa wa2 pa2
+    apply (simp only:applyAllLoop.simps[of env sta cont "head # tail"])
+    by (auto split:ReduceResult.split ApplyResult.split simp del:applyAllLoop.simps)
+  done
+
+lemma applyAllLoop_independet_of_acc_error2 :
+  "applyAllLoop env sta cont htail wa pa = ApplyAllAmbiguousSlotIntervalError \<Longrightarrow>
+   applyAllLoop env sta cont htail wa2 pa2 = ApplyAllAmbiguousSlotIntervalError"
+  apply (induction htail arbitrary: env sta cont wa pa wa2 pa2)
+  apply (force split:ReduceResult.split)
+  subgoal for head tail env sta cont wa pa wa2 pa2
+    apply (simp only:applyAllLoop.simps[of env sta cont "head # tail"])
+    by (auto split:ReduceResult.split ApplyResult.split simp del:applyAllLoop.simps)
+  done
+
 lemma computeTransactionStepEquivalence_error :
   "rest \<noteq> [] \<Longrightarrow>
    computeTransaction \<lparr>interval = interv, inputs = [head]\<rparr> sta con
@@ -895,7 +943,53 @@ lemma computeTransactionStepEquivalence_error :
       = TransactionError x \<Longrightarrow>
    computeTransaction \<lparr>interval = interv, inputs = rest\<rparr> ista icont
       = TransactionError x"
-  sorry
+  apply (cases rest)
+  apply simp
+  subgoal for hrest htail
+    apply (simp only:computeTransaction.simps[of "\<lparr>interval = interv, inputs = [head]\<rparr>"]
+                     computeTransaction.simps[of "\<lparr>interval = interv, inputs = head # hrest # htail\<rparr>"] Let_def)
+    apply (cases "fixInterval (interval \<lparr>interval = interv, inputs = [head]\<rparr>) sta")
+    subgoal for env fixSta
+      apply (subst (asm) fixInterval_doesnt_care_about_inputs[of interv "[head]" sta env fixSta "head # hrest # htail"])
+      apply blast
+      apply (simp only:IntervalResult.case)
+      apply (simp only:applyAllInputs.simps applyAllLoop.simps[of env fixSta])
+      apply (cases "reduceContractUntilQuiescent env fixSta con")
+      subgoal for reduceWarns pays curState cont
+        apply (simp del:fixInterval.simps reduceContractUntilQuiescent.simps computeTransaction.simps applyInput.simps)
+        apply (cases "applyInput env curState head cont")
+        subgoal for applyWarn newState cont2
+          apply (simp only:ApplyResult.case)
+          apply (simp only:applyAllInputs.simps applyAllLoop.simps[of env newState] computeTransaction.simps Let_def)
+          apply (cases "reduceContractUntilQuiescent env newState cont2")
+          subgoal for reduceWarns2 pays2 curState2 cont3
+            apply (simp only:ReduceResult.case list.case ApplyAllResult.case)
+            apply (cases "con = cont3")
+            apply (metis applyInput_reducesContract dual_order.strict_trans order.asym reduceContractUntilQuiescent_only_makes_smaller)
+            apply (simp del:fixInterval.simps reduceContractUntilQuiescent.simps computeTransaction.simps applyInput.simps)
+
+            apply (simp only:fixInterval_idemp_after_computeTransaction[of interv sta env fixSta con
+                                                                           reduceWarns pays curState cont
+                                                                           head applyWarn newState cont2
+                                                                           reduceWarns2 pays2 ista icont])
+            apply (simp only:IntervalResult.case applyAllLoop.simps[of env ista icont])
+            apply (simp only:reduceContractUntilQuiescent_idempotent ReduceResult.case Transaction.select_convs list.case)
+            apply (cases "applyInput env ista hrest icont")
+            subgoal for applyWarna newState2 cont4
+              apply (simp only:ApplyResult.case)
+              apply (cases "applyAllLoop env newState2 cont4 htail
+                                         (([] @ convertReduceWarnings reduceWarns @ convertApplyWarning applyWarn) @
+                                          convertReduceWarnings reduceWarns2 @ convertApplyWarning applyWarna)
+                                         (([] @ pays) @ pays2)")
+              apply (smt ApplyAllResult.simps(8) TransactionOutput.distinct(1) applyAllLoop_only_makes_smaller applyInput_reducesContract dual_order.strict_trans reduceContractUntilQuiescent_only_makes_smaller smallerSize_implies_different)
+              using applyAllLoop_independet_of_acc_error1 apply auto[1]
+              using applyAllLoop_independet_of_acc_error2 by auto
+            by simp
+          by simp
+        by simp
+      by simp
+    by simp
+  done
 
 lemma playTraceAuxIterative_base_case :
   "playTraceAux \<lparr> txOutWarnings = iwa

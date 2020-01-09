@@ -469,13 +469,15 @@ data TransactionError = TEAmbiguousSlotIntervalError
                       | TEUselessTransaction
   deriving (Eq,Ord,Show,Read)
 
+data TOR = TOR { txOutWarnings :: [TransactionWarning]
+               , txOutPayments :: [Payment]
+               , txOutState    :: State
+               , txOutContract :: Contract }
+  deriving (Eq,Ord,Show,Read)
+
 data TransactionOutput =
-    TransactionOutput
-        { txOutWarnings :: [TransactionWarning]
-        , txOutPayments :: [Payment]
-        , txOutState    :: State
-        , txOutContract :: Contract }
-    | Error TransactionError
+    TransactionOutput TOR
+  | Error TransactionError
   deriving (Eq,Ord,Show,Read)
 
 data TransactionInput = TransactionInput
@@ -492,14 +494,33 @@ computeTransaction tx state contract = let
             ApplyAllSuccess warnings payments newState cont -> let
                 in  if (contract == cont) && ((contract /= Close) || (Map.null $ accounts state))
                     then Error TEUselessTransaction
-                    else TransactionOutput { txOutWarnings = warnings
-                                            , txOutPayments = payments
-                                            , txOutState = newState
-                                            , txOutContract = cont }
+                    else TransactionOutput (TOR { txOutWarnings = warnings
+                                                , txOutPayments = payments
+                                                , txOutState = newState
+                                                , txOutContract = cont })
             ApplyAllNoMatchError -> Error TEApplyNoMatchError
             ApplyAllAmbiguousSlotIntervalError -> Error TEAmbiguousSlotIntervalError
         IntervalError error -> Error (TEIntervalError error)
 
+playTraceAux :: TOR -> [TransactionInput] -> TransactionOutput
+playTraceAux res [] = TransactionOutput res
+playTraceAux (TOR { txOutWarnings = warnings
+                  , txOutPayments = payments
+                  , txOutState = state
+                  , txOutContract = cont }) (h:t) =
+  let transRes = computeTransaction h state cont in
+  case transRes of
+    TransactionOutput transResRec ->
+      playTraceAux (transResRec { txOutPayments = payments ++ (txOutPayments transResRec)
+                                , txOutWarnings = warnings ++ (txOutWarnings transResRec)})
+                   t
+    Error _ -> transRes
+
+playTrace :: Slot -> Contract -> [TransactionInput] -> TransactionOutput
+playTrace sl c t = playTraceAux (TOR { txOutWarnings = []
+                                     , txOutPayments = []
+                                     , txOutState = emptyState sl
+                                     , txOutContract = c }) t
 
 -- | Calculates an upper bound for the maximum lifespan of a contract
 contractLifespanUpperBound :: Contract -> Integer

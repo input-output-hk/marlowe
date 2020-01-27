@@ -70,16 +70,18 @@ Contracts in Marlowe can be exhaustively analysed prior to running them, thus pr
 
 \section{Introduction}
 
-Marlowe\footnote{see \url{https://github.com/input-output-hk/marlowe} for complete project} is a domain-specific language (DSL) for implementing financial contracts on blockchain: our initial target is Cardano, but it could be implemented on many distributed ledgers (DLT platforms), including Ethereum. Marlowe is embedded in Haskell, allowing users selectively to use aspects of Haskell -- typically definitions of constants and simple functions -- to express contracts more readably and succinctly. Section \ref{sec:overview} gives an overview of the language, and the changes made to it since it was originally introduced in ~\cite{isola-marlowe}.
+Marlowe~\cite{marlowe-github} is a domain-specific language (DSL) for implementing financial contracts on blockchain: our initial target is Cardano, but it could be implemented on many distributed ledgers (DLT platforms), including Ethereum. Marlowe is embedded in Haskell, allowing users selectively to use aspects of Haskell -- typically definitions of constants and simple functions -- to express contracts more readably and succinctly. Section \ref{sec:overview} gives an overview of the language, and the changes made to it since it was originally introduced in ~\cite{isola-marlowe}.
 
 Marlowe is specified by a reference semantics for the language written in Haskell, and we can use that in a number of ways. We can interpret Marlowe contracts in Haskell itself, but we can also use that implementation, compiled into Plutus~\cite{PlutusPlatform}, to interpret Marlowe directly on the Cardano blockchain, see Section \ref{sec:implementation}. We can also execute the semantics -- translated into PureScript -- directly in a browser, to give an interactive simulation environment, see Section~\ref{sec:playground}.
 
-Because Marlowe is a DSL, we are able to build special purpose tools and techniques to support it. Crucially in a financial environment, we are able to \emph{exhaustively analyse contracts} without executing them, so that we can, for instance, check whether any particular contract is able to make all the payments it should: in the case it is not, we get an explicit example of how it can fail. This analysis, reported in Section \ref{sec:static}, is built into the Marlowe Playground. Finally, we are able to use formal verification to prove properties of the implementation of Marlowe, including a guarantee that ``money in $=$ money out'' for all contracts; see Section~\ref{sec:verification}.
+Because Marlowe is a DSL, we are able to build special purpose tools and techniques to support it. Crucially in a financial environment, we are able to \emph{exhaustively analyse contracts} without executing them, so that we can, for instance, check whether any particular contract is able to make all the payments it should: in the case it is not, we get an explicit example of how it can fail. This analysis (Section \ref{sec:static}) is built into the Marlowe Playground. Finally (Section \ref{sec:verification}) we are able to use formal verification to prove properties of the implementation of Marlowe, including a guarantee that ``money in $=$ money out'' for all contracts.
 
-\section{Marlowe overview}
+Building on~\cite{isola-marlowe}, the specific contributions of this paper are threefold. We describe revised versions of Marlowe and its Playground, we describe the implementation of Marlowe on the Cardano blockchain, and we present both automated static analysis and machine-supported verification for Marlowe.
+
+\section{Marlowe revised: version 3.0}
 \label{sec:overview}
 
-Since the first publication, we have revised the language design: this section gives a brief overview of the current (3.0) version of the language and its semantics.
+Since first publication, we have revised the language design: this section gives a brief overview of the current (3.0) version of the language and its semantics.
 
 
 \subsubsection*{The Marlowe model}
@@ -344,7 +346,7 @@ Alice must produce the following \emph{Redeemer} to satisfy the Marlowe validato
 \noindent
 Bob is then expected to deposit 1000 Ada into Alice's account before slot 200.
 If he does, the contract is closed, and all remaining balances must be paid out
-to their respective owners. In our case, 1000 Ada must be paid to Alice.
+to their respective owners; in this case, 1000 Ada must be paid to Alice. If Bob does not pay, then Alice has lost her money, because this is an unsecured loan.
 
 \begin{figure}[!h]
     \centering
@@ -469,10 +471,10 @@ where \texttt{DetApplyResult} contains the parts of \texttt{ApplyResult} that ar
 
 \section{Formal verification of the Marlowe semantics\label{sec:verification}}
 
-We can also use proof assistants to demonstrate that the Marlowe semantics presents certain desirable properties, such as that money is preserved and anything unspent is returned to users by the end of the execution of any contract.
+We can also use proof assistants to demonstrate that the Marlowe semantics presents certain desirable properties, such as that money is preserved and anything unspent is returned to users by the end of the execution of any contract. Formal statements and proofs of these properties are given in~\cite{marlowe-github}.
+
 
 Currently, we have translated the Haskell Marlowe semantics to Isabelle while keeping both versions as close as possible, but we decided to make them different in two main aspects:
-
 \begin{itemize}
     \item We use \emph{integers for identifiers} because they are easier to handle than strings.
     \item We use a \emph{custom implementation of maps and sets} that use lists because Isabelle already provides many theorems that are proved for lists.
@@ -619,19 +621,23 @@ A user can then apply this transaction and in the example above this would resul
 
 At any point in the simulation, the user can undo any steps made: in this particular case, they can undo the application of the transaction, and iteratively undo more steps. At any point, they can also reset the contract to its initial state. This enables users to apply transactions, see their effects, step back, and try different transactions to see the effects of the changes on the result. They can also change the reduced contract to investigate variants of the original.
 
-The final feature that we would like to present is the static analysis of contracts. As described in the previous section, it is possible to carry out a symbolic execution of a contract and then use a SMT solver to look for cases that could cause unwanted situations. The playground uses this to search for situations where contract execution would cause warnings. For example, suppose you write a contract that causes a payment of 450 Lovelace from Alice to Bob but the contract allows a situation where Alice has only deposited 350 Lovelace. The the static analysis will find this partial payment case and report it to the playground user with an example of how it could occur.
+The final feature that we would like to present is the static analysis of contracts. As described in the previous section, it is possible to carry out a symbolic execution of a contract and then use a SMT solver to look for cases that could cause unwanted situations. The playground uses this to search for situations where contract execution would cause warnings. For example, suppose you write a contract that causes a payment of 450 Lovelace from Alice to Bob but the contract allows a situation where Alice has only deposited 350 Lovelace. The static analysis will find this partial payment case and report it to the playground user with an example of how it could occur.
 
 \section{Related work}
 \label{sec:related}
 
-An earlier paper~\cite{cryptoeprint:2016:1156} reviews smart contracts on blockchain. Here we look at a number of recent systems that bear direct comparison with Marlowe, rather than general purpose languages.
-Nxt~\cite{Nxt}, is special-purpose in providing a ``fat'' high-level
-API, containing built-in transaction types and transactions that support some 250 primitive operations; these can be ``scripted'' in a client (only) using a binding to the API, which is available, for instance, in JavaScript. In providing such specificity this bears comparison with our implementation of contracts from the ACTUS standard~\cite{actus}.
+Our work is inspired by the work of Peyton Jones et al~\cite{PeytonJones:2000} to describe financial contracts using a DSL embedded in Haskell. 
+In the remainder of this section we look at a number of recent systems that bear direct comparison with Marlowe; an earlier paper~\cite{cryptoeprint:2016:1156} gives a detailed review of smart contracts on blockchain. 
 
-Our work is inspired by the original work of Peyton Jones and others~\cite{PeytonJones:2000} to describe financial contracts using a DSL embedded in Haskell. The Findel project~\cite{findel} examines financial contracts on the Ethereum platform, and is also based on~\cite{PeytonJones:2000}. The authors note that payments need to be bounded; this is made concrete in our
+The Findel project~\cite{findel} examines financial contracts on the Ethereum platform, and is also based on~\cite{PeytonJones:2000}. The authors note that payments need to be bounded; this is made concrete in our
 account by our notion of commitments. They take no account of commitments or timeouts as our approach does, and so are unable to guarantee some properties -- such as a finite lifetime -- built into Marlowe by design.
+Nxt~\cite{Nxt}, is special-purpose in providing a ``fat'' high-level
+API, containing built-in transaction types and transactions that support some 250 primitives; these can be ``scripted'' in a client using a binding to the API, which is available, e.g., in JavaScript. In providing such specificity this bears comparison with our implementation of contracts from the ACTUS standard~\cite{actus}.
+
 
 BitML~\cite{BitML} is a DSL for specifying Marlowe-like contracts that regulate transfers on the Bitcoin blockchain, and is implemented via a compiler that translates contracts into  Bitcoin transactions plus strategies. Participants execute a contract by appending these transactions on the Bitcoin blockchain, according to their strategies, which involve the exchange of bitstrings that guarantee to a very high probability the correctness of contract execution. Marlowe is directly implemented by an interpreter which could also be implemented on a covenant-based~\cite{covenants} extension of the Bitcoin blockchain.
+
+
 
 \section{Conclusions and future work}
 

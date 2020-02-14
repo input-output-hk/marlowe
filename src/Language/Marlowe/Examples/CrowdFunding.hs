@@ -39,7 +39,9 @@ addAll l = AddValue (addAll b) (addAll a)
 -- Pay all money into an account to a payee
 payAll :: AccountId -> Payee -> Contract -> Contract
 payAll acId payee cont =
-  Pay acId payee (AvailableMoney acId) cont
+  If (ValueGT (AvailableMoney acId) (Constant 0))
+     (Pay acId payee (AvailableMoney acId) cont)
+     cont
 
 -- Pays all money available in a list of accounts to another account
 payAllAccsTo :: [AccountId] -> Payee -> Contract -> Contract
@@ -57,7 +59,7 @@ transitionFunction _ (party, True) =
    Deposit (AccountId 1 party) party (ChoiceValue (ChoiceId "1" party) (Constant 0)))
 transitionFunction maxContrib (party, False) =
   (Just (party, True),
-   Choice (ChoiceId "1" party) [Bound 0 maxContrib])
+   Choice (ChoiceId "1" party) [Bound 1 maxContrib])
 
 -- Interleaves a list of state machines defined by "f" transition function
 -- and "l" list of initial states. If all state machines terminate continues

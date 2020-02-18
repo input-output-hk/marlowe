@@ -144,7 +144,8 @@ isValidAndFailsAux (Pay accId payee {- token -} val cont) sState =
                 M.insert accId (concVal + (M.findWithDefault 0 destAccId newAccs)) newAccs
              _ -> newAccs }
      contRes <- isValidAndFailsAux cont finalSState
-     return ((((remainingMoneyInAccount .< 0) .|| (concVal .<= 0))
+     return ((((remainingMoneyInAccount .< 0) -- Partial payment
+               .|| (concVal .<= 0)) -- Non-positive payment
               .&& potentialFailedPayTrace)
              .|| contRes)
 isValidAndFailsAux (If obs cont1 cont2) sState =
@@ -194,7 +195,12 @@ isValidAndFailsWhen ((Case (Deposit accId party {- token -} val) cont):rest)
      (newCond, newSState) <- addTransaction (Just symInput) timeout sState pos
      newTrace <- isValidAndFailsAux cont newSState
      contTrace <- isValidAndFailsWhen rest timeout timCont newPreviousMatch sState (pos + 1)
-     return (ite (newCond .&& newTrace) newTrace contTrace)
+     return (ite (newCond .&& newTrace)
+                 newTrace
+                 ((newCond .&& (concVal .<= 0) -- Non-positive deposit warning
+                           .&& (convertToSymbolicTrace (traces newSState)
+                                                       (paramTrace sState)))
+                  .|| contTrace))
 isValidAndFailsWhen ((Case (Choice choId bnds) cont):rest)
                     timeout timCont previousMatch sState pos =
   do concVal <- generateValueInBounds bnds 

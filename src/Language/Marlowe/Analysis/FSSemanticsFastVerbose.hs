@@ -97,7 +97,9 @@ symEvalObs FalseObs _ = sFalse
 updateSymInput :: Maybe SymInput -> SymState -> Symbolic SymState
 updateSymInput Nothing symState = return symState
 updateSymInput (Just (SymDeposit accId _ val)) symState =
-  return (symState {symAccounts = M.insert accId (smax (literal 0) val)
+  let resultVal = M.findWithDefault 0 accId (symAccounts symState)
+                   + smax (literal 0) val in
+  return (symState {symAccounts = M.insert accId resultVal 
                                            (symAccounts symState)})
 updateSymInput (Just (SymChoice choId val)) symState =
   return (symState {symChoices = M.insert choId val (symChoices symState)})

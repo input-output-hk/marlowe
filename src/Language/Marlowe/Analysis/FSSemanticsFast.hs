@@ -127,12 +127,17 @@ isValidAndFailsAux (Pay accId payee {- token -} val cont) sState =
      let potentialFailedPayTrace =
           convertToSymbolicTrace ((lowSlot sState, highSlot sState, Nothing, 0)
                                   :(traces sState))
-     let remainingMoneyInAccount = (M.findWithDefault 0 accId (symAccounts sState)) - concVal
-     let newAccs = M.insert accId remainingMoneyInAccount (symAccounts sState)
+     let originalMoney = M.findWithDefault 0 accId (symAccounts sState)
+     let remainingMoneyInAccount = originalMoney - concVal
+     let newAccs = M.insert accId (smax (literal 0) remainingMoneyInAccount)
+                            (symAccounts sState)
      let finalSState = sState { symAccounts =
            case payee of
              (Account destAccId) ->
-                M.insert accId (concVal + (M.findWithDefault 0 destAccId newAccs)) newAccs
+                M.insert accId
+                         (smin originalMoney (smax (literal 0) concVal)
+                            + M.findWithDefault 0 destAccId newAccs)
+                         newAccs
              _ -> newAccs }
      contRes <- isValidAndFailsAux cont finalSState
      return (ite ((remainingMoneyInAccount .< 0) .|| (concVal .<= 0))

@@ -549,6 +549,10 @@ where \texttt{maxTransactionsInitialState} is essentially the maximum number of 
 This property implies that any trace that is longer than this is guaranteed to produce at least one error. Because transactions that produce an error do not alter the state of the contract, such a list of transactions (a trace) will be equivalent to a list of transactions that does not have the erroneous transaction.
 Thus, we do not lose generality by only exploring shorter traces.
 
+\subsection{Future work}
+
+At the time of writing, we are actively trying new optimisations and approaches for implementing static analysis that are more efficient in practise than the approach described in this paper. As a consequence, in some cases, the static analysis implementation can deviate considerably from the Haskell semantics. Our intention is to keep using property-based testing and formal verification to ensure that both implementations are consistent.
+
 \section{The Marlowe Playground}
 \label{sec:playground}
 

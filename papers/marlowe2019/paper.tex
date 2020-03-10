@@ -52,7 +52,7 @@ Simon Thompson\inst{1,2}}%\orcidID{0000-0002-2350-301X}}
 % If there are more than two authors, 'et al.' is used.
 %
 \institute{IOHK, Hong Kong, 
-\email{alexander.nemish@iohk.io, pablo.lamela@iohk.io, simon.thompson@iohk.io,~david.smith@tweag.io},  \and
+\email{alexander.nemish@iohk.io, pablo.lamela@iohk.io, simon.thompson@iohk.io,~david.smith@tweag.io}  \and
 School of Computing, University of Kent, UK, 
 \email{s.j.thompson@kent.ac.uk}}
 %
@@ -574,7 +574,7 @@ As contracts become larger it makes sense to use another editor in the \emph{Has
 Contracts can also be written using Google's \emph{Blockly} visual programming language, as was earlier described in Meadow~\cite{isola-marlowe}. Blockly gives an easy way to introduce the concepts of Marlowe to users who have no programming knowledge, and in particular the editor gives users a set of options for each construct as the contract is built. Once a contract has been constructed in Blockly it is possible to transfer that contract to the simulation pane. It is also possible to transfer a Marlowe contract to Blockly for further editing.
 
 \begin{wrapfigure}[9]{l}{0.25\textwidth}
-    %\vspace*{-0.28in}
+    \vspace*{-0.24in}
     \includegraphics[width=0.25\textwidth]{hole_options.png}
 \end{wrapfigure}
 
@@ -588,9 +588,9 @@ In our case \lstinline{?mycontract} must be a \lstinline{Contract} of some sort,
 \end{verbatim}
 New options will be presented, one for each hole, and each will have a dropdown list of all the possible values.
 
-\begin{wrapfigure}[6]{l}{0.25\textwidth}
-    \vspace*{-0.25in}
-    \includegraphics[scale=0.2]{hole_options_2.png}
+\begin{wrapfigure}[5]{l}{0.20\textwidth}
+%    \vspace*{-0.25in}
+    \includegraphics[scale=0.18]{hole_options_2.png}
 \end{wrapfigure}
 A complete contract can be written in this guided way with the user needing only to fill in strings and numbers by hand. This approach to writing holes in your code and ``asking'' the compiler what you could put in there is easy to implement in a DSL because there are very limited options, however is is also becoming popular with more complex languages such as Haskell and Idris.
 
@@ -603,24 +603,21 @@ Contracts written in the Marlowe editor are parsed in real-time and if there are
     When [Case (Deposit (AccountId 0 "investor") 
                "guarantor" (Constant 1000_000000)) Close] 10 Close
 \end{verbatim}
-In this case, the only action a user can take to progress the contract is to accept a deposit of 1000 ADA
-from the guarantor to the investor's account. Because of this, the playground can display this action in the input composer.
+In this case, the only action a user can take to progress the contract is to accept a deposit of 1000 ADA from the guarantor to the investor's account. Because of this, the playground can display this action in the input composer.
 
-\begin{wrapfigure}[5]{l}{0.5\textwidth}
-    \vspace*{-0.2in}
+\begin{wrapfigure}[4]{l}{0.47\textwidth}
+    \vspace*{-0.28in}
     \includegraphics[scale=0.15]{input_composer.png}
 \end{wrapfigure}
 
-\noindent
 The user can then choose to add this action to a transaction being prepared. Once the action is added other inputs become possible; these are displayed in the input composer, and again they can be added to the transaction being composed. In this way, multiple %actions can be added to a transaction before it is applied.
+actions can be added to a transaction before it is applied.
 
-\begin{wrapfigure}[5]{l}{0.5\textwidth}
-    \vspace*{-0.2in}
+\begin{wrapfigure}[5]{l}{0.47\textwidth}
+    \vspace*{-0.32in}
     \includegraphics[scale=0.15]{tx_composer.png}
 \end{wrapfigure}
 
-\noindent
-actions can be added to a transaction before it is applied.
 A user can then apply this transaction and in the example above this would result in the state pane showing a single payment and in addition the contract in the Marlowe editor will have been reduced to \lstinline{Close}.
 
 At any point in the simulation, the user can undo any steps made: in this particular case, they can undo the application of the transaction, and iteratively undo more steps. At any point, they can also reset the contract to its initial state. This enables users to apply transactions, see their effects, step back, and try different transactions to see the effects of the changes on the result. They can also change the reduced contract to investigate variants of the original.

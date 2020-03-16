@@ -43,6 +43,7 @@ executable marlowe
                         Language.Marlowe.Analysis.FSSet
                         Language.Marlowe.Analysis.FSMap
                         Language.Marlowe.Analysis.FSSemantics
+                        Language.Marlowe.Analysis.FSSemanticsFastVerbose
                         Language.Marlowe.Analysis.IntegerArray
                         Language.Marlowe.Analysis.Numbering
                         Language.Marlowe.Analysis.MkSymb

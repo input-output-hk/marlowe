@@ -82,6 +82,9 @@ instance Pretty Int where
 instance Pretty Integer where
   prettyFragment = text . show
 
+instance Pretty Rational where
+  prettyFragment = text . show
+
 instance (Pretty a, Pretty b) => Pretty (a, b) where
   prettyFragment (a, b) = encloseSep lparen rparen (comma <> space) [prettyFragment a, prettyFragment b]
 

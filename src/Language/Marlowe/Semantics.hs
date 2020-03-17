@@ -9,6 +9,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           Data.Ratio
 import GHC.Generics (Generic)
 import Language.Marlowe.Pretty (Pretty, prettyFragment)
 import           Text.PrettyPrint.Leijen (text)
@@ -91,6 +92,7 @@ data Value = AvailableMoney AccountId
             | AddValue Value Value
             | SubValue Value Value
             | MulValue Value Value
+            | Scale Rational Value
             | ChoiceValue ChoiceId
             | SlotIntervalStart
             | SlotIntervalEnd
@@ -205,6 +207,20 @@ evalValue env state value = let
         AddValue lhs rhs     -> eval lhs + eval rhs
         SubValue lhs rhs     -> eval lhs - eval rhs
         MulValue lhs rhs     -> eval lhs * eval rhs
+        Scale s rhs          -> let
+            num = numerator s
+            denom = denominator s
+            -- quotient and reminder
+            multiplied = num * eval rhs
+            (q, r) = multiplied `quotRem` denom
+            -- abs (rem (num/denom)) - 1/2
+            abs a = if a >= 0 then a else negate a
+            signum x = if x > 0 then 1 else if x == 0 then 0 else -1
+            sign :: Integer
+            sign = signum (2 * abs r - abs denom)
+            m = if r < 0 then q - 1 else q + 1
+            isEven = (q `rem` 2) == 0
+            in if r == 0 || sign == (-1) || (sign == 0 && isEven) then q else m
         ChoiceValue choiceId ->
             Map.findWithDefault 0 choiceId (choices state)
         SlotIntervalStart    -> (getSlot . ivFrom . slotInterval) env

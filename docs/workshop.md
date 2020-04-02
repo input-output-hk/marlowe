@@ -41,7 +41,7 @@ For each contract that you write, does your contract pass the analysis? If not, 
 
 ## Links
 
-- The [Marlowe Playground](https://david.marlowe.iohkdev.io).
+- The [Marlowe Playground](https://alpha.marlowe.iohkdev.io).
 
 - The [Marlowe github repo](https://github.com/input-output-hk/marlowe).
 

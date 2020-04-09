@@ -166,7 +166,7 @@ This form of implementation relies on the extensions to the UTxO model described
 \subsection{Extended UTxO}
 
 Cardano is a UTxO-based (unspent transaction output) blockchain, similar to Bitcoin~\cite{sok}.
-It extends the Bitcoin model by allowing transaction outputs to hold a \emph{Dataum}.
+It extends the Bitcoin model by allowing transaction outputs to hold a \emph{Datum}.
 As the name suggests, this is a serialised data value used to store and communicate a contract state.
 This allows us to create complex multi-transactional contracts.
 In a nutshell, the EUTxO model looks like this:
@@ -575,7 +575,7 @@ Contracts can also be written using Google's \emph{Blockly} visual programming l
 
 \begin{wrapfigure}[9]{l}{0.25\textwidth}
     \vspace*{-0.24in}
-    \includegraphics[width=0.25\textwidth]{hole_options.png}
+    \includegraphics[width=0.25\textwidth]{figures/hole_options.png}
 \end{wrapfigure}
 
 The Marlowe editor in the unstable version of the playground has a feature called \emph{holes} to aid writing contracts. If we enter the contract \lstinline{?mycontract}
@@ -590,7 +590,7 @@ New options will be presented, one for each hole, and each will have a dropdown 
 
 \begin{wrapfigure}[5]{l}{0.20\textwidth}
 %    \vspace*{-0.25in}
-    \includegraphics[scale=0.18]{hole_options_2.png}
+    \includegraphics[scale=0.18]{figures/hole_options_2.png}
 \end{wrapfigure}
 A complete contract can be written in this guided way with the user needing only to fill in strings and numbers by hand. This approach to writing holes in your code and ``asking'' the compiler what you could put in there is easy to implement in a DSL because there are very limited options, however is is also becoming popular with more complex languages such as Haskell and Idris.
 
@@ -607,7 +607,7 @@ In this case, the only action a user can take to progress the contract is to acc
 
 \begin{wrapfigure}[4]{l}{0.47\textwidth}
     \vspace*{-0.28in}
-    \includegraphics[scale=0.15]{input_composer.png}
+    \includegraphics[scale=0.15]{figures/input_composer.png}
 \end{wrapfigure}
 
 The user can then choose to add this action to a transaction being prepared. Once the action is added other inputs become possible; these are displayed in the input composer, and again they can be added to the transaction being composed. In this way, multiple %actions can be added to a transaction before it is applied.
@@ -615,7 +615,7 @@ actions can be added to a transaction before it is applied.
 
 \begin{wrapfigure}[5]{l}{0.47\textwidth}
     \vspace*{-0.32in}
-    \includegraphics[scale=0.15]{tx_composer.png}
+    \includegraphics[scale=0.15]{figures/tx_composer.png}
 \end{wrapfigure}
 
 A user can then apply this transaction and in the example above this would result in the state pane showing a single payment and in addition the contract in the Marlowe editor will have been reduced to \lstinline{Close}.

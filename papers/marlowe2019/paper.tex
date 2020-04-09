@@ -166,8 +166,8 @@ This form of implementation relies on the extensions to the UTxO model described
 \subsection{Extended UTxO}
 
 Cardano is a UTxO-based (unspent transaction output) blockchain, similar to Bitcoin~\cite{sok}.
-It extends the Bitcoin model by allowing transaction outputs to hold a \emph{Data Script}.
-As the name suggests, this is  a serialised data value used to store and communicate a contract state.
+It extends the Bitcoin model by allowing transaction outputs to hold a \emph{Dataum}.
+As the name suggests, this is a serialised data value used to store and communicate a contract state.
 This allows us to create complex multi-transactional contracts.
 In a nutshell, the EUTxO model looks like this:
 
@@ -185,8 +185,8 @@ Each transaction output contains a \emph{Value}, and is protected either by a \e
 or by a \emph{Validator}.
 
 In order to spend an existing transaction output protected by a \emph{Validator},
-one must create a transaction (a \emph{PendingTx}) that has an \emph{input} that references the transaction output,
-and contains a \emph{Redeemer}, such that \texttt{Validator(Data Script, Redeemer, PendingTx)} evaluates to $True$.
+one must create a transaction (a \emph{Context}) that has an \emph{input} that references the transaction output,
+and contains a \emph{Redeemer}, such that \texttt{Validator(Datum, Redeemer, Context)} evaluates to $True$.
 A valid signature is required to spend a \emph{public key} transaction output.
 
 
@@ -213,17 +213,17 @@ e.g.\ in the Marlowe Playground.
 
 \noindent
 Marlowe contract execution on the blockchain consists of a chain of transactions
-where, at each stage, the remaining contract and its state are passed through the \emph{Data script},
+where, at each stage, the remaining contract and its state are passed through the \emph{Datum},
 and actions/inputs (i.e. \emph{choices} and \emph{money deposits}) are passed via the 
 %SJT: is this right?
-%AN: yes. [Input] is precisely the redeemer script. We could say that Value and SlotInterval are parts of PendingTx,
+%AN: yes. [Input] is precisely the redeemer script. We could say that Value and SlotInterval are parts of Context,
 % but I think it's not that important here.
 \emph{Redeemer}.
 Each step in contract execution is a transaction that spends a Marlowe contract transaction output
 by providing a valid input as \emph{Redeemer}, and produces a transaction output
 with a the remaining Marlowe contract and the updated state.
 
-We store the remaining contract in the \emph{Data script}, which makes it visible to everyone.
+We store the remaining contract in the \emph{Datum}, which makes it visible to everyone.
 This simplifies contract reflection and retrospection.
 
 \subsection{Contract lifecycle on the extended UTxO model}
@@ -236,7 +236,7 @@ creation and execution.
 
 Contract creation is realised as a transaction
 with at least one script output,
-with the particular Marlowe contract in the data script, and protected by the Marlowe validator script.
+with the particular Marlowe contract in the \emph{Datum}, and protected by the Marlowe validator script.
 Note that we do not place any restriction on the transaction inputs, which could use any other transaction
 outputs, including other scripts. This gives this model optimal flexibility and composability.
 
@@ -263,7 +263,7 @@ and \texttt{minSlot} holds a minimal slot number that a contract has seen, to av
 \paragraph{Execution}
 
 Marlowe contract execution consists of a chain of transactions,
-where the remaining contract and state are passed through the \emph{data script},
+where the remaining contract and state are passed through the \emph{Datum},
 and input actions (i.e. \texttt{choices}) are passed as \emph{redeemer scripts}.
 
 Each execution step is a transaction that spends a Marlowe contract transaction output by providing

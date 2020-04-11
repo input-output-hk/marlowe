@@ -291,8 +291,8 @@ datatype Value = AvailableMoney AccountId Token
                | SlotIntervalStart
                | SlotIntervalEnd
                | UseValue ValueId
-
-datatype Observation = AndObs Observation Observation
+               | Cond Observation Value Value
+and Observation = AndObs Observation Observation
                      | OrObs Observation Observation
                      | NotObs Observation
                      | ChoseSomething ChoiceId
@@ -364,7 +364,7 @@ fun fixInterval :: "SlotInterval \<Rightarrow> State \<Rightarrow> IntervalResul
 
 (* EVALUATION *)
 
-fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarrow> int" where
+fun  evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarrow> int" and evalObservation :: "Environment \<Rightarrow> State \<Rightarrow> Observation \<Rightarrow> bool" where
 "evalValue env state (AvailableMoney accId token) =
     findWithDefault 0 (accId, token) (accounts state)" |
 "evalValue env state (Constant integer) = integer" |
@@ -378,23 +378,9 @@ fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarr
 "evalValue env state (SlotIntervalStart) = fst (slotInterval env)" |
 "evalValue env state (SlotIntervalEnd) = snd (slotInterval env)" |
 "evalValue env state (UseValue valId) =
-    findWithDefault 0 valId (boundValues state)"
-
-
-lemma evalDoubleNegValue :
-  "evalValue env sta (NegValue (NegValue x)) = evalValue env sta x"
-  by auto
-
-lemma evalNegValue :
-  "evalValue env sta (AddValue x (NegValue x)) = 0"
-  by auto
-
-lemma evalSubValue :
-  "evalValue env sta (SubValue (AddValue x y) y) = evalValue env sta x"
-  by auto
-
-
-fun evalObservation :: "Environment \<Rightarrow> State \<Rightarrow> Observation \<Rightarrow> bool" where
+    findWithDefault 0 valId (boundValues state)" |
+"evalValue env state (Cond cond thn els) =
+    (if evalObservation env state cond then evalValue env state thn else evalValue env state els)" |
 "evalObservation env state (AndObs lhs rhs) =
     (evalObservation env state lhs \<and> evalObservation env state rhs)" |
 "evalObservation env state (OrObs lhs rhs) =
@@ -415,6 +401,21 @@ fun evalObservation :: "Environment \<Rightarrow> State \<Rightarrow> Observatio
     (evalValue env state lhs = evalValue env state rhs)" |
 "evalObservation env state TrueObs = True" |
 "evalObservation env state FalseObs = False"
+
+
+lemma evalDoubleNegValue :
+  "evalValue env sta (NegValue (NegValue x)) = evalValue env sta x"
+  by auto
+
+lemma evalNegValue :
+  "evalValue env sta (AddValue x (NegValue x)) = 0"
+  by auto
+
+lemma evalSubValue :
+  "evalValue env sta (SubValue (AddValue x y) y) = evalValue env sta x"
+  by auto
+
+
 
 fun refundOne :: "Accounts \<Rightarrow>
                   ((Party \<times> Token \<times> Money) \<times> Accounts) option" where

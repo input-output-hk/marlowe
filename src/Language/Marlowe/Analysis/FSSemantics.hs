@@ -141,6 +141,7 @@ data Value = AvailableMoney AccountId
            | SlotIntervalStart
            | SlotIntervalEnd
            | UseValue ValueId
+           | Cond Observation Value Value
 --           | OracleValue OracleId Value
   deriving (Eq,Ord,Show,Read)
 
@@ -327,6 +328,7 @@ evalValue bnds env state value =
     SlotIntervalStart        -> inStart
     SlotIntervalEnd          -> inEnd
     UseValue (ValueId valId) -> IntegerArray.findWithDefault 0 valId $ boundValues state
+    Cond cond thn els        -> ite (evalObservation bnds env state cond) (go thn) (go els)
   where go = evalValue bnds env state
         (inStart, inEnd) = ST.untuple $ slotInterval env
 

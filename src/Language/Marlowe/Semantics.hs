@@ -94,6 +94,7 @@ data Value = AvailableMoney AccountId
             | SlotIntervalStart
             | SlotIntervalEnd
             | UseValue ValueId
+            | Cond Observation Value Value
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 data Observation = AndObs Observation Observation
@@ -206,6 +207,7 @@ evalValue env state value = let
         SlotIntervalStart    -> (getSlot . ivFrom . slotInterval) env
         SlotIntervalEnd      -> (getSlot . ivTo . slotInterval) env
         UseValue valId       -> Map.findWithDefault 0 valId (boundValues state)
+        Cond cond thn els    -> if evalObservation env state cond then eval thn else eval els
 
 
 -- | Evaluate an @Observation@ to Bool

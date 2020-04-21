@@ -29,3 +29,10 @@ Install Haskell Stack if you haven't already
     $ brew install glpk
     $ stack setup
     $ stack build
+    
+## Build Isabelle proofs
+
+Requirements: Isabelle CLI
+
+    $ cd isabelle
+    $ isabelle build -d. Test

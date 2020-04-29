@@ -1,0 +1,820 @@
+\documentclass[english,runningheads]{llncs}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{babel}
+\begin{document}
+\title{Efficient static analysis of Marlowe contracts}
+
+\author{Pablo {Lamela Seijas}\orcidID{0000-0002-1730-1219}\\
+\email{pablo.lamela@iohk.io}
+\institute{IOHK, Hong Kong}} 
+
+\authorrunning{P. Lamela Seijas}
+
+\maketitle
+
+\section{Introduction\label{sec:Introduction}}
+
+Thanks to static analysis, we can automatically check beforehand whether
+payments promised by a Marlowe contract can be fulfilled in every
+possible execution of the contract. For example, if a Marlowe contract
+has passed the static analysis, we will have a very high assurance
+that whenever the contract says we will be paid a certain amount of
+money, the contract will indeed have enough money to make such payment.
+
+State of the art libraries like SBV \cite{erkok2019sbv} allow straightforward
+static analysis of arbitrary Haskell functions, with very few restrictions
+on how those functions are implemented.
+
+However, static analysis can be very computationally expensive, because
+it essentially needs to check every possible execution of the contract.
+
+For example, in the case of Marlowe, contracts are typically interactive
+and must deal with inputs arriving from different users in different
+orders, and sometimes not arriving at all. In addition, Marlowe allows
+several inputs to be grouped in a single transaction, and different
+decisions may be taken depending on the content of those inputs, or
+in the combinations of contents of those inputs. All these alternatives
+multiply the search space of static analysis and can easily compose
+exponentially and thus make the whole approach unusable in practice
+even for moderately sized contracts.
+
+This paper contributes a number of approaches that can be used when
+optimising static analysis, examples extracted from a case-study where
+we applied these approaches, and an overview of the techniques used
+to test the correctness of the optimisations. 
+
+The case study presented is that of the optimisation of Marlowe\textquoteright s
+static analysis. During this work, the techniques applied allowed
+us to reduce the analysis time of an implementation that followed
+the semantics closely and took a couple of minutes to analyse contracts
+of a few kilobytes, to one where the same contract would take less
+than a second, and where a four-person crowdfunding contract that
+when fully expanded occupies about 19 megabytes, can be analysed in
+around 10 minutes using Z3. In the original implementation, we were
+not able to analyse the 19 megabyte contract because it ran out of
+memory after half an hour.
+
+There are many things that can be done to improve the efficiency of
+static analysis. We have classified them as lightweight and heavyweight. 
+
+\paragraph*{Lightweight }
+
+modifications are local and can be done without fundamentally changing
+the implementation. We consider three main ideas:
+\begin{itemize}
+\item Removing unnecessary parts from the analysis. If they do not affect
+the property that is being verified then we can just remove them from
+the implementation and reduce its complexity.
+\item Avoiding high level abstractions. High level abstractions aid reasoning
+and avoid errors, but also introduce complexity that is not necessarily
+needed.
+\item Reducing search space by normalising parameters. If there are several
+ways of representing some inputs, and the different representations
+have no impact on the analysis, then we can remove all but one when
+implementing static analysis.
+\end{itemize}
+
+\paragraph*{Heavyweight}
+
+modifications are more fundamental approaches that require considerable
+changes to the fundamental structure of the implementation. We consider
+two main ideas:
+\begin{itemize}
+\item Reducing search space by using normalised execution paths relevant
+to the property. Instead of using search space to model inputs, we
+use it to model possible executions, and we also ensure that we only
+represent each possible group of equivalent executions once, i.e:
+executions with the same normal form.
+\item Minimizing the representation of inputs and outputs. We can benefit
+from encoding inputs and outputs as concisely as possible, and discarding
+information that we can infer in other ways.
+\end{itemize}
+In the following sections, we introduce the semantics of Marlowe as
+a case study (Section~\ref{sec:Marlowe-intro}), we go through a
+general approach to static analysis (Section~\ref{sec:Making-Marlowe-symbolic}),
+then we explore both lightweight (Section~\ref{subsec:Lightweight-modifications})
+and heavyweight (Section~\ref{subsec:Heavyweight-modifications})
+optimisation techniques in more detail, and we illustrate them with
+examples of how they apply to Marlowe static analysis. In Section~\ref{sec:Testing},
+we briefly discuss some ways in which property based testing can be
+used to address potential problems that may arise from the implementation
+of the most heavyweight optimisations described in the previous section.
+
+\section{Marlowe and how its design helps static analysis and correctness\label{sec:Marlowe-intro} }
+
+Firstly, we will briefly introduce the semantics of Marlowe, the guarantees
+that are offered implicitly by the semantics, and how the design choices
+facilitate static analysis and make it decidable. A more detailed
+explanation of Marlowe can be found in \cite{marlowe}.
+
+\subsection{Structure of Marlowe contracts\label{subsec:Structure-of-Marlowe} }
+
+Marlowe contracts are able to receive payments, store money and tokens,
+ask for input from the participants, and redistribute stored money
+and tokens back among participants. The decision about which and when
+these actions are carried out is taken by the contract on the basis
+of the information that is available at each point in time. Participants,
+in turn, do not need to be a single person, but they may be represented
+by a \texttt{Role}, which in turn would be controlled by another contract.
+
+The Marlowe language is written as a set of mutually recursive Haskell
+data types. It regulates interactions between a finite number of participants,
+established before the start of the contract. 
+
+The main data type is called \texttt{Contract}, and it represents
+the logic and actions that the contract allows or enforces. The outmost
+constructs of the contract represent the actions that will be enforced
+first, and as those constructs become enforced, the contract will
+evolve into one of its continuations (sub-contracts), and the process
+will continue until only the construct \texttt{Close} remains.
+
+There are 5 constructs of type \texttt{Contract}:
+\begin{itemize}
+\item \texttt{Close} -- signals the end of the life of a contract. Once
+it is reached, all the money and tokens stored in the accounts of
+the contract will be refunded to the owner of each of the respective
+accounts.
+\item \texttt{If} -- immediately decides how the contract must continue,
+depending on a given condition that we call an \texttt{Observation}.
+The value of an \texttt{Observation} can depend on previous choices
+made by participants, on amounts of money and tokens remaining, or
+other factors.
+\item \texttt{Let} -- immediately stores a \texttt{Value} for use later.
+The value of a \texttt{Value} can depend on the information available
+to the contract at the time. For example, it may store the minimum
+slot of the slot interval of the current transaction, or the money
+available in a particular account at a given point in time, for use
+at a later time in the contract execution.
+\item \texttt{When} -- waits for an external input. The \texttt{When} construct
+also specifies a timeout slot: after this slot has been reached, the
+\texttt{When} construct expires, and no longer accepts any input.
+There are three types of input:
+\begin{itemize}
+\item \texttt{Deposit} -- Waits for a participant to deposit an amount
+of money or tokens (specified as a \texttt{Value}) in the contract.
+The amount is added to one of the accounts of the contract.
+\item \texttt{Choice} -- Waits for a participant to make a choice. A choice
+is represented as an integer number from a set specified by the contract.
+\item \texttt{Notify} -- Waits for an \texttt{Observation} to be true.
+Because contracts are reactive (they cannot initiate transactions),
+it is necessary for an external actor to \texttt{Notify} the contract
+that the \texttt{Observation} has become true. However, this notification
+does not have to be carried out by a participant, anybody can do it.
+\end{itemize}
+\item \texttt{Pay} -- immediately makes a payment between accounts of the
+contract, or from an account of the contract to a given participant.
+The amount transferred is specified as a \texttt{Value}. 
+\end{itemize}
+
+\subsection{Semantics\label{subsec:Marlowe-Semantics}}
+
+As we mentioned in Section~\ref{subsec:Structure-of-Marlowe}, Marlowe
+contracts are passive: they are executed by transactions being submitted
+to the blockchain, with the on chain interpreter checking that the
+transaction complies with the contract under execution. These transactions
+need to be submitted by participants or their representatives (e.g.
+user wallets) and their execution is carried out atomically and deterministically.
+
+Each transaction may include a list of inputs, a set of signatures,
+minimum and maximum slot numbers, a set of input UTxOs (incoming money
+and tokens), and a set of outputs (outgoing money and tokens). For
+a transaction to be valid, the transaction should have the same effect
+at any slot within that slot range (be deterministic). For example,
+if a transaction has a minimum slot number which is before a timeout,
+and a maximum slot which after a timeout then the transaction will
+fail with the error \texttt{AmbiguousSlotInterval}, since it would
+not be deterministic.
+
+The key aspect of the Marlowe semantics is that it checks that a particular
+transaction is valid given the current state and contract. Because
+transactions are deterministic, there should be no reason why someone
+accidentally sends a transaction that is invalid, since it will only
+result in a cost to that participant. The type signature of the transaction
+validation function is:
+
+\begin{verbatim}
+computeTransaction :: TransactionInput -> State -> Contract
+                   -> TransactionOutput 
+\end{verbatim}
+
+This function can be factored into four main functions:
+\begin{itemize}
+\item \texttt{reduceContractStep} - this function simplifies the topmost
+construct that does not require an input to be executed (i.e: anything
+but a \texttt{When} that has not expired or a \texttt{Close} when
+accounts are empty). It only simplifies the \texttt{When} construct
+if it has expired (i.e. the timeout specified in the \texttt{When}
+is less than or equal to the minimum slot number). In the case of
+the \texttt{Close} contract, it only refunds one of the accounts at
+a time. 
+\item \texttt{reduceContractUntilQuiescent} - this function calls \texttt{reduceContractStep}
+repeatedly until it has no further effect (i.e. it reaches a fixed
+point). 
+\item \texttt{applyInput} - this function processes one input from the head
+of the input list. The topmost construct must be a \texttt{When} that
+is expecting that particular input and has not expired. 
+\item \texttt{applyAllInputs} - this function processes a list of inputs.
+It calls \texttt{applyInput} for each of the inputs in the list, and
+calls \texttt{reduceContractUntilQuiescent} before and after every
+call to \texttt{applyInput}.
+\end{itemize}
+The \texttt{State} stores information about the amount of money and
+tokens in the contract at a given time, together with the choices
+made, \texttt{Let} bindings made, and a lower bound for the current
+slot:
+
+\begin{verbatim}
+data State = State { accounts    :: Map AccountId Money
+                   , choices     :: Map ChoiceId ChosenNum
+                   , boundValues :: Map ValueId Integer
+                   , minSlot     :: Slot }
+\end{verbatim}
+
+\subsection{Extra considerations\label{subsec:Extra-considerations}}
+
+Many of the design decisions behind Marlowe have been made with the
+aim of preventing potential errors. For example:
+\begin{itemize}
+\item Account identifiers include an account owner; an account owner is
+a participant that will get the money or tokens remaining in an account
+when a contract terminates. At the same time, the only construct that
+can pause the execution of a contract is the \texttt{When} construct,
+which has a timeout, this ensures that all contracts eventually expire
+and terminate. Together these properties ensure that no money or tokens
+are locked in the contract forever.
+\item Classification of money and tokens into accounts separates concerns.
+Marlowe will never spend more money or tokens than there are in an
+account, even if there is more available in the contract. But when
+required to pay more than is in an account, it will pay as much as
+is available in the account, in order to remain as close as possible
+to the original intention of the contract.
+\item Marlowe does not perform deposits or payments of negative amounts
+of money or tokens. It treats them as zero. However, at the same time,
+if there happens to be a request for deposit with a negative amount,
+it continues gracefully, it will still wait for a null deposit to
+be made, and it will continue as if everything is correct, this way
+the expected execution of the contract is disturbed as little as possible.
+\item Marlowe contracts have an upper limit in the number of inputs that
+they accept throughout their life. This limit is implied by the maximum
+number of nested When constructs in the contract, since only one input
+per When can be accepted. At the same time, transactions that have
+no effect on the contract are considered invalid, thus there is also
+a limit in the maximum number of transactions a contract can accept
+throughout its life. This prevents DoS attacks, and makes static analysis
+easier. We discuss this in more detail in Section~\ref{sec:Making-Marlowe-symbolic}.
+\end{itemize}
+
+\section{Making Marlowe semantics symbolic\label{sec:Making-Marlowe-symbolic}}
+
+In this section, we briefly present and reflect on a technique that
+can be used to convert a concrete implementation of a Haskell function
+into a symbolic one by using the SBV library, and to use this symbolic
+implementation for static analysis. In particular, we explore this
+technique in the context of the Marlowe semantics.
+
+This approach corresponds to our first attempt at implementing static
+analysis for Marlowe contracts, and it is a systematic approach that
+can be carried out with very few assumptions. 
+
+\subsection{Overview}
+
+The SBV library supports implementing Haskell functions in a way that
+the same implementation can be used:
+\begin{itemize}
+\item With concrete parameters, as a normal Haskell function
+\item With symbolic variables, so that properties can be check for satisfiability
+using an SMT solver
+\item As part of QuickCheck properties, for testing randomly.
+\end{itemize}
+Parameters that can be used symbolically are wrapped in a monad called
+\texttt{SBV}. Functions that depend on symbolic parameters also return
+values wrapped in the \texttt{SBV} monad.
+
+The idea is therefore to convert our implementation to use values
+wrapped in the \texttt{SBV} monad, by replacing all operations on
+those values with symbolic functions. In order to simplify this work,
+\texttt{SBV} provides symbolic versions for many of the most common
+built-in functions that are either overloaded or have similar names.
+
+Our semantics transaction processing function would thus become:
+
+\begin{verbatim}
+computeTransaction :: SBV TransactionInput -> SBV State
+                   -> SBV Contract
+                   -> SBV TransactionOutput
+\end{verbatim}
+
+We can then define a function that takes a list of transactions instead,
+and we would just need to write a property that says that the result
+of executing the list of transactions for a given contract does not
+have any warnings (the property we are trying to verify). Then we
+can pass the property to SBV and it will tell us which transaction
+lists break the property.
+
+Unfortunately, there are a couple of issues with this approach that
+we review in Section~\ref{subsec:Considerations}.
+
+\subsection{Considerations\label{subsec:Considerations}}
+
+SBV does not currently support complex custom data types. It has some
+support for nonary data types, but not for data types with parameters.
+It does support the \texttt{Either} type, and the \texttt{Tuple} type.
+So it is possible to have conversions between custom data types and
+nested \texttt{Either} and \texttt{Tuple} type synonyms. We originally
+implemented this conversion using Template Haskell, since by using
+this technique the symbolic implementation can remain similar to the
+concrete one.
+
+For example, the following data structure:
+
+\begin{verbatim}
+data Input = IDeposit AccountId Party Money
+           | IChoice ChoiceId ChosenNum
+           | INotify
+\end{verbatim}
+
+Would be translated to the following type synonym:
+
+\begin{verbatim}
+type SInput = SBV (Either (AccountId, Party, Money)
+                          (Either (ChoiceId, ChosenNum)
+                                  ()))
+\end{verbatim}
+
+But this approach cannot address recursive datatypes, let alone mutually
+recursive datatypes. And the \texttt{Contract} type is mutually recursive.
+
+Even if we could represent mutually recursive datatypes, it would
+not be feasible to directly translate the semantics, because a more
+general limitation of SMT solvers is that they cannot, in general,
+deal with arbitrarily sized computations. In other words, if termination
+of a symbolic function is bounded by a parameter that can be arbitrarily
+large, SMT solvers will often fail to terminate when trying to validate
+a property, since doing so often requires a proof by induction. We
+discuss how to address this problem in Section~\ref{subsec:Adapting-the-semantics}.
+
+\subsection{Adapting the semantics\label{subsec:Adapting-the-semantics}}
+
+In order to guarantee termination of the SMT validation, we need a
+concrete bound for the property that we want to validate.
+
+Related work often addresses this problem by manually establishing
+a bound on the amount of computation, e.g: limiting the number of
+computation steps analysed, the number of times loops are unrolled
+\cite{clarke2004tool,gulwani2008program,jackson2000finding}.
+
+In the case of Marlowe, we have natural bounds that we can use because,
+given a concrete contract, we can calculate limits for:
+\begin{itemize}
+\item The maximum number of inputs that can have an effect on the contract
+\item The maximum number of transactions that can have an effect on the
+contract
+\item All of the account, choice, and \texttt{Let} identifiers that will
+be used in the contract
+\item The number of participants that will participate in the contract
+\end{itemize}
+From this data we can deduce an upper bound for:
+\begin{itemize}
+\item The number of times that
+\texttt{computeTransaction}, \texttt{reduceContractStep}, and \texttt{applyInput} are
+called.
+\item The number of accounts that the contract will use, and an
+the number of elements in each of the associative maps
+that comprise the \texttt{State} of the contract.
+\end{itemize}
+If we keep the \texttt{Contract} parameter of the semantics concrete,
+we can use it to bound the execution, because every call to \texttt{reduceContractStep}
+will either make no progress or remove one of the constructs, with
+the exception of \texttt{Close}. But for \texttt{Close} we know we
+just have to call it as many times as the maximum number of accounts
+there can possibly be, since every time we call it it will refund
+one of the accounts.
+
+Thus, the symbolic transaction processing function becomes:
+
+\begin{verbatim}
+computeTransaction :: SBV TransactionInput -> SBV State
+                   -> Contract
+                   -> SBV TransactionOutput
+\end{verbatim}
+
+However, there is one more problem. The output \texttt{Contract} returned
+by the function, which is wrapped inside the \texttt{TransactionOutput},
+is symbolic, since it depends on the current \texttt{TransactionInput}
+and \texttt{State}, which are both symbolic.
+
+We get around this problem by using a continuation style. Instead
+of returning the \texttt{TransactionOutput} directly, we take a continuation
+function that takes the concrete contract and the symbolic version
+of \texttt{TransactionOutput} without the contract.
+
+Thus, the symbolic transaction processing function will look something
+like:
+
+\begin{verbatim}
+computeTransaction :: SymVal a => SBV TransactionInput
+                   -> SBV State -> Contract
+                   -> (SBV TransactionOutput ->
+                       Contract -> SBV a)
+                   -> SBV a
+\end{verbatim}
+
+In practice, we also include some extra information about bounds,
+and we make some other parts of \texttt{TransactionOutput} concrete,
+in addition to the \texttt{Contract}.
+
+\section{Making static analysis efficient\label{sec:Making-static-analysis-efficient}}
+
+In this section, we explain the techniques that we mentioned in Section~\ref{sec:Introduction}
+more in detail, and we illustrate those techniques with examples from
+the static analysis implementation of Marlowe.
+
+\subsection{Lightweight modifications\label{subsec:Lightweight-modifications}}
+
+Some of the modifications that we can apply to a static analysis implementation
+are localised, and they do not fundamentally affect the overall structure
+of the implementation. This means that the implementation can remain
+intuitive and close to the original semantics and model that we are
+trying to analyze, as well as making sure that the changes introduce
+fewer errors than a more serious restructure.
+
+\subsubsection{Removing unnecessary parts from the analysis }
+
+This is probably the most straightforward optimization we can make.
+When we use the same or similar code for both the analysis and the
+implementation, we may end up including code that is not relevant
+to the analysis.
+
+In the case of Marlowe, this was the case of the \texttt{Close} construct.
+The \texttt{Close} construct refunds all the money and tokens remaining
+in the accounts. At the time of analysis, we do not know how much
+is available in each account, because it may depend on the value of
+a choice made by the user in runtime. For that reason, the generated
+constraints must include comparisons for every account. This makes
+the implementation of the \texttt{Close} construct very expensive
+to execute symbolically.
+
+As it turns out, we do not need to implement the semantics of the
+\texttt{Close} construct at all, because it is impossible for the
+\texttt{Close} construct to produce a failed payment: it only pays
+whatever there is available. So we can safely remove it from the analysis.
+
+\subsubsection{Avoiding high level abstractions }
+
+High level libraries like SBV, and even standards like SMTLib, support
+the use and construction of considerably high level abstractions,
+e.g: custom data-types, list, sets\dots{} Unfortunately, even though
+high level abstractions make reasoning about code easier, they often
+prevent certain optimisations, since they abstract out aspects of
+the implementation that in our particular case may be concrete.
+
+For example, in the case of Marlowe static analysis, we initially
+implemented a symbolic associative map primitive with the only limitation
+that it needed a concrete bound in the number of elements. This is
+straightforward to realise using the symbolic implementation of list
+and tuple, both provided by SBV. However, this is very costly in a
+solver: searching a list symbolically requires constraints that check
+the key of every element in the list up to the maximum capacity of
+the associative map, because it is not known at the time of symbolic
+execution how many elements the list has.
+
+However, in Marlowe we know the values of all the keys that we are
+going to use, because the contract is concrete, and only \texttt{Account},
+\texttt{Choice}, and \texttt{Let} identifiers that are mentioned in
+the contract will ever make it into the \texttt{State}. So we do not
+need keys of the associative map to be symbolic, we can use a concrete
+associative map with symbolic values.
+
+Nevertheless, using a partially concrete map prevents us from using
+it as the result of a function that takes symbolic parameters, so
+we will need to use a continuation style insead. An alternative is
+to assign numbers to each possible key, and store them in a symbolic
+list, this will at least prevent the search from having to compare
+a lookup with every key, since we will know in which position of the
+list each value is stored. 
+
+\subsubsection{Reducing search space by normalising parameters\label{subsec:Reducing-search-space-by-normalising-parameters}}
+
+The higher the number of degrees of freedom of the input, the larger
+the search space, and the higher the load we are putting on the SMT
+solver. In many cases, we do not need to explore the whole search
+space to check satisfiability of a property. In particular, we may
+be able to prove that some sets of inputs are equivalent in terms
+of the property whose satisfiability we want to test.
+
+For example, in the case of Marlowe\textquoteright s static analysis,
+Marlowe allows several inputs to be combined in one single transaction.
+This functionality is important because each transaction requires
+the issuer to pay fees, so combining several inputs in a single transaction
+can translate into important savings. On the other hand, it also means
+that static analysis must consider many more possibilities, since
+the number of ways of partitioning inputs in transactions grows exponentially
+in the number of inputs.
+
+However, we can devise a normal form for input traces, in which there
+is a maximum of one input per transaction. We only need to make sure
+that, for every trace, if it produces a warning, there exists a trace
+with only one input per transaction that also produces a warning.
+Using the automated proof assistant Isabelle \cite{nipkow2002isabelle},
+we have shown the stronger property that splitting a transaction in
+two does not modify the effect on a contract as long as the transaction
+does not produce an error\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/isabelle/SingleInputTransactions.thy}
+(last visited on 29/04/2020)}.
+
+This optimization reduces the search space considerably, but transactions
+may still have no inputs, so it still leaves room for many possible
+ways of combining the inputs in transactions. We explain how we reduced
+the search space even further in the next section. 
+
+\subsection{Heavyweight modifications \label{subsec:Heavyweight-modifications}}
+
+When optimising, if our solution is a local minimum, small changes
+to the parameters will not grant any improvement to the value function.
+For that reason, in this section, we explore ways of optimizing that
+may imply considerable rewriting of our properties, constraints, and
+static analysis implementation in general.
+
+\subsubsection{Reducing search space by using normalised execution paths relevant
+to the property \label{subsec:Reducing-search-space-by-using-normalised-execution-paths-relevant-to-the-property}}
+
+One approach we can use that helps improve static analysis efficiency
+is to implement the property thinking of the property we want to test
+instead of trying to make it as close as possible to the full implementation
+of the system. We do not even need to think about the representation
+of a counterexample (we will discuss that in the next section), but
+only in what are the conditions for the property to be false.
+
+Unfortunately, having static analysis be very different from implementation
+makes the approach much more error prone, and in making an argument
+for the trustworthiness of the analysis there are many more assumptions
+that need to be made and reasoned about. In Section~\ref{sec:Testing}
+we explore ways of mitigating this problem.
+
+For example, the main property we want to check is whether there is
+any possible execution that produces a failed payment. Thus, we look
+at executions instead of looking at inputs. The most complicated construct
+in terms of executions is the \texttt{When} construct, since it allows
+for two transactions that are separate in time to have different effects
+depending on when they are issued, all other constructs will get resolved
+instantly in one way or another. But, without loss of generality,
+we can structure them as Figure~\ref{fig:Distribution-of-transactions}
+shows: we can conceptually break the contract tree into subtrees,
+where each subtree has a \texttt{When} construct as its root, with
+the exception of the subtree that has the same root as the original
+contract tree.
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{figures/transactions}
+
+\caption{Distribution of transactions with respect to a contract\label{fig:Distribution-of-transactions}}
+
+\end{figure}
+
+Each level of subtrees will correspond to a transaction, i.e: the
+root subtree will correspond to the first transaction, the set of
+subtrees that are children of the first subtree (in the original tree)
+will correspond to the second transaction, and so on. There may be
+some paths which do not require as many transactions/subtrees as other
+paths, because they go across fewer \texttt{When} constructs before
+finding a \texttt{Close} construct.
+
+We can assign one transaction to each path of execution before a \texttt{When},
+because if the maximum slot number of the transaction is lower than
+the slot number in the timeout and the transaction has no inputs,
+then the execution will stop before the \texttt{When}, so we need
+to account for that possibility. In other words, if two parts of the
+execution path may have different slot numbers when we go through
+them, we need to consider them as separate transactions, because they
+may have payments that depend on those values.
+
+Of course, if the minimum slot number of the transaction is greater
+or equal than the slot number in the timeout, then the first transaction
+will execute past the \texttt{When} and into the timeout branch, and
+we will not need the second transaction. In the same way, if we include
+an input that is allowed by the \texttt{When} into the first transaction,
+then the first transaction will continue into the corresponding \texttt{When}
+branch, and we will not need the second transaction.
+
+We cannot just constrain the maximum slot number of the first transaction
+to be less than the timeout in the \texttt{When} because, if we do
+that, then we will miss executions where one transaction expires several
+\texttt{When} in a row, or when it expires one \texttt{When} and provides
+the right input for later \texttt{When}. And we cannot not constrain
+the maximum slot number of the first transaction because then we will
+not know whether the first transaction goes beyond the \texttt{When}
+or not.
+
+We get around this problem by allowing the slot numbers of the first
+and second transactions to be equal. If this happens, we will find
+out that one of the transactions will be marked as \texttt{UselessTransaction}
+by the semantics when we look at the counterexample. So we just need
+to filter out all transactions that produce \texttt{UselessTransaction}
+warnings in the final result.
+
+Note however that, in Section~\ref{subsec:Reducing-search-space-by-normalising-parameters},
+we already reduced the number of inputs per transaction to a maximum
+of one, and the number of transactions to the maximum number of nested
+\texttt{When}s plus one. But now we have also assigned each of the
+transactions to a part of the contract, so we do not need a symbolic
+list of transactions, we can have a finite concrete list of symbolic
+transactions and we know in advance which of the transactions we are
+working on at each moment during the symbolic execution.
+
+One subtle detail that we realised during testing is that, even though
+the diagram above shows that a \texttt{When} belongs to the next transaction,
+because it will still be there after the previous transaction is executed,
+the observations in the \texttt{Notify} cases. In the same way, the
+values in the \texttt{Deposit} cases will refer to the \texttt{State}
+before the \texttt{When} is executed, but to the slot interval of
+the transaction that triggers the \texttt{When}, since the amount
+to deposit must be calculated without considering the effects of the
+deposit itself. 
+
+\subsubsection{Minimizing the representation of inputs and outputs }
+
+When we initially implemented the efficient version of static analysis
+for Marlowe, we did not pay any attention to the inputs and outputs.
+The first version we wrote of the SBV property would not take any
+symbolic parameters. Originally, it would simply take a concrete \texttt{Contract}
+as input, and it would return a symbolic boolean that said whether
+the \texttt{Contract} was valid or not. However, when the \texttt{Contract}
+turns out to be invalid we also want to know why, so we later modified
+the property to give a counterexample that illustrated what went wrong.
+The original implementation still used some intermediate symbolic
+variables, but they were anonymous, and they were created during the
+exploration of the contract.
+
+A simple way of obtaining a counterexample is to modify the output
+of the function to return the offending trace using the symbolic \texttt{Maybe}
+type. Surprisingly, this small change increases the amount of time
+required by the symbolic analysis severalfold.
+
+The solution to this increase in execution time was to pass as input
+a fixed list of transactions, each of which being represented by a
+tuple with four symbolic integers:
+\begin{enumerate}
+\item An integer representing the minimum slot
+\item An integer representing the maximum slot
+\item An integer representing the \texttt{When} case whose input is being
+included in the transaction, where zero represents the timeout branch
+(and there being no inputs to the transaction).
+\item An integer representing the amount of money or tokens (if the input
+is a \texttt{Deposit}), or the number chosen (if the input is a \texttt{Choice})
+\end{enumerate}
+If we do not need a transaction we just set all four numbers to $-1$.
+
+In order to translate this sequence of numbers into a proper list
+of transactions that is human readable and we can use to report the
+counter example, we need to iterate through the list and see the evolution
+of the contract with each transaction, using the concrete semantics.
+This way we can gather the rest of necessary information, such as
+whether the transaction input is a \texttt{Deposit}. We can also see
+which of the transactions does not have an effect, i.e: they produce
+\texttt{UselessTransaction} as we mentioned in Section~\ref{subsec:Reducing-search-space-by-using-normalised-execution-paths-relevant-to-the-property}.
+
+We use this separation of concerns between the static analysis and
+the concrete semantics to our advantage, as an opportunity for applying
+property based testing, as we explain in Section~\ref{subsec:Testing-for-consistency}.
+
+\section{Testing for consistency and equivalence\label{sec:Testing}}
+
+Errors often occur when optimising or translating. If the static analysis
+implementation is close to the actual implementation, it is much less
+likely that a mistake will be made when writing it. On the other hand,
+if we have to craft a static analysis implementation that is equivalent
+(in some sense) to the original, but is written in a very different
+way, it is quite likely that we will make assumptions which do not
+hold.
+
+In order to avoid these problems, we use a mixture of automated proof
+assistants to verify our assumptions, and property based testing to
+test for consistency and equivalence. 
+
+\subsection{Testing for consistency\label{subsec:Testing-for-consistency} }
+
+If our static analysis is not replicating all the functionality of
+the semantics, we can use potential discrepancies as an opportunity
+for testing, as shown in Figure~\ref{fig:Property-based-testing-for-consistency}.
+We generate random contracts and we apply the static analysis to them
+in order to try to find a counterexample that produces warnings. If
+we cannot find any counterexamples then the test passes, but if we
+find one we test it on the semantics and see whether the counterexample
+indeed produces warnings in the semantics too, if it does not we have
+found a problem either on the static analysis or the semantics.
+
+A limitation of this approach is that it only tests for false positives,
+and it does not prevent false negatives, those can be covered by testing
+for equivalence (see Section~\ref{subsec:Testing-for-equivalence}).
+
+In addition, we can add assertions to the process. In the case of
+Marlowe, if the counterexample breaks one of the assertions or is
+formed incorrectly it would also mean that there is a problem with
+the static analysis. For example, it may be that the counterexample
+refers to a \texttt{Case} of a \texttt{When} that does not exist,
+or that it has invalid or ambiguous intervals. If it has \texttt{UselessTransactions}
+is ok, because we are doing that on purpose, as we mentioned in Section~\ref{subsec:Reducing-search-space-by-using-normalised-execution-paths-relevant-to-the-property}.
+
+\begin{figure}
+\begin{centering}
+\includegraphics[width=0.5\textwidth]{figures/consistency_property}
+\par\end{centering}
+\caption{Property based testing for consistency\label{fig:Property-based-testing-for-consistency}}
+
+\end{figure}
+
+
+\subsection{Testing for equivalence\label{subsec:Testing-for-equivalence} }
+
+If we have two static analysis implementations, we have another opportunity
+for testing. In our case, we have one efficient implementation that
+is very different from the semantics and one inefficient implementation
+that is much closer to the semantics. We can do this as shown in Figure~\ref{fig:Property-based-testing-for-equivalence}.
+We generate random contracts, we feed them to both static analysis
+implementations, and we compare the results. If the results are the
+same then test passes, if they are different then one of the implementations
+is wrong.
+
+\begin{figure}
+\begin{centering}
+\includegraphics[width=0.45\textwidth]{figures/equivalence_property}
+\par\end{centering}
+\caption{Property based testing for equivalence\label{fig:Property-based-testing-for-equivalence}}
+\end{figure}
+
+This approach covers both types of errors, i.e: false positives and
+false negatives (for both of the implementations), but the execution
+time of the tests is bounded from below by the slower of the two implementations.
+The consistency approach is thus more efficient in finding false positives.
+
+\section{Related work}
+
+Work in \cite{mokhov2019formal} documents a similar effort to ensure
+correctness of implementations by using Haskell and SBV library; the
+authors also discuss performance of the analysis and apply this approach
+to non-functional requirements.
+
+The idea of using constraint solvers for finding bugs is not new,
+and there has been a number of initiatives that have explored its
+application to the verification of assertions in programs written
+using general purpose programming languages \cite{gulwani2008program,jackson2000finding};
+as well the compliance with usage protocols \cite{ball2001automatically,xie2005saturn}.
+
+\cite{keshishzadeh2013early} also applies constraint solvers for
+detecting problems in the usage of DSLs. The authors observe that
+SMT solvers have limited support for non-linear constraints such as
+exponentiation. This problem does not affect the current design of
+Marlowe because it does not support multiplication by arbitrary variables,
+and because all inputs are integer and bounded finitely.
+
+\section{Future work }
+
+In the future, we would like to extend static analysis to cover other
+potential problems in Marlowe contracts and to aid their development.
+We can envisage that we can use static analysis to locate unreachable
+subcontracts, to allow developers to provide custom assertions and
+check their satisfiability, and even to allow users to inspect the
+possible maximum and minimum values that particular expressions can
+reach. 
+
+\section{Conclusion}
+
+In this paper, we have summarized the lessons learned from our work
+on optimising the static analysis for Marlowe contracts. We have found
+that there are two clear approaches to static analysis using SMT,
+both have advantages and disadvantages. One is less error prone and
+straightforward, but inefficient and hard to test; the other approach
+is much more efficient, versatile, and testable, but more error prone.
+
+We have also seen that many specific properties and restrictions characteristic
+of the target DSL can be utilized both as optimisation opportunities
+and, in our case, for completeness of the analysis. Since symbolic
+execution of, for example, a turing complete language, would be intractable,
+and would require us to manually set a bound; but this is not in the
+case for Marlowe.
+
+In the end, we have illustrated how to counteract the main disadvantage
+of the later approach, its propensity to errors, by using property
+based testing. This way we have obtained a static analysis implementation
+that is efficient, versatile, testable, and reliable.
+
+On the other hand, for the static analysis of Marlowe contracts, we
+found out that when running statistics on the equivalence testing
+property, most of the bugs were false negatives in the straightforward
+implementation, and the optimised implementation seems to be more
+reliable thanks to the consistency tests that we run beforehand.
+
+Another advantage of the optimised implementation is that, because
+it relies on fewer and simpler features, it is compatible with more
+SMT solvers which, in turn, it means that it is less reliant on the
+correctness of a single SMT solver. If an SMT solver fails to give
+an answer, we can try a different one; if we want to ensure that a
+contract is valid, we can test it with several SMT solvers and ensure
+all of them agree. 
+
+\bibliographystyle{splncs04}
+\bibliography{paper}
+
+\end{document}

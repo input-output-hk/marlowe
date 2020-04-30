@@ -9,5 +9,6 @@ session Test = HOL +
      PositiveAccounts
      QuiescentResult
      ValidState
+     CloseSafe
      TransactionBound
      SingleInputTransactions

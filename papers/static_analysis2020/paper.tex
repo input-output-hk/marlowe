@@ -609,7 +609,7 @@ branch, and we will not need the second transaction.
 We cannot just constrain the maximum slot number of the first transaction
 to be less than the timeout in the \texttt{When} because, if we do
 that, then we will miss executions where one transaction expires several
-\texttt{When} in a row, or when it expires one \texttt{When} and provides
+\texttt{When} in a row, or where it expires one \texttt{When} and provides
 the right input for later \texttt{When}. And we cannot not constrain
 the maximum slot number of the first transaction because then we will
 not know whether the first transaction goes beyond the \texttt{When}

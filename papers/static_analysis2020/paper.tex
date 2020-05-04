@@ -648,8 +648,8 @@ for Marlowe, we did not pay any attention to the inputs and outputs.
 The first version we wrote of the SBV property would not take any
 symbolic parameters. Originally, it would simply take a concrete \texttt{Contract}
 as input, and it would return a symbolic boolean that said whether
-the \texttt{Contract} was valid or not. However, when the \texttt{Contract}
-turns out to be invalid we also want to know why, so we later modified
+the \texttt{Contract} was valid or not. However, if a \texttt{Contract}
+turns out to be invalid, we also want to know why, so we later modified
 the property to give a counterexample that illustrated what went wrong.
 The original implementation still used some intermediate symbolic
 variables, but they were anonymous, and they were created during the

@@ -634,10 +634,10 @@ working on at each moment during the symbolic execution.
 One subtle detail that we realised during testing is that, even though
 the diagram above shows that a \texttt{When} belongs to the next transaction,
 because it will still be there after the previous transaction is executed,
-the observations in the \texttt{Notify} cases. In the same way, the
-values in the \texttt{Deposit} cases will refer to the \texttt{State}
-before the \texttt{When} is executed, but to the slot interval of
-the transaction that triggers the \texttt{When}, since the amount
+the observations in the \texttt{Notify} cases will correspond to the
+\texttt{State} before the \texttt{When} is executed, but to the slot
+interfal of the transactions that triggers the \texttt{When}. The same
+is true for \texttt{Value}s in the \texttt{Deposit} cases, since the amount
 to deposit must be calculated without considering the effects of the
 deposit itself. 
 

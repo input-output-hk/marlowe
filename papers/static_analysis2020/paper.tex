@@ -437,7 +437,7 @@ in addition to the \texttt{Contract}.
 \section{Making static analysis efficient\label{sec:Making-static-analysis-efficient}}
 
 In this section, we explain the techniques that we mentioned in Section~\ref{sec:Introduction}
-more in detail, and we illustrate those techniques with examples from
+in more detail, and we illustrate those techniques with examples from
 the static analysis implementation of Marlowe.
 
 \subsection{Lightweight modifications\label{subsec:Lightweight-modifications}}
@@ -446,8 +446,8 @@ Some of the modifications that we can apply to a static analysis implementation
 are localised, and they do not fundamentally affect the overall structure
 of the implementation. This means that the implementation can remain
 intuitive and close to the original semantics and model that we are
-trying to analyze, as well as making sure that the changes introduce
-fewer errors than a more serious restructure.
+trying to analyze, as well as making changes less likely to introduce
+errors than a more serious restructure.
 
 \subsubsection{Removing unnecessary parts from the analysis }
 
@@ -467,8 +467,10 @@ to execute symbolically.
 
 As it turns out, we do not need to implement the semantics of the
 \texttt{Close} construct at all, because it is impossible for the
-\texttt{Close} construct to produce a failed payment: it only pays
-whatever there is available. So we can safely remove it from the analysis.
+\texttt{Close} construct to produce a failed payment
+(we have also proven this using Isabelle\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/isabelle/CloseSafe.thy}
+(last visited on 04/04/2020)}): it only pays whatever there is available.
+So we can safely remove it from the analysis.
 
 \subsubsection{Avoiding high level abstractions }
 
@@ -598,7 +600,7 @@ execution path may have different slot numbers when we go through
 them, we need to consider them as separate transactions, because they
 may have payments that depend on those values.
 
-Of course, if the minimum slot number of the transaction is greater
+On the other hand, if the minimum slot number of the transaction is greater
 or equal than the slot number in the timeout, then the first transaction
 will execute past the \texttt{When} and into the timeout branch, and
 we will not need the second transaction. In the same way, if we include
@@ -694,7 +696,7 @@ implementation is close to the actual implementation, it is much less
 likely that a mistake will be made when writing it. On the other hand,
 if we have to craft a static analysis implementation that is equivalent
 (in some sense) to the original, but is written in a very different
-way, it is quite likely that we will make assumptions which do not
+way, it is more likely that we will make assumptions which do not
 hold.
 
 In order to avoid these problems, we use a mixture of automated proof

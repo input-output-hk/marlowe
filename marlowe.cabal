@@ -30,6 +30,7 @@ executable marlowe
                         Language.Marlowe.Util
                         Language.Marlowe.ACTUS
                         Language.Marlowe.ACTUS.ActusContracts
+                        Language.Marlowe.Examples.Auction
                         Language.Marlowe.Examples.CrowdFunding
                         Language.Marlowe.Examples.DepositIncentive
                         Language.Marlowe.Examples.Escrow

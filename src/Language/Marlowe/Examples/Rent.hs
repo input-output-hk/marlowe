@@ -3,6 +3,9 @@ module Language.Marlowe.Examples.Rent where
 
 import Language.Marlowe
 
+utilityMonths :: Integer -> Contract
+utilityMonths n = (foldl (.) mkDeposit [payMonth (Slot x) | x <- [1..n]]) Close
+
 utility :: Contract
 utility = mkDeposit $ payMonth 1 $ payMonth 2 $ payMonth 3 $ Close
 

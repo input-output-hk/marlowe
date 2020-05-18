@@ -769,29 +769,29 @@ The consistency approach is thus more efficient in finding false positives.
 \section{Measurements}
 
 \begin{table}[]
+\centering
+\scalebox{0.9}{
 \begin{tabular}{l||lllll}
-\multicolumn{1}{c||}{\textbf{Auction}} & \multicolumn{5}{c}{\textbf{Lightweight optimisations}} \\ \hline \hline
-\textbf{Number of participants}        & \multicolumn{1}{c||}{1}        & \multicolumn{1}{c|}{2}            & \multicolumn{1}{c|}{3}                         & \multicolumn{1}{c|}{4}                        & \multicolumn{1}{c}{5}    \\ \hline
-\textbf{Execution time}                & \multicolumn{1}{c||}{0.2205s}  & \multicolumn{1}{c|}{4m 45.2015s}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \color[HTML]{888888} N/A \\ \hline
-Generation overhead                    & \multicolumn{1}{c||}{76.61\%}  & \multicolumn{1}{c|}{96.40\%}      & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \color[HTML]{888888} N/A \\ \hline
-\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c||}{0.1689s}  & \multicolumn{1}{c|}{4m 34.9342s}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \color[HTML]{888888} N/A \\ \hline
-Z3 overhead                            & \multicolumn{1}{c||}{23.39\%}  & \multicolumn{1}{c|}{3.60\%}       & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \color[HTML]{888888} N/A \\ \hline
-\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c||}{0.0516s}  & \multicolumn{1}{c|}{10.2673s}     & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \color[HTML]{888888} N/A \\ \hline
-\textbf{RAM usage peak}                & \multicolumn{1}{c||}{44,248KB} & \multicolumn{1}{c|}{1,885,928KB}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \color[HTML]{888888} N/A \\ \hline
+\multicolumn{6}{l}{\textbf{Auction contract -- \texttt{Auction.hs}}} \\ \hline \hline
+\multicolumn{6}{c}{\textbf{Lightweight optimisations}} \\ \hline \hline
+\textbf{Num.~participants}        & \multicolumn{1}{c||}{1}        & \multicolumn{1}{c|}{2}            & \multicolumn{1}{c|}{3}                         & \multicolumn{1}{c|}{4}                        & \multicolumn{1}{c}{5}    \\ \hline
+\textbf{Execution time}                & \multicolumn{1}{c||}{0.2205s}  & \multicolumn{1}{c|}{4m 45.2015s}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+Generation overhead                    & \multicolumn{1}{c||}{76.61\%}  & \multicolumn{1}{c|}{96.40\%}      & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c||}{0.1689s}  & \multicolumn{1}{c|}{4m 34.9342s}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+Z3 overhead                            & \multicolumn{1}{c||}{23.39\%}  & \multicolumn{1}{c|}{3.60\%}       & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c||}{0.0516s}  & \multicolumn{1}{c|}{10.2673s}     & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+\textbf{RAM usage peak}                & \multicolumn{1}{c||}{44,248KB} & \multicolumn{1}{c|}{1,885,928KB}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A}  & \multicolumn{1}{c|}{\color[HTML]{888888} N/A} & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline \hline
+\multicolumn{6}{c}{\textbf{Heavyweight optimisations}} \\ \hline \hline
+\textbf{Num.~participants}        & \multicolumn{1}{c||}{1}        & \multicolumn{1}{c|}{2}        & \multicolumn{1}{c|}{3}        & \multicolumn{1}{c|}{4}              & \multicolumn{1}{c}{5}    \\ \hline
+\textbf{Execution time}                & \multicolumn{1}{c||}{0.01198s} & \multicolumn{1}{c|}{0.0289s}  & \multicolumn{1}{c|}{1.1138s}  & \multicolumn{1}{c|}{1h 5m 45.1377s} & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+Generation overhead                    & \multicolumn{1}{c||}{83.73\%}  & \multicolumn{1}{c|}{70.36\%}  & \multicolumn{1}{c|}{75.91\%}  & \multicolumn{1}{c|}{80.86\%}        & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c||}{0.0100s}  & \multicolumn{1}{c|}{0.0203s}  & \multicolumn{1}{c|}{0.8455s}  & \multicolumn{1}{c|}{53m 10.0383s}   & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+Z3 overhead                            & \multicolumn{1}{c||}{16.27\%}  & \multicolumn{1}{c|}{29.64\%}  & \multicolumn{1}{c|}{24.09\%}  & \multicolumn{1}{c|}{19.14\%}        & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c||}{0.0019s}  & \multicolumn{1}{c|}{0.0086s}  & \multicolumn{1}{c|}{0.2683s}  & \multicolumn{1}{c|}{12m 35.0993s}   & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+\textbf{RAM usage peak}                & \multicolumn{1}{c||}{17,020KB} & \multicolumn{1}{c|}{17,740KB} & \multicolumn{1}{c|}{49,668KB} & \multicolumn{1}{c|}{2,364,500KB}    & \multicolumn{1}{c}{\color[HTML]{888888} N/A}
 \end{tabular}
-\end{table}
-
-\begin{table}[]
-\begin{tabular}{l||lllll}
-\multicolumn{1}{c||}{\textbf{Auction}} & \multicolumn{5}{c}{\textbf{Heavyweight optimisations}} \\ \hline \hline
-\textbf{Number of participants}        & \multicolumn{1}{c||}{1}        & \multicolumn{1}{c|}{2}        & \multicolumn{1}{c|}{3}        & \multicolumn{1}{c|}{4}              & \multicolumn{1}{c}{5}    \\ \hline
-\textbf{Execution time}                & \multicolumn{1}{c||}{0.01198s} & \multicolumn{1}{c|}{0.0289s}  & \multicolumn{1}{c|}{1.1138s}  & \multicolumn{1}{c|}{1h 5m 45.1377s} & \color[HTML]{888888} N/A \\ \hline
-Generation overhead                    & \multicolumn{1}{c||}{83.73\%}  & \multicolumn{1}{c|}{70.36\%}  & \multicolumn{1}{c|}{75.91\%}  & \multicolumn{1}{c|}{80.86\%}        & \color[HTML]{888888} N/A \\ \hline
-\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c||}{0.0100s}  & \multicolumn{1}{c|}{0.0203s}  & \multicolumn{1}{c|}{0.8455s}  & \multicolumn{1}{c|}{53m 10.0383s}   & \color[HTML]{888888} N/A \\ \hline
-Z3 overhead                            & \multicolumn{1}{c||}{16.27\%}  & \multicolumn{1}{c|}{29.64\%}  & \multicolumn{1}{c|}{24.09\%}  & \multicolumn{1}{c|}{19.14\%}        & \color[HTML]{888888} N/A \\ \hline
-\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c||}{0.0019s}  & \multicolumn{1}{c|}{0.0086s}  & \multicolumn{1}{c|}{0.2683s}  & \multicolumn{1}{c|}{12m 35.0993s}   & \color[HTML]{888888} N/A \\ \hline
-\textbf{RAM usage peak}                & \multicolumn{1}{c||}{17,020KB} & \multicolumn{1}{c|}{17,740KB} & \multicolumn{1}{c|}{49,668KB} & \multicolumn{1}{c|}{2,364,500KB}    & \color[HTML]{888888} N/A
-\end{tabular}
+}
+\caption{Execution cost measurement of auction contract\label{table1}}
 \end{table}
 
 \section{Related work}

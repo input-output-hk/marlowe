@@ -817,9 +817,34 @@ Z3 overhead                            & \multicolumn{1}{c|}{83.32\%}   & \multi
 \textbf{RAM usage peak}                & \multicolumn{1}{c|}{17,016KB}  & \multicolumn{1}{c|}{18,768KB}  & \multicolumn{1}{c|}{62,108KB}  & \multicolumn{1}{c|}{3,715,020KB}    & \multicolumn{1}{c}{\color[HTML]{888888} N/A}
 \end{tabular}
 }
-\caption{Execution cost measurement of crowdfunding contract\label{table1}}
+\caption{Execution cost measurement of crowdfunding contract\label{table2}}
 \end{table}
 
+\begin{table}[]
+\centering
+\scalebox{0.9}{
+\begin{tabular}{l||lllll}
+\multicolumn{6}{l}{\textbf{Rent contract -- \texttt{Rent.hs}}} \\ \hline \hline
+\multicolumn{6}{c}{\textbf{Lightweight optimisations}} \\ \hline \hline
+\textbf{Num.~months}                   & \multicolumn{1}{c|}{1}        & \multicolumn{1}{c|}{2}         & \multicolumn{1}{c|}{3}                         & \multicolumn{1}{c|}{4}                        & \multicolumn{1}{c}{5}    \\ \hline
+\textbf{Execution time}                & \multicolumn{1}{c|}{0.2850s}   & \multicolumn{1}{c|}{3.0303s}   & \multicolumn{1}{c|}{2m 53.2458s} & \multicolumn{1}{c|}{3h 22m 13.0122s} & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+Generation overhead                    & \multicolumn{1}{c|}{77.55\%}  & \multicolumn{1}{c|}{91.25\%}   & \multicolumn{1}{c|}{99.18\%}     & \multicolumn{1}{c|}{99.94\%}         & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c|}{0.2210s}  & \multicolumn{1}{c|}{2.7651s}   & \multicolumn{1}{c|}{2m 51.8252s} & \multicolumn{1}{c|}{3h 22m 5.7324s}  & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+Z3 overhead                            & \multicolumn{1}{c|}{22.45\%}  & \multicolumn{1}{c|}{8.75\%}    & \multicolumn{1}{c|}{0.82\%}      & \multicolumn{1}{c|}{0.06\%}          & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c|}{0.0640s}  & \multicolumn{1}{c|}{0.2652s}   & \multicolumn{1}{c|}{0m 1.4206s}  & \multicolumn{1}{c|}{7.2798s}         & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline
+\textbf{RAM usage peak}                & \multicolumn{1}{c|}{42,052KB} & \multicolumn{1}{c|}{221,960KB} & \multicolumn{1}{c|}{1,237,092KB} & \multicolumn{1}{c|}{9,160,616KB}     & \multicolumn{1}{c}{\color[HTML]{888888} N/A} \\ \hline \hline
+\multicolumn{6}{c}{\textbf{Heavyweight optimisations}} \\ \hline \hline
+\textbf{Num.~months}                   & \multicolumn{1}{c|}{1}        & \multicolumn{1}{c|}{2}        & \multicolumn{1}{c|}{3}        & \multicolumn{1}{c|}{4}        & \multicolumn{1}{c}{5}    \\ \hline
+\textbf{Execution time}                & \multicolumn{1}{c|}{0.0114s}  & \multicolumn{1}{c|}{0.0111s}  & \multicolumn{1}{c|}{0.01132s} & \multicolumn{1}{c|}{0.01124s} & \multicolumn{1}{c}{0.01255s} \\ \hline
+Generation overhead                    & \multicolumn{1}{c|}{11.55\%}  & \multicolumn{1}{c|}{11.95\%}  & \multicolumn{1}{c|}{13.65\%}  & \multicolumn{1}{c|}{13.69\%}  & \multicolumn{1}{c}{21.00\%} \\ \hline
+\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c|}{0.0013s}  & \multicolumn{1}{c|}{0.0013s}  & \multicolumn{1}{c|}{0.0015s}  & \multicolumn{1}{c|}{0.0015s}  & \multicolumn{1}{c}{0.0026s} \\ \hline
+Z3 overhead                            & \multicolumn{1}{c|}{88.45\%}  & \multicolumn{1}{c|}{88.05\%}  & \multicolumn{1}{c|}{86.35\%}  & \multicolumn{1}{c|}{86.31\%}  & \multicolumn{1}{c}{79.00\%} \\ \hline
+\multicolumn{1}{r||}{× execution time} & \multicolumn{1}{c|}{0.0101s}  & \multicolumn{1}{c|}{0.0098s}  & \multicolumn{1}{c|}{0.0098s}  & \multicolumn{1}{c|}{0.0097s}  & \multicolumn{1}{c}{0.0099s} \\ \hline
+\textbf{RAM usage peak}                & \multicolumn{1}{c|}{15,536KB} & \multicolumn{1}{c|}{15,364KB} & \multicolumn{1}{c|}{15,400KB} & \multicolumn{1}{c|}{15,364KB} & \multicolumn{1}{c}{15,540KB}
+\end{tabular}
+}
+\caption{Execution cost measurement of crowdfunding contract\label{table3}}
+\end{table}
 
 \section{Related work}
 

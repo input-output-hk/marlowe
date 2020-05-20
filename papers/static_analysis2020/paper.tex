@@ -25,7 +25,7 @@ School of Computing, University of Kent, UK,
 
 \maketitle
 \begin{abstract}
-SMT solvers can verify properties very efficiently, and they offer increasing flexibility on the ways that properties can be described. However, the way in which properties are described can affect the computational cost of verifying them considerably. In addition, it is quite hard to predict how different changes will affect the computational cost.
+SMT solvers can verify properties very efficiently, and they offer increasing flexibility on the ways those properties can be described. However, the way in which properties are described can affect the computational cost of verifying them considerably. In addition, it is quite hard to predict how different changes will affect the computational cost.
 
 In this paper, we discuss the lessons we have learned while implementing and optimising the static analysis functionality for Marlowe, a domain specific language for describing self-enforcing financial smart-contracts that can be deployed on a blockchain.
 \end{abstract}
@@ -78,13 +78,13 @@ static analysis. We have classified them as lightweight and heavyweight.
 modifications are local and can be done without fundamentally changing
 the implementation. We consider three main ideas:
 \begin{itemize}
-\item Removing unnecessary parts from the analysis. If they do not affect
+\item \textbf{Removing unnecessary parts from the analysis}. If they do not affect
 the property that is being verified then we can just remove them from
 the implementation and reduce its complexity.
-\item Avoiding high level abstractions. High level abstractions aid reasoning
+\item \textbf{Avoiding high level abstractions}. High level abstractions aid reasoning
 and avoid errors, but also introduce complexity that is not necessarily
 needed.
-\item Reducing search space by normalising parameters. If there are several
+\item \textbf{Reducing search space by normalising parameters}. If there are several
 ways of representing some inputs, and the different representations
 have no impact on the analysis, we can remove all but one when
 implementing static analysis.
@@ -93,15 +93,14 @@ implementing static analysis.
 \paragraph*{Heavyweight}
 
 modifications are more fundamental approaches that require considerable
-changes to the fundamental structure of the implementation. We consider
-two main ideas:
+changes to the structure of the implementation. We consider two main ideas:
 \begin{itemize}
-\item Reducing search space by using normalised execution paths relevant
-to the property. Instead of using search space to model inputs, we
+\item \textbf{Reducing search space by using normalised execution paths relevant
+to the property}. Instead of using search space to model inputs, we
 use it to model possible executions, and we ensure that we only
 represent each possible group of equivalent executions once, i.e:
 executions with the same normal form.
-\item Minimizing the representation of inputs and outputs. We can benefit
+\item \textbf{Minimizing the representation of inputs and outputs}. We can benefit
 from encoding inputs and outputs as concisely as possible, and discarding
 information that we can infer in other ways.
 \end{itemize}
@@ -114,7 +113,7 @@ optimisation techniques in more detail, and we illustrate them with
 examples of how they apply to Marlowe static analysis. In Section~\ref{sec:Testing},
 we briefly discuss some ways in which property based testing can be
 used to address potential problems that may arise from the implementation
-of the most heavyweight optimisations described in the previous section.
+of the heavyweight optimisations described in the previous section.
 In Section~\ref{sec:Measurements}, we present empirical results that
 show the effects of heavyweight optimisations on the execution time
 and memory usage of Marlowe's static analysis.
@@ -130,20 +129,20 @@ explanation of Marlowe can be found in \cite{marlowe}.
 
 Marlowe contracts are able to receive payments, store money and tokens,
 ask for input from the participants, and redistribute stored money
-and tokens back among participants. The decision about which and when
+and tokens back among participants. The decision about which and when of
 these actions are carried out is taken by the contract on the basis
-of the information that is available at each point in time. Participants,
-in turn, do not need to be a single person, but they may be represented
-by a \texttt{Role}, which in turn would be controlled by another contract.
+of the information that is available at each point in time. Participants
+may correspond to either individual public keys or to tokens (\texttt{Role}s).
+In turn, \texttt{Role}s may be controlled by separate independent contracts.
 
 The Marlowe language is written as a set of mutually recursive Haskell
-data types. It regulates interactions between a finite number of participants,
-established before the start of the contract. 
+data types. Marlowe contracts regulate interactions between a finite number
+of participants, determined before the contract is deployed.
 
-The main data type is called \texttt{Contract}, and it represents
+The main data type in Marlowe is called \texttt{Contract}, and it represents
 the logic and actions that the contract allows or enforces. The outmost
-constructs of the contract represent the actions that will be enforced
-first, and as those constructs become enforced, the contract will
+constructs of the \texttt{Contract} represent the actions that will be enforced
+first and, as those constructs become enforced, the \texttt{Contract} will
 evolve into one of its continuations (sub-contracts), and the process
 will continue until only the construct \texttt{Close} remains.
 
@@ -153,17 +152,18 @@ There are 5 constructs of type \texttt{Contract}:
 it is reached, all the money and tokens stored in the accounts of
 the contract will be refunded to the owner of each of the respective
 accounts.
-\item \texttt{If} -- immediately decides how the contract must continue,
-depending on a given condition that we call an \texttt{Observation}.
-The value of an \texttt{Observation} can depend on previous choices
-made by participants, on amounts of money and tokens remaining, or
-other factors.
-\item \texttt{Let} -- immediately stores a \texttt{Value} for use later.
-The value of a \texttt{Value} can depend on the information available
-to the contract at the time. For example, it may store the minimum
-slot of the slot interval of the current transaction, or the money
-available in a particular account at a given point in time, for use
-at a later time in the contract execution.
+\item \texttt{If} -- immediately decides how the contract must continue
+from between two possibilities and depending on a given Boolean condition
+that we call an \texttt{Observation}. The value of an \texttt{Observation}
+can depend on previous choices made by participants, on amounts of money
+and tokens remaining, or other factors.
+\item \texttt{Let} -- immediately stores a \texttt{Value} for later use.
+Expressions of type \texttt{Value} in Marlowe are evaluated to integer
+values and they depend on information available to the contract at the
+time of evaluation. For example, a \texttt{Let} construct can be used to
+store the minimum slot of the slot interval of the current transaction,
+or the amount of money available in a particular account at a given point
+in time, for use at a later stage of the contract execution.
 \item \texttt{When} -- waits for an external input. The \texttt{When} construct
 also specifies a timeout slot: after this slot has been reached, the
 \texttt{When} construct expires, and no longer accepts any input.
@@ -182,34 +182,40 @@ does not have to be carried out by a participant, anybody can do it.
 \end{itemize}
 \item \texttt{Pay} -- immediately makes a payment between accounts of the
 contract, or from an account of the contract to a given participant.
-The amount transferred is specified as a \texttt{Value}. 
+The amount transferred is specified as a \texttt{Value}.
 \end{itemize}
 
 \subsection{Semantics\label{subsec:Marlowe-Semantics}}
 
 As we mentioned in Section~\ref{subsec:Structure-of-Marlowe}, Marlowe
-contracts are passive: they are executed by transactions being submitted
-to the blockchain, with the on chain interpreter checking that the
-transaction complies with the contract under execution. These transactions
+contracts are passive: their code is executed as part of the validation of
+transactions that are submitted to the blockchain. These transactions
 need to be submitted by participants or their representatives (e.g.
-user wallets) and their execution is carried out atomically and deterministically.
+user wallets) and their validation is carried out atomically and
+deterministically.
 
 Each transaction may include a list of inputs, a set of signatures,
 minimum and maximum slot numbers, a set of input UTxOs (incoming money
 and tokens), and a set of outputs (outgoing money and tokens). For
-a transaction to be valid, the transaction should have the same effect
-at any slot within that slot range (be deterministic). For example,
-if a transaction has a minimum slot number which is before a timeout,
-and a maximum slot which after a timeout then the transaction will
-fail with the error \texttt{AmbiguousSlotInterval}, since it would
+a transaction to be valid in Marlowe, the transaction must have the
+same effect for every slot within that slot range (be deterministic).
+For example, if a transaction has a minimum slot number which is before
+a timeout, and a maximum slot which after a timeout then the transaction
+will fail with the error \texttt{AmbiguousSlotInterval}, since it would
 not be deterministic.
 
-The key aspect of the Marlowe semantics is that it checks that a particular
+A key aspect of the Marlowe semantics is that it checks that a particular
 transaction is valid given the current state and contract. Because
 transactions are deterministic, there should be no reason why someone
-accidentally sends a transaction that is invalid, since it will only
-result in a cost to that participant. The type signature of the transaction
-validation function is:
+accidentally sends a transaction that is invalid for a given \texttt{State}
+and \texttt{Contract}, since it will only result in a cost to that participant.
+
+It is possible that, due to a race condition, a participant will send a
+transaction that no longer applies to a running \texttt{Contract} and
+\texttt{State}, but such a transaction would simply be ignored by the
+blockchain.
+
+The type signature of the transaction validation function is:
 
 \begin{verbatim}
 computeTransaction :: TransactionInput -> State -> Contract
@@ -229,8 +235,8 @@ a time.
 \item \texttt{reduceContractUntilQuiescent} - this function calls \texttt{reduceContractStep}
 repeatedly until it has no further effect (i.e. it reaches a fixed
 point). 
-\item \texttt{applyInput} - this function processes one input from the head
-of the input list. The topmost construct must be a \texttt{When} that
+\item \texttt{applyInput} - this function processes one single input.
+The topmost construct must be a \texttt{When} that
 is expecting that particular input and has not expired. 
 \item \texttt{applyAllInputs} - this function processes a list of inputs.
 It calls \texttt{applyInput} for each of the inputs in the list, and
@@ -254,27 +260,27 @@ data State = State { accounts    :: Map AccountId Money
 Many of the design decisions behind Marlowe have been made with the
 aim of preventing potential errors. For example:
 \begin{itemize}
-\item Account identifiers include an account owner; an account owner is
+\item \textbf{Account identifiers include an account owner}; an account owner is
 a participant that will get the money or tokens remaining in an account
 when a contract terminates. At the same time, the only construct that
 can pause the execution of a contract is the \texttt{When} construct,
 which has a timeout, this ensures that all contracts eventually expire
-and terminate. Together these properties ensure that no money or tokens
+and terminate. Together, these properties ensure that no money or tokens
 are locked in the contract forever.
-\item Classification of money and tokens into accounts separates concerns.
+\item \textbf{Classification of money and tokens into accounts} separates concerns.
 Marlowe will never spend more money or tokens than there are in an
 account, even if there is more available in the contract. But when
 required to pay more than is in an account, it will pay as much as
 is available in the account, in order to remain as close as possible
 to the original intention of the contract.
-\item Marlowe does not perform deposits or payments of negative amounts
-of money or tokens. It treats them as zero. However, at the same time,
+\item \textbf{No negative deposits or payments}. Marlowe treats negative
+amounts in deposits and payments as zero. However, at the same time,
 if there happens to be a request for deposit with a negative amount,
 it continues gracefully, it will still wait for a null deposit to
 be made, and it will continue as if everything is correct, this way
 the expected execution of the contract is disturbed as little as possible.
-\item Marlowe contracts have an upper limit in the number of inputs that
-they accept throughout their life. This limit is implied by the maximum
+\item \textbf{Upper limit in the number of inputs} that a Marlowe contract
+can accept throughout its lifetime. This limit is implied by the maximum
 number of nested When constructs in the contract, since only one input
 per When can be accepted. At the same time, transactions that have
 no effect on the contract are considered invalid, thus there is also

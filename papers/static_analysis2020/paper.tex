@@ -115,6 +115,9 @@ examples of how they apply to Marlowe static analysis. In Section~\ref{sec:Testi
 we briefly discuss some ways in which property based testing can be
 used to address potential problems that may arise from the implementation
 of the most heavyweight optimisations described in the previous section.
+In Section~\ref{sec:Measurements}, we present empirical results that
+show the effects of heavyweight optimisations on the execution time
+and memory usage of Marlowe's static analysis.
 
 \section{Marlowe and how its design helps static analysis and correctness\label{sec:Marlowe-intro} }
 
@@ -766,7 +769,7 @@ false negatives (for both of the implementations), but the execution
 time of the tests is bounded from below by the slower of the two implementations.
 The consistency approach is thus more efficient in finding false positives.
 
-\section{Measurements}
+\section{Measurements \label{sec:Measurements} }
 
 
 \begin{table}[]

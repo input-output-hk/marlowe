@@ -768,6 +768,7 @@ The consistency approach is thus more efficient in finding false positives.
 
 \section{Measurements}
 
+
 \begin{table}[]
 \centering
 \scalebox{0.9}{
@@ -875,6 +876,46 @@ Z3 overhead                            & \multicolumn{1}{c|}{85.49\%}  & \multic
 }
 \caption{Execution cost measurement of coupon contract\label{table4}}
 \end{table}
+
+In our experiments, the heavy weight optimisations considerably reduced
+the requirements of both processing time and memory for Marlowe's static
+analysis. In Tables~\ref{table1},~\ref{table2},~\ref{table3},~and~\ref{table4},
+we present the results of measuring the performance of static analysis on
+four example Marlowe contracts,
+before\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/src/Language/Marlowe/Analysis/FSSemantics.hs} [last visited 19-05-2020]}
+and after\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/src/Language/Marlowe/Analysis/FSSemanticsFastVerbose.hs} [last visited 19-05-2020]}
+the heavyweight optimisations.
+
+Unfortunately, at the time of writing, we do not have a completely unoptimised
+version of the static analysis that we can use to compare, because the semantics
+of Marlowe have changed since we implemented such a version.
+
+Using the \texttt{perf} tool \cite{perf}, we have measured the execution time
+and the overhead of both the generation of the constraints and their solution
+by Z3 \cite{de2008z3}. And we have measured the peak RAM usage of the whole
+process by using GNU's \texttt{time} tool \cite{keppel1998gnu}.
+
+In all the contracts, the implementation that has the heavyweight optimisations
+performs much better and scales further. In the case of the \textit{auction}
+(Table~\ref{table1}) and \textit{crowdfunding} (Table~\ref{table2}) contracts,
+whose size grows exponentially, both approaches quickly overwhelm the resources
+available in the execution environment. On the other, in the case of \textit{rent}
+(Table~\ref{table3}) and \textit{coupon bond} (Table~\ref{table4}), which grow
+linearly, by using the lightweight version the problem becomes intractable much
+faster than with the heavyweight version.
+
+Another conclusion that can be derived from the experiments is that, in the
+version with lightweight optimisations, most of the processing time seems to be
+spent during the generation of the constraints, and solving is done relatively
+quickly by Z3; while the opposite happens for the version with heavyweight
+optimisations.
+
+These results suggest that SBV library is able to generate constraints in a way
+that they are handled efficiently by Z3, but the process itself can be costly
+if we are not careful. Nevertheless, the overall execution time required by Z3
+is also lower in the case of the version with heavyweight optimisations and it
+grows more slowly, which suggests the optimisations described in this paper
+affect both stages of the process.
 
 \section{Related work}
 

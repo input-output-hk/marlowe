@@ -784,7 +784,7 @@ The consistency approach is thus more efficient in finding false positives.
 
 \begin{table}[]
 \centering
-\scalebox{0.9}{
+\scalebox{0.8}{
 \begin{tabular}{l||lllll}
 \multicolumn{6}{l}{\textbf{Auction contract -- \texttt{Auction.hs}}} \\ \hline \hline
 \multicolumn{6}{c}{\textbf{Lightweight optimisations}} \\ \hline \hline
@@ -806,12 +806,12 @@ Z3 overhead                            & \multicolumn{1}{c|}{83.73\%}    & \mult
 \textbf{Contract size (chars)}         & \multicolumn{1}{c|}{275}        & \multicolumn{1}{c|}{3,399}     & \multicolumn{1}{c|}{89,335}    & \multicolumn{1}{c|}{4,747,361}      & \multicolumn{1}{c}{413,784,559}
 \end{tabular}
 }
-\caption{Execution cost measurement of auction contract\label{table1}}
+%\caption{Execution cost measurement of auction contract\label{table1}}
 \end{table}
 
 \begin{table}[]
 \centering
-\scalebox{0.9}{
+\scalebox{0.8}{
 \begin{tabular}{l||lllll}
 \multicolumn{6}{l}{\textbf{Crowdfunding contract -- \texttt{CrowdFunding.hs}}} \\ \hline \hline
 \multicolumn{6}{c}{\textbf{Lightweight optimisations}} \\ \hline \hline
@@ -833,12 +833,12 @@ Z3 overhead                            & \multicolumn{1}{c|}{83.32\%}  & \multic
 \textbf{Contract size (chars)}         & \multicolumn{1}{c|}{857}      & \multicolumn{1}{c|}{12,704}   & \multicolumn{1}{c|}{364,824}  & \multicolumn{1}{c|}{19,462,278}   & \multicolumn{1}{c}{1,690,574,798}
 \end{tabular}
 }
-\caption{Execution cost measurement of crowdfunding contract\label{table2}}
+%\caption{Execution cost measurement of crowdfunding contract\label{table2}}
 \end{table}
 
 \begin{table}[]
 \centering
-\scalebox{0.9}{
+\scalebox{0.8}{
 \begin{tabular}{l||lllll}
 \multicolumn{6}{l}{\textbf{Rent contract -- \texttt{Rent.hs}}} \\ \hline \hline
 \multicolumn{6}{c}{\textbf{Lightweight optimisations}} \\ \hline \hline
@@ -860,12 +860,12 @@ Z3 overhead                            & \multicolumn{1}{c|}{88.45\%}  & \multic
 \textbf{Contract size (chars)}         & \multicolumn{1}{c|}{339}      & \multicolumn{1}{c|}{595}      & \multicolumn{1}{c|}{852}      & \multicolumn{1}{c|}{1,109}    & \multicolumn{1}{c}{1,366}
 \end{tabular}
 }
-\caption{Execution cost measurement of crowdfunding contract\label{table3}}
+%\caption{Execution cost measurement of crowdfunding contract\label{table3}}
 \end{table}
 
 \begin{table}[]
 \centering
-\scalebox{0.9}{
+\scalebox{0.8}{
 \begin{tabular}{l||lllll}
 \multicolumn{6}{l}{\textbf{Coupon bond contract - ACTUS.hs}} \\ \hline \hline
 \multicolumn{6}{c}{\textbf{Lightweight optimisations}} \\ \hline \hline
@@ -887,18 +887,20 @@ Z3 overhead                            & \multicolumn{1}{c|}{85.49\%}  & \multic
 \textbf{Contract size (chars)}         & \multicolumn{1}{c|}{479}      & \multicolumn{1}{c|}{635}      & \multicolumn{1}{c|}{791}      & \multicolumn{1}{c|}{947}      & \multicolumn{1}{c}{1,103}
 \end{tabular}
 }
-\caption{Execution cost measurement of coupon contract\label{table4}}
+%\caption{Execution cost measurement of coupon contract\label{table4}}
+\vspace*{-0.6cm}
 \end{table}
 
 In our experiments, the heavy weight optimisations considerably reduced
 the requirements of both processing time and memory for Marlowe's static
-analysis. In Tables~\ref{table1},~\ref{table2},~\ref{table3},~and~\ref{table4},
-we present the results of measuring the performance of static analysis on
-four example Marlowe contracts,
+analysis. %In Tables~\ref{table1},~\ref{table2},~\ref{table3},~and~\ref{table4},
+We present below the results of measuring the performance of static analysis on
+four example  contracts,
 before\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/src/Language/Marlowe/Analysis/FSSemantics.hs} [last visited 19-05-2020]}
 and after\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/src/Language/Marlowe/Analysis/FSSemanticsFastVerbose.hs} [last visited 19-05-2020]}
 the heavyweight optimisations.
 
+\noindent
 Unfortunately, at the time of writing, we do not have a completely unoptimised
 version of the static analysis that we can use to compare, because the semantics
 of Marlowe have changed since we implemented such a version.

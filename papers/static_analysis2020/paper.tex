@@ -42,11 +42,20 @@ that whenever the contract says we will be paid a certain amount of
 money, any execution of the contract will indeed have enough money to
 make such payment.
 
-State of the art libraries like SBV \cite{erkok2019sbv} allow straightforward
-static analysis of arbitrary Haskell functions, with very few restrictions
-on how those functions are implemented. However, static analysis can be very
-computationally expensive, because it essentially needs to check every
-possible execution of the contract.
+Marlowe's static analysis relies on SMT solvers, which are able to check whether a
+set of constraints is satisfiable very efficiently. Thanks to state of the art
+libraries like SBV \cite{erkok2019sbv}, we can describe those constraints in a
+high-level language. In the case of SBV, we can directly write properties as
+Haskell functions, with very few restrictions on how those functions are
+implemented; SBV will automatically translate those functions into a language
+that SMT solvers can understand (namely, SMTLib format \cite{barrett2010smt}).
+
+Nevertheless, static analysis can become very computationally expensive if
+implemented naïvely, because it needs to consider every possible value of the
+property we want to check (in our case the main property we want to check
+is whether a Marlowe contract will have enough money to make all the
+payments described by the contract). Indeed, high-level abstractions
+are often a tradeoff with efficiency.
 
 For example, in the case of Marlowe, contracts are typically interactive
 and must deal with inputs arriving from different users in different
@@ -60,8 +69,11 @@ even for moderately sized contracts.
 
 This paper contributes a number of approaches that can be used when
 optimising static analysis, with examples extracted from a case-study where
-we applied these approaches, and an overview of the techniques used
-to test the correctness of the optimisations. 
+we applied these approaches, an approach to ensure correctness
+of the optimisations that combines the usage of property-based testing
+and verification using automated theorem provers, and empirical data
+that measures the effect of some of the optimisations on the implementation
+of our case-study.
 
 The case study presented is that of the optimisation of Marlowe's
 static analysis. During this work, the techniques applied allowed
@@ -97,7 +109,10 @@ implementing static analysis.
 \paragraph*{Heavyweight}
 
 modifications are more fundamental approaches that require considerable
-changes to the structure of the implementation. We consider two main ideas:
+changes to the structure of the implementation. But these optimisations can also
+translate in important reductions to execution time and memory usage, as
+shown by the experiments we report in Section~\ref{sec:Measurements}.
+We consider two main ideas:
 \begin{itemize}
 \item \textbf{Reducing the search space by using normalised execution paths relevant
 to the property}. Instead of using the search space to model inputs, we
@@ -198,9 +213,11 @@ user wallets) and their validation is carried out atomically and
 deterministically.
 
 Each transaction may include a list of inputs, a set of signatures,
-a slot interval (in which the transaction can be executed), a set
-of input UTxOs (incoming money
-and tokens), and a set of outputs (outgoing money and tokens). For
+a slot interval\footnote{We use a slot interval because it is very difficult to
+know in practice in which slot the transaction is going to be included,
+and we need transactions to be deterministic, so we cannot use individual
+slot numbers.}, a set of input UTxOs (incoming money and tokens), and a
+set of outputs (outgoing money and tokens). For
 a transaction to be valid in Marlowe, the transaction must have the
 same effect for every slot within that slot range (be deterministic).
 For example, if a transaction has a minimum slot number which is before
@@ -376,8 +393,8 @@ Even if we could represent mutually recursive datatypes, it would
 not be feasible to directly translate the semantics, because a more
 general limitation of SMT solvers is that they cannot, in general,
 deal with arbitrarily sized computations. In other words, if termination
-of a symbolic function is bounded by a parameter that can be arbitrarily
-large, SMT solvers will often fail to terminate when trying to validate
+of a symbolic function is not bounded, or is only bounded by a symbolic
+parameter, SMT solvers will often fail to terminate when trying to validate
 a property, since doing so often requires a proof by induction. We
 discuss how to address this problem in Section~\ref{subsec:Adapting-the-semantics}.
 
@@ -486,8 +503,7 @@ to execute symbolically.
 As it turns out, we do not need to implement the semantics of the
 \texttt{Close} construct at all, because it is impossible for the
 \texttt{Close} construct to produce a failed payment
-(we have also proven this\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/isabelle/CloseSafe.thy} using Isabelle \cite{nipkow2002isabelle})
-(last visited on 04/04/2020)}: it only pays whatever there is available.
+(we have also proven this\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/isabelle/CloseSafe.thy} (last visited on 04/04/2020)} using Isabelle \cite{nipkow2002isabelle}): it only pays whatever there is available.
 So we can safely remove it from the analysis.
 
 \subsubsection{Avoiding high level abstractions.}
@@ -695,7 +711,8 @@ included in the transaction, where zero represents the timeout branch
 \item An integer representing the amount of money or tokens (if the input
 is a \texttt{Deposit}), or the number chosen (if the input is a \texttt{Choice})
 \end{enumerate}
-If we do not need a transaction, we just set all four numbers to $-1$.
+If we need fewer transactions, we will just add dummy transactions with all four numbers
+set to $-1$ at the end of the list.
 
 In order to translate this sequence of numbers into a proper list
 of transactions that is human readable and we can use to report the
@@ -765,10 +782,10 @@ for testing. In our case, we have one efficient implementation that
 is very different from the semantics and one inefficient implementation
 that is much closer to the semantics, and we can compare the results of the
 two implementations. We can do this as shown in Figure~\ref{fig:Property-based-testing-for-equivalence}.
-We generate random contracts, we feed them to both static analysis
-implementations, and we compare the results. If the results are the
-same then test passes, if they are different then one of the implementations
-is wrong.
+We generate random contracts using a custom QuickCheck \cite{quickcheck} generator,
+we feed them to both static analysis implementations, and we compare the results.
+If the results are the same then test passes, if they are different then
+one of the implementations is wrong.
 
 \begin{figure}
 \begin{centering}
@@ -906,7 +923,8 @@ the heavyweight optimisations.
 \noindent
 Unfortunately, at the time of writing, we do not have a completely unoptimised
 version of the static analysis that we can use to compare, because the semantics
-of Marlowe have changed since we implemented that version.
+of Marlowe have changed since we implemented that version. However, our impression
+from manual testing is that the impact of lightweight optimisations was much more modest than the impact of heavyweight optimisations.
 
 Using the \texttt{perf} tool \cite{perf}, we have measured the execution
 time\footnote{The experiments were run on a laptop computer with a

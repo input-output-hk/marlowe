@@ -636,22 +636,28 @@ words, if two parts of the execution path may have different slot
 numbers when we go through them, we need to consider them as separate
 transactions, because they may have payments that depend on those values.
 
-On the other hand, if the minimum slot number of a transaction is greater
-or equal than the slot number in the timeout, then the first transaction
-will execute past the \texttt{When} and into the timeout branch, and
-we will not need the second transaction. In the same way, if we include
+On the other hand, this segmentation is not general enough, because there is
+an edge case. A transaction may execute past a \texttt{When} if the minimum
+slot number in the transaction is greater or equal than the timeout of the
+\texttt{When}. If the transaction expires the \texttt{When} we can no longer
+separate the execution before the \texttt{When} and after the \texttt{When}
+into two different transactions, because we know that the timeout branch of the
+\texttt{When} will be executed as part of the first transaction, and thus
+it will use the slot interval of the first
+transaction (same used for the first segment).
+
+This is not only true for the timeout branch, if we include
 an input that is allowed by the \texttt{When} into the first transaction,
 then the first transaction will continue into the corresponding \texttt{When}
-branch, and we will not need the second transaction.
+branch, and we will not use a second transaction.
 
 We cannot just constrain the maximum slot number of the first transaction
 to be less than the timeout in the \texttt{When} because, if we do
 that, then we will miss executions where one transaction expires several
 \texttt{When} in a row, or where it expires one \texttt{When} and provides
-the right input for later \texttt{When}. And we cannot not constrain
+the right input for later \texttt{When}. And we cannot just not constrain
 the maximum slot number of the first transaction because then we will
-not know whether the first transaction goes beyond the \texttt{When}
-or not.
+not know to which segments each transaction applies.
 
 We get around this problem by allowing the slot numbers of the first
 and second transactions to be equal. If this happens, we will find

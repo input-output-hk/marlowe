@@ -280,7 +280,7 @@ Many of the design decisions behind Marlowe have been made with the
 aim of preventing potential errors. For example:
 \begin{itemize}
 \item \textbf{Classification of money and tokens into accounts} separates concerns.
-A Marlowe will never spend more money or tokens than there are in an
+A Marlowe contract will never spend more money or tokens than there are in an
 account, even if there is more available in the contract. But when
 required to pay more than is in an account, it will pay as much as
 is available in the account, in order to remain as close as possible

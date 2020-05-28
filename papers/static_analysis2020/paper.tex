@@ -33,7 +33,7 @@ In this paper, we discuss what we learned while implementing and optimising the 
 \section{Introduction\label{sec:Introduction}}
 
 Thanks to static analysis, we can automatically check beforehand whether any
-payments promised by a Marlowe contract can be fulfilled in every
+payments promised by a Marlowe~\cite{Marlowe:2018,marlowe} contract can be fulfilled in every
 possible execution of the contract. If a Marlowe contract has passed
 the static analysis, we will have a very high assurance
 that whenever the contract says it will make a payment, the contract will
@@ -124,7 +124,7 @@ and memory usage of Marlowe's static analysis (Section~\ref{sec:Measurements}).
 Firstly, we introduce the semantics of Marlowe, the guarantees
 that are offered implicitly by the semantics, and how the design choices
 facilitate static analysis and make it decidable. A more detailed
-explanation can be found in \cite{marlowe}.
+explanation can be found in \cite{marlowe2020}.
 
 \subsection{Structure of Marlowe contracts\label{subsec:Structure-of-Marlowe} }
 

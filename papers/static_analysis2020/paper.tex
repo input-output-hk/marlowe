@@ -33,22 +33,25 @@ In this paper, we discuss what we learned while implementing and optimising the 
 \section{Introduction\label{sec:Introduction}}
 
 Thanks to static analysis, we can automatically check beforehand whether any
-payments promised by a Marlowe~\cite{Marlowe:2018,marlowe} contract can be fulfilled in every
+payments promised by a Marlowe~\cite{marlowe2020,Marlowe:2018} contract can be fulfilled in every
 possible execution of the contract. If a Marlowe contract has passed
 the static analysis, we will have a very high assurance
 that whenever the contract says it will make a payment, the contract will
 indeed have enough money available.
 
 Marlowe's static analysis relies on SMT solvers, which are able to check efficiently
-whether a set of constraints is satisfiable. Thanks to state of the art
+whether a set of constraints is satisfiable. The main property for us is whether a contract will have enough money for all payments to be made in full.
+
+Thanks to state of the art
 libraries like SBV \cite{erkok2019sbv}, we can describe those constraints in a
 high level language. In the case of SBV, we can write properties as
 Haskell functions, with few restrictions on how those functions are
 implemented; SBV automatically translates those functions to SMTLib format \cite{barrett2010smt}, a language many SMT solvers understand.
+However, high level abstractions often have a tradeoff with efficiency, and static analysis can become very expensive computationally if
+implemented naïvely, because it is NP-complete in the general case.
+ 
 
-Nevertheless, static analysis can become very computationally expensive if
-implemented naïvely, because it is an NP-complete problem in the general case.
-In our case the main property is whether a contract will have enough money for all payments. Indeed, high level abstractions are often a tradeoff with efficiency.
+% Indeed, high level abstractions are often a tradeoff with efficiency.
 
 % For example, in the case of Marlowe, contracts are typically interactive
 % and must deal with inputs arriving from different users in different
@@ -62,19 +65,18 @@ In our case the main property is whether a contract will have enough money for a
 
 This paper contributes a number of approaches that can be used when
 optimising static analysis, with examples extracted from a case-study where
-we applied these approaches, an approach to ensure correctness
-of the optimisations that combines the usage of property-based testing
-and verification using automated theorem provers, and empirical data
+we applied these approaches. Our approach aims to ensure correctness
+of the optimisations by combining the use of property-based testing
+and with verification in an automated theorem prover to establish properties of the optimisations. We also present empirical data
 that measures the effect of some of the optimisations on the implementation
-of our case-study: the optimisation of Marlowe's static analysis.
+of our Marlowe case-study.
 
 The techniques described helped us reduce the analysis time of an implementation
 that followed the semantics closely and took a couple of minutes to analyse contracts
 of a few kilobytes, to one where the same contract takes less
 than a second to analyse, and where a four-person crowdfunding contract that
 fully expanded occupies about 19 megabytes, can be analysed in
-around 10 minutes.
-
+around 10 minutes. 
 We have classified optimisation techniques as lightweight and heavyweight. 
 
 \paragraph*{Lightweight}
@@ -108,11 +110,10 @@ we represent them in a normal form.
 and outputs as concisely as possible, discarding inferable information.
 \end{itemize}
 In the following sections, we introduce the semantics of Marlowe as
-a case study (Section~\ref{sec:Marlowe-intro}), we cover a
-general approach to static analysis (Section~\ref{sec:Making-Marlowe-symbolic}),
-we then explore both lightweight (Section~\ref{subsec:Lightweight-modifications})
-and heavyweight (Section~\ref{subsec:Heavyweight-modifications})
-optimisation techniques in more detail, and we illustrate them with
+a case study (Section~\ref{sec:Marlowe-intro}), and we cover a
+general approach to static analysis (Section~\ref{sec:Making-Marlowe-symbolic}).
+We then, in Section \ref{sec:Making-static-analysis-efficient} explore in Section the lightweight and heavyweight 
+optimisation techniques in more detail, and illustrate them with
 examples of how they apply to Marlowe static analysis. In Section~\ref{sec:Testing},
 we illustrate the use of property based testing on the implementation with
 heavyweight optimisations. Finally, we present empirical results that
@@ -590,14 +591,14 @@ by the semantics when we look at the counterexample. So we just need
 to filter out all transactions that produce \texttt{UselessTransaction}
 warnings in the final result.
 
-To sum up, in Section~\ref{subsec:Reducing-search-space-by-normalising-parameters}, we already limitted the number of inputs per transaction
+To sum up, in Section~\ref{subsec:Reducing-search-space-by-normalising-parameters}, we already limited the number of inputs per transaction
 to a maximum of one. But now we have also assigned each of the
 transactions to a part of the contract, so we no longer need a symbolic
 list of transactions, we can use a finite concrete list of symbolic
 transactions.
 
 One detail we found out during testing is that, even though a \texttt{When}
-belongs to the begining of a transaction, the environment used by
+belongs to the beginning of a transaction, the environment used by
 the \texttt{Observation}s in the \texttt{Notify} cases of the \texttt{When}
 correspond to the \texttt{State} before the \texttt{When} is executed (except
 for the slot interval). The same is true for the \texttt{Value} in the
@@ -646,9 +647,9 @@ whether the transaction input is a \texttt{Deposit}. We can also see
 which of the transactions do not have an effect, i.e: they produce
 \texttt{UselessTransaction} as we mentioned in Section~\ref{subsec:Reducing-search-space-by-using-normalised-execution-paths-relevant-to-the-property}.
 
-We use this separation of concerns between the static analysis and
-the concrete semantics to our advantage, as an opportunity for applying
-property based testing, as we explain in Section~\ref{subsec:Testing-for-consistency}.
+We use this separation of concerns between static analysis and
+concrete semantics to our advantage, as an opportunity for applying
+property based testing.%, as we explain in Section~\ref{subsec:Testing-for-consistency}.
 
 \section{Testing for consistency and equivalence\label{sec:Testing}}
 
@@ -659,11 +660,10 @@ if we have to craft a static analysis implementation that is equivalent
 (in some sense) to the original, but is written in a very different
 way, it is more likely that we will make assumptions which do not
 hold.
-
 In order to avoid these problems, we combine the use of automated proof
 assistants to verify our assumptions and the use of property based testing to
-test for consistency and equivalence (as we describe in
-Section~\ref{subsec:Testing-for-consistency}).
+test for consistency and equivalence. %as we describe in
+%Section~\ref{subsec:Testing-for-consistency}).
 
 \subsection{Testing for consistency\label{subsec:Testing-for-consistency} }
 
@@ -677,8 +677,8 @@ find one, we can test it on the semantics and see whether the counterexample
 indeed produces warnings in the semantics too, if it does not we have
 found a problem in either the static analysis or the semantics.
 
-A limitation of this approach is that it only tests for false positives,
-and it does not prevent false negatives, but those can be covered by testing
+A limitation of this approach is that it only tests for false positives; 
+false negatives can be detected by testing
 for equivalence (see Section~\ref{subsec:Testing-for-equivalence}).
 
 In addition, we can add assertions to the process. In the case of
@@ -687,17 +687,17 @@ formed incorrectly, it would also mean that there is a problem with
 the static analysis. For example, it may be that the counterexample
 refers to a \texttt{Case} of a \texttt{When} that does not exist,
 or that it has invalid or ambiguous intervals. If it has \texttt{UselessTransactions}
-is ok, because we are doing that on purpose, as we mentioned in Section~\ref{subsec:Reducing-search-space-by-using-normalised-execution-paths-relevant-to-the-property}.
+that is ok, because we are doing that on purpose, as we mentioned in Section~\ref{subsec:Reducing-search-space-by-using-normalised-execution-paths-relevant-to-the-property}.
 
 \begin{figure}[h]
 \centering
-\begin{minipage}{.5\textwidth}
+\begin{minipage}{.4\textwidth}
     \begin{centering}
     \includegraphics[width=0.8\textwidth]{figures/consistency_property}
     \par\end{centering}
     \caption{Testing for consistency\label{fig:Property-based-testing-for-consistency}}
 \end{minipage}%
-\begin{minipage}{.5\textwidth}
+\begin{minipage}{.4\textwidth}
     \begin{centering}
     \includegraphics[width=0.7\textwidth]{figures/equivalence_property}
     \par\end{centering}
@@ -705,20 +705,20 @@ is ok, because we are doing that on purpose, as we mentioned in Section~\ref{sub
 \end{minipage}
 \end{figure}
 
+\vspace*{-5mm}
 
 \subsection{Testing for equivalence\label{subsec:Testing-for-equivalence} }
 
-If we have two static analysis implementations, we have another opportunity
-for testing. In our case, we have one efficient implementation that
+Given two  implementations of the static analysis, we have another opportunity
+for testing. We have one efficient implementation that
 is very different from the semantics and one inefficient implementation
 that is much closer to the semantics, and we can compare the results of the
-two implementations. We can do this as shown in Figure~\ref{fig:Property-based-testing-for-equivalence}.
+two, as shown in Figure~\ref{fig:Property-based-testing-for-equivalence}.
+
 We generate random contracts using a custom QuickCheck \cite{quickcheck} generator,
-we feed them to both static analysis implementations, and we compare the results.
+ feed them to both implementations, and compare the results.
 If the results are the same then test passes, if they are different then
 one of the implementations is wrong.
-
-
 This approach covers both types of errors, i.e: false positives and
 false negatives (for both of the implementations), but the execution
 time of the tests is bounded from below by the slower of the two implementations.
@@ -849,20 +849,20 @@ version of the static analysis that we can use to compare, because the semantics
 of Marlowe have changed since we implemented that version. However, our impression
 from manual testing is that the impact of lightweight optimisations was much more modest than the impact of heavyweight optimisations.
 
-Using the \texttt{perf} tool \cite{perf}, we have measured the execution
+Using the \texttt{perf} tool \cite{perf}, we measured the execution
 time\footnote{The experiments were run on a laptop computer with a
 i9-9900K (3.6GHz) processor and two modules of 16GB of SODIMM DDR4 RAM at 2400MHz.}
-and the overhead of both the generation of the constraints and their solution
-by Z3 \cite{de2008z3}. And we have measured the peak RAM usage of the whole
-process by using GNU's \texttt{time} tool \cite{keppel1998gnu}.
+and the overhead of the generation of the constraints and their solution
+by Z3 \cite{de2008z3}. We also measured the peak RAM usage of the whole
+process using GNU's \texttt{time} tool \cite{keppel1998gnu}.
 
-In all the contracts, the implementation that has the heavyweight optimisations
+In all cases the implementation with the heavyweight optimisations
 performs much better and scales further. In the case of the \textit{auction}
 and \textit{crowdfunding} contracts, whose size grows exponentially, both
 approaches quickly overwhelm the resources available in the execution environment.
-On the other hand, in the case of \textit{rent} and \textit{coupon bond} contracts,
-which grow linearly, by using the lightweight version, the problem becomes 
-intractable much faster than with the heavyweight version.
+In the case of \textit{rent} and \textit{coupon bond} contracts,
+which grow linearly, when using the lightweight version the problem becomes 
+intractable much faster than with the heavyweight one.
 
 Another conclusion that can be derived from the experiments is that, in the
 version with lightweight optimisations, most of the processing time seems to be
@@ -871,24 +871,23 @@ quickly by Z3; while the opposite happens for the version with heavyweight
 optimisations.
 
 These results suggest that the SBV library is able to generate constraints in a way
-that they are handled efficiently by Z3, but the process itself can be costly
-if we are not careful. Nevertheless, the overall execution time required by Z3
-is also lower in the case of the version with heavyweight optimisations and it
-grows more slowly, which suggests the optimisations described in this paper
-affect both stages of the process to some extent.
+that they are handled efficiently by Z3, but the process itself can be costly. However, the  execution time required by Z3
+is also lower in the case of the heavyweight optimisations as well as
+growing more slowly, which suggests that the optimisations described here
+affect both parts of the process.
 
 \section{Related work}
 
 Work in \cite{mokhov2019formal} documents a similar effort to ensure
-correctness of implementations by using Haskell and SBV library; the
+correctness of control software in Haskell using the SBV library; the
 authors also discuss performance of the analysis and apply this approach
 to non-functional requirements.
 
 The idea of using constraint solvers for finding bugs is not new,
-and there has been a number of initiatives that have explored its
+and there have been a number of initiatives that have explored its
 application to the verification of assertions in programs written
 using general purpose programming languages \cite{gulwani2008program,jackson2000finding};
-as well as for the compliance with usage protocols
+as well as for the compliance with protocols
 \cite{ball2001automatically,xie2005saturn}.
 
 \cite{keshishzadeh2013early} also applies constraint solvers for
@@ -898,37 +897,28 @@ exponentiation. This problem does not affect the current design of
 Marlowe because it does not support multiplication by arbitrary variables,
 and because all inputs are integer and bounded finitely.
 
-\section{Future work}
 
-In the future, we would like to extend static analysis to cover other
-potential problems in Marlowe contracts and to aid their development.
-We can envisage that we can use static analysis to locate unreachable
-subcontracts, to allow developers to provide custom assertions and
-check their satisfiability, and even to allow users to inspect the
-possible maximum and minimum values that particular expressions can
-reach. 
+
 
 \section{Conclusion}
 
-In this paper, we have summarized the lessons learned from our work
-on optimising the static analysis for Marlowe contracts. We have found
-that there are two clear approaches to static analysis using SMT,
+In this paper we have summarized our work
+on optimising the static analysis for Marlowe contracts. We have seen
+that there are two distinct approaches to static analysis using SMT,
 both have advantages and disadvantages. One is less error prone and
-straightforward, but inefficient and hard to test; the other approach
+straightforward, but inefficient and hard to test; the other 
 is much more efficient, versatile, and testable, but more error prone.
-
 We have also seen that many specific properties and restrictions characteristic
 of the target DSL can be utilized both as optimisation opportunities
 and, in our case, for completeness of the analysis. Symbolic execution
-of, for example, a turing complete language, would be intractable,
+of a Turing-complete language, would be intractable,
 and would require us to manually set a bound; but this is not in the
 case for Marlowe.
 
 In the end, we have illustrated how to counteract the main disadvantage
-of the later approach, its propensity to errors, by using property
+of the optimised approach -- its propensity to errors -- by using property
 based testing. This way we have obtained a static analysis implementation
-that is efficient, versatile, testable, and reliable.
-
+that is efficient, versatile, testable, and reliable. 
 On the other hand, for the static analysis of Marlowe contracts, we
 found out that when running statistics on the equivalence testing
 property, most of the bugs were false negatives in the straightforward
@@ -938,10 +928,18 @@ reliable thanks to the consistency tests that we run beforehand.
 Another advantage of the optimised implementation is that, because
 it relies on fewer and simpler features, it is compatible with more
 SMT solvers which, in turn, means that it is less reliant on the
-correctness of a single SMT solver. If an SMT solver fails to give
-an answer, we can try a different one; if we want to ensure that a
-contract is valid, we can test it with several SMT solvers and ensure
-all of them agree. 
+correctness or efficiency of a single solver. If one solver fails to give
+an answer, we can try another; if we want further evidence that a
+contract is valid, we can test it with several solvers.
+
+In the future, we would like to extend static analysis to cover other
+potential problems in Marlowe contracts and to aid their development.
+We plan to use static analysis to locate unreachable
+subcontracts, to allow developers to provide custom assertions and
+check their satisfiability, and to allow users to inspect the
+possible maximum and minimum values that particular expressions can
+reach. 
+
 
 \bibliographystyle{splncs04}
 \bibliography{paper}

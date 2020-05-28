@@ -5,6 +5,7 @@
 \usepackage{graphicx}
 \usepackage{babel}
 \usepackage{multirow}
+\usepackage[bottom]{footmisc}
 \usepackage[table,xcdraw]{xcolor}
 
 \DeclareUnicodeCharacter{00D7}{$\times$}
@@ -620,50 +621,43 @@ exploration of the contract.
 
 A simple way of obtaining a counterexample is to modify the output
 of the function to return the offending trace using the symbolic \texttt{Maybe}
-type. Surprisingly, this small change increases the amount of time
+type. Surprisingly, this change increases the time
 required by the symbolic analysis severalfold.
 
-The solution to this increase in execution time was to pass as input, to
-the static analysis implementation, a fixed list, with each element corresponding
-to a transaction and consisting of a tuple with four symbolic integers:
+An efficient way of extracting counterexample information was to
+pass a symbolic fixed-size list, as input to the static analysis, where
+each element corresponds to a transaction and consists of a tuple with four symbolic integers:
 \begin{enumerate}
 \item An integer representing the minimum slot
 \item An integer representing the maximum slot
 \item An integer representing the \texttt{When} case whose input is being
-included in the transaction, where zero represents the timeout branch
-(and there being no inputs to the transaction).
+included in the transaction, where zero represents the timeout branch (and no input).
 \item An integer representing the amount of money or tokens (if the input
 is a \texttt{Deposit}), or the number chosen (if the input is a \texttt{Choice})
 \end{enumerate}
-If we need fewer transactions, we will just add dummy transactions with all four numbers
-set to $-1$ at the end of the list.
+For short branches (that require fewer transactions) we pad the end of
+the list with dummy transactions with all four numbers set to $-1$.
 
 In order to translate this sequence of numbers into a proper list
 of transactions that is human readable and we can use to report the
-counter example, we need to iterate through the list and see the evolution
-of the contract with each transaction, using the concrete semantics.
-This way, we can gather the rest of necessary information, such as
-whether the transaction input is a \texttt{Deposit}. We can also see
-which of the transactions do not have an effect, i.e: they produce
-\texttt{UselessTransaction} as we mentioned in Section~\ref{subsec:Reducing-search-space-by-using-normalised-execution-paths-relevant-to-the-property}.
+counter example, we need to use the concrete semantics together with
+the information obtained from the static analysis to \emph{fill the gaps},
+by iterating through the list and looking at the evolution
+of the contract with each transaction.
+This provides us with the rest of necessary information, such as
+the type of a transaction input (e.g: whether it is a \texttt{Deposit} or a \texttt{Choice}). We also use this process to filter transactions with no effect,
+i.e: they produce \texttt{UselessTransaction} as we mentioned in Section~\ref{subsec:Reducing-search-space-by-using-normalised-execution-paths-relevant-to-the-property}.
 
-We use this separation of concerns between static analysis and
-concrete semantics to our advantage, as an opportunity for applying
+We also use this separation of concerns between static analysis and
+concrete semantics as an opportunity for applying
 property based testing.%, as we explain in Section~\ref{subsec:Testing-for-consistency}.
 
 \section{Testing for consistency and equivalence\label{sec:Testing}}
 
-Errors often occur when optimising or translating. If the static analysis
-implementation is close to the actual implementation, it is much less
-likely that a mistake will be made when writing it. On the other hand,
-if we have to craft a static analysis implementation that is equivalent
-(in some sense) to the original, but is written in a very different
-way, it is more likely that we will make assumptions which do not
-hold.
-In order to avoid these problems, we combine the use of automated proof
-assistants to verify our assumptions and the use of property based testing to
-test for consistency and equivalence. %as we describe in
-%Section~\ref{subsec:Testing-for-consistency}).
+The more different the static analysis implementation and the concrete
+implementation are, the harder it is to ensure they are consistent with
+each other. To ensure that heavyweight optimisations remain consistent,
+we combine the use of automated proof assistants and the use of property based testing.
 
 \subsection{Testing for consistency\label{subsec:Testing-for-consistency} }
 
@@ -697,6 +691,7 @@ that is ok, because we are doing that on purpose, as we mentioned in Section~\re
     \par\end{centering}
     \caption{Testing for consistency\label{fig:Property-based-testing-for-consistency}}
 \end{minipage}%
+\hspace{0.08\textwidth}
 \begin{minipage}{.4\textwidth}
     \begin{centering}
     \includegraphics[width=0.7\textwidth]{figures/equivalence_property}
@@ -735,7 +730,27 @@ before\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/src/
 and after\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/src/Language/Marlowe/Analysis/FSSemanticsFastVerbose.hs} [last visited 19-05-2020]}
 the heavyweight optimisations.
 
-\begin{table}[]
+Unfortunately, at the time of writing, we do not have a completely unoptimised
+version of the static analysis that we can use to compare, because the semantics
+of Marlowe have changed since we implemented that version. However, our impression
+from manual testing is that the impact of lightweight optimisations was much more modest than the impact of heavyweight optimisations.
+
+Using the \texttt{perf} tool \cite{perf}, we measured the execution
+time\footnote{The experiments were run on a laptop computer with a
+i9-9900K (3.6GHz) processor and two modules of 16GB of SODIMM DDR4 RAM at 2400MHz.}
+and the overhead of the generation of the constraints and their solution
+by Z3 \cite{de2008z3}. We also measured the peak RAM usage of the whole
+process using GNU's \texttt{time} tool \cite{keppel1998gnu}.
+
+In all cases the implementation with the heavyweight optimisations
+performs much better and scales further. In the case of the \textit{auction}
+and \textit{crowdfunding} contracts, whose size grows exponentially, both
+approaches quickly overwhelm the resources available in the execution environment.
+In the case of \textit{rent} and \textit{coupon bond} contracts,
+which grow linearly, when using the lightweight version the problem becomes 
+intractable much faster than with the heavyweight one.
+
+\begin{table}[b]
 \centering
 \scalebox{0.8}{
 \begin{tabular}{l||lllll}
@@ -844,25 +859,6 @@ Z3 overhead                            & \multicolumn{1}{c|}{85.49\%}  & \multic
 
 
 \noindent
-Unfortunately, at the time of writing, we do not have a completely unoptimised
-version of the static analysis that we can use to compare, because the semantics
-of Marlowe have changed since we implemented that version. However, our impression
-from manual testing is that the impact of lightweight optimisations was much more modest than the impact of heavyweight optimisations.
-
-Using the \texttt{perf} tool \cite{perf}, we measured the execution
-time\footnote{The experiments were run on a laptop computer with a
-i9-9900K (3.6GHz) processor and two modules of 16GB of SODIMM DDR4 RAM at 2400MHz.}
-and the overhead of the generation of the constraints and their solution
-by Z3 \cite{de2008z3}. We also measured the peak RAM usage of the whole
-process using GNU's \texttt{time} tool \cite{keppel1998gnu}.
-
-In all cases the implementation with the heavyweight optimisations
-performs much better and scales further. In the case of the \textit{auction}
-and \textit{crowdfunding} contracts, whose size grows exponentially, both
-approaches quickly overwhelm the resources available in the execution environment.
-In the case of \textit{rent} and \textit{coupon bond} contracts,
-which grow linearly, when using the lightweight version the problem becomes 
-intractable much faster than with the heavyweight one.
 
 Another conclusion that can be derived from the experiments is that, in the
 version with lightweight optimisations, most of the processing time seems to be

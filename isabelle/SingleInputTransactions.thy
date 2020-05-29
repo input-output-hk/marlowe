@@ -4,6 +4,8 @@ imports Main Semantics
 
 begin
 
+declare [[ smt_timeout = 300 ]]
+
 fun inputsToTransactions :: "SlotInterval \<Rightarrow> Input list \<Rightarrow> Transaction list" where
 "inputsToTransactions si Nil = Cons \<lparr> interval = si
                                     , inputs = Nil \<rparr> Nil" |

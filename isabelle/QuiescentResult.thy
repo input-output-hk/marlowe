@@ -44,7 +44,8 @@ lemma reduceContractStepIsQuiescent : "validAndPositive_state sta \<Longrightarr
   apply (metis reduceContractStep.simps(2) reduceContractStepPayIsQuiescent)
   apply simp
   using isQuiescent.simps(2) apply blast
-  by (metis ReduceStepResult.distinct(1) reduceContractStep.simps(5))
+  apply (metis ReduceStepResult.distinct(1) reduceContractStep.simps(5))
+  by simp
 
 lemma reductionLoopIsQuiescent_aux :
   "(\<And>x11 x12 x13 x14 x xa.

@@ -66,7 +66,8 @@ lemma reductionStep_preserves_valid_state :
   apply (cases "state")
   apply (cases "newState")
   apply simp
-  by (metis MList.insert_valid ReduceStepResult.inject State.ext_inject valid_map.simps)
+  apply (metis MList.insert_valid ReduceStepResult.inject State.ext_inject valid_map.simps)
+  by simp
 
 lemma reductionLoop_preserves_valid_state_aux :
   "(\<And>x11 x12 x13 x14 x xa.
@@ -111,6 +112,7 @@ lemma applyInput_preserves_valid_state :
   apply simp
   apply simp
   apply (metis applyCases_preserves_valid_state applyInput.simps(1))
+  apply simp
   by simp
 
 lemma applyAllLoop_preserves_valid_state :

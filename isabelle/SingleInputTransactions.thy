@@ -508,7 +508,8 @@ lemma reductionStep_only_makes_smaller :
       apply (cases "timeout \<le> low")
       by simp_all
     done
-  by (simp add:Let_def)
+  apply(simp add:Let_def)
+  by simp
 
 lemma reductionLoop_only_makes_smaller :
   "cont1 \<noteq> cont \<Longrightarrow>

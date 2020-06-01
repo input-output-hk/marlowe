@@ -147,7 +147,8 @@ theorem reduceContractStep_gtZero :
   using reduceContractStep_gtZero_Pay apply blast
   apply simp
   apply (smt ReduceStepResult.distinct(1) ReduceStepResult.inject ReduceStepResult.simps(5) case_prod_unfold reduceContractStep.simps(4))
-  using reduceContractStep_gtZero_Let by blast
+  using reduceContractStep_gtZero_Let apply blast
+  by simp
 
 lemma reduceLoop_gtZero : 
   "valid_state state \<Longrightarrow>
@@ -203,6 +204,7 @@ lemma applyInput_gtZero :
   apply (simp)
   apply (simp only:applyInput.simps)
   using applyCases_positive apply blast
+  apply simp
   by simp
 
 lemma applyAllLoop_gtZero : 

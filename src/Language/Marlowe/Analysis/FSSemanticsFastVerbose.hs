@@ -307,6 +307,9 @@ isValidAndFailsAux hasErr (Let valId val cont) sState =
      let newBVMap = M.insert valId concVal (symBoundValues sState)
      let newSState = sState { symBoundValues = newBVMap }
      isValidAndFailsAux hasErr cont newSState
+isValidAndFailsAux hasErr (Assert obs cont) sState =
+  isValidAndFailsAux (hasErr .|| sNot obsVal) cont sState
+  where obsVal = symEvalObs obs sState
 
 -- Returns sTrue iif the given sinteger is in the list of bounds
 ensureBounds :: SInteger -> [Bound] -> SBool
@@ -419,6 +422,7 @@ countWhens (Pay uv uw ux c) = countWhens c
 countWhens (If uz c c2)     = max (countWhens c) (countWhens c2)
 countWhens (When cl t c)    = 1 + max (countWhensCaseList cl) (countWhens c)
 countWhens (Let va vb c)    = countWhens c
+countWhens (Assert o c)    = countWhens c
 
 -- Same as countWhens but it starts with a Case list
 countWhensCaseList :: [Case] -> Integer

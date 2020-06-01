@@ -184,6 +184,7 @@ data Contract = Close
               | If Observation Contract Contract
               | When [Case] Timeout Contract
               | Let ValueId Value Contract
+              | Assert Observation Contract
   deriving (Eq,Ord,Show,Read)
 
 --data State = State { account :: Map AccountId Money
@@ -410,6 +411,7 @@ data ReduceWarning = ReduceNoWarning
                                     -- ^ src    ^ dest ^ paid ^ expected
                    | ReduceShadowing NValueId Integer Integer
                                      -- oldVal ^  newVal ^
+                   | ReduceAssertionFailed
   deriving (Eq,Ord,Show,Read)
 
 mkSymbolicDatatype ''ReduceWarning
@@ -474,6 +476,9 @@ reduce bnds env state (Let valId val cont) f =
                     (\oldVal -> sReduceShadowing lValId oldVal evVal)
                     (IntegerArray.lookup (valueIdNumber valId) sv)
     lValId = literalValueId valId
+reduce bnds env state (Assert obs cont) f =
+  f (sReduced warn sReduceNoEffect state) (DRRProgress cont 0)
+  where warn = ite (evalObservation bnds env state obs) sReduceNoWarning sReduceAssertionFailed
 
 -- REDUCE ALL
 
@@ -1011,6 +1016,10 @@ convertContract (MS.Let valId value cont) maps =
   where (newValId, mapsWithValId) = convertValId valId maps
         (newValue, mapsWithValue) = convertValue value mapsWithValId
         (newCont, actionsWithCont, mapsWithContract) = convertContract cont mapsWithValue
+convertContract (MS.Assert obs cont) maps =
+    (Assert newObs newCont, actionsWithCont, mapsWithContract)
+  where (newObs, mapsWithObs) = convertObservation obs maps
+        (newCont, actionsWithCont, mapsWithContract) = convertContract cont mapsWithObs
 
 convertContractBase :: MS.Contract -> (Contract, MaxActions, Mappings)
 convertContractBase c = convertContract c emptyMappings
@@ -1075,6 +1084,7 @@ revertReduceWarningList (ReducePartialPay accId payee mon1 mon2) maps =
 revertReduceWarningList (ReduceShadowing valId int1 int2) maps =
      MS.ReduceShadowing newValId int1 int2
   where newValId = revertValId (unNestValueId valId) maps
+revertReduceWarningList ReduceAssertionFailed maps = MS.ReduceAssertionFailed
 
 revertTransactionWarningList :: TransactionWarning -> Mappings -> [MS.TransactionWarning]
 revertTransactionWarningList (TransactionReduceWarnings warningList) maps =

@@ -96,7 +96,8 @@ lemma maxTimeOnlyDecreases_reduceStep :
     by (metis ReduceStepResult.inject case_prod_conv eq_iff)
     apply auto[1]
   apply (simp add: maxTimeOnlyDecreases_reduceStepWhen)
-  by (metis ReduceStepResult.inject eq_iff maxTimeContract.simps(6) reduceContractStep.simps(5))
+  apply (metis ReduceStepResult.inject eq_iff maxTimeContract.simps(6) reduceContractStep.simps(5))
+  by simp
 
 lemma maxTimeNotAmbiguous_reduceLoop : "maxTimeContract cont \<le> iniSlot \<Longrightarrow>
     iniSlot \<le> endSlot \<Longrightarrow>
@@ -127,7 +128,8 @@ lemma timedOutReduce_only_quiescent_in_close :
   apply (metis reduceContractStep.simps(2) reduceContractStepPayIsQuiescent)
   apply simp
   using timedOutReduce_only_quiescent_in_close_When apply blast
-  by (metis ReduceStepResult.distinct(1) reduceContractStep.simps(5))
+  apply (metis ReduceStepResult.distinct(1) reduceContractStep.simps(5))
+  by simp
 
 lemma timedOutReduceStep_does_not_modify_minSlot :
   "minSlot sta = iniSlot \<Longrightarrow>
@@ -162,7 +164,8 @@ lemma timedOutReduceStep_does_not_modify_minSlot :
       by (auto simp:Let_def)
       apply auto[1]
     apply (smt ReduceStepResult.distinct(1) ReduceStepResult.distinct(3) ReduceStepResult.inject State.ext_inject State.surjective State.update_convs(4) prod.case_eq_if reduceContractStep.simps(4))
-    by (smt ReduceStepResult.inject State.ext_inject State.surjective State.update_convs(3) State.update_convs(4) reduceContractStep.simps(5))
+    apply (smt ReduceStepResult.inject State.ext_inject State.surjective State.update_convs(3) State.update_convs(4) reduceContractStep.simps(5))
+    by simp
 
 lemma timedOutReduceContractLoop_closes_contract : "minSlot sta \<le> iniSlot \<Longrightarrow>
     maxTimeContract cont \<le> iniSlot \<Longrightarrow>

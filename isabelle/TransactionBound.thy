@@ -10,7 +10,8 @@ and countWhens :: "Contract \<Rightarrow> nat" where
 "countWhens (Pay _ _ _ _ c) = countWhens c" |
 "countWhens (If _ c c2) = max (countWhens c) (countWhens c2)" |
 "countWhens (When cl t c) = Suc (max (countWhensCaseList cl) (countWhens c))" |
-"countWhens (Contract.Let _ _ c) = countWhens c"
+"countWhens (Contract.Let _ _ c) = countWhens c" |
+"countWhens (Assert _ c) = Suc (countWhens c)"
 
 fun maxTransactionsCaseList :: "Case list \<Rightarrow> State \<Rightarrow> nat" where
 "maxTransactionsCaseList caLi st = Suc (countWhensCaseList caLi)"
@@ -50,7 +51,7 @@ lemma reduceContractStep_not_quiescent_reduces : "\<not> isQuiescent c st \<Long
       apply (simp add:Let_def)
     done
   done
-  by (metis ReduceStepResult.inject le_eq_less_or_eq)
+  by (metis ReduceStepResult.inject eq_imp_le)
 
 lemma reduceContractStep_doesnt_increase_maxTransactions : "reduceContractStep env st c = Reduced wa ef nst nc \<Longrightarrow>
                                                             maxTransactions nc nst \<le> maxTransactions c st"
@@ -117,6 +118,7 @@ lemma applyInput_decreases_countWhens :
   apply simp
   apply simp
   using applyCases_doesnt_increase_countWhens apply fastforce
+  apply simp
   by simp
 
 lemma applyCases_doesnt_increase_maxTransactions :
@@ -134,6 +136,7 @@ lemma applyInput_doesnt_increase_maxTransactions :
   apply simp
   apply simp
   using applyCases_doesnt_increase_countWhens apply fastforce
+  apply simp
   by simp
 
 lemma applyAllLoop_doesnt_increase_maxTransactions :

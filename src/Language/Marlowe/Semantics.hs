@@ -141,6 +141,7 @@ data Contract = Close
               | If Observation Contract Contract
               | When [Case] Timeout Contract
               | Let ValueId Value Contract
+              | Assert Observation Contract
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 data State = State { accounts    :: Map AccountId Money
@@ -281,11 +282,13 @@ giveMoney payee money accounts = case payee of
 -- REDUCE
 
 data ReduceWarning = ReduceNoWarning
-                    | ReduceNonPositivePay AccountId Payee Integer
-                    | ReducePartialPay AccountId Payee Money Money
-                                    -- ^ src    ^ dest ^ paid ^ expected
-                    | ReduceShadowing ValueId Integer Integer
-                                      -- oldVal ^  newVal ^
+                   | ReduceNonPositivePay AccountId Payee Integer
+                   | ReducePartialPay AccountId Payee Money Money
+                                     -- ^ src    ^ dest ^ paid ^ expected
+                   | ReduceShadowing ValueId Integer Integer
+                                     -- oldVal ^  newVal ^
+
+                   | ReduceAssertionFailed
   deriving (Eq,Ord,Show,Read)
 
 
@@ -344,6 +347,11 @@ reduceContractStep env state contract = case contract of
               Nothing     -> ReduceNoWarning
         in Reduced warn ReduceNoPayment newState cont
 
+    Assert obs cont -> let
+        warning = if evalObservation env state obs
+                  then ReduceNoWarning
+                  else ReduceAssertionFailed
+        in Reduced warning ReduceNoPayment state cont
 
 data ReduceResult = ContractQuiescent [ReduceWarning] [Payment] State Contract
                   | RRAmbiguousSlotIntervalError
@@ -374,7 +382,7 @@ data ApplyWarning = ApplyNoWarning
   deriving (Eq,Ord,Show,Read)
 
 data ApplyResult = Applied ApplyWarning State Contract
-                  | ApplyNoMatchError
+                 | ApplyNoMatchError
   deriving (Eq,Ord,Show,Read)
 
 -- Apply a single Input to the contract (assumes the contract is reduced)
@@ -411,6 +419,7 @@ data TransactionWarning = TransactionNonPositiveDeposit Party AccountId Integer
                                                 -- ^ src    ^ dest ^ paid ^ expected
                         | TransactionShadowing ValueId Integer Integer
                                                 -- oldVal ^  newVal ^
+                        | TransactionAssertionFailed
   deriving (Eq,Ord,Show,Read)
 
 convertReduceWarnings :: [ReduceWarning] -> [TransactionWarning]
@@ -423,7 +432,9 @@ convertReduceWarnings (first:rest) =
     ReducePartialPay accId payee paid expected ->
             [TransactionPartialPay accId payee paid expected]
     ReduceShadowing valId oldVal newVal ->
-            [TransactionShadowing valId oldVal newVal])
+            [TransactionShadowing valId oldVal newVal]
+    ReduceAssertionFailed ->
+            [TransactionAssertionFailed])
   ++ convertReduceWarnings rest
 
 convertApplyWarning :: ApplyWarning -> [TransactionWarning]
@@ -535,4 +546,6 @@ contractLifespanUpperBound contract = case contract of
         contractsLifespans = fmap (\(Case _ cont) -> contractLifespanUpperBound cont) cases
         in maximum (getSlot timeout : contractLifespanUpperBound subContract : contractsLifespans)
     Let _ _ cont -> contractLifespanUpperBound cont
+    Assert _ cont -> contractLifespanUpperBound cont
+
 

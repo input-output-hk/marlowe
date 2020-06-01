@@ -323,6 +323,7 @@ and Contract = Close
              | If Observation Contract Contract
              | When "Case list" Timeout Contract
              | Let ValueId Value Contract
+             | Assert Observation Contract
 
 type_synonym Accounts = "((AccountId \<times> Token) \<times> Money) list"
 
@@ -476,6 +477,7 @@ datatype ReduceWarning = ReduceNoWarning
                        | ReduceNonPositivePay AccountId Payee Token Money
                        | ReducePartialPay AccountId Payee Token Money Money
                        | ReduceShadowing ValueId int int
+                       | ReduceAssertionFailed
 
 datatype ReduceStepResult = Reduced ReduceWarning ReduceEffect State Contract
                           | NotReduced
@@ -521,7 +523,12 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
    let warn = case lookup valId boundVals of
                 Some oldVal \<Rightarrow> ReduceShadowing valId oldVal evaluatedValue
               | None \<Rightarrow> ReduceNoWarning in
-   Reduced warn ReduceNoPayment newState cont)"
+   Reduced warn ReduceNoPayment newState cont)" |
+"reduceContractStep env state (Assert obs cont) =
+  (let warning = if evalObservation env state obs
+                 then ReduceNoWarning
+                 else ReduceAssertionFailed
+   in Reduced warning ReduceNoPayment state cont)"
 
 datatype ReduceResult = ContractQuiescent "ReduceWarning list" "Payment list"
                                           State Contract
@@ -660,7 +667,8 @@ lemma reduceContractStepReducesSize :
   using reduceContractStepReducesSize_Pay apply blast
   apply auto[1]
   apply (meson eq_fst_iff reduceContractStepReducesSize_When)
-  using reduceContractStepReducesSize_Let by blast
+  using reduceContractStepReducesSize_Let apply blast
+  by simp
 
 function (sequential) reductionLoop :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceWarning list \<Rightarrow>
                                         Payment list \<Rightarrow> ReduceResult" where
@@ -728,6 +736,7 @@ datatype TransactionWarning = TransactionNonPositiveDeposit Party AccountId Toke
                             | TransactionNonPositivePay AccountId Payee Token int
                             | TransactionPartialPay AccountId Payee Token Money Money
                             | TransactionShadowing ValueId int int
+                            | TransactionAssertionFailed
 
 fun convertReduceWarnings :: "ReduceWarning list \<Rightarrow> TransactionWarning list" where
 "convertReduceWarnings Nil = Nil" |
@@ -741,7 +750,9 @@ fun convertReduceWarnings :: "ReduceWarning list \<Rightarrow> TransactionWarnin
         (convertReduceWarnings rest)" |
 "convertReduceWarnings (Cons (ReduceShadowing valId oldVal newVal) rest) =
    Cons (TransactionShadowing valId oldVal newVal)
-        (convertReduceWarnings rest)"
+        (convertReduceWarnings rest)" |
+"convertReduceWarnings (Cons ReduceAssertionFailed rest) =
+   Cons TransactionAssertionFailed (convertReduceWarnings rest)"
 
 fun convertApplyWarning :: "ApplyWarning \<Rightarrow> TransactionWarning list" where
 "convertApplyWarning ApplyNoWarning = Nil" |
@@ -895,6 +906,7 @@ and maxTimeCase :: "Case \<Rightarrow> int" where
 "maxTimeContract (When Nil timeout contract) = max timeout (maxTimeContract contract)" |
 "maxTimeContract (When (Cons head tail) timeout contract) = max (maxTimeCase head) (maxTimeContract (When tail timeout contract))" |
 "maxTimeContract (Let _ _ contract) = maxTimeContract contract" |
+"maxTimeContract (Assert _ contract) = maxTimeContract contract" |
 "maxTimeCase (Case _ contract) = maxTimeContract contract"
 
 end

@@ -389,7 +389,7 @@ lemma reduceContractStep_preserves_money :
   subgoal for valId val cont
     apply (simp only:reduceContractStep.simps)
     by (metis State.simps(1) State.simps(8) State.surjective add.left_neutral moneyInReduceEffect.simps(2) moneyInReduceStepResult.simps(1) moneyInState.simps)
-  done
+  by simp
 
 lemma applyCases_preserves_money_aux :
   "validAndPositive_state state \<Longrightarrow>

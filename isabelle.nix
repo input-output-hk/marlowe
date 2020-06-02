@@ -13,6 +13,7 @@ let
       export PATH=$PATH:${pkgs.stdenv.lib.makeBinPath (
         pkgs.stdenv.lib.optionals (!pkgs.stdenv.isDarwin) [ pkgs.nettools ] ++ [pkgs.perl pkgs.isabelle])}
       cd isabelle
+      
       isabelle build -v -d. Test
     '';
 in rec {

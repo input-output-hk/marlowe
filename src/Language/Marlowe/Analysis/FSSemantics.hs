@@ -137,6 +137,8 @@ data Value = AvailableMoney AccountId
            | NegValue Value
            | AddValue Value Value
            | SubValue Value Value
+           | MulValue Value Value
+           | DivValue Value Value
            | ChoiceValue ChoiceId Value
            | SlotIntervalStart
            | SlotIntervalEnd
@@ -323,6 +325,8 @@ evalValue bnds env state value =
     NegValue val             -> go val
     AddValue lhs rhs         -> go lhs + go rhs
     SubValue lhs rhs         -> go lhs + go rhs
+    MulValue lhs rhs         -> go lhs * go rhs
+    DivValue lhs rhs         -> fst $ go lhs `sDivMod` go rhs
     ChoiceValue (ChoiceId c p) defVal -> SM.maybe (go defVal)
                                                   id
                                                   (IntegerArray.lookup c $ choice state)
@@ -911,6 +915,14 @@ convertValue (MS.NegValue val) maps =
   where (newVal, mapsWithVal) = convertValue val maps
 convertValue (MS.AddValue val1 val2) maps =
     (AddValue newVal1 newVal2, mapsWithVal2)
+  where (newVal1, mapsWithVal1) = convertValue val1 maps
+        (newVal2, mapsWithVal2) = convertValue val2 mapsWithVal1
+convertValue (MS.MulValue val1 val2) maps =
+    (MulValue newVal1 newVal2, mapsWithVal2)
+  where (newVal1, mapsWithVal1) = convertValue val1 maps
+        (newVal2, mapsWithVal2) = convertValue val2 mapsWithVal1
+convertValue (MS.DivValue val1 val2) maps =
+    (DivValue newVal1 newVal2, mapsWithVal2)
   where (newVal1, mapsWithVal1) = convertValue val1 maps
         (newVal2, mapsWithVal2) = convertValue val2 mapsWithVal1
 convertValue (MS.SubValue val1 val2) maps =

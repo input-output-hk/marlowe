@@ -165,8 +165,6 @@ symEvalVal (SubValue lhs rhs) symState = symEvalVal lhs symState -
                                          symEvalVal rhs symState
 symEvalVal (MulValue lhs rhs) symState = symEvalVal lhs symState *
                                          symEvalVal rhs symState
-symEvalVal (DivValue lhs rhs) symState = fst $ symEvalVal lhs symState `sDivMod`
-                                         symEvalVal rhs symState
 symEvalVal (ChoiceValue choId defVal) symState =
   M.findWithDefault (symEvalVal defVal symState) choId (symChoices symState)
 symEvalVal SlotIntervalStart symState = lowSlot symState

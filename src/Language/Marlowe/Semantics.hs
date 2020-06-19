@@ -90,6 +90,7 @@ data Value = AvailableMoney AccountId
             | NegValue Value
             | AddValue Value Value
             | SubValue Value Value
+            | MulValue Value Value
             | ChoiceValue ChoiceId Value
             | SlotIntervalStart
             | SlotIntervalEnd
@@ -203,6 +204,7 @@ evalValue env state value = let
         NegValue val         -> negate (eval val)
         AddValue lhs rhs     -> eval lhs + eval rhs
         SubValue lhs rhs     -> eval lhs - eval rhs
+        MulValue lhs rhs     -> eval lhs * eval rhs
         ChoiceValue choiceId defVal ->
             Map.findWithDefault (eval defVal) choiceId (choices state)
         SlotIntervalStart    -> (getSlot . ivFrom . slotInterval) env

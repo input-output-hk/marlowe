@@ -6,6 +6,10 @@ builtins.mapAttrs (k: _v:
   in
   pkgs.recurseIntoAttrs {
     testIsabelle = isabelleNix.isabelleTest;
+    testHaskell = pkgs.haskell.lib.buildStackProject {
+      name = "marlowe";
+      src = ./.;
+    };
   }
 ) {
   x86_64-linux = {};

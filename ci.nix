@@ -8,8 +8,8 @@ builtins.mapAttrs (k: _v:
   in
   pkgs.recurseIntoAttrs {
     testIsabelle = isabelleNix.isabelleTest;
-    testHaskell = pkgs.haskell-nix.project {
-      src = pkgs.haskell-nix.haskellLib.cleanGit {
+    testHaskell = haskellNixPkgs.haskell-nix.project {
+      src = haskellNixPkgs.haskell-nix.haskellLib.cleanGit {
         name = "marlowe";
         src = ./.;
       };

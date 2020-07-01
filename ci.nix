@@ -7,7 +7,7 @@ builtins.mapAttrs (k: _v:
   in
   pkgs.recurseIntoAttrs {
     testIsabelle = isabelleNix.isabelleTest;
-    testHaskell = haskellNix.marlowe.components.marlowe ;
+    testHaskell = haskellNix.marlowe.components.exes.marlowe ;
   }
 ) {
   x86_64-linux = {};

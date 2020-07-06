@@ -74,7 +74,7 @@ of our Marlowe case-study.
 
 The techniques described helped us reduce the analysis time of an implementation
 that followed the semantics closely and took a couple of minutes to analyse contracts
-of a few kilobytes, to one where the same contract takes less
+with a source code of a few kilobytes, to one where the same contract takes less
 than a second to analyse, and where a four-person crowdfunding contract that
 fully expanded occupies about 19 megabytes, can be analysed in
 around 10 minutes. 
@@ -296,8 +296,6 @@ This approach corresponds to our first attempt at implementing static
 analysis for Marlowe contracts, and it is a systematic approach that
 can be carried out with very few assumptions. 
 
-\subsection{Overview}
-
 The SBV library supports implementing Haskell functions in a way that
 the same implementation can be used:
 \begin{itemize}
@@ -452,7 +450,7 @@ so we can safely remove it from the analysis.
 
 High level libraries like SBV, and even standards like SMTLib, support
 the use and construction of high level abstractions,
-e.g: custom data-types, list, sets\dots{} Unfortunately, even though
+e.g: custom data-types, list, sets\ldots{} Unfortunately, even though
 high level abstractions aid reasoning about code, they often
 prevent optimisations, since they abstract out aspects that
 in our particular case may be concrete.
@@ -725,10 +723,11 @@ In our experiments, the heavyweight optimisations considerably reduced
 the requirements of both processing time and memory for Marlowe's static
 analysis. %In Tables~\ref{table1},~\ref{table2},~\ref{table3},~and~\ref{table4},
 We present below the results of measuring the performance of static analysis on
-four example  contracts,
+four example contracts,
 before\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/src/Language/Marlowe/Analysis/FSSemantics.hs} [last visited 19-05-2020]}
 and after\footnote{\url{https://github.com/input-output-hk/marlowe/blob/master/src/Language/Marlowe/Analysis/FSSemanticsFastVerbose.hs} [last visited 19-05-2020]}
-the heavyweight optimisations.
+the heavyweight optimisations. We could not obtain data for some of the experiments because they
+required more RAM than there was available or too much processing time.
 
 Unfortunately, at the time of writing, we do not have a completely unoptimised
 version of the static analysis that we can use to compare, because the semantics

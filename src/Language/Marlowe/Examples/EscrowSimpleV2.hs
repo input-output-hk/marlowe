@@ -65,7 +65,7 @@ arbitrate =
 
 -- Predicate for choices
 
-isPay :: Value -> Bool
+isPay :: Value -> Observation 
 
 isPay chosen = chosen `ValueEQ` (Constant 0)
 
@@ -107,10 +107,8 @@ carolChoice = choice "carol" both
 
 aliceChosen, bobChosen :: Value
 
-aliceChosen = ChoiceValue (ChoiceId choiceName "alice") defValue
-bobChosen   = ChoiceValue (ChoiceId choiceName "bob") defValue
-
-defValue = Constant 42
+aliceChosen = ChoiceValue (ChoiceId choiceName "alice")
+bobChosen   = ChoiceValue (ChoiceId choiceName "bob")
 
 -- Value under escrow
 

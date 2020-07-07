@@ -39,7 +39,7 @@ multiState [("2",False),("3",False),("4",False),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",False),("4",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",False),("3",True),("4",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",False),("3",False),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",False),("3",False),("4",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",False),("3",False),("4",False)] fc t tc)
        ] t tc
 multiState [("2",False),("3",False),("4",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",False),("4",False)] fc t tc)
@@ -49,19 +49,19 @@ multiState [("2",False),("3",False),("4",False)] fc t tc =
 multiState [("2",False),("3",False),("4",True),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",False),("4",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",False),("3",True),("4",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",False),("3",False),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",False),("3",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",False),("3",False),("4",True),("5",True)] fc t tc)
        ] t tc
 multiState [("2",False),("3",False),("4",True),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",False),("4",True),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",False),("3",True),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",False),("3",False),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",False),("3",False),("4",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",False),("3",False),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",False),("3",False),("4",True)] fc t tc)
        ] t tc
 multiState [("2",False),("3",False),("4",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",False),("4",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",False),("3",True),("4",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",False),("3",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",False),("3",False)] fc t tc)
        ] t tc
 multiState [("2",False),("3",False),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",False),("5",False)] fc t tc)
@@ -71,7 +71,7 @@ multiState [("2",False),("3",False),("5",False)] fc t tc =
 multiState [("2",False),("3",False),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",False),("3",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",False),("3",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",False),("3",False)] fc t tc)
        ] t tc
 multiState [("2",False),("3",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",False)] fc t tc)
@@ -79,51 +79,51 @@ multiState [("2",False),("3",False)] fc t tc =
        ] t tc
 multiState [("2",False),("3",True),("4",False),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",False),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",False),("4",False),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",False),("4",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",False),("3",True),("4",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",False),("3",True),("4",False),("5",True)] fc t tc)
        ] t tc
 multiState [("2",False),("3",True),("4",False),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",False),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",False),("4",False),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",False),("4",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",False),("3",True),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",False),("3",True),("4",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",False),("3",True),("4",False)] fc t tc)
        ] t tc
 multiState [("2",False),("3",True),("4",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",False),("4",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",False),("4",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",False),("3",True),("4",True)] fc t tc)
        ] t tc
 multiState [("2",False),("3",True),("4",True),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",False),("4",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",False),("3",True),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",False),("4",True),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",False),("3",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",False),("3",True),("4",True),("5",True)] fc t tc)
        ] t tc
 multiState [("2",False),("3",True),("4",True),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",False),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",False),("3",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",False),("3",True),("4",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",False),("4",True),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",False),("3",True),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",False),("3",True),("4",True)] fc t tc)
        ] t tc
 multiState [("2",False),("3",True),("4",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",False),("4",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",False),("3",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",False),("4",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",False),("3",True)] fc t tc)
        ] t tc
 multiState [("2",False),("3",True),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",False),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",False),("3",True),("5",True)] fc t tc)
        ] t tc
 multiState [("2",False),("3",True),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",False),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",False),("3",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",False),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",False),("3",True)] fc t tc)
        ] t tc
 multiState [("2",False),("3",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("3",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",False)] fc t tc)
        ] t tc
 multiState [("2",False),("4",False),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("4",False),("5",False)] fc t tc)
@@ -133,7 +133,7 @@ multiState [("2",False),("4",False),("5",False)] fc t tc =
 multiState [("2",False),("4",False),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("4",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",False),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",False),("4",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",False),("4",False)] fc t tc)
        ] t tc
 multiState [("2",False),("4",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("4",False)] fc t tc)
@@ -141,17 +141,17 @@ multiState [("2",False),("4",False)] fc t tc =
        ] t tc
 multiState [("2",False),("4",True),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("4",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",False),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",False),("4",True),("5",True)] fc t tc)
        ] t tc
 multiState [("2",False),("4",True),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",False),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",False),("4",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",False),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",False),("4",True)] fc t tc)
        ] t tc
 multiState [("2",False),("4",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("4",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",False)] fc t tc)
        ] t tc
 multiState [("2",False),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("5",False)] fc t tc)
@@ -159,145 +159,145 @@ multiState [("2",False),("5",False)] fc t tc =
        ] t tc
 multiState [("2",False),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",False)] fc t tc)
        ] t tc
 multiState [("2",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "2") [Bound 0 10000]) (multiState [("2",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",False),("4",False),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",False),("4",False),("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",False),("4",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",True),("3",False),("4",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",True),("3",False),("4",False),("5",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",False),("4",False),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",False),("4",False),("5",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",False),("4",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",True),("3",False),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",True),("3",False),("4",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",True),("3",False),("4",False)] fc t tc)
        ] t tc
 multiState [("2",True),("3",False),("4",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",False),("4",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",False),("4",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",True),("3",False),("4",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",False),("4",True),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",False),("4",True),("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",False),("4",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",True),("3",False),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",True),("3",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",True),("3",False),("4",True),("5",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",False),("4",True),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",False),("4",True),("5",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",False),("4",True),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",True),("3",False),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",True),("3",False),("4",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",True),("3",False),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",True),("3",False),("4",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",False),("4",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",False),("4",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",False),("4",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",True),("3",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",True),("3",False)] fc t tc)
        ] t tc
 multiState [("2",True),("3",False),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",False),("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",True),("3",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",True),("3",False),("5",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",False),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",False),("5",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",True),("3",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",True),("3",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",True),("3",False)] fc t tc)
        ] t tc
 multiState [("2",True),("3",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("2",True),("3",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",True),("4",False),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",True),("4",False),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",True),("4",False),("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",True),("4",False),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",True),("4",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",False),("5",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",True),("4",False),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",True),("4",False),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",True),("4",False),("5",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",True),("4",False),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",True),("4",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",True),("3",True),("4",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",True),("3",True),("4",False)] fc t tc)
        ] t tc
 multiState [("2",True),("3",True),("4",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",True),("4",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",True),("4",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",True),("4",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",True),("4",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",True),("4",True),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",True),("4",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",True),("4",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",True),("3",True),("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",True),("4",True),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",True),("4",True),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",True),("3",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",True),("3",True),("4",True),("5",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",True),("4",True),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",True),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",True),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",True),("3",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",True),("3",True),("4",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",True),("4",True),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",True),("4",True),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",True),("3",True),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",True),("3",True),("4",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",True),("4",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",True),("4",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",True),("4",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",True),("3",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",True),("4",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",True),("4",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",True),("3",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",True),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",True),("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",True),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",True),("3",True),("5",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",True),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",True),("3",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",True),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",True),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",True),("3",True)] fc t tc)
        ] t tc
 multiState [("2",True),("3",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("3",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("2",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("3",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("2",True)] fc t tc)
        ] t tc
 multiState [("2",True),("4",False),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("4",False),("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("4",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",True),("4",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",True),("4",False),("5",True)] fc t tc)
        ] t tc
 multiState [("2",True),("4",False),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("4",False),("5",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("4",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",True),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",True),("4",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",True),("4",False)] fc t tc)
        ] t tc
 multiState [("2",True),("4",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("4",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("4",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("2",True),("4",True)] fc t tc)
        ] t tc
 multiState [("2",True),("4",True),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("4",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",True),("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("4",True),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",True),("4",True),("5",True)] fc t tc)
        ] t tc
 multiState [("2",True),("4",True),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",True),("4",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("4",True),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",True),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",True),("4",True)] fc t tc)
        ] t tc
 multiState [("2",True),("4",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("4",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("2",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("4",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("2",True)] fc t tc)
        ] t tc
 multiState [("2",True),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("2",True),("5",True)] fc t tc)
        ] t tc
 multiState [("2",True),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("2",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("2",True)] fc t tc)
        ] t tc
 multiState [("2",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2") (Constant 0))) (multiState [] fc t tc)
+  When [ Case (Deposit (AccountId 1 "2") "2" (ChoiceValue (ChoiceId "1" "2"))) (multiState [] fc t tc)
        ] t tc
 multiState [("3",False),("4",False),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("3",True),("4",False),("5",False)] fc t tc)
@@ -307,7 +307,7 @@ multiState [("3",False),("4",False),("5",False)] fc t tc =
 multiState [("3",False),("4",False),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("3",True),("4",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("3",False),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("3",False),("4",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("3",False),("4",False)] fc t tc)
        ] t tc
 multiState [("3",False),("4",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("3",True),("4",False)] fc t tc)
@@ -315,17 +315,17 @@ multiState [("3",False),("4",False)] fc t tc =
        ] t tc
 multiState [("3",False),("4",True),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("3",True),("4",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("3",False),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("3",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("3",False),("4",True),("5",True)] fc t tc)
        ] t tc
 multiState [("3",False),("4",True),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("3",True),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("3",False),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("3",False),("4",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("3",False),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("3",False),("4",True)] fc t tc)
        ] t tc
 multiState [("3",False),("4",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("3",True),("4",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("3",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("3",False)] fc t tc)
        ] t tc
 multiState [("3",False),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("3",True),("5",False)] fc t tc)
@@ -333,49 +333,49 @@ multiState [("3",False),("5",False)] fc t tc =
        ] t tc
 multiState [("3",False),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("3",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("3",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("3",False)] fc t tc)
        ] t tc
 multiState [("3",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "3") [Bound 0 10000]) (multiState [("3",True)] fc t tc)
        ] t tc
 multiState [("3",True),("4",False),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("4",False),("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("4",False),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("3",True),("4",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("3",True),("4",False),("5",True)] fc t tc)
        ] t tc
 multiState [("3",True),("4",False),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("4",False),("5",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("4",False),("5",True)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("3",True),("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("3",True),("4",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("3",True),("4",False)] fc t tc)
        ] t tc
 multiState [("3",True),("4",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("4",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("4",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("3",True),("4",True)] fc t tc)
        ] t tc
 multiState [("3",True),("4",True),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("4",True),("5",False)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("3",True),("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("4",True),("5",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("3",True),("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("3",True),("4",True),("5",True)] fc t tc)
        ] t tc
 multiState [("3",True),("4",True),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("3",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("3",True),("4",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("4",True),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("3",True),("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("3",True),("4",True)] fc t tc)
        ] t tc
 multiState [("3",True),("4",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("4",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("3",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("4",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("3",True)] fc t tc)
        ] t tc
 multiState [("3",True),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("3",True),("5",True)] fc t tc)
        ] t tc
 multiState [("3",True),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("3",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("3",True)] fc t tc)
        ] t tc
 multiState [("3",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3") (Constant 0))) (multiState [] fc t tc)
+  When [ Case (Deposit (AccountId 1 "3") "3" (ChoiceValue (ChoiceId "1" "3"))) (multiState [] fc t tc)
        ] t tc
 multiState [("4",False),("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("4",True),("5",False)] fc t tc)
@@ -383,27 +383,27 @@ multiState [("4",False),("5",False)] fc t tc =
        ] t tc
 multiState [("4",False),("5",True)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("4",True),("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("4",False)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("4",False)] fc t tc)
        ] t tc
 multiState [("4",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "4") [Bound 0 10000]) (multiState [("4",True)] fc t tc)
        ] t tc
 multiState [("4",True),("5",False)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("5",False)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("5",False)] fc t tc)
        , Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("4",True),("5",True)] fc t tc)
        ] t tc
 multiState [("4",True),("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [("5",True)] fc t tc)
-       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [("4",True)] fc t tc)
+  When [ Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [("5",True)] fc t tc)
+       , Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [("4",True)] fc t tc)
        ] t tc
 multiState [("4",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4") (Constant 0))) (multiState [] fc t tc)
+  When [ Case (Deposit (AccountId 1 "4") "4" (ChoiceValue (ChoiceId "1" "4"))) (multiState [] fc t tc)
        ] t tc
 multiState [("5",False)] fc t tc =
   When [ Case (Choice (ChoiceId "1" "5") [Bound 0 10000]) (multiState [("5",True)] fc t tc)
        ] t tc
 multiState [("5",True)] fc t tc =
-  When [ Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5") (Constant 0))) (multiState [] fc t tc)
+  When [ Case (Deposit (AccountId 1 "5") "5" (ChoiceValue (ChoiceId "1" "5"))) (multiState [] fc t tc)
        ] t tc
 multiState [] fc t tc = fc
 

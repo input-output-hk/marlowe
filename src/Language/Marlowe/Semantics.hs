@@ -91,7 +91,7 @@ data Value = AvailableMoney AccountId
             | AddValue Value Value
             | SubValue Value Value
             | MulValue Value Value
-            | ChoiceValue ChoiceId Value
+            | ChoiceValue ChoiceId
             | SlotIntervalStart
             | SlotIntervalEnd
             | UseValue ValueId
@@ -205,8 +205,8 @@ evalValue env state value = let
         AddValue lhs rhs     -> eval lhs + eval rhs
         SubValue lhs rhs     -> eval lhs - eval rhs
         MulValue lhs rhs     -> eval lhs * eval rhs
-        ChoiceValue choiceId defVal ->
-            Map.findWithDefault (eval defVal) choiceId (choices state)
+        ChoiceValue choiceId ->
+            Map.findWithDefault 0 choiceId (choices state)
         SlotIntervalStart    -> (getSlot . ivFrom . slotInterval) env
         SlotIntervalEnd      -> (getSlot . ivTo . slotInterval) env
         UseValue valId       -> Map.findWithDefault 0 valId (boundValues state)

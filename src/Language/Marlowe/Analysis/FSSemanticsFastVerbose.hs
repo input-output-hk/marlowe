@@ -165,8 +165,8 @@ symEvalVal (SubValue lhs rhs) symState = symEvalVal lhs symState -
                                          symEvalVal rhs symState
 symEvalVal (MulValue lhs rhs) symState = symEvalVal lhs symState *
                                          symEvalVal rhs symState
-symEvalVal (ChoiceValue choId defVal) symState =
-  M.findWithDefault (symEvalVal defVal symState) choId (symChoices symState)
+symEvalVal (ChoiceValue choId) symState =
+  M.findWithDefault (literal 0) choId (symChoices symState)
 symEvalVal SlotIntervalStart symState = lowSlot symState
 symEvalVal SlotIntervalEnd symState = highSlot symState
 symEvalVal (UseValue valId) symState =

@@ -16,7 +16,7 @@ contract owner minBid maxBid bidders deadline = go Nothing [] $ map fromString b
       where
         --choose :: Party -> Case
         choose p = Case (Choice (choice p) [(Bound minBid maxBid)]) $
-            Let (value p) (ChoiceValue (choice p) $ Constant maxBid) $
+            Let (value p) (ChoiceValue (choice p)) $
                 go m (p : ps) $ filter (/= p) qs
         --deposit :: Party -> Case
         deposit p =

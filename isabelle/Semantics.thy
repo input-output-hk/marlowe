@@ -288,7 +288,7 @@ datatype Value = AvailableMoney AccountId Token
                | AddValue Value Value
                | SubValue Value Value
                | MulValue Value Value
-               | ChoiceValue ChoiceId Value
+               | ChoiceValue ChoiceId
                | SlotIntervalStart
                | SlotIntervalEnd
                | UseValue ValueId
@@ -377,8 +377,8 @@ fun  evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightar
     evalValue env state lhs - evalValue env state rhs" |
 "evalValue env state (MulValue lhs rhs) =
     evalValue env state lhs * evalValue env state rhs" |
-"evalValue env state (ChoiceValue choId defVal) =
-    findWithDefault (evalValue env state defVal) choId (choices state)" |
+"evalValue env state (ChoiceValue choId) =
+    findWithDefault 0 choId (choices state)" |
 "evalValue env state (SlotIntervalStart) = fst (slotInterval env)" |
 "evalValue env state (SlotIntervalEnd) = snd (slotInterval env)" |
 "evalValue env state (UseValue valId) =

@@ -56,7 +56,7 @@ type ContributionState = (Party, Bool)
 transitionFunction :: Integer -> ContributionState -> (Maybe ContributionState, Action)
 transitionFunction _ (party, True) =
   (Nothing,
-   Deposit (AccountId 1 party) party (ChoiceValue (ChoiceId "1" party) (Constant 0)))
+   Deposit (AccountId 1 party) party (ChoiceValue (ChoiceId "1" party)))
 transitionFunction maxContrib (party, False) =
   (Just (party, True),
    Choice (ChoiceId "1" party) [Bound 1 maxContrib])

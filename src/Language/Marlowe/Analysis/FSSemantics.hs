@@ -327,18 +327,10 @@ evalValue bnds env state value =
     AddValue lhs rhs         -> go lhs + go rhs
     SubValue lhs rhs         -> go lhs + go rhs
     MulValue lhs rhs         -> go lhs * go rhs
-    Scale s rhs              -> let
-      num = literal (numerator s)
-      denom = literal (denominator s)
-      symVal = go rhs
-      -- quotient and reminder
-      (q, r) = (num * symVal) `sQuotRem` denom
-      -- abs (rem (num/denom)) - 1/2
-      sign = signum (2 * abs r - abs denom)
-      m = ite (r .< 0) (q - 1) (q + 1)
-      isEven = (q `sRem` 2) .== 0
-      in ite (r .== 0 .|| sign .== (-1) .|| (sign .== 0 .&& isEven))
-      {- then -} q {- else -} m
+    Scale s rhs              -> let (n, d) = (numerator s, denominator s) in
+                                let nn = go rhs * literal n in
+                                let (q, r) = nn `sQuotRem` literal d in
+                                ite (abs r * 2 .< literal (abs d)) q (q + signum nn * literal (signum d))
     ChoiceValue (ChoiceId c p) -> SM.maybe (literal 0)
                                            id
                                            (IntegerArray.lookup c $ choice state)

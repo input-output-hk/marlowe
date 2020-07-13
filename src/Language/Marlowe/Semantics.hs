@@ -207,27 +207,16 @@ evalValue env state value = let
         AddValue lhs rhs     -> eval lhs + eval rhs
         SubValue lhs rhs     -> eval lhs - eval rhs
         MulValue lhs rhs     -> eval lhs * eval rhs
-        Scale s rhs          -> let
-            num = numerator s
-            denom = denominator s
-            -- quotient and reminder
-            multiplied = num * eval rhs
-            (q, r) = multiplied `quotRem` denom
-            -- abs (rem (num/denom)) - 1/2
-            abs a = if a >= 0 then a else negate a
-            signum x = if x > 0 then 1 else if x == 0 then 0 else -1
-            sign :: Integer
-            sign = signum (2 * abs r - abs denom)
-            m = if r < 0 then q - 1 else q + 1
-            isEven = (q `rem` 2) == 0
-            in if r == 0 || sign == (-1) || (sign == 0 && isEven) then q else m
+        Scale s rhs          -> let (n, d) = (numerator s, denominator s) in
+                                let nn = eval rhs * n in
+                                let (q, r) = nn `quotRem` d in
+                                if abs r * 2 < abs d then q else q + signum nn * signum d
         ChoiceValue choiceId ->
             Map.findWithDefault 0 choiceId (choices state)
         SlotIntervalStart    -> (getSlot . ivFrom . slotInterval) env
         SlotIntervalEnd      -> (getSlot . ivTo . slotInterval) env
         UseValue valId       -> Map.findWithDefault 0 valId (boundValues state)
         Cond cond thn els    -> if evalObservation env state cond then eval thn else eval els
-
 
 -- | Evaluate an @Observation@ to Bool
 evalObservation :: Environment -> State -> Observation -> Bool

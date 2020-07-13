@@ -1,5 +1,5 @@
 theory Semantics
-imports Main MList SList ListTools "HOL-Library.Product_Lexorder" HOL.Rat
+imports Main MList SList ListTools "HOL-Library.Product_Lexorder"
 begin
 
 type_synonym Slot = int
@@ -288,7 +288,7 @@ datatype Value = AvailableMoney AccountId Token
                | AddValue Value Value
                | SubValue Value Value
                | MulValue Value Value
-               | Scale rat Value
+               | Scale int int Value
                | ChoiceValue ChoiceId
                | SlotIntervalStart
                | SlotIntervalEnd
@@ -370,6 +370,15 @@ fun fixInterval :: "SlotInterval \<Rightarrow> State \<Rightarrow> IntervalResul
 fun signum :: "int \<Rightarrow> int" where
 "signum x = (if x > 0 then 1 else if x = 0 then 0 else -1)"
 
+fun quot :: "int \<Rightarrow> int \<Rightarrow> int" (infixl "quot" 70) where
+"x quot y = (if ((x < 0) = (y < 0)) then x div y else -(abs x div abs y))"
+
+fun rem :: "int \<Rightarrow> int \<Rightarrow> int" (infixl "rem" 70) where
+"x rem y = x - (x quot y) * y"
+
+fun quotRem :: "int \<Rightarrow> int \<Rightarrow> int \<times> int" (infixl "quotRem" 70) where
+"x quotRem y = (x quot y, x rem y)"
+
 fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarrow> int" and evalObservation :: "Environment \<Rightarrow> State \<Rightarrow> Observation \<Rightarrow> bool" where
 "evalValue env state (AvailableMoney accId token) =
     findWithDefault 0 (accId, token) (accounts state)" |
@@ -381,15 +390,10 @@ fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarr
     evalValue env state lhs - evalValue env state rhs" |
 "evalValue env state (MulValue lhs rhs) =
     evalValue env state lhs * evalValue env state rhs" |
-"evalValue env state (Scale s rhs) = 
-    (let (num, denom) = quotient_of s in
-     let multiplied = num * evalValue env state rhs in
-     let q = multiplied div denom in
-     let r = multiplied mod denom in
-     let sign = signum (2 * abs r - abs denom) in
-     let m = if r < 0 then q - 1 else q + 1 in
-     let isEven = (q mod 2) = 0
-     in if r = 0 \<or> sign = (-1) \<or> (sign = 0 \<and> isEven) then q else m)" |
+"evalValue env state (Scale n d rhs) = 
+    (let nn = evalValue env state rhs * n in
+     let (q, r) = nn quotRem d in
+     if abs r * 2 < abs d then q else q + signum nn * signum d)" |
 "evalValue env state (ChoiceValue choId) =
     findWithDefault 0 choId (choices state)" |
 "evalValue env state (SlotIntervalStart) = fst (slotInterval env)" |
@@ -436,12 +440,21 @@ lemma evalSubValue :
   by auto
 
 lemma evalScaleByZeroIsZero :
-  "evalValue env sta (Scale (0/1) x) = 0"
+  "evalValue env sta (Scale 0 1 x) = 0"
   by auto
 
-lemma evalScaleByOneIsX :
-  "evalValue env sta (Scale (1/1) x) = evalValue env sta x"
-  by auto
+lemma evalScaleByOneIsX : "evalValue env sta (Scale 1 1 x) = evalValue env sta x"
+  apply simp
+  by (smt div_by_1)
+
+lemma evalScaleMultiplies :
+  "evalValue env sta (Scale a b (Constant (x * c))) = evalValue env sta (Scale (x * a) b (Constant c))"
+  apply (simp only:evalValue.simps)
+  by (simp add: mult.commute mult.left_commute)
+
+lemma evalScaleMultiplyFractByConstant :
+  "c \<noteq> 0 \<Longrightarrow> evalValue env sta (Scale (c * a) (c * b) x) = evalValue env sta (Scale a b x)"
+  oops
 
 fun refundOne :: "Accounts \<Rightarrow>
                   ((Party \<times> Token \<times> Money) \<times> Accounts) option" where

@@ -165,6 +165,11 @@ symEvalVal (SubValue lhs rhs) symState = symEvalVal lhs symState -
                                          symEvalVal rhs symState
 symEvalVal (MulValue lhs rhs) symState = symEvalVal lhs symState *
                                          symEvalVal rhs symState
+symEvalVal (Scale s rhs) symState =
+  let (n, d) = (numerator s, denominator s) in
+  let nn = symEvalVal rhs symState * literal n in
+  let (q, r) = nn `sQuotRem` literal d in
+  ite (abs r * 2 .< literal (abs d)) q (q + signum nn * literal (signum d))
 symEvalVal (ChoiceValue choId) symState =
   M.findWithDefault (literal 0) choId (symChoices symState)
 symEvalVal SlotIntervalStart symState = lowSlot symState

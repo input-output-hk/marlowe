@@ -1,5 +1,5 @@
 theory StaticAnalysis
-  imports Semantics MList "HOL-Library.Monad_Syntax"
+  imports Semantics MList "HOL-Library.Monad_Syntax" HOL.Wellfounded
 begin
 
 (* Symbolic mock definition *)
@@ -229,5 +229,157 @@ fun addTransaction :: "int \<Rightarrow> int \<Rightarrow> SymInput option \<Rig
                                    , whenPos := pos
                                    \<rparr>));
         return (conditions, uSymInput) })"
+
+fun const :: "'a \<Rightarrow> 'b \<Rightarrow> 'a" where
+"const x _ = x"
+
+fun ensureBounds :: "int \<Rightarrow> Bound list \<Rightarrow> bool" where
+"ensureBounds cho Nil = False" |
+"ensureBounds cho (Cons (lowBnd, hiBnd) t) =
+  (((cho \<ge> lowBnd) \<and> (cho \<le> hiBnd)) \<or> ensureBounds cho t)"
+
+fun addFreshSlotsToState :: "SymState \<Rightarrow> (int \<times> int \<times> SymState) Symbolic" where
+"addFreshSlotsToState (SymState sState) =
+  do { newLowSlot \<leftarrow> newVar;
+       newHighSlot \<leftarrow> newVar;
+       return (newLowSlot, newHighSlot, SymState (sState \<lparr> lowSlot := newLowSlot,
+                                                           highSlot := newHighSlot \<rparr>))
+     }"
+
+fun newPreviousMatchDeposit :: "Value \<Rightarrow> AccountId \<Rightarrow> Party \<Rightarrow> Token \<Rightarrow>
+                                (SymInput \<Rightarrow> SymState \<Rightarrow> bool) \<Rightarrow>
+                                (SymInput \<Rightarrow> SymState \<Rightarrow> bool)" where
+"newPreviousMatchDeposit val accId party token previousMatch otherSymInput pmSymState =
+   (let pmConcVal = symEvalVal val pmSymState in
+    case otherSymInput of
+       SymDeposit otherAccId otherParty otherToken otherConcVal \<Rightarrow>
+         if ((otherAccId = accId) \<and> (otherParty = party) \<and> (otherToken = token))
+         then (otherConcVal = pmConcVal) \<or> previousMatch otherSymInput pmSymState
+         else previousMatch otherSymInput pmSymState
+     | _ \<Rightarrow> previousMatch otherSymInput pmSymState)"
+
+fun newPreviousMatchChoice :: "ChoiceId \<Rightarrow> Bound list \<Rightarrow>
+                               (SymInput \<Rightarrow> SymState \<Rightarrow> bool) \<Rightarrow>
+                               (SymInput \<Rightarrow> SymState \<Rightarrow> bool)" where
+"newPreviousMatchChoice choId bnds previousMatch otherSymInput pmSymState =
+   (case otherSymInput of
+       SymChoice otherChoId otherConcVal \<Rightarrow>
+         if otherChoId = choId
+         then (ensureBounds otherConcVal bnds \<or> previousMatch otherSymInput pmSymState)
+         else previousMatch otherSymInput pmSymState
+     | _ \<Rightarrow> previousMatch otherSymInput pmSymState)"
+
+fun newPreviousMatchNotify :: "Observation \<Rightarrow>
+                               (SymInput \<Rightarrow> SymState \<Rightarrow> bool) \<Rightarrow>
+                               (SymInput \<Rightarrow> SymState \<Rightarrow> bool)" where
+"newPreviousMatchNotify obs previousMatch otherSymInput pmSymState =
+   (let pmObsRes = symEvalObs obs pmSymState in
+    case otherSymInput of
+       SymNotify \<Rightarrow> (pmObsRes \<or> previousMatch otherSymInput pmSymState)
+     | _ \<Rightarrow> previousMatch otherSymInput pmSymState)"
+
+function (sequential) isValidAndFailsAux :: "bool \<Rightarrow> Contract \<Rightarrow> SymState \<Rightarrow> bool Symbolic" and
+     applyInputConditions :: "int \<Rightarrow> int \<Rightarrow> bool \<Rightarrow> SymInput option \<Rightarrow> int \<Rightarrow>
+                             SymState \<Rightarrow> int \<Rightarrow> Contract \<Rightarrow>
+                             (bool \<times> bool) Symbolic" and
+    isValidAndFailsWhen :: "bool \<Rightarrow> Case list \<Rightarrow> int \<Rightarrow> Contract \<Rightarrow>
+                            (SymInput \<Rightarrow> SymState \<Rightarrow> bool) \<Rightarrow> SymState \<Rightarrow>
+                            int \<Rightarrow> bool Symbolic" where
+"isValidAndFailsAux hasErr Close (SymState sState) =
+  return (hasErr \<and> convertToSymbolicTrace (Cons (lowSlot sState, highSlot sState,
+                                                 symInput sState, whenPos sState)
+                                                (traces sState)) (paramTrace sState))" |
+"isValidAndFailsAux hasErr (Pay accId payee tok val cont) (SymState sState) =
+  do { let concVal = symEvalVal val (SymState sState);
+       let originalMoney = findWithDefault 0 (accId, tok) (symAccounts sState);
+       let remainingMoneyInAccount = originalMoney - max 0 concVal;
+       let newAccs = MList.insert (accId, tok) (max 0 remainingMoneyInAccount)
+                                  (symAccounts sState);
+       let finalSState = SymState (sState \<lparr> symAccounts :=
+             (case payee of
+                 Account destAccId \<Rightarrow>
+                  MList.insert (destAccId, tok)
+                               (min originalMoney (max 0 concVal)
+                                 + findWithDefault 0 (destAccId, tok) newAccs)
+                               newAccs
+               | _ \<Rightarrow> newAccs) \<rparr>);
+       isValidAndFailsAux ((remainingMoneyInAccount < 0)
+                           \<or> (concVal \<le> 0)
+                           \<or> hasErr) cont finalSState
+     }" |
+"isValidAndFailsAux hasErr (If obs cont1 cont2) sState =
+  do { let obsVal = symEvalObs obs sState;
+       contVal1 \<leftarrow> isValidAndFailsAux hasErr cont1 sState;
+       contVal2 \<leftarrow> isValidAndFailsAux hasErr cont2 sState;
+       return (if obsVal then contVal1 else contVal2)
+     }" |
+"isValidAndFailsAux hasErr (When list timeout cont) sState =
+  isValidAndFailsWhen hasErr list timeout cont (const (const False)) sState 1" |
+"isValidAndFailsAux hasErr (Let valId val cont) (SymState sState) =
+  do { let concVal = symEvalVal val (SymState sState);
+       let newBVMap = MList.insert valId concVal (symBoundValues sState);
+       let newSState = SymState (sState \<lparr> symBoundValues := newBVMap \<rparr>);
+       isValidAndFailsAux hasErr cont newSState }" |
+"isValidAndFailsAux hasErr (Assert obs cont) sState =
+  (let obsVal = symEvalObs obs sState in
+   isValidAndFailsAux (hasErr \<or> (\<not> obsVal)) cont sState)" |
+"applyInputConditions ls hs hasErr maybeSymInput timeout sState pos cont =
+  do { (newCond, newSState) \<leftarrow> addTransaction ls hs maybeSymInput timeout sState pos;
+       newTrace \<leftarrow> isValidAndFailsAux hasErr cont newSState;
+       return (newCond, newTrace) }" |
+"isValidAndFailsWhen hasErr Nil timeout cont previousMatch sState pos =
+  do { newLowSlot \<leftarrow> newVar;
+       newHighSlot \<leftarrow> newVar;
+       (cond, newTrace) \<leftarrow> applyInputConditions newLowSlot newHighSlot
+                                                hasErr None timeout sState 0 cont;
+       return (if cond then newTrace else False) }" |
+"isValidAndFailsWhen hasErr (Cons (Case (Deposit accId party token val) cont) rest)
+                     timeout timCont previousMatch sState pos =
+  do { (newLowSlot, newHighSlot, sStateWithInput) \<leftarrow> addFreshSlotsToState sState;
+       let concVal = symEvalVal val sStateWithInput;
+       let symInput = SymDeposit accId party token concVal;
+       let clashResult = previousMatch symInput sStateWithInput;
+       let newPreviousMatch = newPreviousMatchDeposit val accId party token previousMatch;
+       (newCond, newTrace) \<leftarrow> applyInputConditions newLowSlot newHighSlot
+                                (hasErr \<or> (concVal \<le> 0))
+                                (Some symInput) timeout sState pos cont;
+       contTrace \<leftarrow> isValidAndFailsWhen hasErr rest timeout timCont
+                                        newPreviousMatch sState (pos + 1);
+       return (if (newCond \<and> (\<not> clashResult)) then newTrace else contTrace) }" |
+"isValidAndFailsWhen hasErr (Cons (Case (Choice choId bnds) cont) rest)
+                     timeout timCont previousMatch sState pos =
+  do { (newLowSlot, newHighSlot, sStateWithInput) \<leftarrow> addFreshSlotsToState sState;
+       concVal \<leftarrow> newVar;
+       let symInput = SymChoice choId concVal;
+       let clashResult = previousMatch symInput sStateWithInput;
+       let newPreviousMatch = newPreviousMatchChoice choId bnds previousMatch;
+       contTrace \<leftarrow> isValidAndFailsWhen hasErr rest timeout timCont
+                                        newPreviousMatch sState (pos + 1);
+       (newCond, newTrace)
+                 \<leftarrow> applyInputConditions newLowSlot newHighSlot
+                                         hasErr (Some symInput) timeout sState pos cont;
+       return (if (newCond \<and> (\<not> clashResult)) then (ensureBounds concVal bnds \<and> newTrace)
+               else contTrace) }" |
+"isValidAndFailsWhen hasErr (Cons (Case (Notify obs) cont) rest)
+                     timeout timCont previousMatch sState pos =
+  do { (newLowSlot, newHighSlot, sStateWithInput) \<leftarrow> addFreshSlotsToState sState;
+       let obsRes = symEvalObs obs sStateWithInput;
+       let symInput = SymNotify;
+       let clashResult = previousMatch symInput sStateWithInput;
+       let newPreviousMatch = newPreviousMatchNotify obs previousMatch;
+       contTrace \<leftarrow> isValidAndFailsWhen hasErr rest timeout timCont
+                                        newPreviousMatch sState (pos + 1);
+       (newCond, newTrace) \<leftarrow> applyInputConditions newLowSlot newHighSlot
+                                                   hasErr (Some symInput) timeout sState pos cont;
+       return (if (newCond \<and> obsRes \<and> (\<not> clashResult)) then newTrace else contTrace) }"
+  by pat_completeness auto
+termination isValidAndFailsAux
+  apply (relation "measure
+                     (\<lambda> params .
+                         case params of
+                           Inl (_, (c, _)) \<Rightarrow> (size (c :: Contract)) * 3
+                         | Inr (Inl (_, (_, (_, (_, (_, (_, (_, c)))))))) \<Rightarrow> (size (c :: Contract) * 3) + 1
+                         | Inr (Inr (_, (cl, (_, (c, _))))) \<Rightarrow> (size_list size (cl :: Case list)) * 3 + size c * 3 + 2)")
+  by simp_all
 
 end

@@ -382,4 +382,20 @@ termination isValidAndFailsAux
                          | Inr (Inr (_, (cl, (_, (c, _))))) \<Rightarrow> (size_list size (cl :: Case list)) * 3 + size c * 3 + 2)")
   by simp_all
 
+fun wrapper :: "Contract \<Rightarrow> (int \<times> int \<times> int \<times> int) list \<Rightarrow> State option \<Rightarrow> bool Symbolic" where
+"wrapper c st maybeState = do { ess \<leftarrow> mkInitialSymState st maybeState;
+                                isValidAndFailsAux False c ess }"
+                                
+fun hasWarnings :: "TransactionOutput \<Rightarrow> bool" where
+"hasWarnings (TransactionError _) = False" |
+"hasWarnings (TransactionOutput txOutRec) = (Nil \<noteq> txOutWarnings txOutRec)"
+
+theorem staticAnalysisWorks : "(\<exists> t env. execute (wrapper c t (Some st)) x \<noteq> None) =
+                               (\<exists> t. hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
+                                                               , txOutPayments = Nil
+                                                               , txOutState = st
+                                                               , txOutContract = c \<rparr> t))"
+  oops
+
+
 end

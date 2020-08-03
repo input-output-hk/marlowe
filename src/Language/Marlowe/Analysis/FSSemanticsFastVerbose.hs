@@ -313,7 +313,8 @@ isValidAndFailsAux hasErr (Let valId val cont) sState =
   do let concVal = symEvalVal val sState
      let newBVMap = M.insert valId concVal (symBoundValues sState)
      let newSState = sState { symBoundValues = newBVMap }
-     isValidAndFailsAux hasErr cont newSState
+     isValidAndFailsAux ((literal (M.member valId (symBoundValues sState))) -- Shadowed definition
+                         .|| hasErr) cont newSState
 isValidAndFailsAux hasErr (Assert obs cont) sState =
   isValidAndFailsAux (hasErr .|| sNot obsVal) cont sState
   where obsVal = symEvalObs obs sState

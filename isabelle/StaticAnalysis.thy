@@ -9,8 +9,8 @@ record SymbolicMonadData = numSymbolicVars :: nat
 
 datatype 'a Symbolic = Symbolic "SymbolicMonadData \<Rightarrow> ('a \<times> SymbolicMonadData) option"
 
-fun execute :: "'a Symbolic \<Rightarrow> SymbolicMonadData \<Rightarrow> ('a \<times> SymbolicMonadData) option" where
-"execute (Symbolic f) = f"
+primrec execute :: "'a Symbolic \<Rightarrow> SymbolicMonadData \<Rightarrow> ('a \<times> SymbolicMonadData) option" where
+  "execute (Symbolic f) = f"
 
 fun bind :: "'a Symbolic \<Rightarrow> ('a \<Rightarrow> 'b Symbolic) \<Rightarrow> 'b Symbolic" where
   "bind m nf =
@@ -28,7 +28,8 @@ fun maybeNth :: "'a list => nat => 'a option" (infixl "!?" 100) where
 definition newVar :: "int Symbolic" where
   "newVar = Symbolic (\<lambda> st . let nsv = numSymbolicVars st in
                    case (symbolicVarValues st) !? nsv of
-                     Some x \<Rightarrow> Some (x, st \<lparr> numSymbolicVars := Suc nsv \<rparr> ) )"
+                     Some x \<Rightarrow> Some (x, st \<lparr> numSymbolicVars := Suc nsv \<rparr> )
+                   | None \<Rightarrow> None )"
 
 fun constrain :: "bool \<Rightarrow> unit Symbolic" where
   "constrain val = Symbolic (\<lambda> st . if val then Some ((), st) else None)"
@@ -73,7 +74,7 @@ function (sequential) generateSymbolicInterval :: "int option \<Rightarrow> (int
 "generateSymbolicInterval None =
   do { hs \<leftarrow> newVar;
        ls \<leftarrow> newVar;
-       constrain (ls < hs);
+       constrain (ls \<le> hs);
        return (ls, hs) }" |
 "generateSymbolicInterval (Some ms) =
   do { (ls, hs) \<leftarrow> generateSymbolicInterval None;
@@ -194,7 +195,7 @@ fun addTransaction :: "int \<Rightarrow> int \<Rightarrow> SymInput option \<Rig
   let prevSymInp = symInput symState in
   let oldPos = whenPos symState in
   do { let tim = slotTim;
-       constrain (newLowSlot < newHighSlot);
+       constrain (newLowSlot \<le> newHighSlot);
        let conditions = (((oldHighSlot < tim) \<or>
                           ((oldLowSlot = newLowSlot) \<and> (oldHighSlot = newHighSlot))) \<and>
                          (newLowSlot \<ge> tim));
@@ -319,7 +320,7 @@ function (sequential) isValidAndFailsAux :: "bool \<Rightarrow> Contract \<Right
   do { let concVal = symEvalVal val (SymState sState);
        let newBVMap = MList.insert valId concVal (symBoundValues sState);
        let newSState = SymState (sState \<lparr> symBoundValues := newBVMap \<rparr>);
-       isValidAndFailsAux hasErr cont newSState }" |
+       isValidAndFailsAux ((member valId (symBoundValues sState)) \<or> hasErr) cont newSState }" |
 "isValidAndFailsAux hasErr (Assert obs cont) sState =
   (let obsVal = symEvalObs obs sState in
    isValidAndFailsAux (hasErr \<or> (\<not> obsVal)) cont sState)" |
@@ -390,12 +391,15 @@ fun hasWarnings :: "TransactionOutput \<Rightarrow> bool" where
 "hasWarnings (TransactionError _) = False" |
 "hasWarnings (TransactionOutput txOutRec) = (Nil \<noteq> txOutWarnings txOutRec)"
 
-theorem staticAnalysisWorks : "(\<exists> t env. execute (wrapper c t (Some st)) x \<noteq> None) =
+fun isCounterExample :: "(bool \<times> SymbolicMonadData) option \<Rightarrow> bool" where
+"isCounterExample None = False" |
+"isCounterExample (Some (b, _)) = b"
+
+theorem staticAnalysisWorks : "(\<exists> t x. isCounterExample (execute (wrapper c t (Some st)) x)) =
                                (\<exists> t. hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
                                                                , txOutPayments = Nil
                                                                , txOutState = st
                                                                , txOutContract = c \<rparr> t))"
-  oops
-
+    oops
 
 end

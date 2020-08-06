@@ -10,6 +10,8 @@ import Data.Either (Either(..))
 
 nestClauses :: [Con] -> TypeQ
 nestClauses [] = error "No constructors for type"
+nestClauses [NormalC _ [(_, t)]] =
+  return t
 nestClauses [NormalC _ params] =
   foldl' (appT) (tupleT (length params)) [return t | (_, t) <- params]
 nestClauses list = appT (appT [t| Either |]
@@ -50,7 +52,7 @@ nestFunClauses [] f = error "No constructors for type"
 nestFunClauses [NormalC name params] f =
   [do names <- mapM (\x -> newName ('p':(show x))) [1..(length params)]
       clause [ conP name [ varP n | n <- names ] ]
-             (normalB (f (tupE (map varE names)))) []]
+             (normalB (f (tupE' (map varE names)))) []]
 nestFunClauses list f = (nestFunClauses fHalf (f . (\x -> [e| Left $(x) |]))) ++
                         (nestFunClauses sHalf (f . (\x -> [e| Right $(x) |])))
   where ll = length list
@@ -77,7 +79,7 @@ unNestFunClauses :: [Con] -> (PatQ -> PatQ) -> [ClauseQ]
 unNestFunClauses [] f = error "No constructors for type"
 unNestFunClauses [NormalC name params] f =
   [do names <- mapM (\x -> newName ('p':(show x))) [1..(length params)]
-      clause [f (tupP (map varP names))]
+      clause [f (tupP' (map varP names))]
              (normalB (foldl' appE (conE name) [ varE n | n <- names ])) []]
 unNestFunClauses list f = (unNestFunClauses fHalf (f . (\x -> [p| Left $(x) |]))) ++
                           (unNestFunClauses sHalf (f . (\x -> [p| Right $(x) |])))
@@ -98,7 +100,7 @@ mkSymCaseRec func [] = error "No constructors for type"
 mkSymCaseRec func [NormalC name params] =
   do paramNames <- mapM (\x -> newName ('p':(show x))) [1..(length params)]
      let ssName = mkName ('S':'S':(nameBase name))
-     let wrapping = [e| (\ $(tupP $ map varP paramNames) ->
+     let wrapping = [e| (\ $(tupP' $ map varP paramNames) ->
                         $(varE func)
                         ($(foldl' (appE) (conE ssName) $ map (varE) paramNames))) |]
      if length params > 1
@@ -142,9 +144,9 @@ mkSymConsts tvs sName [NormalC name params] f =
        [do names <- mapM (\x -> newName ('p':(show x))) [1..(length params)]
            clause [ varP n | n <- names ]
                   (normalB (f (if length params > 1
-                               then [e| ST.tuple $(tupE (map varE names)) |]
+                               then [e| ST.tuple $(tupE' (map varE names)) |]
                                else if length params > 0
-                                    then tupE (map varE names)
+                                    then tupE' (map varE names)
                                     else [e| literal () |]))) []]
      return [signature, declaration]
 mkSymConsts tvs sName list f =
@@ -153,6 +155,30 @@ mkSymConsts tvs sName list f =
      return (rfHalf ++ rsHalf)
   where ll = length list
         (fHalf, sHalf) = splitAt (ll - (length list `div` 2)) list
+
+-- | Backwards-compatible handling of unary tuple expressions.
+--
+-- From GHC-8.10.1, unary tuples do not map to the plain expression, but
+-- apply the 'Unit' type. To keep compatibility between several TH versions,
+-- we restore the old behaviour here.
+--
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/16881
+--
+tupE' :: [TH.ExpQ] -> TH.ExpQ
+tupE' [e] = e
+tupE' es  = tupE es
+
+-- | Backwards-compatible handling of unary tuple patterns.
+--
+-- From GHC-8.10.1, unary tuples do not map to the plain pattern, but
+-- apply the 'Unit' type. To keep compatibility between several TH versions,
+-- we restore the old behaviour here.
+--
+-- See https://gitlab.haskell.org/ghc/ghc/-/issues/16881
+--
+tupP' :: [TH.PatQ] -> TH.PatQ
+tupP' [p] = p
+tupP' ps  = tupP ps
 
 mkSymbolicDatatype :: TH.Name -> TH.Q [TH.Dec]
 mkSymbolicDatatype typeName =

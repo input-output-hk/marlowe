@@ -1127,4 +1127,12 @@ theorem traceToSingleInputIsEquivalent : "playTrace sn co tral = playTrace sn co
   apply (simp only:playTrace.simps)
   using playTraceAuxToSingleInputIsEquivalent by blast
 
+
+lemma transactionPrefixForSingleInput : "h # t = traceListToSingleInput c \<Longrightarrow> (\<exists> sc. t = traceListToSingleInput sc)"
+  oops
+
+
+lemma traceListToSingleInput_isSingleInput : "\<lparr>interval = inte, inputs = inp_h # inp_t\<rparr> # t = traceListToSingleInput t2 \<Longrightarrow> inp_t \<noteq> [] \<Longrightarrow> False"
+  oops
+
 end

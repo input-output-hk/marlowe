@@ -1,5 +1,5 @@
 theory StaticAnalysis
-  imports Semantics MList "HOL-Library.Monad_Syntax" HOL.Wellfounded
+  imports Semantics MList "HOL-Library.Monad_Syntax" HOL.Wellfounded SingleInputTransactions
 begin
 
 (* Symbolic mock definition *)
@@ -395,11 +395,119 @@ fun isCounterExample :: "(bool \<times> SymbolicMonadData) option \<Rightarrow> 
 "isCounterExample None = False" |
 "isCounterExample (Some (b, _)) = b"
 
+theorem noCounterExamplePropagatesComputeEmptyTransaction :
+   "computeTransaction \<lparr> interval = (lo, hi), inputs = [] \<rparr> st c = TransactionOutput \<lparr>txOutWarnings = [], txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
+     (\<And>t x. \<not> isCounterExample (execute (wrapper c t (Some st)) x)) \<Longrightarrow> isCounterExample (execute (wrapper newCont t2 (Some newSta)) x2) \<Longrightarrow> False"
+  oops
+
+theorem noCounterExamplePropagatesComputeSingleInputTransaction :
+   "computeTransaction \<lparr> interval = (lo, hi), inputs = [inp] \<rparr> st c = TransactionOutput \<lparr>txOutWarnings = [], txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
+     (\<And>t x. \<not> isCounterExample (execute (wrapper c t (Some st)) x)) \<Longrightarrow> isCounterExample (execute (wrapper newCont t2 (Some newSta)) x2) \<Longrightarrow> False"
+  oops
+
+theorem computeEmptyTransactionWarningIsCounterExample :
+   "(\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
+    computeTransaction \<lparr> interval = (lo, hi), inputs = [] \<rparr> st c = TransactionOutput \<lparr>txOutWarnings = newWarn, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
+    newWarn = []"
+  oops
+
+theorem computeSingleInputTransactionWarningIsCounterExample :
+   "(\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
+    computeTransaction \<lparr> interval = (lo, hi), inputs = [inp] \<rparr> st c = TransactionOutput \<lparr>txOutWarnings = newWarn, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
+    newWarn = []"
+  oops
+
+lemma staticAnalysisComplete_emptyTransaction : "(\<And>c st p.
+        (\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
+        hasWarnings (playTraceAux \<lparr>txOutWarnings = [], txOutPayments = p, txOutState = st, txOutContract = c\<rparr> t) \<Longrightarrow> False) \<Longrightarrow>
+    (\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
+    hasWarnings (playTraceAux \<lparr>txOutWarnings = newWarns, txOutPayments = p @ newPays, txOutState = newSta, txOutContract = newCont\<rparr> t) \<Longrightarrow>
+    computeTransaction \<lparr>interval = inte, inputs = []\<rparr> st c =
+    TransactionOutput \<lparr>txOutWarnings = newWarns, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
+    newTxOut = \<lparr>txOutWarnings = newWarns, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow> False"
+  (*
+  by (metis computeEmptyTransactionWarningIsCounterExample const.cases noCounterExamplePropagatesComputeEmptyTransaction)
+  *)
+  oops
+
+lemma staticAnalysisComplete_singleInputTransaction : "(\<And>c st p.
+        (\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
+        hasWarnings (playTraceAux \<lparr>txOutWarnings = [], txOutPayments = p, txOutState = st, txOutContract = c\<rparr> t) \<Longrightarrow> False) \<Longrightarrow>
+    traceListToSingleInput t2 = \<lparr>interval = inte, inputs = [inp]\<rparr> # t \<Longrightarrow>
+    (\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
+    hasWarnings (playTraceAux \<lparr>txOutWarnings = newWarns, txOutPayments = p @ newPays, txOutState = newSta, txOutContract = newCont\<rparr> t) \<Longrightarrow>
+    computeTransaction \<lparr>interval = inte, inputs = [inp]\<rparr> st c =
+    TransactionOutput \<lparr>txOutWarnings = newWarns, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
+    newTxOut = \<lparr>txOutWarnings = newWarns, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow> False"
+  (*
+  apply (cases newWarns)
+  apply (simp only:refl)
+  apply (metis noCounterExamplePropagatesComputeSingleInputTransaction small_lazy'.cases)
+  apply (simp only:refl)
+  by (metis computeSingleInputTransactionWarningIsCounterExample list.distinct(1) prod.exhaust)
+  *)
+  oops
+
+lemma staticAnalysisComplete_aux : "(\<And> t2 x. \<not> ( isCounterExample (execute (wrapper c t2 (Some st)) x))) \<Longrightarrow> hasWarnings (playTraceAux \<lparr>txOutWarnings = [], txOutPayments = p, txOutState = st, txOutContract = c\<rparr> t) \<Longrightarrow> False"
+  (*
+  apply (simp only:playTraceAuxToSingleInputIsEquivalent[of _ t])
+  apply (induction "traceListToSingleInput t" arbitrary: c st p t)
+  apply simp
+  subgoal for h t t2 c st p
+    apply (cases h)
+    subgoal for inte inp
+      apply (cases inp)
+      apply (subst (asm) eq_commute[of "h # t" "traceListToSingleInput t2"])
+      apply (simp only:playTraceAux.simps refl)
+      apply (cases "computeTransaction h st c")
+      subgoal for newTxOut
+        apply (cases "newTxOut")
+        subgoal for newWarns newPays newSta newCont
+          apply (simp del:computeTransaction.simps execute.simps wrapper.simps)
+          by (metis staticAnalysisComplete_emptyTransaction transactionPrefixForSingleInput)
+        done
+      apply simp
+      subgoal for inp_h inp_t
+        apply (cases "inp_t = []")
+        apply (subst (asm) eq_commute[of "h # t" "traceListToSingleInput t2"])
+        apply (simp only:playTraceAux.simps refl)
+        apply (cases "computeTransaction h st c")
+        subgoal for newTxOut
+          apply (cases "newTxOut")
+          subgoal for newWarns newPays newSta newCont
+            apply (simp del:computeTransaction.simps execute.simps wrapper.simps)
+            by (metis staticAnalysisComplete_singleInputTransaction transactionPrefixForSingleInput)
+          done
+          apply simp
+        apply (simp only:refl)
+        using traceListToSingleInput_isSingleInput by blast
+      done
+    done
+  done
+  *)
+  oops
+
+theorem staticAnalysisComplete : "(\<exists> t. hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
+                                                                  , txOutPayments = Nil
+                                                                  , txOutState = st
+                                                                  , txOutContract = c \<rparr> t)) \<Longrightarrow>
+                                  (\<exists> t x. isCounterExample (execute (wrapper c t (Some st)) x))"
+  (* using staticAnalysisComplete_aux by blast *)
+  oops
+
+theorem staticAnalysisSound : "(\<exists> t x. isCounterExample (execute (wrapper c t (Some st)) x)) \<Longrightarrow>
+                               (\<exists> t. hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
+                                                               , txOutPayments = Nil
+                                                               , txOutState = st
+                                                               , txOutContract = c \<rparr> t))"
+  oops
+
 theorem staticAnalysisWorks : "(\<exists> t x. isCounterExample (execute (wrapper c t (Some st)) x)) =
                                (\<exists> t. hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
                                                                , txOutPayments = Nil
                                                                , txOutState = st
                                                                , txOutContract = c \<rparr> t))"
-    oops
+  (* using staticAnalysisComplete staticAnalysisSound by blast *)
+  oops
 
 end

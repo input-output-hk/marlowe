@@ -1127,4 +1127,28 @@ theorem traceToSingleInputIsEquivalent : "playTrace sn co tral = playTrace sn co
   apply (simp only:playTrace.simps)
   using playTraceAuxToSingleInputIsEquivalent by blast
 
+
+lemma transactionPrefixForSingleInput : "h # t = traceListToSingleInput nt \<Longrightarrow> (\<exists> nt2. t = traceListToSingleInput nt2)"
+  apply (induction nt rule:traceListToSingleInput.induct)
+  apply simp
+  subgoal for si inps rest
+    apply (induction inps arbitrary: h t rest si)
+    apply auto[1]
+    subgoal for a inps h t rest si
+      apply (simp only:traceListToSingleInput.simps)
+      apply (cases inps)
+      apply simp
+      apply (simp only:refl inputsToTransactions.simps)
+      by (metis append_Cons list.inject traceListToSingleInput.simps(2))
+    done
+  done
+
+lemma traceListToSingleInput_isSingleInput : "\<lparr>interval = inte, inputs = inp_h # inp_t\<rparr> # t = traceListToSingleInput t2 \<Longrightarrow> inp_t \<noteq> [] \<Longrightarrow> False"
+  apply (induction t2 rule:traceListToSingleInput.induct)
+  apply simp_all
+  subgoal for si inps rest
+    apply (induction si inps rule:inputsToTransactions.induct)
+    by simp_all
+  done
+
 end

@@ -1,5 +1,5 @@
 theory StaticAnalysis
-  imports Semantics MList "HOL-Library.Monad_Syntax" HOL.Wellfounded SingleInputTransactions
+  imports Semantics MList "HOL-Library.Monad_Syntax" HOL.Wellfounded SingleInputTransactions PositiveAccounts 
 begin
 
 (* Symbolic mock definition *)
@@ -395,62 +395,94 @@ fun isCounterExample :: "(bool \<times> SymbolicMonadData) option \<Rightarrow> 
 "isCounterExample None = False" |
 "isCounterExample (Some (b, _)) = b"
 
+lemma closeContractRemains_applyAllLoop : "applyAllLoop env fixSta Close inps warn pay = ApplyAllSuccess newWarn newPay newState cont \<Longrightarrow> cont = Close"
+  sorry
+
+lemma closeContractRemains : "validAndPositive_state st \<Longrightarrow>
+                       computeTransaction inps st Close = TransactionOutput \<lparr>txOutWarnings = newWarns, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow> newCont = Close"
+  apply (simp del:validAndPositive_state.simps)
+  apply (cases "fixInterval (interval inps) st")
+  apply (simp only:refl IntervalResult.case)
+  subgoal for env fixSta
+    apply (cases "applyAllInputs env fixSta Close (inputs inps)")
+    subgoal for warnings payments newState cont
+      apply (simp only:refl ApplyAllResult.case)
+      by (metis TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllInputs.simps closeContractRemains_applyAllLoop)
+    by simp_all
+  apply (simp only:refl IntervalResult.case)
+  by simp
+
+lemma noCounterExamplePropagatesComputeEmptyTransaction_Close : "\<not> isCounterExample (execute (wrapper Close t (Some sta)) x)"
+  apply simp
+  apply (auto split:option.splits prod.splits)
+  subgoal for a b
+    apply (cases a)
+    by simp
+  done
+
 theorem noCounterExamplePropagatesComputeEmptyTransaction :
-   "computeTransaction \<lparr> interval = (lo, hi), inputs = [] \<rparr> st c = TransactionOutput \<lparr>txOutWarnings = [], txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
-     (\<And>t x. \<not> isCounterExample (execute (wrapper c t (Some st)) x)) \<Longrightarrow> isCounterExample (execute (wrapper newCont t2 (Some newSta)) x2) \<Longrightarrow> False"
+   "validAndPositive_state st \<Longrightarrow>
+    computeTransaction \<lparr> interval = (lo, hi), inputs = [] \<rparr> st c = TransactionOutput \<lparr>txOutWarnings = [], txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
+    (\<And>t x. \<not> isCounterExample (execute (wrapper c t (Some st)) x)) \<Longrightarrow> isCounterExample (execute (wrapper newCont t2 (Some newSta)) x2) \<Longrightarrow> False"
+  (*apply (induction c)
+  apply simp
+  using closeContractRemains noCounterExamplePropagatesComputeEmptyTransaction_Close apply blast*)
   oops
 
 theorem noCounterExamplePropagatesComputeSingleInputTransaction :
-   "computeTransaction \<lparr> interval = (lo, hi), inputs = [inp] \<rparr> st c = TransactionOutput \<lparr>txOutWarnings = [], txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
+   "validAndPositive_state st \<Longrightarrow>
+    computeTransaction \<lparr> interval = (lo, hi), inputs = [inp] \<rparr> st c = TransactionOutput \<lparr>txOutWarnings = [], txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
      (\<And>t x. \<not> isCounterExample (execute (wrapper c t (Some st)) x)) \<Longrightarrow> isCounterExample (execute (wrapper newCont t2 (Some newSta)) x2) \<Longrightarrow> False"
   oops
 
 theorem computeEmptyTransactionWarningIsCounterExample :
-   "(\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
+   "validAndPositive_state st \<Longrightarrow>
+    (\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
     computeTransaction \<lparr> interval = (lo, hi), inputs = [] \<rparr> st c = TransactionOutput \<lparr>txOutWarnings = newWarn, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
     newWarn = []"
   oops
 
 theorem computeSingleInputTransactionWarningIsCounterExample :
-   "(\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
+   "validAndPositive_state st \<Longrightarrow>
+    (\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
     computeTransaction \<lparr> interval = (lo, hi), inputs = [inp] \<rparr> st c = TransactionOutput \<lparr>txOutWarnings = newWarn, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
     newWarn = []"
   oops
 
 lemma staticAnalysisComplete_emptyTransaction : "(\<And>c st p.
+        validAndPositive_state st \<Longrightarrow>
         (\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
         hasWarnings (playTraceAux \<lparr>txOutWarnings = [], txOutPayments = p, txOutState = st, txOutContract = c\<rparr> t) \<Longrightarrow> False) \<Longrightarrow>
+    validAndPositive_state st \<Longrightarrow>
     (\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
     hasWarnings (playTraceAux \<lparr>txOutWarnings = newWarns, txOutPayments = p @ newPays, txOutState = newSta, txOutContract = newCont\<rparr> t) \<Longrightarrow>
     computeTransaction \<lparr>interval = inte, inputs = []\<rparr> st c =
     TransactionOutput \<lparr>txOutWarnings = newWarns, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
     newTxOut = \<lparr>txOutWarnings = newWarns, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow> False"
-  (*
-  by (metis computeEmptyTransactionWarningIsCounterExample const.cases noCounterExamplePropagatesComputeEmptyTransaction)
-  *)
+  (* by (metis TransactionOutputRecord.select_convs(3) computeEmptyTransactionWarningIsCounterExample computeTransaction_preserves_validAndPositive_state noCounterExamplePropagatesComputeEmptyTransaction small_lazy'.cases) *)
   oops
 
 lemma staticAnalysisComplete_singleInputTransaction : "(\<And>c st p.
+        validAndPositive_state st \<Longrightarrow>
         (\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
         hasWarnings (playTraceAux \<lparr>txOutWarnings = [], txOutPayments = p, txOutState = st, txOutContract = c\<rparr> t) \<Longrightarrow> False) \<Longrightarrow>
+    validAndPositive_state st \<Longrightarrow>
     traceListToSingleInput t2 = \<lparr>interval = inte, inputs = [inp]\<rparr> # t \<Longrightarrow>
     (\<And>t2 x. \<not> isCounterExample (execute (wrapper c t2 (Some st)) x)) \<Longrightarrow>
     hasWarnings (playTraceAux \<lparr>txOutWarnings = newWarns, txOutPayments = p @ newPays, txOutState = newSta, txOutContract = newCont\<rparr> t) \<Longrightarrow>
     computeTransaction \<lparr>interval = inte, inputs = [inp]\<rparr> st c =
     TransactionOutput \<lparr>txOutWarnings = newWarns, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
     newTxOut = \<lparr>txOutWarnings = newWarns, txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow> False"
-  (*
-  apply (cases newWarns)
+  (* apply (cases newWarns)
   apply (simp only:refl)
-  apply (metis noCounterExamplePropagatesComputeSingleInputTransaction small_lazy'.cases)
+  apply (metis TransactionOutputRecord.select_convs(3) computeTransaction_preserves_validAndPositive_state noCounterExamplePropagatesComputeSingleInputTransaction prod.exhaust)
   apply (simp only:refl)
-  by (metis computeSingleInputTransactionWarningIsCounterExample list.distinct(1) prod.exhaust)
-  *)
+  by (metis computeSingleInputTransactionWarningIsCounterExample list.distinct(1) prod.exhaust) *)
   oops
 
-lemma staticAnalysisComplete_aux : "(\<And> t2 x. \<not> ( isCounterExample (execute (wrapper c t2 (Some st)) x))) \<Longrightarrow> hasWarnings (playTraceAux \<lparr>txOutWarnings = [], txOutPayments = p, txOutState = st, txOutContract = c\<rparr> t) \<Longrightarrow> False"
-  (*
-  apply (simp only:playTraceAuxToSingleInputIsEquivalent[of _ t])
+lemma staticAnalysisComplete_aux : "validAndPositive_state st \<Longrightarrow>
+                                    (\<And> t2 x. \<not> ( isCounterExample (execute (wrapper c t2 (Some st)) x))) \<Longrightarrow> hasWarnings (playTraceAux \<lparr>txOutWarnings = [], txOutPayments = p, txOutState = st, txOutContract = c\<rparr> t) \<Longrightarrow> False"
+  (* apply (simp only:playTraceAuxToSingleInputIsEquivalent[of _ t])
   apply (induction "traceListToSingleInput t" arbitrary: c st p t)
   apply simp
   subgoal for h t t2 c st p
@@ -463,7 +495,7 @@ lemma staticAnalysisComplete_aux : "(\<And> t2 x. \<not> ( isCounterExample (exe
       subgoal for newTxOut
         apply (cases "newTxOut")
         subgoal for newWarns newPays newSta newCont
-          apply (simp del:computeTransaction.simps execute.simps wrapper.simps)
+          apply (simp del:computeTransaction.simps execute.simps wrapper.simps validAndPositive_state.simps)
           by (metis staticAnalysisComplete_emptyTransaction transactionPrefixForSingleInput)
         done
       apply simp
@@ -475,7 +507,7 @@ lemma staticAnalysisComplete_aux : "(\<And> t2 x. \<not> ( isCounterExample (exe
         subgoal for newTxOut
           apply (cases "newTxOut")
           subgoal for newWarns newPays newSta newCont
-            apply (simp del:computeTransaction.simps execute.simps wrapper.simps)
+            apply (simp del:computeTransaction.simps execute.simps wrapper.simps validAndPositive_state.simps)
             by (metis staticAnalysisComplete_singleInputTransaction transactionPrefixForSingleInput)
           done
           apply simp
@@ -483,11 +515,11 @@ lemma staticAnalysisComplete_aux : "(\<And> t2 x. \<not> ( isCounterExample (exe
         using traceListToSingleInput_isSingleInput by blast
       done
     done
-  done
-  *)
+  done *)
   oops
 
-theorem staticAnalysisComplete : "(\<exists> t. hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
+theorem staticAnalysisComplete : "validAndPositive_state st \<Longrightarrow>
+                                  (\<exists> t. hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
                                                                   , txOutPayments = Nil
                                                                   , txOutState = st
                                                                   , txOutContract = c \<rparr> t)) \<Longrightarrow>
@@ -495,19 +527,22 @@ theorem staticAnalysisComplete : "(\<exists> t. hasWarnings (playTraceAux \<lpar
   (* using staticAnalysisComplete_aux by blast *)
   oops
 
-theorem staticAnalysisSound : "(\<exists> t x. isCounterExample (execute (wrapper c t (Some st)) x)) \<Longrightarrow>
+(*
+theorem staticAnalysisSound : "validAndPositive_state st \<Longrightarrow>
+                               (\<exists> t x. isCounterExample (execute (wrapper c t (Some st)) x)) \<Longrightarrow>
                                (\<exists> t. hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
                                                                , txOutPayments = Nil
                                                                , txOutState = st
                                                                , txOutContract = c \<rparr> t))"
   oops
 
-theorem staticAnalysisWorks : "(\<exists> t x. isCounterExample (execute (wrapper c t (Some st)) x)) =
+theorem staticAnalysisWorks : "validAndPositive_state st \<Longrightarrow>
+                               (\<exists> t x. isCounterExample (execute (wrapper c t (Some st)) x)) =
                                (\<exists> t. hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
                                                                , txOutPayments = Nil
                                                                , txOutState = st
                                                                , txOutContract = c \<rparr> t))"
-  (* using staticAnalysisComplete staticAnalysisSound by blast *)
-  oops
+  using staticAnalysisComplete staticAnalysisSound by blast
+ *)
 
 end

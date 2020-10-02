@@ -17,61 +17,8 @@ type_synonym Timeout = Slot
 type_synonym Money = Ada
 type_synonym ChosenNum = int
 
-datatype AccountId = AccountId NumAccount Party
+type_synonym AccountId = Party
 
-(* BEGIN Proof of linorder for AccountId *)
-fun less_eq_AccId :: "AccountId \<Rightarrow> AccountId \<Rightarrow> bool" where
-"less_eq_AccId (AccountId a b) (AccountId c d) =
-   (if a < c then True
-    else (if (a > c) then False else b \<le> d))"
-
-fun less_AccId :: "AccountId \<Rightarrow> AccountId \<Rightarrow> bool" where
-"less_AccId a b = (\<not> (less_eq_AccId b a))"
-
-instantiation "AccountId" :: "ord"
-begin
-definition "a \<le> b = less_eq_AccId a b"
-definition "a < b = less_AccId a b"
-instance
-proof
-qed
-end
-
-lemma linearAccountId : "x \<le> y \<or> y \<le> (x::AccountId)"
-  by (smt less_eq_AccId.elims(3) less_eq_AccId.simps less_eq_AccountId_def)
-
-instantiation "AccountId" :: linorder
-begin
-instance
-proof
-  fix x y
-  have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: AccountId))"
-    by (meson less_AccId.elims(2) less_AccId.elims(3) less_AccountId_def less_eq_AccountId_def linearAccountId)
-  thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
-next
-  fix x
-  have "x \<le> (x :: AccountId)" by (meson linearAccountId)
-  thus "x \<le> x" by simp
-next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: AccountId)"
-    by (smt less_eq_AccId.elims(2) less_eq_AccId.simps less_eq_AccountId_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
-next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: AccountId)"
-    by (smt less_eq_AccId.elims(2) less_eq_AccId.simps less_eq_AccountId_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: AccountId)" by simp
-next
-  fix x y
-  from linearAccountId have "x \<le> y \<or> y \<le> (x :: AccountId)" by simp
-  thus "x \<le> y \<or> y \<le> x" by simp
-qed
-end
-(* END Proof of linorder for AccountId *)
-
-fun accountOwner :: "AccountId \<Rightarrow> Party" where
-"accountOwner (AccountId _ party) = party"
 
 datatype Token = Token CurrencySymbol TokenName
 
@@ -544,7 +491,7 @@ lemma evalScaleMultiplyFractByConstant :
 fun refundOne :: "Accounts \<Rightarrow>
                   ((Party \<times> Token \<times> Money) \<times> Accounts) option" where
 "refundOne (((accId, tok), money)#rest) =
-   (if money > 0 then Some ((accountOwner accId, tok, money), rest) else refundOne rest)" |
+   (if money > 0 then Some ((accId, tok, money), rest) else refundOne rest)" |
 "refundOne [] = None"
 
 lemma refundOneShortens : "refundOne acc = Some (c, nacc) \<Longrightarrow>

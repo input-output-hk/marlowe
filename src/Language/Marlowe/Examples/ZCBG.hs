@@ -19,7 +19,7 @@ allActions l timeout cont timeoutCont =
         | (b, t, a) <- splitEverywhere l]
        timeout timeoutCont
 
-payAll :: AccountId -> Payee -> Contract -> Contract
+payAll :: Party -> Payee -> Contract -> Contract
 payAll acId payee cont =
   Pay acId payee (AvailableMoney acId) cont
 
@@ -42,7 +42,7 @@ zeroCouponBondGuaranteed issuer investor guarantor notional discount startDate m
                     )
               )
               Close
-  where guarantorAcc = AccountId 1 guarantor
-        investorAcc = AccountId 2 investor
+  where guarantorAcc = guarantor
+        investorAcc = investor
 
 

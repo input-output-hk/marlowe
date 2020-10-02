@@ -66,12 +66,6 @@ type Timeout = Slot
 type Money = Ada
 type ChosenNum = Integer
 
-data AccountId = AccountId NumAccount Party
-  deriving (Eq,Ord,Show,Read,Generic,Pretty)
-
-accountOwner :: AccountId -> Party
-accountOwner (AccountId _ party) = party
-
 data ChoiceId = ChoiceId ChoiceName Party
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
@@ -86,7 +80,7 @@ instance Show ValueId where
 instance Read ValueId where
   readsPrec p x = [(ValueId (T.pack v), s) | (v, s) <- readsPrec p x]
 
-data Value = AvailableMoney AccountId
+data Value = AvailableMoney Party
             | Constant Integer
             | NegValue Value
             | AddValue Value Value
@@ -127,12 +121,12 @@ data Bound = Bound Integer Integer
 inBounds :: ChosenNum -> [Bound] -> Bool
 inBounds num = any (\(Bound l u) -> num >= l && num <= u)
 
-data Action = Deposit AccountId Party Value
+data Action = Deposit Party Party Value
             | Choice ChoiceId [Bound]
             | Notify Observation
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
-data Payee = Account AccountId
+data Payee = Account Party
             | Party Party
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
@@ -140,14 +134,14 @@ data Case = Case Action Contract
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 data Contract = Close
-              | Pay AccountId Payee Value Contract
+              | Pay Party Payee Value Contract
               | If Observation Contract Contract
               | When [Case] Timeout Contract
               | Let ValueId Value Contract
               | Assert Observation Contract
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
-data State = State { accounts    :: Map AccountId Money
+data State = State { accounts    :: Map Party Money
                    , choices     :: Map ChoiceId ChosenNum
                    , boundValues :: Map ValueId Integer
                    , minSlot     :: Slot }
@@ -162,7 +156,7 @@ emptyState sn = State { accounts = Map.empty
 newtype Environment = Environment { slotInterval :: SlotInterval }
   deriving (Eq,Ord,Show,Read)
 
-data Input = IDeposit AccountId Party Money
+data Input = IDeposit Party Party Money
             | IChoice ChoiceId ChosenNum
             | INotify
   deriving (Eq,Ord,Show,Read)
@@ -238,11 +232,11 @@ evalObservation env state obs = let
 
 
 -- | Pick the first account with money in it
-refundOne :: Map AccountId Money -> Maybe ((Party, Money), Map AccountId Money)
+refundOne :: Map Party Money -> Maybe ((Party, Money), Map Party Money)
 refundOne accounts = do
-    ((accId, money), rest) <- Map.minViewWithKey accounts
+    ((owner, money), rest) <- Map.minViewWithKey accounts
     if getLovelace money > 0
-    then return ((accountOwner accId, money), rest)
+    then return ((owner, money), rest)
     else refundOne rest
 
 
@@ -255,12 +249,12 @@ data ReduceEffect = ReduceWithPayment Payment
 
 
 -- | Obtains the amount of money available an account
-moneyInAccount :: AccountId -> Map AccountId Money -> Money
+moneyInAccount :: Party -> Map Party Money -> Money
 moneyInAccount = Map.findWithDefault (Lovelace 0)
 
 
 -- | Sets the amount of money available in an account
-updateMoneyInAccount :: AccountId -> Money -> Map AccountId Money -> Map AccountId Money
+updateMoneyInAccount :: Party -> Money -> Map Party Money -> Map Party Money
 updateMoneyInAccount accId money =
     if getLovelace money <= 0 then Map.delete accId else Map.insert accId money
 
@@ -268,7 +262,7 @@ updateMoneyInAccount accId money =
 {-| Add the given amount of money to an account (only if it is positive).
     Return the updated Map
 -}
-addMoneyToAccount :: AccountId -> Money -> Map AccountId Money -> Map AccountId Money
+addMoneyToAccount :: Party -> Money -> Map Party Money -> Map Party Money
 addMoneyToAccount accId money accounts = let
     balance = moneyInAccount accId accounts
     newBalance = balance + money
@@ -279,7 +273,7 @@ addMoneyToAccount accId money accounts = let
 {-| Gives the given amount of money to the given payee.
     Returns the appropriate effect and updated accounts
 -}
-giveMoney :: Payee -> Money -> Map AccountId Money -> (ReduceEffect, Map AccountId Money)
+giveMoney :: Payee -> Money -> Map Party Money -> (ReduceEffect, Map Party Money)
 giveMoney payee money accounts = case payee of
     Party party   -> (ReduceWithPayment (Payment party money), accounts)
     Account accId -> let
@@ -289,8 +283,8 @@ giveMoney payee money accounts = case payee of
 -- REDUCE
 
 data ReduceWarning = ReduceNoWarning
-                   | ReduceNonPositivePay AccountId Payee Integer
-                   | ReducePartialPay AccountId Payee Money Money
+                   | ReduceNonPositivePay Party Payee Integer
+                   | ReducePartialPay Party Payee Money Money
                                      -- ^ src    ^ dest ^ paid ^ expected
                    | ReduceShadowing ValueId Integer Integer
                                      -- oldVal ^  newVal ^
@@ -385,7 +379,7 @@ reduceContractUntilQuiescent env state contract = let
     in reductionLoop env state contract [] []
 
 data ApplyWarning = ApplyNoWarning
-                  | ApplyNonPositiveDeposit Party AccountId Integer
+                  | ApplyNonPositiveDeposit Party Party Integer
   deriving (Eq,Ord,Show,Read)
 
 data ApplyResult = Applied ApplyWarning State Contract
@@ -420,9 +414,9 @@ applyInput _ _ _ _                          = ApplyNoMatchError
 
 -- APPLY ALL
 
-data TransactionWarning = TransactionNonPositiveDeposit Party AccountId Integer
-                        | TransactionNonPositivePay AccountId Payee Integer
-                        | TransactionPartialPay AccountId Payee Money Money
+data TransactionWarning = TransactionNonPositiveDeposit Party Party Integer
+                        | TransactionNonPositivePay Party Payee Integer
+                        | TransactionPartialPay Party Payee Money Money
                                                 -- ^ src    ^ dest ^ paid ^ expected
                         | TransactionShadowing ValueId Integer Integer
                                                 -- oldVal ^  newVal ^

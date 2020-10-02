@@ -19,7 +19,7 @@ import           Language.Marlowe.Semantics
 ---------------------------------------------------
 
 -- Symbolic version of Input (with symbolic value but concrete identifiers)
-data SymInput = SymDeposit AccountId Party SInteger
+data SymInput = SymDeposit Party Party SInteger
               | SymChoice ChoiceId SInteger
               | SymNotify
 
@@ -61,7 +61,7 @@ data SymState = SymState { lowSlot        :: SInteger
                          , paramTrace     :: [(SInteger, SInteger, SInteger, SInteger)]
                          , symInput       :: Maybe SymInput
                          , whenPos        :: Integer
-                         , symAccounts    :: Map AccountId SInteger
+                         , symAccounts    :: Map Party SInteger
                          , symChoices     :: Map ChoiceId SInteger
                          , symBoundValues :: Map ValueId SInteger
                          }
@@ -176,9 +176,9 @@ symEvalVal SlotIntervalStart symState = lowSlot symState
 symEvalVal SlotIntervalEnd symState = highSlot symState
 symEvalVal (UseValue valId) symState =
   M.findWithDefault (literal 0) valId (symBoundValues symState)
-symEvalVal (Cond cond v1 v2) symState = ite (symEvalObs cond symState) 
-                                            (symEvalVal v1 symState) 
-                                            (symEvalVal v2 symState) 
+symEvalVal (Cond cond v1 v2) symState = ite (symEvalObs cond symState)
+                                            (symEvalVal v1 symState)
+                                            (symEvalVal v2 symState)
 
 -- Symbolic version evalObservation
 symEvalObs :: Observation -> SymState -> SBool

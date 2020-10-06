@@ -174,8 +174,8 @@ swapExample =
   where
     gracePeriod = Slot 3*60*24 -- 24 hours
     date1 = Slot 1563839989
-    acc1 = AccountId 1 "party1"
-    acc2 = AccountId 2 "party2"
+    acc1 = "party1"
+    acc2 = "party2"
 
 {- Simply swap two payments between parties using single account, fully fungible -}
 swapSingleAccount =
@@ -197,8 +197,8 @@ swapSingleAccount =
   where
     gracePeriod = 3*60*24 -- 24 hours
     date1 = 1563839989
-    acc1 = AccountId 1 "party1"
-    acc2 = AccountId 2 "party2"
+    acc1 = "party1"
+    acc2 = "party2"
 
 {- Swap two payments between parties, all payments are guaranteed by a 3rd party -}
 swapGuaranteedExample =
@@ -225,9 +225,9 @@ swapGuaranteedExample =
   where
     gracePeriod = Slot 3*60*24 -- 24 hours
     date1 = Slot 1563839989
-    acc1 = AccountId 1 "party1"
-    acc2 = AccountId 2 "party2"
-    acc3 = AccountId 3 "guarantor"
+    acc1 = "party1"
+    acc2 = "party2"
+    acc3 = "guarantor"
 
 {-  Swap two payments between parties using single account.
     All payments are guaranteed by a 3rd party.
@@ -264,9 +264,9 @@ swapSingleAccountGuaranteedExample =
     where
     gracePeriod = Slot 3*60*24 -- 24 hours
     date1 = Slot 1563839989
-    acc1 = AccountId 1 "party1"
-    acc2 = AccountId 2 "party2"
-    acc3 = AccountId 3 "guarantor"
+    acc1 = "party1"
+    acc2 = "party2"
+    acc3 = "guarantor"
 
 choiceIdExample :: ChoiceId
 choiceIdExample = ChoiceId "RockPaperScissors" "Alice"

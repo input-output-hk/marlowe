@@ -31,7 +31,7 @@ zeroCouponBondGuaranteed issuer investor guarantor notional discount startDate m
                                                Close)
                                     )
                            )
-        guarantorAcc = AccountId 1 guarantor
-        investorAcc = AccountId 2 investor
+        guarantorAcc = guarantor
+        investorAcc = investor
 
 

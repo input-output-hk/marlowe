@@ -22,17 +22,15 @@ contract owner minBid maxBid bidders deadline = go Nothing [] $ map fromString b
         deposit p =
             let v   = UseValue $ value p
                 ps' = filter (/= p) ps
-            in  Case (Deposit (account p) p v) $ case m of
+            in  Case (Deposit p p v) $ case m of
                     Nothing       -> go (Just (v, p)) ps' qs
                     Just (v', p') -> If (ValueGT v v')
                         (go (Just (v, p)) ps' qs)
                         (go m ps' qs)
     settle :: Maybe (Value, Party) -> Contract
     settle Nothing       = Close
-    settle (Just (v, p)) = Pay (account p) (Party owner) v Close
+    settle (Just (v, p)) = Pay p (Party owner) v Close
     choice :: Party -> ChoiceId
     choice = ChoiceId "Bid"
-    account :: Party -> AccountId
-    account = AccountId 1
     value :: Party -> ValueId
     value p = head [fromString q | q <- bidders, fromString q == p]

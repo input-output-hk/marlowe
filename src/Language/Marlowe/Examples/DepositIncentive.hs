@@ -3,7 +3,7 @@ module Language.Marlowe.Examples.DepositIncentive where
 
 import Language.Marlowe
 
-payAll :: AccountId -> Payee -> Contract -> Contract
+payAll :: Party -> Payee -> Contract -> Contract
 payAll acId payee cont =
   Pay acId payee (AvailableMoney acId) cont
 
@@ -28,9 +28,9 @@ depositAmt, incentiveAmt :: Value
 depositAmt = Constant 100
 incentiveAmt = Constant 20
 
-depositAcc, incentiveAcc :: AccountId
-depositAcc = AccountId 1 depositer
-incentiveAcc = AccountId 1 incentiviser
+depositAcc, incentiveAcc :: Party
+depositAcc = depositer
+incentiveAcc = incentiviser
 
 depositer, incentiviser :: Party
 depositer = "depositer"

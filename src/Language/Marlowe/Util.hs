@@ -12,41 +12,38 @@ import           Language.Marlowe.Semantics
 instance IsString PubKey where
     fromString s = PubKey (T.pack s)
 
-instance IsString AccountId where
-    fromString s = AccountId 0 (PubKey (T.pack s))
-
 instance IsString ValueId where
     fromString s = ValueId (T.pack s)
 
 alicePubKey :: PubKey
 alicePubKey = PubKey "Alice"
 
-aliceAcc :: AccountId
-aliceAcc = AccountId 0 alicePubKey
+aliceAcc :: Party
+aliceAcc = alicePubKey
 
 bobPubKey :: PubKey
 bobPubKey = PubKey "Bob"
 
-bobAcc :: AccountId
-bobAcc = AccountId 0 bobPubKey
+bobAcc :: Party
+bobAcc = bobPubKey
 
 carolPubKey :: PubKey
 carolPubKey = PubKey "Carol"
 
-carolAcc :: AccountId
-carolAcc = AccountId 0 carolPubKey
+carolAcc :: Party
+carolAcc = carolPubKey
 
 charliePubKey :: PubKey
 charliePubKey = PubKey "Charlie"
 
-charlieAcc :: AccountId
-charlieAcc = AccountId 0 charliePubKey
+charlieAcc :: Party
+charlieAcc = charliePubKey
 
 evePubKey :: PubKey
 evePubKey = PubKey "Eve"
 
-eveAcc :: AccountId
-eveAcc = AccountId 0 evePubKey
+eveAcc :: Party
+eveAcc = evePubKey
 
 
 type AccountsDiff = Map Party Money

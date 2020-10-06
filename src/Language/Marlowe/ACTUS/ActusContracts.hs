@@ -41,7 +41,7 @@ genPrincialAtMaturnityContract investor issuer config@ContractConfig{..} = let
     (f, _) = foldl generator (id, state) schedule
     in f Close
   where
-    acc = AccountId 1 investor
+    acc = investor
     maturityDay = fromJust maturityDate
     maturitySlot = dayToSlot maturityDay
     state = pamStateInit initialExchangeDate maturityDay
@@ -68,8 +68,8 @@ genPrincialAtMaturnityGuaranteedContract :: Party -> Party -> Party ->  Contract
 genPrincialAtMaturnityGuaranteedContract investor issuer guarantor config@ContractConfig{..} = guaranteed
   where
     cont = let (f, _) = foldl generator (id, state) schedule in f Close
-    acc = AccountId 1 investor
-    gacc = AccountId 2 guarantor
+    acc = investor
+    gacc = guarantor
     maturityDay = fromJust maturityDate
     maturitySlot = dayToSlot maturityDay
     state = pamStateInit initialExchangeDate maturityDay

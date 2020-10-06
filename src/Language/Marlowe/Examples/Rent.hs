@@ -9,15 +9,16 @@ utilityMonths n = (foldl (.) mkDeposit [payMonth (Slot x) | x <- [1..n]]) Close
 utility :: Contract
 utility = mkDeposit $ payMonth 1 $ payMonth 2 $ payMonth 3 $ Close
 
-tenant, landlord :: Party
+tenant, landlord, tenantDeposit :: Party
 tenant = "tenant"
+tenantDeposit = "tenantDeposit"
 landlord = "landlord"
 
-depositAcc :: AccountId
-depositAcc = AccountId 1 tenant
+depositAcc :: Party
+depositAcc = tenantDeposit
 
-monthlyAcc :: AccountId
-monthlyAcc = AccountId 2 tenant
+monthlyAcc :: Party
+monthlyAcc = tenant
 
 depositAmt, monthlyFee :: Integer
 depositAmt = 200
@@ -27,7 +28,7 @@ depositTimeout, daysInAMonth :: Timeout
 depositTimeout = 10
 daysInAMonth = 30
 
-mkDeposit c = When [Case (Deposit depositAcc tenant (Constant depositAmt))
+mkDeposit c = When [Case (Deposit tenantDeposit tenant (Constant depositAmt))
                          c]
                    depositTimeout
                    Close
@@ -38,6 +39,6 @@ payMonth m c = When [Case (Deposit monthlyAcc tenant (Constant monthlyFee))
                     (payAll depositAcc (Party landlord) Close)
 
 -- Pay all money into an account to a payee
-payAll :: AccountId -> Payee -> Contract -> Contract
+payAll :: Party -> Payee -> Contract -> Contract
 payAll acId payee cont = Pay acId payee (AvailableMoney acId) cont
 

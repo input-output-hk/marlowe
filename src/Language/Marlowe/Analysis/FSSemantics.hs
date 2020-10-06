@@ -22,34 +22,24 @@ import qualified Language.Marlowe.Semantics as MS
 
 data Bounds = Bounds { numParties :: Integer
                      , numChoices :: Integer
-                     , numAccounts :: Integer
                      , numLets :: Integer
                      , numActions :: Integer
                      }
 
 data Mappings = Mappings { partyM :: Numbering MS.Party
                          , choiceM :: Numbering MS.ChoiceId
-                         , accountM :: Numbering MS.AccountId
                          , valueM :: Numbering MS.ValueId }
   deriving (Eq,Ord,Show)
 
 emptyMappings :: Mappings
 emptyMappings = Mappings { partyM = emptyNumbering
                          , choiceM = emptyNumbering
-                         , accountM = emptyNumbering
                          , valueM = emptyNumbering }
 
 convertParty :: MS.Party -> Mappings -> (Party, Mappings)
 convertParty party maps@(Mappings { partyM = partyNumberings }) = (newParty, newMaps)
   where (newParty, newPartyNumberings) = getNumbering party partyNumberings
         newMaps = maps { partyM = newPartyNumberings }
-
-revertAccId :: AccountId -> Mappings -> MS.AccountId
-revertAccId (AccountId accId _) maps = getLabel accId (accountM maps)
-
-getOriginalOwner :: NumAccount -> Mappings -> Party
-getOriginalOwner numAccId maps = fst $ convertParty ownerParty maps
-  where (MS.AccountId _ ownerParty) = revertAccId (AccountId numAccId 0) maps
 
 
 type SlotNumber = Integer
@@ -71,33 +61,6 @@ type SMoney = SInteger
 
 type ChosenNum = Integer
 type SChosenNum = SBV ChosenNum
-
-data AccountId = AccountId NumAccount Party
-  deriving (Eq,Ord,Show,Read)
-type NAccountId = (NumAccount, Party)
-type SAccountId = STuple NumAccount Party
-
-sAccountId :: NumAccount -> Party -> SAccountId
-sAccountId a p = ST.tuple (literal a, literal p)
-
-nestAccountId :: AccountId -> NAccountId
-nestAccountId (AccountId numAccId party) = (numAccId, party)
-
-unNestAccountId :: NAccountId -> AccountId
-unNestAccountId (numAccId, party) = (AccountId numAccId party)
-
-literalAccountId :: AccountId -> SAccountId
-literalAccountId (AccountId a p) = sAccountId a p
-
-nestedToSAccountId :: NAccountId -> SAccountId
-nestedToSAccountId (a, p) = sAccountId a p
-
-accountNumber :: AccountId -> NumAccount
-accountNumber (AccountId numAccount _) = numAccount
-
-symAccountOwner :: SAccountId -> SParty
-symAccountOwner x = party
-  where (_, party) = ST.untuple x
 
 data ChoiceId = ChoiceId NumChoice Party
   deriving (Eq,Ord,Show,Read)
@@ -133,7 +96,7 @@ literalValueId (ValueId x) = literal x
 unNestValueId :: NValueId -> ValueId
 unNestValueId x = ValueId x
 
-data Value = AvailableMoney AccountId
+data Value = AvailableMoney Party
            | Constant Integer
            | NegValue Value
            | AddValue Value Value
@@ -168,12 +131,12 @@ inBounds :: SChosenNum -> [Bound] -> SBool
 inBounds num = foldl' (\acc (l, u) -> acc .|| ((num .>= literal l) .&& (num .<= literal u)))
                       sFalse
 
-data Action = Deposit AccountId Party Value
+data Action = Deposit Party Party Value
             | Choice ChoiceId [Bound]
             | Notify Observation
   deriving (Eq,Ord,Show,Read)
 
-data Payee = Account NAccountId
+data Payee = Account Party
            | Party Party
   deriving (Eq,Ord,Show,Read)
 
@@ -183,7 +146,7 @@ data Case = Case Action Contract
   deriving (Eq,Ord,Show,Read)
 
 data Contract = Close
-              | Pay AccountId Payee Value Contract
+              | Pay Party Payee Value Contract
               | If Observation Contract Contract
               | When [Case] Timeout Contract
               | Let ValueId Value Contract
@@ -204,7 +167,7 @@ type State = ( NIntegerArray
              , SlotNumber)
 
 emptySState :: Bounds -> SSlotNumber -> SState
-emptySState bnds sn = ST.tuple ( IntegerArray.empty (numAccounts bnds)
+emptySState bnds sn = ST.tuple ( IntegerArray.empty (numParties bnds)
                                , IntegerArray.empty (numChoices bnds)
                                , IntegerArray.empty (numLets bnds)
                                , sn)
@@ -255,7 +218,7 @@ sEnvironment :: SSlotInterval -> SEnvironment
 sEnvironment si = si
 
 --type SInput = SMaybe (SEither (AccountId, Party, Money) (ChoiceId, ChosenNum))
-data Input = IDeposit NAccountId Party Money
+data Input = IDeposit Party Party Money
            | IChoice NChoiceId ChosenNum
            | INotify
   deriving (Eq,Ord,Show,Read)
@@ -321,7 +284,7 @@ fixInterval i st =
 evalValue :: Bounds -> SEnvironment -> SState -> Value -> SInteger
 evalValue bnds env state value =
   case value of
-    AvailableMoney (AccountId a p) -> IntegerArray.findWithDefault 0 a $ account state
+    AvailableMoney p -> IntegerArray.findWithDefault 0 p $ account state
     Constant integer         -> literal integer
     NegValue val             -> go val
     AddValue lhs rhs         -> go lhs + go rhs
@@ -361,19 +324,19 @@ evalObservation bnds env state obs =
     goVal = evalValue bnds env state
 
 -- Obtains the amount of money available an account
-moneyInAccount :: IntegerArray -> AccountId -> SMoney
-moneyInAccount accs accId = IntegerArray.findWithDefault 0 (accountNumber accId) accs
+moneyInAccount :: IntegerArray -> Party -> SMoney
+moneyInAccount accs party = IntegerArray.findWithDefault 0 party accs
 
 -- Sets the amount of money available in an account
-updateMoneyInAccount :: IntegerArray -> AccountId -> SMoney -> IntegerArray
+updateMoneyInAccount :: IntegerArray -> Party -> SMoney -> IntegerArray
 updateMoneyInAccount accs accId mon =
   ite (mon .<= 0)
-      (IntegerArray.delete (accountNumber accId) accs)
-      (IntegerArray.insert (accountNumber accId) mon accs)
+      (IntegerArray.delete accId accs)
+      (IntegerArray.insert accId mon accs)
 
 -- Withdraw up to the given amount of money from an account
 -- Return the amount of money withdrawn
-withdrawMoneyFromAccount :: IntegerArray -> AccountId -> SMoney
+withdrawMoneyFromAccount :: IntegerArray -> Party -> SMoney
                          -> STuple Money NIntegerArray
 withdrawMoneyFromAccount accs accId mon = ST.tuple (withdrawnMoney, newAcc)
   where
@@ -384,7 +347,7 @@ withdrawMoneyFromAccount accs accId mon = ST.tuple (withdrawnMoney, newAcc)
 
 -- Add the given amount of money to an accoun (only if it is positive)
 -- Return the updated Map
-addMoneyToAccount :: IntegerArray -> AccountId -> SMoney
+addMoneyToAccount :: IntegerArray -> Party -> SMoney
                   -> IntegerArray
 addMoneyToAccount accs accId mon =
   ite (mon .<= 0)
@@ -408,14 +371,14 @@ giveMoney accs (Party party) mon = ST.tuple ( sReduceNormalPay (literal party) m
                                             , accs )
 giveMoney accs (Account accId) mon = ST.tuple ( sReduceNoEffect
                                               , newAccs )
-    where newAccs = addMoneyToAccount accs (unNestAccountId accId) mon
+    where newAccs = addMoneyToAccount accs accId mon
 
 
 -- REDUCE
 
 data ReduceWarning = ReduceNoWarning
-                   | ReduceNonPositivePay NAccountId NPayee Money
-                   | ReducePartialPay NAccountId NPayee Money Money
+                   | ReduceNonPositivePay Party NPayee Money
+                   | ReducePartialPay Party NPayee Money Money
                                     -- ^ src    ^ dest ^ paid ^ expected
                    | ReduceShadowing NValueId Integer Integer
                                      -- oldVal ^  newVal ^
@@ -448,7 +411,7 @@ reduce :: SymVal a => Bounds -> SEnvironment -> SState -> Contract
 reduce bnds _ state Close f = f sNotReduced $ DRRContractOver
 reduce bnds env state (Pay accId payee val nc) f =
   ite (mon .<= 0)
-      (f (sReduced (sReduceNonPositivePay (literalAccountId accId)
+      (f (sReduced (sReduceNonPositivePay (literal accId)
                                           (literal $ nestPayee payee)
                                           mon)
                    sReduceNoEffect state)
@@ -458,7 +421,7 @@ reduce bnds env state (Pay accId payee val nc) f =
         (paidMon, newAccs) = ST.untuple $
                                withdrawMoneyFromAccount (account state) accId mon
         noMonWarn = ite (paidMon .< mon)
-                        (sReducePartialPay (literalAccountId accId)
+                        (sReducePartialPay (literal accId)
                                            (literal $ nestPayee payee) paidMon mon)
                         (sReduceNoWarning)
         (payEffect, finalAccs) = ST.untuple $ giveMoney newAccs payee paidMon
@@ -542,7 +505,7 @@ reduceAll bnds env sta c f = reduceAllAux bnds 0 Nothing env sta c [] [] f
 -- APPLY
 
 data ApplyWarning = ApplyNoWarning
-                  | ApplyNonPositiveDeposit Party NAccountId Integer
+                  | ApplyNonPositiveDeposit Party Party Integer
   deriving (Eq,Ord,Show,Read)
 
 mkSymbolicDatatype ''ApplyWarning
@@ -592,7 +555,7 @@ applyCases bnds env state inp@(SSIDeposit accId1 party1 mon1)
   ite ((accId1 .== sAccId2) .&& (party1 .== sParty2) .&& (mon1 .== mon2))
       (f (sApplied warning newState) (DARNormal nc 1))
       (applyCases bnds env state inp t f)
-  where sAccId2 = literalAccountId accId2
+  where sAccId2 = literal accId2
         sParty2 = literal party2
         mon2 = evalValue bnds env state val2
         warning = ite (mon2 .> 0)
@@ -877,14 +840,6 @@ type MaxActions = Integer
 convertTimeout :: MS.Timeout -> Timeout
 convertTimeout (MS.Slot num) = num
 
-convertAccId :: MS.AccountId -> Mappings -> (AccountId, Mappings)
-convertAccId accId@(MS.AccountId _ party) maps =
-    (AccountId newAccNum newParty, mapsWithParty)
-  where accountNumberings = accountM maps
-        (newAccNum, newAccountNumberings) = getNumbering accId accountNumberings
-        mapsWithAccId = maps { accountM = newAccountNumberings }
-        (newParty, mapsWithParty) = convertParty party mapsWithAccId
-
 convertValId :: MS.ValueId -> Mappings -> (ValueId, Mappings)
 convertValId valId maps@(Mappings { valueM = valueNumberings }) =
     (ValueId newValId, mapsWithValId)
@@ -900,8 +855,8 @@ convertChoId choId@(MS.ChoiceId _ party) maps =
         (newParty, mapsWithParty) = convertParty party mapsWithChoId
 
 convertPayee :: MS.Payee -> Mappings -> (Payee, Mappings)
-convertPayee (MS.Account accId) maps = (Account (nestAccountId newAccId), mapsWithAccId)
-  where (newAccId, mapsWithAccId) = convertAccId accId maps
+convertPayee (MS.Account accId) maps = (Account newAccId, mapsWithAccId)
+  where (newAccId, mapsWithAccId) = convertParty accId maps
 convertPayee (MS.Party party) maps = (Party newParty, mapsWithParty)
   where (newParty, mapsWithParty) = convertParty party maps
 
@@ -911,7 +866,7 @@ convertBound (MS.Bound from to) = (from, to)
 convertValue :: MS.Value -> Mappings -> (Value, Mappings)
 convertValue (MS.AvailableMoney accId) maps =
     (AvailableMoney newAccId, mapsWithAccId)
-  where (newAccId, mapsWithAccId) = convertAccId accId maps
+  where (newAccId, mapsWithAccId) = convertParty accId maps
 convertValue (MS.Constant inte) maps =
     (Constant inte, maps)
 convertValue (MS.NegValue val) maps =
@@ -981,7 +936,7 @@ convertObservation (MS.FalseObs) maps = (FalseObs, maps)
 convertAction :: MS.Action -> Mappings -> (Action, Mappings)
 convertAction (MS.Deposit accId party value) maps =
     (Deposit newAccId newParty newValue, mapsWithValue)
-  where (newAccId, mapsWithAccId) = convertAccId accId maps
+  where (newAccId, mapsWithAccId) = convertParty accId maps
         (newParty, mapsWithParty) = convertParty party mapsWithAccId
         (newValue, mapsWithValue) = convertValue value mapsWithParty
 convertAction (MS.Choice choId bounds) maps =
@@ -1006,7 +961,7 @@ convertContract :: MS.Contract -> Mappings -> (Contract, MaxActions, Mappings)
 convertContract MS.Close maps = (Close, 0, maps)
 convertContract (MS.Pay accId payee value cont) maps =
     (Pay newAccId newPayee newValue newCont, actionsWithCont, mapsWithContract)
-  where (newAccId, mapsWithAccId) = convertAccId accId maps
+  where (newAccId, mapsWithAccId) = convertParty accId maps
         (newPayee, mapsWithPayee) = convertPayee payee mapsWithAccId
         (newValue, mapsWithValue) = convertValue value mapsWithPayee
         (newCont, actionsWithCont, mapsWithContract) = convertContract cont mapsWithValue
@@ -1039,7 +994,6 @@ extractBounds :: MaxActions -> Mappings -> Bounds
 extractBounds maxActions maps =
   Bounds { numParties = numberOfLabels (partyM maps)
          , numChoices = numberOfLabels (choiceM maps)
-         , numAccounts = numberOfLabels (accountM maps)
          , numLets = numberOfLabels (valueM maps)
          , numActions = maxActions }
 
@@ -1063,7 +1017,7 @@ revertValId (ValueId valId) maps = getLabel valId (valueM maps)
 
 revertInput :: Input -> Mappings -> MS.Input
 revertInput (IDeposit accId party mon) maps = MS.IDeposit newAccId newParty newMon
-  where newAccId = revertAccId (unNestAccountId accId) maps
+  where newAccId = revertParty accId maps
         newParty = revertParty party maps
         newMon = revertMoney mon
 revertInput (IChoice choId chosenNum) maps = MS.IChoice newChoId chosenNum
@@ -1077,18 +1031,18 @@ revertTransactionList list maps =
    | (slotInter, nInput) <- list]
 
 revertPayee :: Payee -> Mappings -> MS.Payee
-revertPayee (Account accId) maps = MS.Account (revertAccId (unNestAccountId accId) maps)
+revertPayee (Account accId) maps = MS.Account (revertParty accId maps)
 revertPayee (Party party) maps = MS.Party (revertParty party maps)
 
 revertReduceWarningList :: ReduceWarning -> Mappings -> MS.ReduceWarning
 revertReduceWarningList ReduceNoWarning _ = MS.ReduceNoWarning
 revertReduceWarningList (ReduceNonPositivePay accId payee inte) maps =
      MS.ReduceNonPositivePay newAccId newPayee inte
-  where newAccId = revertAccId (unNestAccountId accId) maps
+  where newAccId = revertParty accId maps
         newPayee = revertPayee (unNestPayee payee) maps
 revertReduceWarningList (ReducePartialPay accId payee mon1 mon2) maps =
      MS.ReducePartialPay newAccId newPayee newMon1 newMon2
-  where newAccId = revertAccId (unNestAccountId accId) maps
+  where newAccId = revertParty accId maps
         newPayee = revertPayee (unNestPayee payee) maps
         newMon1 = revertMoney mon1
         newMon2 = revertMoney mon2
@@ -1104,7 +1058,7 @@ revertTransactionWarningList (TransactionApplyWarning applyWarning) maps =
   case unNestApplyWarning applyWarning of
     (ApplyNonPositiveDeposit party accId amount) ->
        [MS.TransactionNonPositiveDeposit (revertParty party maps)
-                                         (revertAccId (unNestAccountId accId) maps)
+                                         (revertParty accId maps)
                                          amount]
     ApplyNoWarning -> error "ApplyNoWarning in result"
 

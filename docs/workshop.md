@@ -4,10 +4,10 @@
 
 Using the BLOCKLY tab, try building these contracts
 
-1. Make a payment of 2 Lovelace from Alice to Bob, from account 0, belonging to Alice.
-1. Modify contract 1 to ask for a deposit of money from Alice into that account before the payment is made.
-1. Modify contract 2 to ask for a decision from Carol. Carol should choose 0 or 1: if she chooses 1, the payment is split between Alice and Bob; if zero, it all goes to Bob.
-1. Try to analyse the contracts that you have written. Try modifying the contracts so that ones that didn't pass now do, and vice versa. 
+1. Make a payment of 2 Lovelace from Alice to Bob, from Alice's account.
+1. Modify contract 1 to ask for a deposit of money from Alice into her account before the payment is made.
+1. Modify contract 2 to ask for a decision from Carol. Carol should choose 0 or 1: if she chooses 1, the payment from Alice's account is split between Alice and Bob; if zero, it all goes to Bob.
+1. Analyse the three contracts that you have written. Try modifying the contracts so that ones that didn't pass now do, and vice versa. 
 
 ## “Bulgarian escrow”: modifying the escrow contract
 

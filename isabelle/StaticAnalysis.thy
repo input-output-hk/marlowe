@@ -5,15 +5,14 @@ begin
 
 (* Symbolic mock definition *)
 
-record SymbolicMonadData = numSymbolicVars :: nat
-                           symbolicVarValues :: "int list"
+type_synonym SymbolicMonadData = "int list"
 
 datatype 'a Symbolic = Symbolic "SymbolicMonadData \<Rightarrow> ('a \<times> SymbolicMonadData) option"
 
 primrec execute :: "'a Symbolic \<Rightarrow> SymbolicMonadData \<Rightarrow> ('a \<times> SymbolicMonadData) option" where
   "execute (Symbolic f) = f"
 
-fun bind :: "'a Symbolic \<Rightarrow> ('a \<Rightarrow> 'b Symbolic) \<Rightarrow> 'b Symbolic" where
+definition bind :: "'a Symbolic \<Rightarrow> ('a \<Rightarrow> 'b Symbolic) \<Rightarrow> 'b Symbolic" where
   "bind m nf =
       Symbolic (\<lambda> il. (case execute m il of
                      Some (r1, s1) \<Rightarrow> execute (nf r1) s1
@@ -22,20 +21,16 @@ fun bind :: "'a Symbolic \<Rightarrow> ('a \<Rightarrow> 'b Symbolic) \<Rightarr
 adhoc_overloading
   Monad_Syntax.bind StaticAnalysis.bind
 
-fun maybeNth :: "'a list => nat => 'a option" (infixl "!?" 100) where
-"(x # xs) !? n = (case n of 0 \<Rightarrow> Some x | Suc k \<Rightarrow> xs !? k)" |
-"Nil !? n = None"
-
 definition newVar :: "int Symbolic" where
-  "newVar = Symbolic (\<lambda> st . let nsv = numSymbolicVars st in
-                   case (symbolicVarValues st) !? nsv of
-                     Some x \<Rightarrow> Some (x, st \<lparr> numSymbolicVars := Suc nsv \<rparr> )
-                   | None \<Rightarrow> None )"
+  "newVar = Symbolic (\<lambda> st .
+                   case st of
+                     Cons h t \<Rightarrow> Some (h, t)
+                   | Nil \<Rightarrow> None )"
 
-fun constrain :: "bool \<Rightarrow> unit Symbolic" where
+definition constrain :: "bool \<Rightarrow> unit Symbolic" where
   "constrain val = Symbolic (\<lambda> st . if val then Some ((), st) else None)"
 
-fun return :: "'a \<Rightarrow> 'a Symbolic" where
+definition return :: "'a \<Rightarrow> 'a Symbolic" where
   "return x = Symbolic (\<lambda> st . Some (x, st))"
 
 lemma symbolicConstrain : "(\<exists> x. execute (do { a \<leftarrow> newVar;
@@ -43,15 +38,54 @@ lemma symbolicConstrain : "(\<exists> x. execute (do { a \<leftarrow> newVar;
                                                constrain (c a b);
                                                return () }) x \<noteq> None) = (\<exists> a b. c a b)"
   apply (rule iffI)
-  apply simp
+  apply (simp add:bind_def add:constrain_def)
   apply (smt case_prod_beta' execute.simps option.case_eq_if option.distinct(1))
   apply (auto simp del:bind.simps not_None_eq)
   subgoal for a b
-    apply(rule exI[of _ "\<lparr> numSymbolicVars = 0
-                         , symbolicVarValues = (Cons a (Cons b Nil)) \<rparr>"])
-    by (simp add:newVar_def)
+    apply(rule exI[of _ "(Cons a (Cons b Nil))"])
+    by (simp add:newVar_def bind_def constrain_def return_def)
   done
 
+
+fun isCounterExample :: "(bool \<times> SymbolicMonadData) option \<Rightarrow> bool" where
+"isCounterExample None = False" |
+"isCounterExample (Some (b, _)) = b"
+
+lemma abstract_newVar : "isCounterExample (execute (newVar \<bind> (\<lambda>v. m v)) (Cons h t)) = isCounterExample (execute (m h) t)"
+  by (auto split:option.splits simp add:bind_def newVar_def)
+
+lemma abstract_constrain : "isCounterExample (execute (constrain b \<bind> (\<lambda>_ . m)) x) = (b \<and> isCounterExample (execute m x))"
+  by (auto split:option.splits simp add:bind_def constrain_def)
+
+lemma newVar_failsForNil : "isCounterExample (execute (newVar \<bind> (\<lambda>v. m v)) []) = False"
+  by (simp add: StaticAnalysis.bind_def newVar_def)
+
+lemma inline_monad : "((m1 \<bind> return \<circ> f) \<bind> m2) = (m1 \<bind> m2 \<circ> f)"
+  by (auto split:option.splits simp add:bind_def return_def)
+
+lemma inline_monads_ex1 : "((newVar \<bind> (\<lambda>hs. newVar \<bind> (\<lambda>ls. constrain (ls \<le> hs) \<bind> (\<lambda>_. return (ls, hs))))) \<bind> (\<lambda>(ls, hs). constrain (lSlot \<le> ls) \<bind> (\<lambda>_. return (ls, hs)))) \<bind> f =
+                            (newVar \<bind> (\<lambda>hs. newVar \<bind> (\<lambda>ls. constrain (ls \<le> hs) \<bind> (\<lambda>_. constrain (lSlot \<le> ls) \<bind> (\<lambda>_. f (ls, hs))))))"
+  by (auto split:option.splits simp add:bind_def return_def execute_def)
+
+lemma bind_left_unit : "do { x \<leftarrow> return a :: int Symbolic; k x } = k a"
+  apply (auto split:option.splits simp add:bind_def return_def execute_def)
+  by (metis Symbolic.exhaust Symbolic.rec)
+
+lemma bind_right_unit : "do { x \<leftarrow> m :: int Symbolic; return x } = m"
+  apply (simp only:bind_def)
+  apply (cases m)
+  apply simp
+  subgoal for x
+    apply (subst HOL.fun_eq_iff)
+    apply auto
+    subgoal for a
+      apply (cases "x a")
+      by (auto simp add:execute_def return_def)
+    done
+  done
+
+lemma bind_assoc : "do {y \<leftarrow> do { x \<leftarrow> m :: int Symbolic; k x }; h y} = do { x \<leftarrow> m; do { y \<leftarrow> k x; h y} }"
+  by (auto split:option.splits simp add:bind_def return_def execute_def)
 
 (* Symbolic semantics definition *)
 
@@ -392,9 +426,21 @@ fun hasWarnings :: "TransactionOutput \<Rightarrow> bool" where
 "hasWarnings (TransactionError _) = False" |
 "hasWarnings (TransactionOutput txOutRec) = (Nil \<noteq> txOutWarnings txOutRec)"
 
-fun isCounterExample :: "(bool \<times> SymbolicMonadData) option \<Rightarrow> bool" where
-"isCounterExample None = False" |
-"isCounterExample (Some (b, _)) = b"
+(* Invariants of symbolic execution *)
+fun symStateToState :: "SymState \<Rightarrow> State" where
+"symStateToState (SymState symState) =
+   \<lparr> accounts = symAccounts symState
+   , choices = symChoices symState
+   , boundValues = symBoundValues symState
+   , minSlot = lowSlot symState \<rparr>"
+
+fun symStateToEnv :: "SymState \<Rightarrow> Environment" where
+"symStateToEnv (SymState symState) = \<lparr> slotInterval = (lowSlot symState, highSlot symState) \<rparr>"
+
+lemma symEval_eval_equivalence : "symEvalVal val symState = evalValue (symStateToEnv symState) (symStateToState symState) val"
+                                 "symEvalObs obs symState = evalObservation (symStateToEnv symState) (symStateToState symState) obs"
+  apply (induction val symState and obs symState rule:symEvalVal_symEvalObs.induct)
+  by auto
 
 lemma closeContractRemains_reduceContractUntilQuiescent : "reduceContractUntilQuiescent env fixSta Close = ContractQuiescent reduceWarns pays curState cont \<Longrightarrow> cont = Close"
   by (simp add: reduceClose_is_Close)
@@ -425,10 +471,10 @@ lemma closeContractRemains : "validAndPositive_state st \<Longrightarrow>
 
 lemma noCounterExamplePropagatesComputeEmptyTransaction_Close : "\<not> isCounterExample (execute (wrapper Close t (Some sta)) x)"
   apply simp
-  apply (auto split:option.splits prod.splits)
+  apply (auto split:option.splits prod.splits simp add:bind_def)
   subgoal for a b
     apply (cases a)
-    by simp
+    by (simp add:return_def)
   done
 
 fun isNonPositivePay :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarrow> bool" where
@@ -574,6 +620,138 @@ lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_PartialPay : "validA
    apply simp
   by simp
 
+lemma giveMoneyPreserves_validState : "validAndPositive_state fixSta \<Longrightarrow> giveMoney payee token (min (moneyInAccount accountId token (accounts fixSta)) (evalValue fixEnv fixSta val))
+   (updateMoneyInAccount accountId token (moneyInAccount accountId token (accounts fixSta) - min (moneyInAccount accountId token (accounts fixSta)) (evalValue fixEnv fixSta val)) (accounts fixSta)) =
+  (givePayment, giveFinalAccs) \<Longrightarrow> validAndPositive_state (fixSta\<lparr>accounts := giveFinalAccs\<rparr>)"
+  oops
+
+lemma comp_pair_eta : "\<And>f g. f \<circ> g = (\<lambda> (a, b). f (g (a, b)))"
+  by (simp add: comp_def cond_case_prod_eta)
+
+lemma split_tuple : "(a = (b, c)) = ((fst a = b) \<and> ((snd a = c)))"
+  by auto
+
+lemma accountTransferEquivalence :
+  "\<not> evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val \<le> 0 \<Longrightarrow>
+   \<not> moneyInAccount accountId token accs < evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val \<Longrightarrow>
+   snd (giveMoney payee token (min (moneyInAccount accountId token accs) (evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val))
+     (updateMoneyInAccount accountId token
+       (moneyInAccount accountId token accs - min (moneyInAccount accountId token accs) (evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val)) accs)) =
+    (let concVal = evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val;
+         originalMoney = findWithDefault 0 (accountId, token) accs;
+         remainingMoneyInAccount = originalMoney - max 0 concVal;
+         newAccs = MList.insert (accountId, token) (max 0 remainingMoneyInAccount)
+                                (symAccounts sState) in
+         (case payee of
+              Account destAccId \<Rightarrow>
+                  MList.insert (destAccId, token)
+                               (min originalMoney (max 0 concVal)
+                                + findWithDefault 0 (destAccId, token) newAccs)
+                               newAccs
+             | _ \<Rightarrow> newAccs))"
+  oops
+
+lemma symbolicPreservesConstraintsAfterPay_aux :
+  "\<not> evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val \<le> 0 \<Longrightarrow>
+    \<not> moneyInAccount accountId token accs < evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val \<Longrightarrow>
+    giveMoney payee token (min (moneyInAccount accountId token accs) (evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val))
+     (updateMoneyInAccount accountId token
+       (moneyInAccount accountId token accs - min (moneyInAccount accountId token accs) (evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val)) accs) =
+    (givePayment, giveFinalAccs) \<Longrightarrow>
+    fixSta = \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> \<Longrightarrow>
+  lSlot \<le> hSlot \<Longrightarrow>
+  mSlot \<le> lSlot \<Longrightarrow>
+  isCounterExample
+    (execute (isValidAndFailsAux False subCont (SymState \<lparr>lowSlot = lSlot, highSlot = hSlot, traces = [], paramTrace = t, symInput = None, whenPos = 0, symAccounts = giveFinalAccs, symChoices = chos, symBoundValues = boundVals\<rparr>))
+      x) \<Longrightarrow> 
+      isCounterExample
+            (execute (isValidAndFailsAux False (Pay accountId payee token val subCont)
+                    (SymState \<lparr>lowSlot = lSlot, highSlot = hSlot, traces = [], paramTrace = t, symInput = None, whenPos = 0, symAccounts = accs, symChoices = chos, symBoundValues = boundVals\<rparr>))
+              x)"
+  apply (simp only:isValidAndFailsAux.simps)
+  apply (simp only:symEval_eval_equivalence symStateToEnv.simps symStateToState.simps SymStateRecord.simps)
+  oops
+
+lemma symbolicPreservesConstraintsAfterPay_aux2 :
+  "\<not> evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val \<le> 0 \<Longrightarrow>
+    \<not> moneyInAccount accountId token accs < evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val \<Longrightarrow>
+    giveMoney payee token (min (moneyInAccount accountId token accs) (evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val))
+     (updateMoneyInAccount accountId token
+       (moneyInAccount accountId token accs - min (moneyInAccount accountId token accs) (evalValue fixEnv \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> val)) accs) =
+    (givePayment, giveFinalAccs) \<Longrightarrow>
+    fixSta = \<lparr>accounts = accs, choices = chos, boundValues = boundVals, minSlot = mSlot\<rparr> \<Longrightarrow>
+   isCounterExample
+     (execute
+       (generateSymbolicInterval (Some mSlot) \<bind>
+        (\<lambda>(a, b).
+            isValidAndFailsAux False subCont (SymState \<lparr>lowSlot = a, highSlot = b, traces = [], paramTrace = t, symInput = None, whenPos = 0, symAccounts = giveFinalAccs, symChoices = chos, symBoundValues = boundVals\<rparr>)))
+       x) \<Longrightarrow> 
+       isCounterExample
+             (execute
+               (generateSymbolicInterval (Some mSlot) \<bind>
+                (\<lambda>(a, b).
+                    isValidAndFailsAux False (Pay accountId payee token val subCont)
+                     (SymState \<lparr>lowSlot = a, highSlot = b, traces = [], paramTrace = t, symInput = None, whenPos = 0, symAccounts = accs, symChoices = chos, symBoundValues = boundVals\<rparr>)))
+               x)"
+  apply (simp only:generateSymbolicInterval.simps)
+  apply (simp only:inline_monads_ex1)
+  apply (cases x)
+  using newVar_failsForNil apply blast
+  apply (simp only:abstract_newVar)
+  subgoal for hSlot x2
+    apply (cases x2)
+    using newVar_failsForNil apply blast
+    apply (simp only:abstract_newVar)
+    subgoal for lSlot x3
+    apply (auto simp only:abstract_constrain)
+(* using symbolicPreservesConstraintsAfterPay_aux by blast *)
+  oops
+    
+lemma symbolicPreservesConstraintsAfterPay : "\<not> evalValue fixEnv fixSta val \<le> 0 \<Longrightarrow>
+                                             \<not> isPartialPay fixEnv fixSta accountId token val \<Longrightarrow>
+                                             giveMoney payee token (min (moneyInAccount accountId token (accounts fixSta)) (evalValue fixEnv fixSta val))
+                                              (updateMoneyInAccount accountId token (moneyInAccount accountId token (accounts fixSta) - min (moneyInAccount accountId token (accounts fixSta)) (evalValue fixEnv fixSta val)) (accounts fixSta)) =
+                                             (givePayment, giveFinalAccs) \<Longrightarrow>
+                                              (\<And>t x. \<not> isCounterExample (execute (wrapper (Pay accountId payee token val subCont) t (Some fixSta)) x)) \<Longrightarrow>
+                                              (isCounterExample (execute (wrapper subCont t (Some (fixSta\<lparr>accounts := giveFinalAccs\<rparr>))) x)) \<Longrightarrow> False"
+  apply (auto simp del:updateMoneyInAccount.simps moneyInAccount.simps)
+  apply (cases fixSta)
+  subgoal for accounts choices boundValues minSlot
+    apply (simp only:mkInitialSymState.simps State.simps)
+    (* Reorder to use composition instead of lambda expression *)
+    apply (subgoal_tac "(\<And>t x. isCounterExample
+                (execute
+                  ((generateSymbolicInterval (Some minSlot) \<bind>
+                    (return \<circ> (\<lambda>(ls, hs). SymState \<lparr>lowSlot = ls, highSlot = hs, traces = [], paramTrace = t, symInput = None, whenPos = 0, symAccounts = accounts, symChoices = choices, symBoundValues = boundValues\<rparr>))) \<bind>
+                   isValidAndFailsAux False (Pay accountId payee token val subCont))
+                  x) \<Longrightarrow> False)")
+    (* Remove original hypothesis *)
+      apply (thin_tac "(\<And>t x. \<not> isCounterExample
+                (execute
+                  ((generateSymbolicInterval (Some minSlot) \<bind>
+                    (\<lambda>(ls, hs). return (SymState \<lparr>lowSlot = ls, highSlot = hs, traces = [], paramTrace = t, symInput = None, whenPos = 0, symAccounts = accounts, symChoices = choices, symBoundValues = boundValues\<rparr>))) \<bind>
+                   isValidAndFailsAux False (Pay accountId payee token val subCont))
+                  x))")
+    (* Reorder to use composition instead of lambda expression *)
+    apply (subgoal_tac "isCounterExample
+      (execute
+        ((generateSymbolicInterval (Some minSlot) \<bind>
+          (return \<circ> (\<lambda>(ls, hs). SymState \<lparr>lowSlot = ls, highSlot = hs, traces = [], paramTrace = t, symInput = None, whenPos = 0, symAccounts = giveFinalAccs, symChoices = choices, symBoundValues = boundValues\<rparr>))) \<bind>
+         isValidAndFailsAux False subCont)
+        x)")
+    apply (thin_tac "(isCounterExample
+      (execute
+        ((generateSymbolicInterval (Some minSlot) \<bind>
+          (\<lambda>(ls, hs). return (SymState \<lparr>lowSlot = ls, highSlot = hs, traces = [], paramTrace = t, symInput = None, whenPos = 0, symAccounts = giveFinalAccs, symChoices = choices, symBoundValues = boundValues\<rparr>))) \<bind>
+         isValidAndFailsAux False subCont)
+        x))")
+      apply (simp only:inline_monad comp_pair_eta[symmetric])
+      apply (simp only:comp_pair_eta prod.case)
+    (* using symbolicPreservesConstraintsAfterPay_aux apply blast
+       by (simp_all only: comp_pair_eta prod.case)
+  done *)
+oops
+
 lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay : "(\<And>st lo hi newPays newSta newCont t2 x2.
         validAndPositive_state st \<Longrightarrow>
         computeTransaction \<lparr>interval = (lo, hi), inputs = []\<rparr> st subCont = TransactionOutput \<lparr>txOutWarnings = [], txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
@@ -594,7 +772,38 @@ lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay : "(\<And>st lo hi n
     apply (metis IntervalResult.inject(1) noCounterExamplePropagatesComputeEmptyTransaction_Pay_NonPositivePay not_le)
     apply (cases "isPartialPay env fixedSt accountId token val")
     apply (metis IntervalResult.inject(1) noCounterExamplePropagatesComputeEmptyTransaction_Pay_PartialPay not_le)
-    oops
+    apply (simp only:computeTransaction.simps [of "\<lparr>interval = (lo, hi), inputs = []\<rparr>" st "Pay accountId payee token val subCont"] Let_def)
+    apply (cases "fixInterval (interval \<lparr>interval = (lo, hi), inputs = []\<rparr>) st")
+    subgoal for fixEnv fixSta
+      apply (simp only:refl IntervalResult.case)
+      apply (subgoal_tac "env = fixEnv")
+      apply (simp only:applyAllInputs.simps applyAllLoop.simps[of fixEnv fixSta "Pay accountId payee token val subCont" "inputs \<lparr>interval = (lo, hi), inputs = []\<rparr>" "[]" "[]"])
+      apply (simp only:reduceContractUntilQuiescent.simps reductionLoop.simps reduceContractStep.simps)
+      apply (simp only:Let_def isNonPositivePay.simps refl)
+      apply (subgoal_tac "evalValue fixEnv fixSta val \<le> 0 = False")
+      apply (simp only:refl if_False)
+      apply (cases "giveMoney payee token (min (moneyInAccount accountId token (accounts fixSta)) (evalValue fixEnv fixSta val))
+                          (updateMoneyInAccount accountId token (moneyInAccount accountId token (accounts fixSta) - min (moneyInAccount accountId token (accounts fixSta)) (evalValue fixEnv fixSta val)) (accounts fixSta))")
+      subgoal for givePayment giveFinalAccs
+        apply (simp only:prod.case ReduceStepResult.case)
+        apply (subgoal_tac "min (moneyInAccount accountId token (accounts fixSta)) (evalValue fixEnv fixSta val) < evalValue fixEnv fixSta val = False")
+        apply (simp only:if_False if_True refl)
+        subgoal premises fact
+          apply (rule fact(1))
+          apply (subgoal_tac "validAndPositive_state (fixSta\<lparr>accounts := giveFinalAccs\<rparr>)")
+          apply blast
+(*
+          using fact(11) fact(14) fact(2) fixInterval_preserves_preserves_validAndPositive_state giveMoneyPreserves_validState apply blast
+          (* ToDo *)
+          using symbolicPreservesConstraintsAfterPay apply blast
+          apply (rule fact(5))
+        by simp
+      apply simp
+      by simp
+    by simp
+  by simp
+*)
+  oops
 
 theorem noCounterExamplePropagatesComputeEmptyTransaction :
    "validAndPositive_state st \<Longrightarrow>

@@ -426,6 +426,242 @@ fun hasWarnings :: "TransactionOutput \<Rightarrow> bool" where
 "hasWarnings (TransactionError _) = False" |
 "hasWarnings (TransactionOutput txOutRec) = (Nil \<noteq> txOutWarnings txOutRec)"
 
+(* Functions for calculating symbolic variables and output *)
+
+type_synonym SymVarsOutput = "int list \<times> (int \<times> int \<times> int \<times> int) list"
+
+fun padWithMinusOnes :: "nat \<Rightarrow> (int \<times> int \<times> int \<times> int) list \<Rightarrow> (int \<times> int \<times> int \<times> int) list" where
+"padWithMinusOnes 0 l = l" |
+"padWithMinusOnes (Suc n) (Cons h t) = Cons h (padWithMinusOnes n t)" |
+"padWithMinusOnes (Suc n) Nil = (Cons (-1, -1, -1, -1) (padWithMinusOnes n Nil))"
+
+fun combineOutputs :: "nat \<Rightarrow> (int \<times> int \<times> int \<times> int) list list \<Rightarrow> (int \<times> int \<times> int \<times> int) list" where
+"combineOutputs execBranch l = padWithMinusOnes (fold max (map length l) 0) (l ! execBranch)"
+
+fun combineSymVarsOutput :: "nat \<Rightarrow> SymVarsOutput list \<Rightarrow> SymVarsOutput" where
+"combineSymVarsOutput executionBranch symVarsOutput =
+   (concat (map fst symVarsOutput), combineOutputs executionBranch (map snd symVarsOutput))"
+
+fun calculateSymVars_mkInitialSymState :: "int \<Rightarrow> int \<Rightarrow> State option \<Rightarrow> SymState \<times> SymVarsOutput" where
+"calculateSymVars_mkInitialSymState ls hs None =
+  (SymState \<lparr> lowSlot = ls
+            , highSlot = hs
+            , traces = Nil
+            , paramTrace = Nil
+            , symInput = None
+            , whenPos = 0
+            , symAccounts = Nil
+            , symChoices = Nil
+            , symBoundValues = Nil
+            \<rparr>, ([hs, ls], []))" |
+"calculateSymVars_mkInitialSymState ls hs (Some \<lparr> accounts = accs
+                                                , choices = cho
+                                                , boundValues = bVal
+                                                , minSlot = ms \<rparr>) =
+  (SymState \<lparr> lowSlot = max ms ls
+            , highSlot = hs
+            , traces = Nil
+            , paramTrace = Nil
+            , symInput = None
+            , whenPos = 0
+            , symAccounts = accs
+            , symChoices = cho
+            , symBoundValues = bVal \<rparr>, ([hs, ls], []))"
+
+fun calculateSymVars_updateSymInput :: "SymInput option \<Rightarrow> SymState \<Rightarrow> SymState" where
+"calculateSymVars_updateSymInput None symState = symState" |
+"calculateSymVars_updateSymInput (Some (SymDeposit accId _ tok val)) (SymState symState) =
+  (let resultVal = findWithDefault 0 (accId, tok) (symAccounts symState)
+                    + max 0 val in
+   SymState (symState \<lparr> symAccounts :=
+                            MList.insert (accId, tok) resultVal
+                                         (symAccounts symState) \<rparr>))" |
+"calculateSymVars_updateSymInput (Some (SymChoice choId val)) (SymState symState) =
+  SymState (symState \<lparr> symChoices := MList.insert choId val (symChoices symState) \<rparr>)" |
+"calculateSymVars_updateSymInput (Some SymNotify) symState =
+  symState"
+
+fun calculateSymVars_addTransaction :: "int \<Rightarrow> int \<Rightarrow> SymInput option \<Rightarrow> SymState \<Rightarrow> int \<Rightarrow>
+                                        SymState" where
+"calculateSymVars_addTransaction newLowSlot newHighSlot None
+                (SymState symState) pos =
+  (let uSymInput = calculateSymVars_updateSymInput None
+                      (SymState
+                         (symState \<lparr> lowSlot := newLowSlot
+                                   , highSlot := newHighSlot
+                                   , symInput := None
+                                   , whenPos := pos
+                                   \<rparr>)) in
+   uSymInput)" |
+"calculateSymVars_addTransaction newLowSlot newHighSlot newSymInput (SymState symState) pos =
+  (let uSymInput = calculateSymVars_updateSymInput newSymInput
+                      (SymState
+                         (symState \<lparr> lowSlot := newLowSlot
+                                   , highSlot := newHighSlot
+                                   , symInput := newSymInput
+                                   , whenPos := pos
+                                   \<rparr>)) in
+   uSymInput)"
+
+fun firstMatchesSymInput :: "SymInput \<Rightarrow> Transaction \<Rightarrow> bool" where
+"firstMatchesSymInput sInput transaction =
+  (case inputs transaction of
+     Nil \<Rightarrow> False
+   | Cons h t \<Rightarrow> (case sInput of
+                     SymDeposit accId party token amount \<Rightarrow> (h = IDeposit accId party token amount)
+                   | SymChoice choId cho \<Rightarrow> (h = IChoice choId cho)
+                   | SymNotify \<Rightarrow> (h = INotify)))"
+
+fun addSymVars :: "int list \<Rightarrow> SymVarsOutput \<Rightarrow> SymVarsOutput" where
+"addSymVars l (vars, transactions) = (l @ vars, transactions)"
+
+fun getFirstChoice :: "Transaction \<Rightarrow> ChosenNum option" where
+"getFirstChoice tra =
+   (case inputs tra of
+      Cons (IChoice _ v) _ \<Rightarrow> Some v
+    | _ \<Rightarrow> None)"
+
+fun isValidChoice :: "ChoiceId \<Rightarrow> Bound list \<Rightarrow> Transaction \<Rightarrow> bool" where
+"isValidChoice choId bounds tra =
+  (case inputs tra of
+     Cons (IChoice traChoId traCho) _ \<Rightarrow> ((traChoId = choId) \<and> (inBounds traCho bounds))
+   | _ \<Rightarrow> False)"
+
+function (sequential)
+    calculateSymVars_isValidAndFailsAux :: "Transaction \<Rightarrow> Transaction list \<Rightarrow> Contract \<Rightarrow> SymState \<Rightarrow> SymVarsOutput"  and
+    calculateSymVars_applyInputConditions :: "Transaction \<Rightarrow> Transaction list \<Rightarrow> int \<Rightarrow> int \<Rightarrow> SymInput option \<Rightarrow>
+                                              SymState \<Rightarrow> int \<Rightarrow> Contract \<Rightarrow>
+                                              SymVarsOutput" and
+    calculateSymVars_isValidAndFailsWhen :: "Transaction \<Rightarrow> Transaction list \<Rightarrow> Case list \<Rightarrow> int \<Rightarrow> Contract \<Rightarrow>
+                                             SymState \<Rightarrow> int \<Rightarrow> SymVarsOutput" where
+"calculateSymVars_isValidAndFailsAux tra traList Close (SymState symState) =
+   ([], [(lowSlot symState, highSlot symState,
+          getSymValFrom (symInput symState), whenPos symState)])" |
+"calculateSymVars_isValidAndFailsAux tra traList (Pay accId payee tok val cont) (SymState symState) =
+   (let concVal = symEvalVal val (SymState symState);
+        originalMoney = findWithDefault 0 (accId, tok) (symAccounts symState);
+        remainingMoneyInAccount = originalMoney - max 0 concVal;
+        newAccs = MList.insert (accId, tok) (max 0 remainingMoneyInAccount)
+                               (symAccounts symState);
+        finalSState = SymState (symState \<lparr> symAccounts :=
+         (case payee of
+             Account destAccId \<Rightarrow>
+              MList.insert (destAccId, tok)
+                           (min originalMoney (max 0 concVal)
+                             + findWithDefault 0 (destAccId, tok) newAccs)
+                           newAccs
+           | _ \<Rightarrow> newAccs) \<rparr>) in
+    calculateSymVars_isValidAndFailsAux tra traList cont finalSState)" |
+"calculateSymVars_isValidAndFailsAux tra traList (If obs cont1 cont2) symState =
+   (let obsVal = symEvalObs obs symState;
+        contVal1 = calculateSymVars_isValidAndFailsAux tra traList cont1 symState;
+        contVal2 = calculateSymVars_isValidAndFailsAux tra traList cont1 symState in
+    combineSymVarsOutput (if obsVal then 0 else 1) [contVal1, contVal2])" |
+"calculateSymVars_isValidAndFailsAux tra traList (When list timeout cont) sState =
+  calculateSymVars_isValidAndFailsWhen tra traList list timeout cont sState 1" |
+"calculateSymVars_isValidAndFailsAux tra traList (Let valId val cont) (SymState symState) =
+   (let concVal = symEvalVal val (SymState symState);
+        newBVMap = MList.insert valId concVal (symBoundValues symState);
+        newSymState = SymState (symState \<lparr> symBoundValues := newBVMap \<rparr>) in
+    calculateSymVars_isValidAndFailsAux tra traList cont newSymState)" |
+"calculateSymVars_isValidAndFailsAux tra traList (Assert obs cont) symState =
+   calculateSymVars_isValidAndFailsAux tra traList cont symState" |
+"calculateSymVars_applyInputConditions tra traList ls hs maybeSymInput (SymState symState) pos cont =
+  (let newSState = calculateSymVars_addTransaction ls hs maybeSymInput (SymState symState) pos;
+       oldLowSlot = lowSlot symState;
+       oldHighSlot = highSlot symState;
+       oldSymInp = symInput symState;
+       oldPos = whenPos symState;
+       (symVars, symOutput) = calculateSymVars_isValidAndFailsAux tra traList cont newSState
+   in (symVars, Cons (oldLowSlot, oldHighSlot, getSymValFrom oldSymInp, oldPos) symOutput))" |
+"calculateSymVars_isValidAndFailsWhen tra traList Nil timeout cont symState pos =
+   (let (low, high) = interval tra in
+    if low \<ge> timeout
+    then addSymVars [low, high] (calculateSymVars_applyInputConditions tra traList low high None symState 0 cont)
+    else (case traList of
+            Nil \<Rightarrow> addSymVars [0, 0] (calculateSymVars_applyInputConditions tra traList 0 0 None symState 0 cont)
+          | Cons h t \<Rightarrow> let (newLow, newHigh) = interval h in
+                        addSymVars [newLow, newHigh] (calculateSymVars_applyInputConditions h t newLow newHigh None symState 0 cont)))" |
+"calculateSymVars_isValidAndFailsWhen tra traList (Cons (Case (Deposit accId party token val) cont) rest)
+                     timeout timCont (SymState symState) pos =
+       (let (low, high) = interval tra;
+            concVal = symEvalVal val (SymState symState);
+            sInput = SymDeposit accId party token concVal;
+            (newTra, newTraList) = if (high < timeout \<and> firstMatchesSymInput sInput tra)
+                                   then (tra, traList)
+                                   else (case traList of
+                                           Nil \<Rightarrow> (tra, traList)
+                                         | (Cons h t) \<Rightarrow> (h, t));
+            (newLowSlot, newHighSlot) = interval newTra;
+            symStateWithInput = SymState (symState \<lparr> lowSlot := newLowSlot,
+                                                     highSlot := newHighSlot \<rparr>);
+            newConcVal = symEvalVal val symStateWithInput;
+            newSInput = SymDeposit accId party token newConcVal;
+            newCond = newHighSlot < timeout \<and> firstMatchesSymInput newSInput newTra;
+            newTrace = calculateSymVars_applyInputConditions newTra newTraList newLowSlot newHighSlot
+                                         (Some newSInput) (SymState symState) pos cont;
+            contTrace = calculateSymVars_isValidAndFailsWhen tra traList rest timeout timCont
+                                                             (SymState symState) (pos + 1) in
+       addSymVars [newLowSlot, newHighSlot] (combineSymVarsOutput (if newCond then 0 else 1) [newTrace, contTrace]))" |
+"calculateSymVars_isValidAndFailsWhen tra traList (Cons (Case (Choice choId bnds) cont) rest)
+                     timeout timCont (SymState symState) pos =
+       (let (low, high) = interval tra;
+            (newTra, newTraList) = if (high < timeout \<and> isValidChoice choId bnds tra)
+                                   then (tra, traList)
+                                   else (case traList of
+                                           Nil \<Rightarrow> (tra, traList)
+                                         | (Cons h t) \<Rightarrow> (h, t));
+            (newLowSlot, newHighSlot) = interval newTra;
+            symStateWithInput = SymState (symState \<lparr> lowSlot := newLowSlot,
+                                                     highSlot := newHighSlot \<rparr>);
+            newConcVal = case getFirstChoice newTra of
+                           None \<Rightarrow> 0
+                         | Some x \<Rightarrow> x;
+            newSInput = SymChoice choId newConcVal;
+            newCond = newHighSlot < timeout \<and> isValidChoice choId bnds newTra;
+            newTrace = calculateSymVars_applyInputConditions newTra newTraList newLowSlot newHighSlot
+                                         (Some newSInput) (SymState symState) pos cont;
+            contTrace = calculateSymVars_isValidAndFailsWhen tra traList rest timeout timCont
+                                                             (SymState symState) (pos + 1) in
+       addSymVars [newLowSlot, newHighSlot, newConcVal] (combineSymVarsOutput (if newCond then 0 else 1) [newTrace, contTrace]))" |
+"calculateSymVars_isValidAndFailsWhen tra traList (Cons (Case (Notify obs) cont) rest)
+                     timeout timCont (SymState symState) pos =
+       (let (low, high) = interval tra;
+            sInput = SymNotify;
+            obsRes = symEvalObs obs (SymState symState);
+            (newTra, newTraList) = if (high < timeout \<and> obsRes)
+                                   then (tra, traList)
+                                   else (case traList of
+                                           Nil \<Rightarrow> (tra, traList)
+                                         | (Cons h t) \<Rightarrow> (h, t));
+            (newLowSlot, newHighSlot) = interval newTra;
+            symStateWithInput = SymState (symState \<lparr> lowSlot := newLowSlot,
+                                                     highSlot := newHighSlot \<rparr>);
+            newSInput = SymNotify;
+            newObsRes = symEvalObs obs symStateWithInput;
+            newCond = newHighSlot < timeout \<and> firstMatchesSymInput newSInput newTra;
+            newTrace = calculateSymVars_applyInputConditions newTra newTraList newLowSlot newHighSlot
+                                         (Some newSInput) (SymState symState) pos cont;
+            contTrace = calculateSymVars_isValidAndFailsWhen tra traList rest timeout timCont
+                                                             (SymState symState) (pos + 1) in
+       addSymVars [newLowSlot, newHighSlot] (combineSymVarsOutput (if newCond then 0 else 1) [newTrace, contTrace]))"
+  by pat_completeness auto
+termination calculateSymVars_isValidAndFailsAux
+  apply (relation "measure
+                     (\<lambda> params .
+                         case params of
+                           Inl (_, (_, (c, _))) \<Rightarrow> (size (c :: Contract)) * 3
+                         | Inr (Inl (_, (_, (_, (_, (_, (_, (_, c)))))))) \<Rightarrow> (size (c :: Contract) * 3) + 1
+                         | Inr (Inr (_, (_, (cl, (_, (c, _)))))) \<Rightarrow> (size_list size (cl :: Case list)) * 3 + size c * 3 + 2)")
+  by simp_all
+
+fun calculateSymVars :: "State option \<Rightarrow> Transaction list \<Rightarrow> Contract \<Rightarrow> SymVarsOutput" where
+"calculateSymVars state (Cons h t) cont =
+  (let (low, high) = interval h;
+       (symState, symVars) = calculateSymVars_mkInitialSymState low high state in
+   combineSymVarsOutput 1 [symVars, calculateSymVars_isValidAndFailsAux h t cont symState])" |
+"calculateSymVars state Nil cont = ([], [])"
+
 (* Invariants of symbolic execution *)
 fun symStateToState :: "SymState \<Rightarrow> State" where
 "symStateToState (SymState symState) =

@@ -1,6 +1,5 @@
 theory StaticAnalysis
   imports Semantics MList "HOL-Library.Monad_Syntax" HOL.Wellfounded SingleInputTransactions PositiveAccounts Timeout
-
 begin
 
 (* Symbolic mock definition *)
@@ -153,14 +152,35 @@ fun getSymValFrom :: "SymInput option \<Rightarrow> int" where
 "getSymValFrom (Some (SymChoice _ val)) = val" |
 "getSymValFrom (Some SymNotify) = 0"
 
+fun convertRestToSymbolicTrace :: "(int \<times> int \<times> SymInput option \<times> int) list \<Rightarrow>
+                               (int \<times> int \<times> int \<times> int) list \<Rightarrow> bool" where
+"convertRestToSymbolicTrace (Cons (lowS, highS, inp, pos) t) (Cons (a, b, c, d) t2) =
+   ((lowS = a) \<and> (highS = b) \<and> (getSymValFrom inp = c) \<and> (pos = d) \<and> (convertRestToSymbolicTrace t t2))" |
+"convertRestToSymbolicTrace Nil Nil = True" |
+"convertRestToSymbolicTrace _ _ = undefined"
+
+fun isPadding :: "(int \<times> int \<times> int \<times> int) list \<Rightarrow> bool" where
+"isPadding Nil = True" |
+"isPadding (Cons (a, b, c, d) t) = ((a = -1) \<and> (b = -1) \<and> (c = -1) \<and> (d = -1) \<and> isPadding t)"
+
 fun convertToSymbolicTrace :: "(int \<times> int \<times> SymInput option \<times> int) list \<Rightarrow>
-                               (int \<times> int \<times> int \<times> int) list \<Rightarrow> bool " where
-"convertToSymbolicTrace Nil Nil = True" |
-"convertToSymbolicTrace Nil (Cons (a, b, c, d) t) =
-   ((a = -1) \<and> (b = -1) \<and> (c = -1) \<and> (d = -1) \<and> convertToSymbolicTrace Nil t)" |
-"convertToSymbolicTrace (Cons (lowS, highS, inp, pos) t) (Cons (a, b, c, d) t2) =
-   ((lowS = a) \<and> (highS = b) \<and> (getSymValFrom inp = c) \<and> (pos = d))" |
-"convertToSymbolicTrace _ _ = undefined"
+                               (int \<times> int \<times> int \<times> int) list \<Rightarrow> bool" where
+"convertToSymbolicTrace refL symL =
+   (let lenRefL = length refL;
+        lenSymL = length symL in
+    (if lenRefL \<le> lenSymL
+     then (let lenPadding = lenSymL - lenRefL in
+           isPadding (take lenPadding symL) \<and> convertRestToSymbolicTrace refL (drop lenPadding symL))
+     else undefined))"
+
+fun convertToSymbolicTrace_old :: "(int \<times> int \<times> SymInput option \<times> int) list \<Rightarrow>
+                               (int \<times> int \<times> int \<times> int) list \<Rightarrow> bool" where
+"convertToSymbolicTrace_old Nil Nil = True" |
+"convertToSymbolicTrace_old Nil (Cons (a, b, c, d) t) =
+   ((a = -1) \<and> (b = -1) \<and> (c = -1) \<and> (d = -1) \<and> convertToSymbolicTrace_old Nil t)" |
+"convertToSymbolicTrace_old (Cons (lowS, highS, inp, pos) t) (Cons (a, b, c, d) t2) =
+   ((lowS = a) \<and> (highS = b) \<and> (getSymValFrom inp = c) \<and> (pos = d) \<and> convertToSymbolicTrace_old t t2)" |
+"convertToSymbolicTrace_old _ _ = undefined"
 
 fun symEvalVal :: "Value \<Rightarrow> SymState \<Rightarrow> int" and
     symEvalObs :: "Observation \<Rightarrow> SymState \<Rightarrow> bool" where
@@ -389,12 +409,12 @@ function (sequential) isValidAndFailsAux :: "bool \<Rightarrow> Contract \<Right
        let symInput = SymChoice choId concVal;
        let clashResult = previousMatch symInput sStateWithInput;
        let newPreviousMatch = newPreviousMatchChoice choId bnds previousMatch;
-       contTrace \<leftarrow> isValidAndFailsWhen hasErr rest timeout timCont
-                                        newPreviousMatch sState (pos + 1);
        (newCond, newTrace)
                  \<leftarrow> applyInputConditions newLowSlot newHighSlot
                                          hasErr (Some symInput) timeout sState pos cont;
-       return (if (newCond \<and> (\<not> clashResult)) then (ensureBounds concVal bnds \<and> newTrace)
+       contTrace \<leftarrow> isValidAndFailsWhen hasErr rest timeout timCont
+                                        newPreviousMatch sState (pos + 1);
+       return (if (newCond \<and> (\<not> clashResult) \<and> ensureBounds concVal bnds) then newTrace
                else contTrace) }" |
 "isValidAndFailsWhen hasErr (Cons (Case (Notify obs) cont) rest)
                      timeout timCont previousMatch sState pos =
@@ -403,10 +423,10 @@ function (sequential) isValidAndFailsAux :: "bool \<Rightarrow> Contract \<Right
        let symInput = SymNotify;
        let clashResult = previousMatch symInput sStateWithInput;
        let newPreviousMatch = newPreviousMatchNotify obs previousMatch;
-       contTrace \<leftarrow> isValidAndFailsWhen hasErr rest timeout timCont
-                                        newPreviousMatch sState (pos + 1);
        (newCond, newTrace) \<leftarrow> applyInputConditions newLowSlot newHighSlot
                                                    hasErr (Some symInput) timeout sState pos cont;
+       contTrace \<leftarrow> isValidAndFailsWhen hasErr rest timeout timCont
+                                        newPreviousMatch sState (pos + 1);
        return (if (newCond \<and> obsRes \<and> (\<not> clashResult)) then newTrace else contTrace) }"
   by pat_completeness auto
 termination isValidAndFailsAux
@@ -421,7 +441,7 @@ termination isValidAndFailsAux
 fun wrapper :: "Contract \<Rightarrow> (int \<times> int \<times> int \<times> int) list \<Rightarrow> State option \<Rightarrow> bool Symbolic" where
 "wrapper c st maybeState = do { ess \<leftarrow> mkInitialSymState st maybeState;
                                 isValidAndFailsAux False c ess }"
-                                
+
 fun hasWarnings :: "TransactionOutput \<Rightarrow> bool" where
 "hasWarnings (TransactionError _) = False" |
 "hasWarnings (TransactionOutput txOutRec) = (Nil \<noteq> txOutWarnings txOutRec)"
@@ -430,10 +450,12 @@ fun hasWarnings :: "TransactionOutput \<Rightarrow> bool" where
 
 type_synonym SymVarsOutput = "int list \<times> (int \<times> int \<times> int \<times> int) list"
 
+fun repeat :: "nat \<Rightarrow> 'a \<Rightarrow> 'a list" where
+"repeat 0 x = Nil" |
+"repeat (Suc n) x = (Cons x (repeat n x))"
+
 fun padWithMinusOnes :: "nat \<Rightarrow> (int \<times> int \<times> int \<times> int) list \<Rightarrow> (int \<times> int \<times> int \<times> int) list" where
-"padWithMinusOnes 0 l = l" |
-"padWithMinusOnes (Suc n) (Cons h t) = Cons h (padWithMinusOnes n t)" |
-"padWithMinusOnes (Suc n) Nil = (Cons (-1, -1, -1, -1) (padWithMinusOnes n Nil))"
+"padWithMinusOnes n l = repeat (n - length l) (-1, -1, -1, -1) @ l"
 
 fun combineOutputs :: "nat \<Rightarrow> (int \<times> int \<times> int \<times> int) list list \<Rightarrow> (int \<times> int \<times> int \<times> int) list" where
 "combineOutputs execBranch l = padWithMinusOnes (fold max (map length l) 0) (l ! execBranch)"
@@ -555,7 +577,7 @@ function (sequential)
 "calculateSymVars_isValidAndFailsAux tra traList (If obs cont1 cont2) symState =
    (let obsVal = symEvalObs obs symState;
         contVal1 = calculateSymVars_isValidAndFailsAux tra traList cont1 symState;
-        contVal2 = calculateSymVars_isValidAndFailsAux tra traList cont1 symState in
+        contVal2 = calculateSymVars_isValidAndFailsAux tra traList cont2 symState in
     combineSymVarsOutput (if obsVal then 0 else 1) [contVal1, contVal2])" |
 "calculateSymVars_isValidAndFailsAux tra traList (When list timeout cont) sState =
   calculateSymVars_isValidAndFailsWhen tra traList list timeout cont sState 1" |
@@ -573,7 +595,8 @@ function (sequential)
        oldSymInp = symInput symState;
        oldPos = whenPos symState;
        (symVars, symOutput) = calculateSymVars_isValidAndFailsAux tra traList cont newSState
-   in (symVars, Cons (oldLowSlot, oldHighSlot, getSymValFrom oldSymInp, oldPos) symOutput))" |
+   in (symVars, symOutput @ [(oldLowSlot, oldHighSlot, getSymValFrom oldSymInp, oldPos)]))" |
+
 "calculateSymVars_isValidAndFailsWhen tra traList Nil timeout cont symState pos =
    (let (low, high) = interval tra in
     if low \<ge> timeout
@@ -612,8 +635,6 @@ function (sequential)
                                            Nil \<Rightarrow> (tra, traList)
                                          | (Cons h t) \<Rightarrow> (h, t));
             (newLowSlot, newHighSlot) = interval newTra;
-            symStateWithInput = SymState (symState \<lparr> lowSlot := newLowSlot,
-                                                     highSlot := newHighSlot \<rparr>);
             newConcVal = case getFirstChoice newTra of
                            None \<Rightarrow> 0
                          | Some x \<Rightarrow> x;
@@ -659,8 +680,143 @@ fun calculateSymVars :: "State option \<Rightarrow> Transaction list \<Rightarro
 "calculateSymVars state (Cons h t) cont =
   (let (low, high) = interval h;
        (symState, symVars) = calculateSymVars_mkInitialSymState low high state in
-   combineSymVarsOutput 1 [symVars, calculateSymVars_isValidAndFailsAux h t cont symState])" |
+       combineSymVarsOutput 1 [symVars, calculateSymVars_isValidAndFailsAux h t cont symState])" |
 "calculateSymVars state Nil cont = ([], [])"
+
+(* Test1 for calculateSymVars *)
+
+definition role_alice :: PubKey where
+"role_alice = 1"
+
+definition role_bob :: PubKey where
+"role_bob = 2"
+
+definition role_carol :: PubKey where
+"role_carol = 3"
+
+definition token_ada :: Token where
+"token_ada = Token 0 0"
+
+definition choice_choice :: ChoiceName where
+"choice_choice = 1"
+
+definition badEscrow_aux :: Contract where
+"badEscrow_aux = (When [
+                  (Case
+                     (Choice
+                        (ChoiceId choice_choice
+                           role_alice) [
+                        (0, 1)])
+                     (When [
+                        (Case
+                           (Choice
+                              (ChoiceId choice_choice
+                                 role_bob) [
+                              (0, 1)])
+                           (If
+                              (ValueEQ
+                                 (ChoiceValue
+                                    (ChoiceId choice_choice
+                                       role_alice))
+                                 (ChoiceValue
+                                    (ChoiceId choice_choice
+                                       role_bob)))
+                              (If
+                                 (ValueEQ
+                                    (ChoiceValue
+                                       (ChoiceId choice_choice
+                                          role_alice))
+                                    (Constant 0))
+                                 (Pay
+                                    role_alice
+                                    (Party
+                                       role_bob)
+                                    token_ada
+                                    (Constant 450) Close) Close)
+                              (When [
+                                    (Case
+                                       (Choice
+                                          (ChoiceId choice_choice
+                                             role_carol) [
+                                          (1, 1)]) Close)
+                                    ,
+                                    (Case
+                                       (Choice
+                                          (ChoiceId choice_choice
+                                             role_carol) [
+                                          (0, 0)])
+                                       (Pay
+                                          role_alice
+                                          (Party
+                                             role_bob)
+                                          token_ada
+                                          (Constant 451) Close))] 100 Close)))] 60
+                        (When [
+                              (Case
+                                 (Choice
+                                    (ChoiceId choice_choice
+                                       role_carol) [
+                                    (1, 1)]) Close)
+                              ,
+                              (Case
+                                 (Choice
+                                    (ChoiceId choice_choice
+                                       role_carol) [
+                                    (0, 0)])
+                                 (Pay
+                                    role_alice
+                                    (Party
+                                       role_bob)
+                                    token_ada
+                                    (Constant 450) Close))] 100 Close)))] 40
+                  (When [
+                        (Case
+                           (Choice
+                              (ChoiceId choice_choice
+                                 role_carol) [
+                              (1, 1)]) Close)
+                        ,
+                        (Case
+                           (Choice
+                              (ChoiceId choice_choice
+                                 role_carol) [
+                              (0, 0)])
+                           (Pay
+                              role_alice
+                              (Party
+                                 role_bob)
+                              token_ada
+                              (Constant 450) Close))] 100 Close))"
+
+definition badEscrow :: Contract where
+"badEscrow = When [
+            (Case
+               (Deposit
+                  role_alice
+                  role_alice
+                  token_ada
+                  (Constant 450))
+               badEscrow_aux)] 10 Close"
+
+definition badEscrowOffendingTrace :: "Transaction list" where
+"badEscrowOffendingTrace = [ \<lparr> interval = (2, 3)
+                             , inputs = [IDeposit role_alice role_alice token_ada 450]
+                             \<rparr>
+                           , \<lparr> interval = (4, 5)
+                             , inputs = [IChoice (ChoiceId choice_choice role_alice) 0]
+                             \<rparr>
+                           , \<lparr> interval = (6, 7)
+                             , inputs = [IChoice (ChoiceId choice_choice role_bob) 1]
+                             \<rparr>
+                           , \<lparr> interval = (8, 9)
+                             , inputs = [IChoice (ChoiceId choice_choice role_carol) 0]
+                             \<rparr>
+                           ]"
+
+value "calculateSymVars (Some (emptyState 0)) badEscrowOffendingTrace badEscrow"
+
+value "execute (wrapper badEscrow [(8, 9, 0, 2), (6, 7, 1, 1), (4, 5, 0, 1), (2, 3, 450, 1), (2, 3, 0, 0)]
+                        (Some (emptyState 0))) [3, 2, 2, 3, 4, 5, 0, 6, 7, 1, 8, 9, 0, 8, 9, 0, 8, 9, 6, 7, 8, 9, 0, 8, 9, 0, 8, 9, 4, 5, 6, 7, 1, 6, 7, 1, 6, 7, 4, 5]"
 
 (* Invariants of symbolic execution *)
 fun symStateToState :: "SymState \<Rightarrow> State" where

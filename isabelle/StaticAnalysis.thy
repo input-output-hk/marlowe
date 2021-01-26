@@ -1012,20 +1012,12 @@ lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_PartialPay : "validA
    apply simp
   by simp
 
-fun removeErrorTransactions :: "State \<Rightarrow> Contract \<Rightarrow> Transaction list \<Rightarrow> Transaction list" where
-"removeErrorTransactions _ _ Nil = Nil" |
-"removeErrorTransactions state cont (Cons h t) =
-   (let transRes = computeTransaction h state cont in
-    case transRes of
-      TransactionOutput transResRec \<Rightarrow> h # removeErrorTransactions (txOutState transResRec) (txOutContract transResRec) t
-    | TransactionError _ \<Rightarrow> removeErrorTransactions state cont t)"
-
 theorem staticAnalysisComplete_aux : "validAndPositive_state st \<Longrightarrow>
                                       hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
                                                                 , txOutPayments = Nil
                                                                 , txOutState = st
                                                                 , txOutContract = c \<rparr> t) \<Longrightarrow>
-                                      calculateSymVars (Some st) (traceListToSingleInput (removeErrorTransactions st c t)) c = (x2, t2) \<Longrightarrow>
+                                      calculateSymVars (Some st) (traceListToSingleInput t) c = (x2, t2) \<Longrightarrow>
                                       isCounterExample (execute (wrapper c t2 (Some st)) x2)"
   oops
 
@@ -1035,7 +1027,7 @@ theorem staticAnalysisComplete : "validAndPositive_state st \<Longrightarrow>
                                                                   , txOutState = st
                                                                   , txOutContract = c \<rparr> t)) \<Longrightarrow>
                                   (\<exists> t x. isCounterExample (execute (wrapper c t (Some st)) x))"
- (* by (meson old.prod.exhaust staticAnalysisComplete_aux) *)
+ (* by (meson const.cases staticAnalysisComplete_aux) *)
   oops
 
 (*

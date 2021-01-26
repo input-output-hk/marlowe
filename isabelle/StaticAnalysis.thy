@@ -1012,13 +1012,59 @@ lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_PartialPay : "validA
    apply simp
   by simp
 
-theorem staticAnalysisComplete_aux : "validAndPositive_state st \<Longrightarrow>
+lemma staticAnalysisComplete_emptyTransaction : "(\<And>nst nc.
+        validAndPositive_state nst \<Longrightarrow>
+        hasWarnings (playTraceAux \<lparr>txOutWarnings = [], txOutPayments = [], txOutState = nst, txOutContract = nc\<rparr> tt) \<Longrightarrow>
+        calculateSymVars (Some nst) tt nc = (x2, t2) \<Longrightarrow> isCounterExample (execute (wrapper nc t2 (Some nst)) x2)) \<Longrightarrow>
+    validAndPositive_state st \<Longrightarrow>
+    isSingleInput (\<lparr>interval = inte, inputs = []\<rparr> # tt) \<Longrightarrow>
+    hasWarnings (playTraceAux \<lparr>txOutWarnings = [], txOutPayments = [], txOutState = st, txOutContract = c\<rparr> (\<lparr>interval = inte, inputs = []\<rparr> # tt)) \<Longrightarrow>
+    calculateSymVars (Some st) (\<lparr>interval = inte, inputs = []\<rparr> # tt) c = (x2, t2) \<Longrightarrow> isCounterExample (execute (wrapper c t2 (Some st)) x2)"
+  oops
+
+lemma staticAnlysisComplete_singleInputTransaction : "(\<And>nst nc.
+        validAndPositive_state nst \<Longrightarrow>
+        isSingleInput tt \<Longrightarrow> hasWarnings (playTraceAux \<lparr>txOutWarnings = [], txOutPayments = [], txOutState = nst, txOutContract = nc\<rparr> tt) \<Longrightarrow> calculateSymVars (Some nst) tt nc = (x2, t2) \<Longrightarrow> isCounterExample (execute (wrapper nc t2 (Some nst)) x2)) \<Longrightarrow>
+    validAndPositive_state st \<Longrightarrow>
+    isSingleInput (\<lparr>interval = inte, inputs = [ih]\<rparr> # tt) \<Longrightarrow>
+    hasWarnings (playTraceAux \<lparr>txOutWarnings = [], txOutPayments = [], txOutState = st, txOutContract = c\<rparr> (\<lparr>interval = inte, inputs = [ih]\<rparr> # tt)) \<Longrightarrow>
+    calculateSymVars (Some st) (\<lparr>interval = inte, inputs = [ih]\<rparr> # tt) c = (x2, t2) \<Longrightarrow> isCounterExample (execute (wrapper c t2 (Some st)) x2)"
+  oops
+
+lemma staticAnalysisComplete_aux : "validAndPositive_state st \<Longrightarrow>
+                                      isSingleInput t \<Longrightarrow>
                                       hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
                                                                 , txOutPayments = Nil
                                                                 , txOutState = st
                                                                 , txOutContract = c \<rparr> t) \<Longrightarrow>
+                                      calculateSymVars (Some st) t c = (x2, t2) \<Longrightarrow>
+                                      isCounterExample (execute (wrapper c t2 (Some st)) x2)"
+  (*
+  apply (induction t arbitrary:st c)
+  apply simp
+  subgoal for th tt st c
+    apply (cases th)
+    subgoal for inte inps
+      apply (cases inps)
+      using isSingleInput.simps(2) staticAnalysisComplete_emptyTransaction apply blast
+      subgoal for ih it
+        apply (cases it)
+        using staticAnlysisComplete_singleInputTransaction apply blast
+        by simp
+      done
+    done
+  done
+  *)
+  oops
+
+lemma staticAnalysisComplete_aux2 : "validAndPositive_state st \<Longrightarrow>
+                                      hasWarnings (playTraceAux \<lparr> txOutWarnings = Nil
+                                                                , txOutPayments = Nil
+                                                                , txOutState = st
+                                                                , txOutContract = c \<rparr> (traceListToSingleInput t)) \<Longrightarrow>
                                       calculateSymVars (Some st) (traceListToSingleInput t) c = (x2, t2) \<Longrightarrow>
                                       isCounterExample (execute (wrapper c t2 (Some st)) x2)"
+  (* using staticAnalysisComplete_aux traceListToSingleInput_isSingleInput2 by blast *)
   oops
 
 theorem staticAnalysisComplete : "validAndPositive_state st \<Longrightarrow>
@@ -1027,7 +1073,7 @@ theorem staticAnalysisComplete : "validAndPositive_state st \<Longrightarrow>
                                                                   , txOutState = st
                                                                   , txOutContract = c \<rparr> t)) \<Longrightarrow>
                                   (\<exists> t x. isCounterExample (execute (wrapper c t (Some st)) x))"
- (* by (meson const.cases staticAnalysisComplete_aux) *)
+  (* by (metis playTraceAuxToSingleInputIsEquivalent staticAnalysisComplete_aux2 surj_pair) *)
   oops
 
 (*

@@ -1143,6 +1143,7 @@ lemma transactionPrefixForSingleInput : "h # t = traceListToSingleInput nt \<Lon
     done
   done
 
+
 lemma traceListToSingleInput_isSingleInput : "\<lparr>interval = inte, inputs = inp_h # inp_t\<rparr> # t = traceListToSingleInput t2 \<Longrightarrow> inp_t \<noteq> [] \<Longrightarrow> False"
   apply (induction t2 rule:traceListToSingleInput.induct)
   apply simp_all
@@ -1151,4 +1152,20 @@ lemma traceListToSingleInput_isSingleInput : "\<lparr>interval = inte, inputs = 
     by simp_all
   done
 
+fun isSingleInput :: "Transaction list \<Rightarrow> bool" where
+"isSingleInput [] = True" |
+"isSingleInput (h # t) = (length (inputs h) \<le> 1 \<and> isSingleInput t)"
+
+lemma isSingleInput_dist_with_append : "isSingleInput (a @ b) = (isSingleInput a \<and> isSingleInput b)"
+  apply (induction a arbitrary:b)
+  by auto
+
+lemma inputToTransactions_isSingleInput : "isSingleInput (inputsToTransactions si inps)"
+  apply (induction si inps rule:inputsToTransactions.induct)
+  by auto
+
+lemma traceListToSingleInput_isSingleInput2 : "isSingleInput (traceListToSingleInput t)"
+  apply (induction t rule:traceListToSingleInput.induct)
+  by (simp_all add: inputToTransactions_isSingleInput isSingleInput_dist_with_append)
+    
 end

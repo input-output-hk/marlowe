@@ -54,7 +54,7 @@
 \renewcommand{\lstlistingname}{Listing}
 
 \begin{document}
-\title{Contribution Title\thanks{Supported by organization x.}}
+\title{Standardized crypto-loans on Cardano blockchain\textquotedblright \thanks{Supported by organization x.}}
 
 \maketitle
 %\titlerunning{Abbreviated paper title}
@@ -89,6 +89,22 @@ at its core.
 
 
 \section{Introduction}
+
+List of contributions:
+\begin{itemize}
+\item \textquotedblleft Marlowe Labs\textquotedblright{} editor on Playground
+(Dmytro) 
+\item R Shiny cashflow visualiser for ACTUS (Dmytro) 
+\item ACTUS Utility functions (Dmytro, Quanterall) 
+\item executable ACTUS spec for PAM (Dmytro, Alex) 
+\item executable ACTUS spec for LAM (Wyo Hackathon) 
+\item Library for generating ACTUS contracts (Dmytro) 
+\item ACTUS-like examples on Playground (Dmytro, Alex, Pablo) 
+\item Marlowe DSL enhancements for Actus: Cond, Mul (Dmytro) (draft) 
+\item ACTUS spec generator for Agda (Dmytro) 
+\item Auto-refund static analysis (Pablo) (partial: only QC) 
+\item Verification with QC + SMT (Dmytro) 
+\end{itemize}
 
 \section{Background}
 
@@ -279,13 +295,11 @@ party providing necessary data or network of parties under consensus
 {[}find a quote{]}. From Marlowe DSL perspective, the exact mechanism
 that provides external data is less important, as Marlowe abstracts
 over IO by requiring particular type of input (``Choice'') protected
-with a cryptographic signature (Choice owner), although Plutus implementation
-of Marlowe only supports {[}Cardano Elliptic Curves - which ones?{]}
-so adding new types of signatures would require some extra work. As
-a result, the event of receiving data from Oracle is treated the same
-as receiving integer numbers from user input in other languages
+with a cryptographic signature (Choice owner). As a result, the event
+of receiving data from Oracle is treated the same as receiving integer
+numbers from user input in other languages
 
-\section{Building executable specification of ACTUS for crypto-loans}
+\section{Building executable specification of ACTUS}
 
 \subsection{Mimicking the specification with Haskell code}
 
@@ -375,7 +389,7 @@ result:
 
 \begin{equation}
 formula(st)=\begin{cases}
-formula' & var1(st)<var2(st)\\
+formula'(st) & var1(st)<var2(st)\\
 0 & otherwise
 \end{cases}
 \end{equation}
@@ -457,8 +471,9 @@ contract type to be merged
 \label{fig1-1} 
 \end{figure}
 
-Generated contract is essentially a continuation chain of repetition
-Marlowe Contracts:
+
+Generated contract is essentially a continuation chain of smaller
+contracts:
 
 \noindent 
 \begin{equation}
@@ -480,7 +495,7 @@ is generated from the fixed (known in advance) schedule of events
 using $SCHED()$function from ACTUS.
 
 \begin{figure}
-\includegraphics[width=1\textwidth]{flowchart} \caption{Modules responsible for contract generation.}
+\includegraphics[width=1\textwidth]{flowchart} \caption{Chain of sub-contracts representing ACTUS logic}
 \label{fig1-1-1} 
 \end{figure}
 

@@ -1,0 +1,692 @@
+%% LyX 2.3.6.2 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+\documentclass[runningheads]{llncs}
+\usepackage[latin9]{inputenc}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{graphicx}
+
+\makeatletter
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+% This is samplepaper.tex, a sample chapter demonstrating the
+% LLNCS macro package for Springer Computer Science proceedings;
+% Version 2.20 of 2017/10/04
+%
+% Used for displaying a sample figure. If possible, figure files should
+% be included in EPS format.
+%
+% If you use the hyperref package, please uncomment the following line
+% to display URLs in blue roman font according to Springer's eBook style:
+% \renewcommand\UrlFont{\color{blue}\rmfamily}
+
+
+
+
+
+
+
+
+
+\usepackage{listings}
+\renewcommand{\lstlistingname}{Listing}
+
+
+
+\makeatother
+
+\usepackage{listings}
+\renewcommand{\lstlistingname}{Listing}
+
+\begin{document}
+\title{Contribution Title\thanks{Supported by organization x.}}
+\author{First Author\inst{1}\orcidID{0000-1111-2222-3333} \and Second
+Author\inst{2,3}\orcidID{1111-2222-3333-4444} \and Third Author\inst{3}\orcidID{2222--3333-4444-5555}}
+\authorrunning{F. Author et al.}
+\institute{Princeton University, Princeton NJ 08544, USA \and Springer Heidelberg,
+Tiergartenstr. 17, 69121 Heidelberg, Germany }
+\email{lncs@springer.com}
+\institute{\url{http://www.springer.com/gp/computer-science/lncs} \and ABC
+Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
+ }
+\email{\{abc,lncs\}@uni-heidelberg.de}
+\maketitle
+\begin{abstract}
+Crypto-loans are unique and innovative financial instruments that
+allow trustless P2P lending, which could provide a safe and convenient
+source of liquidity for cryptocurrency holders. In this article, we
+explore a smart-contract framework for building standardized crypto-loans
+with Marlowe DSL and Algorithmic Contract Types Unified Standards
+at its core.
+
+\keywords{cardano \and actus \and blockchain \and finance} 
+\end{abstract}
+
+
+\section{Introduction}
+
+\section{Background}
+
+A loan is a form of debt incurred by an individual or other entity.
+The lender advances a sum of money to the borrower. In return, the
+borrower agrees to a certain set of terms including any finance charges,
+interest, repayment date, and other conditions.
+
+Cryptocurrency-backed loans must have collaterals as there is no trust
+between party and counterparty. While loan is usually settled in a
+stable-coin currency (e.g. USDT/USDC), the typical collateral is denominated
+in a cryptocurrency (e.g. BTC). The purpose of this loan is to give
+the borrower access to the fiat value of their crypto-funds without
+actually selling them for fiat. Borrower pays interest In exchange
+for provided liquidity.
+
+Every loan has a positive net payoff (return minus investment) that
+is either rendered as a one-time payment (see ZCB) or as a scheduled
+payment of the interest. The rate of interest could be fixed throughout
+the lifetime of a contract - for example zero-risk bonds have an fixed
+interest proportional to inflation rate.
+
+However, in a generic case - the interest rate is variable and depends
+on an external factor agreed in advance, while the interest is periodically
+updated by observing the state of that factor. Such loans usually
+represent an investment in a particular venture or the industry. As
+a somewhat fictional example, one could imagine a cryptocurrency miner
+who decided to scale their crypto-farm: the loan (in USD) with variable
+interest that directly depends on cryptocurrency prices would be more
+attractive for a miner because it would directly correlate with miner's
+profits. For example, if the price of the cryptocurrency goes down
+in a particular month - miners would have to pay lower interest -
+one always pays ``fixed share'' of the profits. In a more traditional
+setup - the canonical example would be a power plant taking a loan
+with interest depending on electricity prices. In both cases, either
+cryptocurrency or electricity prices become a driver for the interest
+rate.
+
+Although, one can't just take the bare price of the asset and turn
+it into a rate. In order to make ``units of measurement'' compatible
+- adjustments should be made. Fluctuations of the interest rate driver
+are embedded as:
+
+\noindent 
+\begin{equation}
+\Delta_{r}=capfloor(driver*multiplier+spread-interestRate_{t-1})
+\end{equation}
+
+\noindent 
+\begin{equation}
+interestRate_{t+1}=capfloor(interestRate_{t-1}+\Delta_{r}),
+\end{equation}
+
+Where capfloor is a function that limits the range of fluctuation
+(thus limiting lender's risk exposure):
+
+\noindent 
+\begin{equation}
+capfloor(x)=max(min(x,floor),cap)
+\end{equation}
+
+Here, the spread parameter loosely represents the difference between
+the average prime rate that the lender expects (benchmark yield) and
+the rate imposed by the driver - the higher the spread, the higher
+the resulting interest rate is. Multiplier effectively rescales the
+interest rate plot in order to represent the difference between units
+of measurement: how much percentage points you would get for a usd-to-kilowatt
+and so on.
+
+In the context of ACTUS and other event-based frameworks, there is
+one more factor influencing interest rates thrrough scaling:
+
+\noindent 
+\begin{equation}
+interestPayment=interestScalingFactor*interstRate*notional
+\end{equation}
+
+This scaling is dynamic and loosely adjusts for variance (volatility)
+of the asset that the interest rate driver represents.
+
+\paragraph*{Interest accrual and capitalisation. }
+
+Counterparty might decide to reinvest profit received as interest
+from the same loan. In the simplest case, this renders as compound
+interest (TODO link). This can be modeled through interest accrual
+and capitalisation, for instance contracts from the ACTUS specification
+accrue interest between interest payments and can transfer interest
+to a notional during interest capitalisation event (IPCL).
+
+Overall, variable interest rates introduce a certain risk for a lender,
+thus they are subject to hedging. While any instrument that depends
+on the same risk factor (interest rate driver) would suffice - the
+most popular way to hedge a variable interest rate loan is interest
+rate swap. This instrument allows two (or more) parties to exchange
+their incomes - one from fixed interest rate loans, the other one
+- from variable interest
+
+\paragraph*{Counterparty risk.}
+
+Trustless setups, especially ones in the cryptocurrency world (e.g.
+decentralised smart-contracts and exchanges) require zero trust between
+party and counterparty involved in a contract. In case of a loan,
+this literally means that counterparty has zero-obligation to pay
+the money back, thus rendering the loan useless for a party. Such
+risks are usually addressed by introducing collaterals: 
+\begin{enumerate}
+\item Alice would like to borrow 1000 USD 
+\item She has Bitcoin assets cost around 1500 USD, which she intends to
+hold throughout a year, so Alice has high confidence in the market
+(she expects prices to double or triple) 
+\item Bob would like to lend 1000 USD and get an interest higher than traditional
+interest rate offered by banks (let's say 15\% instead of 10\%). He
+is either bearish or neutral towards Bitcoin. 
+\item Alice transfers her BTC as collateral to a contract, and Bob transfers
+his USD to Alice 
+\item If Alice pays interest and notional on time (and Btc-price doesn't
+render collateral worthless) - she can get her collateral back, otherwise
+the loan gets liquidated and collateral is transferred to Bob. 
+\end{enumerate}
+
+\section{Modeling financial contracts}
+
+\subsection{Marlowe }
+
+Marlowe is a high-level, domain-specific language (DSL) for writing
+financial contracts on blockchain. Marlowe is defined by an executable
+semantics in Haskell, and has been implemented on the UTxO-based Cardano
+blockchain.
+
+The main advantage of using Marlowe to carry ACTUS logic is enhanced
+security that static analysis {[}TODO link{]} provides. SMT-solvers
+gain increasing popularity as an alternative to fuzzing when it comes
+to testing software for vulnerabilities {[}TODO link{]}. Smart contracts
+generated from ACTUS specification are quite complicated, so manually
+testing every possible execution path for every possible combination
+of contract terms is not feasible. Static analysis, in turn, can reduce
+the amount of ``dumb'' mistakes that could cost millions to the
+users by ensuring obvious properties of a contract. It is not a panacea,
+however, unlike with fuzzing, if SA says that certain property holds
+- it does it with 100\% assurance.
+
+\subsection{ACTUS}
+
+ACTUS defines the logic embedded in legal agreements that eventually
+turn the contract terms into actual cash flows, or more generally
+business events. Most of Its basic contract types represent different
+variations of lending contracts.
+
+ACTUS relies on a state machine formalism in order to describe the
+behaviour of a given contract. Every payoff (transfer of funds in
+or out of a contract) can be inferred for any given state. Every state
+can be inferred from previous events and observed risk factors:
+
+\noindent 
+\begin{equation}
+payoff_{i}=POF(state_{i})
+\end{equation}
+
+\noindent 
+\begin{equation}
+path=STF_{1}(ct,ev_{1})\circ STF_{2}(ct,ev_{2}).\circ\ldots\circ STF_{i}(ct,ev_{n})
+\end{equation}
+
+\noindent 
+\begin{equation}
+state_{i}=path(INIT(ct)),
+\end{equation}
+
+where $ct$ is contract terms, $INIT$ returns initial state, $sched$
+returns scheduled events, $STF$ takes ${contractterms,event,state}$
+and returns next state, $POF$ returns payoff.
+
+\subsection{Necessity for Oracles}
+
+In order to support variable interest rates and scaling, ACTUS requires
+a smart contract to be able to observe the value of a given risk factor
+(such as interest rate) at a particular point in time t:
+
+\noindent 
+\begin{equation}
+riskfactor_{i}{}_{t}=O_{rf}(i,t)
+\end{equation}
+
+This is due to the risk factor's state not being known at instantiation
+time. In the case of Cardano blockchain, these values are usually
+provided through an ``Oracle'' mechanism. Oracle could be a trusted
+party providing necessary data or network of parties under consensus
+{[}find a quote{]}. From Marlowe DSL perspective, the exact mechanism
+that provides external data is less important, as Marlowe abstracts
+over IO by requiring particular type of input (``Choice'') protected
+with a cryptographic signature (Choice owner), although Plutus implementation
+of Marlowe only supports {[}Cardano Elliptic Curves - which ones?{]}
+so adding new types of signatures would require some extra work. As
+a result, the event of receiving data from Oracle is treated the same
+as receiving integer numbers from user input in other languages
+
+\section{Building executable specification of ACTUS for crypto-loans}
+
+\subsection{Mimicking the specification with Haskell code}
+
+The ACTUS standard is specified in terms of {[}link{]} scheduling,
+payoff and state transition functions that are polymorphic on event
+and contract type. The specification also follows quite specific naming
+conventions that are incompatible with Haskell's conventions. The
+executable specification follows original ACTUS conventions as close
+as possible in order to ease code base maintenance when faced with
+updates of original ACTUS spec (link to github).
+
+Using Haskell itself as a DSL for explicitly encoding formulas without
+using advanced language idioms also simplifies code generation, but
+in case of ACTUS comes at a cost reduced type-safety, handling nullable
+values explicitly introduces risk of exceptions. However this risk
+is addressed using QuickCheck generators.
+
+\subsection{Utilizing polymorphism to abstract over basic operations}
+
+In order to keep our executable specification independent of the carrier
+(whether its smart-contract engine, proof assistant, analytical framework
+or even machine learning model) - we abstract over underlying representations
+of state variables and arithmetic operations:
+
+\begin{lstlisting}
+--Definitions/ContractState.hs 
+data ContractStatePoly a b = ContractStatePoly  
+{  
+tmd     :: b  
+, nt    :: a  
+, ipnr  :: a  
+, ipac  :: a  
+, feac  :: a  
+, fac   :: a  
+, nsc   :: a  
+, isc   :: a  
+, prf   :: ContractStatus  
+, sd    :: b  
+, prnxt :: a  
+, ipcb  :: a  
+} deriving (Show) 
+
+--Ops.hs
+class ActusOps a where    
+   _min :: a -> a -> a
+   _max :: a -> a -> a
+   _zero :: a
+   _one :: a
+
+class ActusNum a where
+   (+) :: a -> a -> a
+   (-) :: a -> a -> a
+   (*) :: a -> a -> a
+   (/) :: a -> a -> a
+
+class YearFractionOps a b where
+   _y :: DCC -> a -> a -> a -> b   
+
+class DateOps a b where
+   _lt :: a -> a -> b --returns pseudo-boolean   
+
+class RoleSignOps a where
+   _r :: ContractRole -> a
+\end{lstlisting}
+
+Thus, every formula in the executable spec could either be instantiated
+to: 
+\begin{itemize}
+\item Formula on some ``atomic'' type (like Double, Day) - could be used
+to directly compute cash-flows for analytical purposes or precompute
+payoffs for smart contracts that don't depend on oracles 
+\item Formula representing piece of AST (Marlowe Value, Observation) - could
+be used to generate smart contracts that depend on oracles or to generate
+code in another language (like Agda) 
+\end{itemize}
+This approach of abstracting formulas has a limitation of not allowing
+conditionals to be expressed in an abstract way (There is no ActusIf
+typeclass) - luckily most of conditional expressions in ACTUS specification
+don't depend on variable state of a contract - they depend on ContractTerms
+that are known in advance during contract generation. This allows
+us to dispatch appropriate formulas during generation rather than
+execution.
+
+The only exception to this are rare situations where we need to compare
+2 state variables and either choose formula1 or 0 depending on comparison
+result:
+
+\begin{equation}
+formula(st)=\begin{cases}
+formula' & var1(st)<var2(st)\\
+0
+\end{cases}
+\end{equation}
+
+We rely on pseudo-boolean ``less than'' function in order to address
+that: 
+
+\noindent 
+\begin{equation}
+formula(st)=pseudoLt(var1(s1),var2(st)))*formula'
+\end{equation}
+
+\noindent 
+\begin{equation}
+pseudoLt(a,b)=Cond(a>b,1,0)
+\end{equation}
+
+
+\subsection{Contract terms representation and explicit applicability}
+
+In order to simplify serialisation/deserialisation of contract terms
+across Actus related services maintained by Cardano/IOG - we rely
+on \textquotedblleft superposed\textquotedblright{} representation
+of contract terms - all contract types are represented with the same
+type. Although it allows both encoder and decoder to express any ACTUS
+contract terms, it also allows for invalid combinations of terms (for
+example PRNXT cannot be applied to PAM-contract), which means contracts
+require specific validation that is implemented by means of applicability
+function:
+
+Applicability: ContractTerms \textbar -\textgreater{} Bool
+
+Actus has a family of applicability functions polymorphic on contract
+type:
+
+Applicability: ContractType x ContractTerm \textbar -\textgreater{}
+ApplicabilityType Where applicability is either: none, always, nullable,
+multiple -{}-TODO describe
+
+In order to build superposed contract terms type for such function,
+we have to resolve conflicting applicability for contract terms merged
+by following the resolution rules below:
+
+weaken(none, always) = weaken(always, none) = nullable weaken(a1,
+a2) = if (priority(a1) \textgreater{} priority(a2)) a1 else a2 Where
+priority(always) = 0 priority(none) = 1 priority(nullable) = 2 priority(multiple)
+= 3 a1 - is applicability of a given term of first contract type to
+be merged a2 - is applicability of a given term of second contract
+type to be merged 
+
+\section{Generating Marlowe contracts from standardised ACTUS contract terms}
+
+\subsection{Overall architecture }
+
+Generated contract is essentially a continuation chain of Marlowe
+Contracts:
+
+chainlink(eventtype, date) = receive\_data(oracle\_data(date)) -\textgreater{}
+calculate\_payoff(eventtype, date) -\textgreater{} process\_payoff(date)
+
+where receive\_data - is asking an Oracle for Marlowe Choice if needed
+calculate\_payoff - calculates payoff formula. For fixed-rate contracts
+this is optimised into a precalculated constant. process\_payoff -
+await Deposit of payoff amount from a party: if deposit is transferred
+it redirects the funds to a counterparty - otherwise it transfers
+the collateral to a counterparty and closes the contract.
+
+The chain is generated from the fixed (known in advance) schedule
+of events:
+
+contract(schedule) = receive\_collaterals -\textgreater{} initialise
+state -\textgreater{} fold schedule chainlink 
+
+\subsection{Avoiding exponential growth }
+
+Marlowe doesn\textquoteright t allow functions and recursion. Naive
+usage of If operator in Marlowe could lead to exponential growth of
+a contract, for example:
+
+If (condition) then perform\_something1(); continue(); else perform\_something2;
+continue()
+
+would inline contents of \textquotedblleft continue()\textquotedblright{}
+twice and given that ACTUS contracts are essentially generated using
+continuation as an accumulator - this would lead to exponential explosion
+of the size of any actus contract that has conditionals in their state
+transition logic.
+
+Example of such logic would be cap/floor limitations on interest rate:
+
+adjusted = max(min(original, floor), cap) Where max(a, b) = if (a
+\textgreater{} b) then a else b min(a,b) = if (a \textless{} b) then
+a else b
+
+We addressed this issue by introducing Cond(link to Marlowe docs)
+construct in order to represent \textquotedblleft if\textquotedblright{}
+expressions. So instead of using the \textquotedblleft If\textquotedblright{}
+contract to decide the value of some variable - we use conditional
+assignment instead as Cond is essentially just a pure function that
+returns value depending on condition in contrast to the \textquotedblleft If\textquotedblright{}
+contract that performs action instead of returning value. The name
+is borrowed from a similar function in Lisp. 
+
+\subsection{Limitations due to termination }
+
+Marlowe doesn\textquoteright t allow perpetual contracts even if their
+recursion is productive (example: perpetual swap) - thus we can\textquoteright t
+support certain contract types from ACTUS specification, namely the
+ones that don\textquoteright t have a defined maturity date (like
+UMP). In a long-term perspective - there is a possible workaround:
+contracts with no maturity date could be represented as actors with
+finite amounts of state transitions. We prototyped this approach in
+a separate branch, however it does seem more prone to errors comparing
+to rendering predefined schedules and more importantly it greatly
+affects static analysis as the amount of \textquotedblleft reduction
+steps\textquotedblright{} grows from N\_scheduled\_event = count(event)
+to N\_state\_transition = max(date(event)) - min(date(event)) / precision.
+See https://github.com/dk14/plutus/tree/ACTUS 
+
+\subsection{Fixed-point precision }
+
+Marlowe only supports Integers, while ACTUS is expressed in terms
+of real numbers. In order to model a real number in such a setup -
+we rely on fixed point precision. The algebra looks like this: 
+\begin{lstlisting}
+   (+)                         = AddValue
+   (-)                         = SubValue
+   a * b                       = Scale (1 % marloweFixedPoint) $ MulValue a b
+   (Constant 0) / (Constant 0) = (Constant 0)
+   (Constant x) / (Constant y) = Scale (marloweFixedPoint % 1) $ Constant $ div x y
+   x / (Constant y)            = Scale (marloweFixedPoint % y) $ x    
+   _ / _                       = undefined --division not supported in Marlowe yet 
+\end{lstlisting}
+
+
+\subsection{Representing Actus state in a Marlowe contract}
+
+Unfortunately, Marlowe DSL doesn\textquoteright t support any notion
+of records, the variables can only be of type \textquotedblleft Integer\textquotedblright .
+Thus, in order to map contract state (ContractStatePoly) we first
+pack a set of Marlowe variables (Value Observation) representing previous
+t-1 state into ContractStatePoly, then we apply polymorphic state
+transition, and finally unpack ContractState poly into a set of Marlowe
+variables into t+1 state:
+
+st\_t+1 = unpack(stateTransition(pack(st\_t-1))) , where pack is a
+chain of UseValue and unpack is a chain of Let
+
+Representing \textquotedblleft mutations\textquotedblright{} (e.g.
+state transitions) in Marlowe (unfolding)
+
+Marlowe doesn\textquoteright t support mutable variables, so we have
+to represent state at t (st\_t) literally by naming convention:
+
+variable\_name(name, t) = concat(name, \textquotedblleft \_\textquotedblright ,
+t) generate\_variable\_accessor(name, t) = UseValue variable\_name(name,
+t) generate\_variable\_setter(name, t, formula) = Let variable\_name(name,
+t) formula 
+
+\subsection{ActusLabs}
+
+In order to demonstrate and test the capabilities of Actus generators,
+a visual Blockly-based tool was developed for Marlowe Playground.
+The Actus Labs tool allows users to construct contract terms visually,
+generate a corresponding Marlowe contract and try it out in a simulated
+environment. 
+
+\section{Tokenization}
+
+Every participant of an ACTUS contract is described by a Role which
+is in its turn represented through a special unique non-fungible token.
+This makes every Marlowe contract a tradable security, allowing a
+participant to sell its \textquotedblleft share\textquotedblright{}
+in a contract by selling a corresponding role token.
+
+Role tokens can potentially allow more complex manipulation over shares,
+especially when share represents an incoming cash flow: participants
+only send funds to a party represented by a given token. Such a token
+would represent a positive cashflow which in turn could not just become
+tradable but would also allow to derive tokens only representing fractions
+of a particular cash flow in a contract.
+
+Moreover, it turns Actus-loans into derivatives, for example contracts
+like Interest Rate Swap (and Swaps in general) could be approximated
+by an Atomic Swap of tokens representing incoming cash flows from
+lending. 
+
+For example, if Alice has fixed income from a loan (or some other
+investment) and Bob has comparable but variable (fluctuating) income
+- Bob can hedge by swapping cash flows with Alice. If Alice\textquoteright s
+income is locked with token1 and Bob\textquoteright s income is locked
+with token2 - then atomic swap of those tokens is equivalent to a
+swap of cash flows.
+
+\section{Verification and testing}
+
+\subsection{QuickCheck for cross-testing}
+
+In order to test the equivalence between Executable Haskell implementation
+of ACTUS for smart-contracts and original Java implementation for
+analytics - a simple property test was introduced:
+
+Forall ct. get\_cashflows\_haskell(ct, riskfactormodel) == get\_cashflows\_java(ct,
+riskfactormodel)
+
+Where get\_cashflows returns a set of \{date, payoff\} tuples. 
+
+\subsection{QuickCheck for verification}
+
+QuickCheck contract terms generators also allow to ensure arbitrary
+properties of a Marlowe contract. This could be enhanced with Marlowe\textquoteright s
+static analysis feature by utilising Assert operator:
+
+ContractTerms := sample(qcgenerator) Contract := generateMarloweContract(ContractTerms)
+ContractWithAssert := appendAssertion(Contract, assertion) runStaticAnalysis(ContractWithAssert)
+
+While it doesn\textquoteright t cover all possible contracts it could
+guarantee that property holds for a statistically significant fraction
+of a contract. Using Static Analysis to check a particular contract
+instead of randomly sampling allows: 
+\begin{itemize}
+\item more balanced sampling: Space of contract terms depends linearly on
+the coverage, e.g. if we cover 10\% of all possible contract terms
+- we\textquoteright ll cover 10\% of all contracts. Different contracts
+have different amount of risk factors thus different search space,
+for instance a contract with 3 risk factors (e.g. 3 observations of
+an interest rate) would span over n\textasciicircum 3 while a contract
+with 10 risk factors would span over n\textasciicircum 10. Meanwhile,
+space of all risk factors in all contracts doesn\textquoteright t
+linearly depend on the coverage. 
+\item dependency tracking: SMT-solver would likely be more aware of execution
+paths leading to failure of a test, which could significantly reduce
+search space 
+\item completeness: If not timed out, SMT-solver is decidable while sampling
+is semi-decidable. 
+\end{itemize}
+
+\subsection{Securing collateral logic with auto-refund warnings}
+
+By design, the Marlowe interpreter always refunds assets held in a
+contract when it terminates. This is done in order to ensure that
+no funds are lost forever. The funds are returned to whoever\textquoteright s
+internal account actually holds them.
+
+However, this presents as a problem in certain cases where ownership
+of the funds could not be automatically determined. For example if
+Alice puts collateral in a crypto-loan contract - she would formally
+maintain ownership, which means she would get automatically refunded
+when Close contract is reached.
+
+This implicit refund is easy to overlook by smart-contract developers
+as plain Close is often used as a default action in case of unexpected
+behaviour like timeouts(especially Choice timeout). This can easily
+lead to multi-million dollar mistakes if malicious Alice decides to
+exploit an auto-refund feature in order to get her collateral without
+paying back. Here\textquoteright s the example of simple attack vector:
+\begin{enumerate}
+\item Alice creates a contract where Deposit timeout would lead to Close 
+\item Bob doesn\textquoteright t know or test the timeout path. Even if
+Bob is a programmer - he might not be aware that Closing contract
+would cause collateral refund 
+\item Alice puts collateral and gets notional from Bob 
+\item Alice doesn\textquoteright t pay for a loan (Deposit timeout) 
+\item Alice gets her collateral back 
+\item Bob loses notional
+\end{enumerate}
+In order to prevent this from happening, an additional \textquotedblright Auto-Refund\textquotedblright{}
+security check was introduced as part of Static Analysis {[}TODO link{]}
+tooling which notifies users about all Close constructs that can lead
+to automatic refunds and encourages users to write explicit logic
+for edge cases. 
+
+\section{Comparison with existing smart-contracts approaches }
+
+Unlike current popular DeFi lending approaches (like Harvest Finance)
+- Marlowe ACTUS-based implementation tends to rely on \textquotedblleft good
+old\textquotedblright{} matching instead of pooling. While pooling
+is proven to be superior to order-book based approaches when it comes
+to automated market makers, using it for lending has been shown to
+be more susceptible to attacks (for example \textquotedblleft flash
+loan\textquotedblright{} (https://www.coindesk.com/harvest-finance-24m-attack-triggers-570m-bank-run-in-latest-defi-exploit)).
+
+Moving trade matching off-chain also improves scalability of the protocol
+- every loan is a separate contract, thus there is no global state.
+
+Actus provides additional benefit of being regulatory friendly, ACTUS
+foundation provides a set of tools allowing Monte-Carlo simulations
+of ACTUS contracts. 
+
+\section{Conclusion}
+
+Marlowe language was explicitly designed as a set of building blocks
+for financial contracts that could be combined by anyone familiar
+with basic programming. Marlowe ACTUS generators improve on that by
+providing a way to automatically combine blocks based on standardized
+requirements specified by the user.
+
+On top of that, Marlowe ACTUS provides a toolkit for cross-testing
+with original ACTUS spec, a framework for adding new contract types,
+cash-flow visualisations and verification tooling.
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{fig1} \caption{A figure caption is always placed below the illustration. Please note
+that short captions are centered, while long ones are justified by
+the macro package automatically.}
+\label{fig1} 
+\end{figure}
+
+For citations of references, we prefer the use of square brackets
+and consecutive numbers. Citations using labels or the author/year
+convention are also acceptable. The following bibliography provides
+a sample reference list with entries for journal articles~\cite{ref_article1},
+an LNCS chapter~\cite{ref_lncs1}, a book~\cite{ref_book1}, proceedings
+without editors~\cite{ref_proc1}, and a homepage~\cite{ref_url1}.
+Multiple citations are grouped \cite{ref_article1,ref_lncs1,ref_book1},
+\cite{ref_article1,ref_book1,ref_proc1,ref_url1}. % ---- Bibliography ----
+% BibTeX users should specify bibliography style 'splncs04'.
+% References will then be sorted and formatted in the correct style.
+% \bibliographystyle{splncs04}
+% \bibliography{mybibliography}
+
+\begin{thebibliography}{1}
+\bibitem{ref_article1} Author, F.: Article title. Journal \textbf{2}(5),
+99--110 (2016)
+
+\bibitem{ref_lncs1} Author, F., Author, S.: Title of a proceedings
+paper. In: Editor, F., Editor, S. (eds.) CONFERENCE 2016, LNCS, vol.
+9999, pp. 1--13. Springer, Heidelberg (2016). \doi{10.10007/1234567890}
+
+\bibitem{ref_book1} Author, F., Author, S., Author, T.: Book title.
+2nd edn. Publisher, Location (1999)
+
+\bibitem{ref_proc1} Author, A.-B.: Contribution title. In: 9th International
+Proceedings on Proceedings, pp. 1--2. Publisher, Location (2010)
+
+\bibitem{ref_url1} LNCS Homepage, \url{http://www.springer.com/lncs}.
+Last accessed 4 Oct 2017 
+\end{thebibliography}
+
+\end{document}

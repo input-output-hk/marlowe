@@ -1,0 +1,2017 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass llncs
+\begin_preamble
+% This is samplepaper.tex, a sample chapter demonstrating the
+% LLNCS macro package for Springer Computer Science proceedings;
+% Version 2.20 of 2017/10/04
+%
+% Used for displaying a sample figure. If possible, figure files should
+% be included in EPS format.
+%
+% If you use the hyperref package, please uncomment the following line
+% to display URLs in blue roman font according to Springer's eBook style:
+% \renewcommand\UrlFont{\color{blue}\rmfamily}
+
+
+
+
+
+
+
+
+
+\usepackage{listings}
+\renewcommand{\lstlistingname}{Listing}
+\end_preamble
+\options runningheads
+\use_default_options false
+\maintain_unincluded_children false
+\language english
+\language_package none
+\inputencoding iso8859-15
+\fontencoding default
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 2
+\use_package amssymb 0
+\use_package cancel 0
+\use_package esint 1
+\use_package mathdots 0
+\use_package mathtools 0
+\use_package mhchem 0
+\use_package stackrel 0
+\use_package stmaryrd 0
+\use_package undertilde 0
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 0
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Contribution Title
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+Supported by organization x.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Author
+First Author
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+inst
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+1
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+orcidID
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+0000-1111-2222-3333
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+and
+\end_layout
+
+\end_inset
+
+ Second Author
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+inst
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+2,3
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+orcidID
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+1111-2222-3333-4444
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+and
+\end_layout
+
+\end_inset
+
+ Third Author
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+inst
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+3
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+orcidID
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+2222–3333-4444-5555
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Author Running
+F.
+ Author et al.
+\end_layout
+
+\begin_layout Institute
+Princeton University, Princeton NJ 08544, USA 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+and
+\end_layout
+
+\end_inset
+
+ Springer Heidelberg, Tiergartenstr.
+ 17, 69121 Heidelberg, Germany 
+\end_layout
+
+\begin_layout Email
+lncs@springer.com
+\end_layout
+
+\begin_layout Institute
+\begin_inset Flex URL
+status collapsed
+
+\begin_layout Plain Layout
+
+http://www.springer.com/gp/computer-science/lncs
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+and
+\end_layout
+
+\end_inset
+
+ ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany
+\begin_inset Newline newline
+\end_inset
+
+ 
+\end_layout
+
+\begin_layout Email
+{abc,lncs}@uni-heidelberg.de
+\end_layout
+
+\begin_layout Abstract
+Crypto-loans are unique and innovative financial instruments that allow
+ trustless P2P lending, which could provide a safe and convenient source
+ of liquidity for cryptocurrency holders.
+ In this article, we explore a smart-contract framework for building standardize
+d crypto-loans with Marlowe DSL and Algorithmic Contract Types Unified Standards
+ at its core.
+\end_layout
+
+\begin_layout Abstract
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+keywords
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+cardano 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+and
+\end_layout
+
+\end_inset
+
+ actus 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+and
+\end_layout
+
+\end_inset
+
+ blockchain 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+and
+\end_layout
+
+\end_inset
+
+ finance
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+ 
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Section
+Background
+\end_layout
+
+\begin_layout Standard
+A loan is a form of debt incurred by an individual or other entity.
+ The lender advances a sum of money to the borrower.
+ In return, the borrower agrees to a certain set of terms including any
+ finance charges, interest, repayment date, and other conditions.
+\end_layout
+
+\begin_layout Standard
+Cryptocurrency-backed loans must have collaterals as there is no trust between
+ party and counterparty.
+ While loan is usually settled in a stable-coin currency (e.g.
+ USDT/USDC), the typical collateral is denominated in a cryptocurrency (e.g.
+ BTC).
+ The purpose of this loan is to give the borrower access to the fiat value
+ of their crypto-funds without actually selling them for fiat.
+ Borrower pays interest In exchange for provided liquidity.
+\end_layout
+
+\begin_layout Standard
+Every loan has a positive net payoff (return minus investment) that is either
+ rendered as a one-time payment (see ZCB) or as a scheduled payment of the
+ interest.
+ The rate of interest could be fixed throughout the lifetime of a contract
+ - for example zero-risk bonds have an fixed interest proportional to inflation
+ rate.
+\end_layout
+
+\begin_layout Standard
+However, in a generic case - the interest rate is variable and depends on
+ an external factor agreed in advance, while the interest is periodically
+ updated by observing the state of that factor.
+ Such loans usually represent an investment in a particular venture or the
+ industry.
+ As a somewhat fictional example, one could imagine a cryptocurrency miner
+ who decided to scale their crypto-farm: the loan (in USD) with variable
+ interest that directly depends on cryptocurrency prices would be more attractiv
+e for a miner because it would directly correlate with miner's profits.
+ For example, if the price of the cryptocurrency goes down in a particular
+ month - miners would have to pay lower interest - one always pays 
+\begin_inset Quotes eld
+\end_inset
+
+fixed share
+\begin_inset Quotes erd
+\end_inset
+
+ of the profits.
+ In a more traditional setup - the canonical example would be a power plant
+ taking a loan with interest depending on electricity prices.
+ In both cases, either cryptocurrency or electricity prices become a driver
+ for the interest rate.
+\end_layout
+
+\begin_layout Standard
+Although, one can't just take the bare price of the asset and turn it into
+ a rate.
+ In order to make 
+\begin_inset Quotes eld
+\end_inset
+
+units of measurement
+\begin_inset Quotes erd
+\end_inset
+
+ compatible - adjustments should be made.
+ Fluctuations of the interest rate driver are embedded as:
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{equation}
+\Delta_{r}=capfloor(driver*multiplier+spread-interestRate_{t-1})
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{equation}
+interestRate_{t+1}=capfloor(interestRate_{t-1}+\Delta_{r}),
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Where capfloor is a function that limits the range of fluctuation (thus
+ limiting lender's risk exposure):
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{equation}
+capfloor(x)=max(min(x,floor),cap)
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Here, the spread parameter loosely represents the difference between the
+ average prime rate that the lender expects (benchmark yield) and the rate
+ imposed by the driver - the higher the spread, the higher the resulting
+ interest rate is.
+ Multiplier effectively rescales the interest rate plot in order to represent
+ the difference between units of measurement: how much percentage points
+ you would get for a usd-to-kilowatt and so on.
+\end_layout
+
+\begin_layout Standard
+In the context of ACTUS and other event-based frameworks, there is one more
+ factor influencing interest rates thrrough scaling:
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{equation}
+interestPayment=interestScalingFactor*interstRate*notional
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This scaling is dynamic and loosely adjusts for variance (volatility) of
+ the asset that the interest rate driver represents.
+\end_layout
+
+\begin_layout Paragraph*
+Interest accrual and capitalisation.
+ 
+\end_layout
+
+\begin_layout Standard
+Counterparty might decide to reinvest profit received as interest from the
+ same loan.
+ In the simplest case, this renders as compound interest (TODO link).
+ This can be modeled through interest accrual and capitalisation, for instance
+ contracts from the ACTUS specification accrue interest between interest
+ payments and can transfer interest to a notional during interest capitalisation
+ event (IPCL).
+\end_layout
+
+\begin_layout Standard
+Overall, variable interest rates introduce a certain risk for a lender,
+ thus they are subject to hedging.
+ While any instrument that depends on the same risk factor (interest rate
+ driver) would suffice - the most popular way to hedge a variable interest
+ rate loan is interest rate swap.
+ This instrument allows two (or more) parties to exchange their incomes
+ - one from fixed interest rate loans, the other one - from variable interest
+\end_layout
+
+\begin_layout Paragraph*
+Counterparty risk.
+\end_layout
+
+\begin_layout Standard
+Trustless setups, especially ones in the cryptocurrency world (e.g.
+ decentralised smart-contracts and exchanges) require zero trust between
+ party and counterparty involved in a contract.
+ In case of a loan, this literally means that counterparty has zero-obligation
+ to pay the money back, thus rendering the loan useless for a party.
+ Such risks are usually addressed by introducing collaterals: 
+\end_layout
+
+\begin_layout Enumerate
+Alice would like to borrow 1000 USD 
+\end_layout
+
+\begin_layout Enumerate
+She has Bitcoin assets cost around 1500 USD, which she intends to hold throughou
+t a year, so Alice has high confidence in the market (she expects prices
+ to double or triple) 
+\end_layout
+
+\begin_layout Enumerate
+Bob would like to lend 1000 USD and get an interest higher than traditional
+ interest rate offered by banks (let's say 15% instead of 10%).
+ He is either bearish or neutral towards Bitcoin.
+ 
+\end_layout
+
+\begin_layout Enumerate
+Alice transfers her BTC as collateral to a contract, and Bob transfers his
+ USD to Alice 
+\end_layout
+
+\begin_layout Enumerate
+If Alice pays interest and notional on time (and Btc-price doesn't render
+ collateral worthless) - she can get her collateral back, otherwise the
+ loan gets liquidated and collateral is transferred to Bob.
+ 
+\end_layout
+
+\begin_layout Section
+Modeling financial contracts
+\end_layout
+
+\begin_layout Subsection
+Marlowe 
+\end_layout
+
+\begin_layout Standard
+Marlowe is a high-level, domain-specific language (DSL) for writing financial
+ contracts on blockchain.
+ Marlowe is defined by an executable semantics in Haskell, and has been
+ implemented on the UTxO-based Cardano blockchain.
+\end_layout
+
+\begin_layout Standard
+The main advantage of using Marlowe to carry ACTUS logic is enhanced security
+ that static analysis [TODO link] provides.
+ SMT-solvers gain increasing popularity as an alternative to fuzzing when
+ it comes to testing software for vulnerabilities [TODO link].
+ Smart contracts generated from ACTUS specification are quite complicated,
+ so manually testing every possible execution path for every possible combinatio
+n of contract terms is not feasible.
+ Static analysis, in turn, can reduce the amount of 
+\begin_inset Quotes eld
+\end_inset
+
+dumb
+\begin_inset Quotes erd
+\end_inset
+
+ mistakes that could cost millions to the users by ensuring obvious properties
+ of a contract.
+ It is not a panacea, however, unlike with fuzzing, if SA says that certain
+ property holds - it does it with 100% assurance.
+\end_layout
+
+\begin_layout Subsection
+ACTUS
+\end_layout
+
+\begin_layout Standard
+ACTUS defines the logic embedded in legal agreements that eventually turn
+ the contract terms into actual cash flows, or more generally business events.
+ Most of Its basic contract types represent different variations of lending
+ contracts.
+\end_layout
+
+\begin_layout Standard
+ACTUS relies on a state machine formalism in order to describe the behaviour
+ of a given contract.
+ Every payoff (transfer of funds in or out of a contract) can be inferred
+ for any given state.
+ Every state can be inferred from previous events and observed risk factors:
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{equation}
+payoff_{i}=POF(state_{i})
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{equation}
+path=STF_{1}(ct,ev_{1})\circ STF_{2}(ct,ev_{2}).\circ\ldots\circ STF_{i}(ct,ev_{n})
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{equation}
+state_{i}=path(INIT(ct)),
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $ct$
+\end_inset
+
+ is contract terms, 
+\begin_inset Formula $INIT$
+\end_inset
+
+ returns initial state, 
+\begin_inset Formula $sched$
+\end_inset
+
+ returns scheduled events, 
+\begin_inset Formula $STF$
+\end_inset
+
+ takes 
+\begin_inset Formula ${contractterms,event,state}$
+\end_inset
+
+ and returns next state, 
+\begin_inset Formula $POF$
+\end_inset
+
+ returns payoff.
+\end_layout
+
+\begin_layout Subsection
+Necessity for Oracles
+\end_layout
+
+\begin_layout Standard
+In order to support variable interest rates and scaling, ACTUS requires
+ a smart contract to be able to observe the value of a given risk factor
+ (such as interest rate) at a particular point in time t:
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{equation}
+riskfactor_{i}{}_{t}=O_{rf}(i,t)
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This is due to the risk factor
+\begin_inset Quotes ers
+\end_inset
+
+s state not being known at instantiation time.
+ In the case of Cardano blockchain, these values are usually provided through
+ an 
+\begin_inset Quotes eld
+\end_inset
+
+Oracle
+\begin_inset Quotes erd
+\end_inset
+
+ mechanism.
+ Oracle could be a trusted party providing necessary data or network of
+ parties under consensus [find a quote].
+ From Marlowe DSL perspective, the exact mechanism that provides external
+ data is less important, as Marlowe abstracts over IO by requiring particular
+ type of input (
+\begin_inset Quotes eld
+\end_inset
+
+Choice
+\begin_inset Quotes erd
+\end_inset
+
+) protected with a cryptographic signature (Choice owner), although Plutus
+ implementation of Marlowe only supports [Cardano Elliptic Curves - which
+ ones?] so adding new types of signatures would require some extra work.
+ As a result, the event of receiving data from Oracle is treated the same
+ as receiving integer numbers from user input in other languages
+\end_layout
+
+\begin_layout Section
+Building executable specification of ACTUS for crypto-loans
+\end_layout
+
+\begin_layout Subsection
+Mimicking the specification with Haskell code
+\end_layout
+
+\begin_layout Standard
+The ACTUS standard is specified in terms of [link] scheduling, payoff and
+ state transition functions that are polymorphic on event and contract type.
+ The specification also follows quite specific naming conventions that are
+ incompatible with Haskell
+\begin_inset Quotes ers
+\end_inset
+
+s conventions.
+ The executable specification follows original ACTUS conventions as close
+ as possible in order to ease code base maintenance when faced with updates
+ of original ACTUS spec (link to github).
+\end_layout
+
+\begin_layout Standard
+Using Haskell itself as a DSL for explicitly encoding formulas without using
+ advanced language idioms also simplifies code generation, but in case of
+ ACTUS comes at a cost reduced type-safety, handling nullable values explicitly
+ introduces risk of exceptions.
+ However this risk is addressed using QuickCheck generators.
+\end_layout
+
+\begin_layout Subsection
+Utilizing polymorphism to abstract over basic operations
+\end_layout
+
+\begin_layout Standard
+In order to keep our executable specification independent of the carrier
+ (whether its smart-contract engine, proof assistant, analytical framework
+ or even machine learning model) - we abstract over underlying representations
+ of state variables and arithmetic operations:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+--Definitions/ContractState.hs 
+\end_layout
+
+\begin_layout Plain Layout
+
+data ContractStatePoly a b = ContractStatePoly  
+\end_layout
+
+\begin_layout Plain Layout
+
+{  
+\end_layout
+
+\begin_layout Plain Layout
+
+tmd     :: b  
+\end_layout
+
+\begin_layout Plain Layout
+
+, nt    :: a  
+\end_layout
+
+\begin_layout Plain Layout
+
+, ipnr  :: a  
+\end_layout
+
+\begin_layout Plain Layout
+
+, ipac  :: a  
+\end_layout
+
+\begin_layout Plain Layout
+
+, feac  :: a  
+\end_layout
+
+\begin_layout Plain Layout
+
+, fac   :: a  
+\end_layout
+
+\begin_layout Plain Layout
+
+, nsc   :: a  
+\end_layout
+
+\begin_layout Plain Layout
+
+, isc   :: a  
+\end_layout
+
+\begin_layout Plain Layout
+
+, prf   :: ContractStatus  
+\end_layout
+
+\begin_layout Plain Layout
+
+, sd    :: b  
+\end_layout
+
+\begin_layout Plain Layout
+
+, prnxt :: a  
+\end_layout
+
+\begin_layout Plain Layout
+
+, ipcb  :: a  
+\end_layout
+
+\begin_layout Plain Layout
+
+} deriving (Show) 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+--Ops.hs
+\end_layout
+
+\begin_layout Plain Layout
+
+class ActusOps a where    
+\end_layout
+
+\begin_layout Plain Layout
+
+   _min :: a -> a -> a
+\end_layout
+
+\begin_layout Plain Layout
+
+   _max :: a -> a -> a
+\end_layout
+
+\begin_layout Plain Layout
+
+   _zero :: a
+\end_layout
+
+\begin_layout Plain Layout
+
+   _one :: a
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+class ActusNum a where
+\end_layout
+
+\begin_layout Plain Layout
+
+   (+) :: a -> a -> a
+\end_layout
+
+\begin_layout Plain Layout
+
+   (-) :: a -> a -> a
+\end_layout
+
+\begin_layout Plain Layout
+
+   (*) :: a -> a -> a
+\end_layout
+
+\begin_layout Plain Layout
+
+   (/) :: a -> a -> a
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+class YearFractionOps a b where
+\end_layout
+
+\begin_layout Plain Layout
+
+   _y :: DCC -> a -> a -> a -> b   
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+class DateOps a b where
+\end_layout
+
+\begin_layout Plain Layout
+
+   _lt :: a -> a -> b --returns pseudo-boolean   
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+class RoleSignOps a where
+\end_layout
+
+\begin_layout Plain Layout
+
+   _r :: ContractRole -> a
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Thus, every formula in the executable spec could either be instantiated
+ to: 
+\end_layout
+
+\begin_layout Itemize
+Formula on some 
+\begin_inset Quotes eld
+\end_inset
+
+atomic
+\begin_inset Quotes erd
+\end_inset
+
+ type (like Double, Day) - could be used to directly compute cash-flows
+ for analytical purposes or precompute payoffs for smart contracts that
+ don
+\begin_inset Quotes ers
+\end_inset
+
+t depend on oracles 
+\end_layout
+
+\begin_layout Itemize
+Formula representing piece of AST (Marlowe Value, Observation) - could be
+ used to generate smart contracts that depend on oracles or to generate
+ code in another language (like Agda) 
+\end_layout
+
+\begin_layout Standard
+This approach of abstracting formulas has a limitation of not allowing condition
+als to be expressed in an abstract way (There is no ActusIf typeclass) -
+ luckily most of conditional expressions in ACTUS specification don
+\begin_inset Quotes ers
+\end_inset
+
+t depend on variable state of a contract - they depend on ContractTerms
+ that are known in advance during contract generation.
+ This allows us to dispatch appropriate formulas during generation rather
+ than execution.
+\end_layout
+
+\begin_layout Standard
+The only exception to this are rare situations where we need to compare
+ 2 state variables and either choose formula1 or 0 depending on comparison
+ result:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+formula(st)=\begin{cases}
+formula' & var1(st)<var2(st)\\
+0
+\end{cases}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We rely on pseudo-boolean 
+\begin_inset Quotes eld
+\end_inset
+
+less than
+\begin_inset Quotes erd
+\end_inset
+
+ function in order to address that: 
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{equation}
+formula(st)=pseudoLt(var1(s1),var2(st)))*formula'
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Formula 
+\begin{equation}
+pseudoLt(a,b)=Cond(a>b,1,0)
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Contract terms representation and explicit applicability
+\end_layout
+
+\begin_layout Standard
+In order to simplify serialisation/deserialisation of contract terms across
+ Actus related services maintained by Cardano/IOG - we rely on “superposed”
+ representation of contract terms - all contract types are represented with
+ the same type.
+ Although it allows both encoder and decoder to express any ACTUS contract
+ terms, it also allows for invalid combinations of terms (for example PRNXT
+ cannot be applied to PAM-contract), which means contracts require specific
+ validation that is implemented by means of applicability function:
+\end_layout
+
+\begin_layout Standard
+Applicability: ContractTerms |-> Bool
+\end_layout
+
+\begin_layout Standard
+Actus has a family of applicability functions polymorphic on contract type:
+\end_layout
+
+\begin_layout Standard
+Applicability: ContractType x ContractTerm |-> ApplicabilityType Where applicabi
+lity is either: none, always, nullable, multiple --TODO describe
+\end_layout
+
+\begin_layout Standard
+In order to build superposed contract terms type for such function, we have
+ to resolve conflicting applicability for contract terms merged by following
+ the resolution rules below:
+\end_layout
+
+\begin_layout Standard
+weaken(none, always) = weaken(always, none) = nullable weaken(a1, a2) =
+ if (priority(a1) > priority(a2)) a1 else a2 Where priority(always) = 0
+ priority(none) = 1 priority(nullable) = 2 priority(multiple) = 3 a1 - is
+ applicability of a given term of first contract type to be merged a2 -
+ is applicability of a given term of second contract type to be merged 
+\end_layout
+
+\begin_layout Section
+Generating Marlowe contracts from standardised ACTUS contract terms
+\end_layout
+
+\begin_layout Subsection
+Overall architecture 
+\end_layout
+
+\begin_layout Standard
+Generated contract is essentially a continuation chain of Marlowe Contracts:
+\end_layout
+
+\begin_layout Standard
+chainlink(eventtype, date) = receive_data(oracle_data(date)) -> calculate_payoff
+(eventtype, date) -> process_payoff(date)
+\end_layout
+
+\begin_layout Standard
+where receive_data - is asking an Oracle for Marlowe Choice if needed calculate_
+payoff - calculates payoff formula.
+ For fixed-rate contracts this is optimised into a precalculated constant.
+ process_payoff - await Deposit of payoff amount from a party: if deposit
+ is transferred it redirects the funds to a counterparty - otherwise it
+ transfers the collateral to a counterparty and closes the contract.
+\end_layout
+
+\begin_layout Standard
+The chain is generated from the fixed (known in advance) schedule of events:
+\end_layout
+
+\begin_layout Standard
+contract(schedule) = receive_collaterals -> initialise state -> fold schedule
+ chainlink 
+\end_layout
+
+\begin_layout Subsection
+Avoiding exponential growth 
+\end_layout
+
+\begin_layout Standard
+Marlowe doesn’t allow functions and recursion.
+ Naive usage of If operator in Marlowe could lead to exponential growth
+ of a contract, for example:
+\end_layout
+
+\begin_layout Standard
+If (condition) then perform_something1(); continue(); else perform_something2;
+ continue()
+\end_layout
+
+\begin_layout Standard
+would inline contents of “continue()” twice and given that ACTUS contracts
+ are essentially generated using continuation as an accumulator - this would
+ lead to exponential explosion of the size of any actus contract that has
+ conditionals in their state transition logic.
+\end_layout
+
+\begin_layout Standard
+Example of such logic would be cap/floor limitations on interest rate:
+\end_layout
+
+\begin_layout Standard
+adjusted = max(min(original, floor), cap) Where max(a, b) = if (a > b) then
+ a else b min(a,b) = if (a < b) then a else b
+\end_layout
+
+\begin_layout Standard
+We addressed this issue by introducing Cond(link to Marlowe docs) construct
+ in order to represent “if” expressions.
+ So instead of using the “If” contract to decide the value of some variable
+ - we use conditional assignment instead as Cond is essentially just a pure
+ function that returns value depending on condition in contrast to the “If”
+ contract that performs action instead of returning value.
+ The name is borrowed from a similar function in Lisp.
+ 
+\end_layout
+
+\begin_layout Subsection
+Limitations due to termination 
+\end_layout
+
+\begin_layout Standard
+Marlowe doesn’t allow perpetual contracts even if their recursion is productive
+ (example: perpetual swap) - thus we can’t support certain contract types
+ from ACTUS specification, namely the ones that don’t have a defined maturity
+ date (like UMP).
+ In a long-term perspective - there is a possible workaround: contracts
+ with no maturity date could be represented as actors with finite amounts
+ of state transitions.
+ We prototyped this approach in a separate branch, however it does seem
+ more prone to errors comparing to rendering predefined schedules and more
+ importantly it greatly affects static analysis as the amount of “reduction
+ steps” grows from N_scheduled_event = count(event) to N_state_transition
+ = max(date(event)) - min(date(event)) / precision.
+ See https://github.com/dk14/plutus/tree/ACTUS 
+\end_layout
+
+\begin_layout Subsection
+Fixed-point precision 
+\end_layout
+
+\begin_layout Standard
+Marlowe only supports Integers, while ACTUS is expressed in terms of real
+ numbers.
+ In order to model a real number in such a setup - we rely on fixed point
+ precision.
+ The algebra looks like this: 
+\begin_inset listings
+inline false
+status open
+
+\begin_layout Plain Layout
+
+   (+)                         = AddValue
+\end_layout
+
+\begin_layout Plain Layout
+
+   (-)                         = SubValue
+\end_layout
+
+\begin_layout Plain Layout
+
+   a * b                       = Scale (1 % marloweFixedPoint) $ MulValue
+ a b
+\end_layout
+
+\begin_layout Plain Layout
+
+   (Constant 0) / (Constant 0) = (Constant 0)
+\end_layout
+
+\begin_layout Plain Layout
+
+   (Constant x) / (Constant y) = Scale (marloweFixedPoint % 1) $ Constant
+ $ div x y
+\end_layout
+
+\begin_layout Plain Layout
+
+   x / (Constant y)            = Scale (marloweFixedPoint % y) $ x    
+\end_layout
+
+\begin_layout Plain Layout
+
+   _ / _                       = undefined --division not supported in Marlowe
+ yet 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Representing Actus state in a Marlowe contract
+\end_layout
+
+\begin_layout Standard
+Unfortunately, Marlowe DSL doesn’t support any notion of records, the variables
+ can only be of type “Integer”.
+ Thus, in order to map contract state (ContractStatePoly) we first pack
+ a set of Marlowe variables (Value Observation) representing previous t-1
+ state into ContractStatePoly, then we apply polymorphic state transition,
+ and finally unpack ContractState poly into a set of Marlowe variables into
+ t+1 state:
+\end_layout
+
+\begin_layout Standard
+st_t+1 = unpack(stateTransition(pack(st_t-1))) , where pack is a chain of
+ UseValue and unpack is a chain of Let
+\end_layout
+
+\begin_layout Standard
+Representing “mutations” (e.g.
+ state transitions) in Marlowe (unfolding)
+\end_layout
+
+\begin_layout Standard
+Marlowe doesn’t support mutable variables, so we have to represent state
+ at t (st_t) literally by naming convention:
+\end_layout
+
+\begin_layout Standard
+variable_name(name, t) = concat(name, “_”, t) generate_variable_accessor(name,
+ t) = UseValue variable_name(name, t) generate_variable_setter(name, t,
+ formula) = Let variable_name(name, t) formula 
+\end_layout
+
+\begin_layout Subsection
+ActusLabs
+\end_layout
+
+\begin_layout Standard
+In order to demonstrate and test the capabilities of Actus generators, a
+ visual Blockly-based tool was developed for Marlowe Playground.
+ The Actus Labs tool allows users to construct contract terms visually,
+ generate a corresponding Marlowe contract and try it out in a simulated
+ environment.
+ 
+\end_layout
+
+\begin_layout Section
+Tokenization
+\end_layout
+
+\begin_layout Standard
+Every participant of an ACTUS contract is described by a Role which is in
+ its turn represented through a special unique non-fungible token.
+ This makes every Marlowe contract a tradable security, allowing a participant
+ to sell its “share” in a contract by selling a corresponding role token.
+\end_layout
+
+\begin_layout Standard
+Role tokens can potentially allow more complex manipulation over shares,
+ especially when share represents an incoming cash flow: participants only
+ send funds to a party represented by a given token.
+ Such a token would represent a positive cashflow which in turn could not
+ just become tradable but would also allow to derive tokens only representing
+ fractions of a particular cash flow in a contract.
+\end_layout
+
+\begin_layout Standard
+Moreover, it turns Actus-loans into derivatives, for example contracts like
+ Interest Rate Swap (and Swaps in general) could be approximated by an Atomic
+ Swap of tokens representing incoming cash flows from lending.
+ 
+\end_layout
+
+\begin_layout Standard
+For example, if Alice has fixed income from a loan (or some other investment)
+ and Bob has comparable but variable (fluctuating) income - Bob can hedge
+ by swapping cash flows with Alice.
+ If Alice’s income is locked with token1 and Bob’s income is locked with
+ token2 - then atomic swap of those tokens is equivalent to a swap of cash
+ flows.
+\end_layout
+
+\begin_layout Section
+Verification and testing
+\end_layout
+
+\begin_layout Subsection
+QuickCheck for cross-testing
+\end_layout
+
+\begin_layout Standard
+In order to test the equivalence between Executable Haskell implementation
+ of ACTUS for smart-contracts and original Java implementation for analytics
+ - a simple property test was introduced:
+\end_layout
+
+\begin_layout Standard
+Forall ct.
+ get_cashflows_haskell(ct, riskfactormodel) == get_cashflows_java(ct, riskfactor
+model)
+\end_layout
+
+\begin_layout Standard
+Where get_cashflows returns a set of {date, payoff} tuples.
+ 
+\end_layout
+
+\begin_layout Subsection
+QuickCheck for verification
+\end_layout
+
+\begin_layout Standard
+QuickCheck contract terms generators also allow to ensure arbitrary properties
+ of a Marlowe contract.
+ This could be enhanced with Marlowe’s static analysis feature by utilising
+ Assert operator:
+\end_layout
+
+\begin_layout Standard
+ContractTerms := sample(qcgenerator) Contract := generateMarloweContract(Contrac
+tTerms) ContractWithAssert := appendAssertion(Contract, assertion) runStaticAnal
+ysis(ContractWithAssert)
+\end_layout
+
+\begin_layout Standard
+While it doesn’t cover all possible contracts it could guarantee that property
+ holds for a statistically significant fraction of a contract.
+ Using Static Analysis to check a particular contract instead of randomly
+ sampling allows: 
+\end_layout
+
+\begin_layout Itemize
+more balanced sampling: Space of contract terms depends linearly on the
+ coverage, e.g.
+ if we cover 10% of all possible contract terms - we’ll cover 10% of all
+ contracts.
+ Different contracts have different amount of risk factors thus different
+ search space, for instance a contract with 3 risk factors (e.g.
+ 3 observations of an interest rate) would span over n^3 while a contract
+ with 10 risk factors would span over n^10.
+ Meanwhile, space of all risk factors in all contracts doesn’t linearly
+ depend on the coverage.
+ 
+\end_layout
+
+\begin_layout Itemize
+dependency tracking: SMT-solver would likely be more aware of execution
+ paths leading to failure of a test, which could significantly reduce search
+ space 
+\end_layout
+
+\begin_layout Itemize
+completeness: If not timed out, SMT-solver is decidable while sampling is
+ semi-decidable.
+ 
+\end_layout
+
+\begin_layout Subsection
+Securing collateral logic with auto-refund warnings
+\end_layout
+
+\begin_layout Standard
+By design, the Marlowe interpreter always refunds assets held in a contract
+ when it terminates.
+ This is done in order to ensure that no funds are lost forever.
+ The funds are returned to whoever’s internal account actually holds them.
+\end_layout
+
+\begin_layout Standard
+However, this presents as a problem in certain cases where ownership of
+ the funds could not be automatically determined.
+ For example if Alice puts collateral in a crypto-loan contract - she would
+ formally maintain ownership, which means she would get automatically refunded
+ when Close contract is reached.
+\end_layout
+
+\begin_layout Standard
+This implicit refund is easy to overlook by smart-contract developers as
+ plain Close is often used as a default action in case of unexpected behaviour
+ like timeouts(especially Choice timeout).
+ This can easily lead to multi-million dollar mistakes if malicious Alice
+ decides to exploit an auto-refund feature in order to get her collateral
+ without paying back.
+ Here’s the example of simple attack vector:
+\end_layout
+
+\begin_layout Enumerate
+Alice creates a contract where Deposit timeout would lead to Close 
+\end_layout
+
+\begin_layout Enumerate
+Bob doesn’t know or test the timeout path.
+ Even if Bob is a programmer - he might not be aware that Closing contract
+ would cause collateral refund 
+\end_layout
+
+\begin_layout Enumerate
+Alice puts collateral and gets notional from Bob 
+\end_layout
+
+\begin_layout Enumerate
+Alice doesn’t pay for a loan (Deposit timeout) 
+\end_layout
+
+\begin_layout Enumerate
+Alice gets her collateral back 
+\end_layout
+
+\begin_layout Enumerate
+Bob loses notional
+\end_layout
+
+\begin_layout Standard
+In order to prevent this from happening, an additional ”Auto-Refund” security
+ check was introduced as part of Static Analysis [TODO link] tooling which
+ notifies users about all Close constructs that can lead to automatic refunds
+ and encourages users to write explicit logic for edge cases.
+ 
+\end_layout
+
+\begin_layout Section
+Comparison with existing smart-contracts approaches 
+\end_layout
+
+\begin_layout Standard
+Unlike current popular DeFi lending approaches (like Harvest Finance) -
+ Marlowe ACTUS-based implementation tends to rely on “good old” matching
+ instead of pooling.
+ While pooling is proven to be superior to order-book based approaches when
+ it comes to automated market makers, using it for lending has been shown
+ to be more susceptible to attacks (for example “flash loan” (https://www.coindes
+k.com/harvest-finance-24m-attack-triggers-570m-bank-run-in-latest-defi-exploit)).
+\end_layout
+
+\begin_layout Standard
+Moving trade matching off-chain also improves scalability of the protocol
+ - every loan is a separate contract, thus there is no global state.
+\end_layout
+
+\begin_layout Standard
+Actus provides additional benefit of being regulatory friendly, ACTUS foundation
+ provides a set of tools allowing Monte-Carlo simulations of ACTUS contracts.
+ 
+\end_layout
+
+\begin_layout Section
+Conclusion
+\end_layout
+
+\begin_layout Standard
+Marlowe language was explicitly designed as a set of building blocks for
+ financial contracts that could be combined by anyone familiar with basic
+ programming.
+ Marlowe ACTUS generators improve on that by providing a way to automatically
+ combine blocks based on standardized requirements specified by the user.
+\end_layout
+
+\begin_layout Standard
+On top of that, Marlowe ACTUS provides a toolkit for cross-testing with
+ original ACTUS spec, a framework for adding new contract types, cash-flow
+ visualisations and verification tooling.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename fig1.eps
+	width 100text%
+
+\end_inset
+
+ 
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+A figure caption is always placed below the illustration.
+ Please note that short captions are centered, while long ones are justified
+ by the macro package automatically.
+\end_layout
+
+\end_inset
+
+
+\begin_inset CommandInset label
+LatexCommand label
+name "fig1"
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For citations of references, we prefer the use of square brackets and consecutiv
+e numbers.
+ Citations using labels or the author/year convention are also acceptable.
+ The following bibliography provides a sample reference list with entries
+ for journal articles
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "ref_article1"
+literal "false"
+
+\end_inset
+
+, an LNCS chapter
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "ref_lncs1"
+literal "false"
+
+\end_inset
+
+, a book
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "ref_book1"
+literal "false"
+
+\end_inset
+
+, proceedings without editors
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "ref_proc1"
+literal "false"
+
+\end_inset
+
+, and a homepage
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "ref_url1"
+literal "false"
+
+\end_inset
+
+.
+ Multiple citations are grouped 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "ref_article1,ref_lncs1,ref_book1"
+literal "false"
+
+\end_inset
+
+, 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "ref_article1,ref_book1,ref_proc1,ref_url1"
+literal "false"
+
+\end_inset
+
+.
+ 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+% ---- Bibliography ----
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+% BibTeX users should specify bibliography style 'splncs04'.
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+% References will then be sorted and formatted in the correct style.
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+% 
+\backslash
+bibliographystyle{splncs04}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+% 
+\backslash
+bibliography{mybibliography}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "ref_article1"
+literal "false"
+
+\end_inset
+
+ Author, F.: Article title.
+ Journal 
+\series bold
+2
+\series default
+(5), 99–110 (2016)
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "ref_lncs1"
+literal "false"
+
+\end_inset
+
+ Author, F., Author, S.: Title of a proceedings paper.
+ In: Editor, F., Editor, S.
+ (eds.) CONFERENCE 2016, LNCS, vol.
+ 9999, pp.
+ 1–13.
+ Springer, Heidelberg (2016).
+ 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+doi
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\end_inset
+
+10.10007/1234567890
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "ref_book1"
+literal "false"
+
+\end_inset
+
+ Author, F., Author, S., Author, T.: Book title.
+ 2nd edn.
+ Publisher, Location (1999)
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "ref_proc1"
+literal "false"
+
+\end_inset
+
+ Author, A.-B.: Contribution title.
+ In: 9th International Proceedings on Proceedings, pp.
+ 1–2.
+ Publisher, Location (2010)
+\end_layout
+
+\begin_layout Bibliography
+\begin_inset CommandInset bibitem
+LatexCommand bibitem
+key "ref_url1"
+literal "false"
+
+\end_inset
+
+ LNCS Homepage, 
+\begin_inset Flex URL
+status collapsed
+
+\begin_layout Plain Layout
+
+http://www.springer.com/lncs
+\end_layout
+
+\end_inset
+
+.
+ Last accessed 4 Oct 2017 
+\end_layout
+
+\end_body
+\end_document

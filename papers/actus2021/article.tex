@@ -350,7 +350,7 @@ result:
 \begin{equation}
 formula(st)=\begin{cases}
 formula' & var1(st)<var2(st)\\
-0
+0 & otherwise
 \end{cases}
 \end{equation}
 
@@ -380,48 +380,74 @@ example PRNXT cannot be applied to PAM-contract), which means contracts
 require specific validation that is implemented by means of applicability
 function:
 
-Applicability: ContractTerms \textbar -\textgreater{} Bool
+\noindent 
+\begin{equation}
+Applicability:ContractTerms\mapsto Bool
+\end{equation}
 
 Actus has a family of applicability functions polymorphic on contract
 type:
 
-Applicability: ContractType x ContractTerm \textbar -\textgreater{}
-ApplicabilityType Where applicability is either: none, always, nullable,
-multiple -{}-TODO describe
+\noindent 
+\begin{equation}
+Applicability:ContractType\times ContractTerm\mapsto ApplicabilityType
+\end{equation}
+
+Where applicability could be: none, always, nullable, multiple
 
 In order to build superposed contract terms type for such function,
 we have to resolve conflicting applicability for contract terms merged
-by following the resolution rules below:
+using the following resolution rules:
 
-weaken(none, always) = weaken(always, none) = nullable weaken(a1,
-a2) = if (priority(a1) \textgreater{} priority(a2)) a1 else a2 Where
-priority(always) = 0 priority(none) = 1 priority(nullable) = 2 priority(multiple)
-= 3 a1 - is applicability of a given term of first contract type to
-be merged a2 - is applicability of a given term of second contract
-type to be merged 
+\noindent 
+\begin{equation}
+weaken(a_{1},a_{2})=\begin{cases}
+nullable & a_{1}=none\wedge a_{2}=always\\
+nullable & a_{1}=always\wedge a_{2}=none\\
+a_{1} & priority(a_{1})>priority(a_{2})\\
+a_{2} & otherwise
+\end{cases}
+\end{equation}
+
+\noindent 
+\begin{equation}
+priority(x)=\begin{cases}
+0 & x=always\\
+1 & x=none\\
+2 & x=nullable\\
+3 & x=multiple
+\end{cases}
+\end{equation}
+
+Where $a_{1}$ - is applicability of a given term of first contract
+type to be merged $a_{2}$ - is applicability of a given term of second
+contract type to be merged 
 
 \section{Generating Marlowe contracts from standardised ACTUS contract terms}
 
 \subsection{Overall architecture }
 
-Generated contract is essentially a continuation chain of Marlowe
-Contracts:
+Generated contract is essentially a continuation chain of repetition
+Marlowe Contracts:
 
-chainlink(eventtype, date) = receive\_data(oracle\_data(date)) -\textgreater{}
-calculate\_payoff(eventtype, date) -\textgreater{} process\_payoff(date)
+\noindent 
+\begin{equation}
+chainlink(t)=receiveData(t)\circ calculatePayoff(t)\circ processPayoff(t)
+\end{equation}
 
-where receive\_data - is asking an Oracle for Marlowe Choice if needed
-calculate\_payoff - calculates payoff formula. For fixed-rate contracts
+\noindent 
+\begin{equation}
+contract(ct)=receiveCollaterals(ct)\circ INIT(ct)\circ\prod_{t\in SCHED(ct)}chainlink(t)
+\end{equation}
+
+where $receiveData$ - is asking an Oracle for Marlowe Choice if needed,
+$calculatePayoff$ - calculates payoff formula. For fixed-rate contracts
 this is optimised into a precalculated constant. process\_payoff -
 await Deposit of payoff amount from a party: if deposit is transferred
 it redirects the funds to a counterparty - otherwise it transfers
-the collateral to a counterparty and closes the contract.
-
-The chain is generated from the fixed (known in advance) schedule
-of events:
-
-contract(schedule) = receive\_collaterals -\textgreater{} initialise
-state -\textgreater{} fold schedule chainlink 
+the collateral to a counterparty and closes the contract. The chain
+is generated from the fixed (known in advance) schedule of events
+using $SCHED()$function from ACTUS.
 
 \subsection{Avoiding exponential growth }
 
@@ -429,8 +455,15 @@ Marlowe doesn\textquoteright t allow functions and recursion. Naive
 usage of If operator in Marlowe could lead to exponential growth of
 a contract, for example:
 
-If (condition) then perform\_something1(); continue(); else perform\_something2;
-continue()
+\begin{lstlisting}
+If (condition) 
+	then 
+		perform_something1()
+		continue() 
+	else 
+		perform_something2 
+		continue()
+\end{lstlisting}
 
 would inline contents of \textquotedblleft continue()\textquotedblright{}
 twice and given that ACTUS contracts are essentially generated using

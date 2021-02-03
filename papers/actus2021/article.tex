@@ -177,6 +177,13 @@ it into a rate. In order to make \emph{units of measurement} compatible
 adjustments should be made. Fluctuations of the interest rate driver
 are embedded thus:
 
+% SJT a couple of questions about these equations
+% Q1
+% What is the role of the subscript r in \Delta_r
+% Q2
+% interest rate at t+1 defined from rate at t-1. I'd have expected just one difference, so
+% t+1 defined from t, or t defined from t-1.
+
 \noindent 
 \begin{equation}
 \Delta_{r}=\ident{capfloor}(\ident{driver}*\ident{multiplier}+\ident{spread}-\ident{interestRate}_{t-1})
@@ -200,51 +207,58 @@ and so limiting the lender's exposure to risk:
 The \emph{spread} parameter here loosely represents the difference between
 the average prime 
 % SJT explain "prime" here.
-rate that the lender expects (the benchmark yield) and
+rate that the lender expects -- the \emph{benchmark yield} -- and
 the rate imposed by the driver - the higher the spread, the higher
 the resulting interest rate. The multiplier %effectively 
 rescales the interest rate value 
 % SJT used value here rather than plot: is that OK?
 in order to represent the changes to be made converting between different units
-of measurement: how many percentage points you would get for a usd-to-kilowatt conversion
+of measurement: how many percentage points 
+% SJT percentage points of what?
+you would get for a USD-to-kilowatt conversion
 and so on.
 
-In the context of ACTUS and other event-based frameworks, there is
+In the context of ACTUS and other event-based frameworks, 
+% SJT - need to explain "event-based" in this context.
+there is
 one more factor influencing interest rates thorough scaling:
 
 \noindent 
 \begin{equation}
 interestPayment=interestScalingFactor*interestRate*notional
 \end{equation}
-
+\noindent
 This scaling is dynamic and loosely adjusts for variance (volatility)
 of the asset that the interest rate driver represents.
 
 \paragraph*{Interest accrual and capitalisation. }
 
-Counterparty might decide to reinvest profit received as interest
-from the same loan. In the simplest case, this renders as compound
-interest. This can be modelled through interest accrual and capitalisation,
-for instance contracts from the ACTUS specification accrue interest
+A counterparty might decide to reinvest profit received as interest
+from the %same 
+% SJT I think "same" is superfluous here: is that OK?
+loan. In the simplest case, this renders as compound
+interest. This can be modelled through interest accrual and capitalisation;
+% SJT what does "capitalisation" mean?
+for instance, contracts from the ACTUS specification accrue interest
 between interest payments and can transfer interest to a notional
 during interest capitalisation event (IPCL).
 
 Overall, variable interest rates introduce a certain risk for a lender,
-thus they are subject to hedging. While any instrument that depends
-on the same risk factor (interest rate driver) would suffice - the
-most popular way to hedge a variable interest rate loan is interest
+thus they can be %are 
+subject to hedging. While any instrument that depends
+on the same risk factor (interest rate driver) would suffice, the
+most popular way to hedge a variable interest rate loan is an interest
 rate swap. This instrument allows two (or more) parties to exchange
-their incomes - one from fixed interest rate loans, the other one
-- from variable interest
+their incomes - one from a fixed interest rate loan, the other from a variable-rate loan.
 
 \paragraph*{Counterparty risk.}
 
-Trustless setups, especially ones in the cryptocurrency world (e.g.
-decentralised smart-contracts and exchanges) require zero trust between
+Trustless setups, especially ones in the cryptocurrency world, including 
+decentralised smart-contracts and exchanges, require no trust between
 party and counterparty involved in a contract. In case of a loan,
-this literally means that counterparty has zero-obligation to pay
+this literally means that counterparty has zero obligation to pay
 the money back, thus rendering the loan useless for a party. Such
-risks are usually addressed by introducing collaterals: 
+risks are usually addressed by introducing collaterals, as in the following scenario. 
 \begin{enumerate}
 \item Alice would like to borrow 1000 USD 
 \item She has Bitcoin assets cost around 1500 USD, which she intends to
@@ -255,9 +269,9 @@ interest rate offered by banks (let's say 15\% instead of 10\%). He
 is either bearish or neutral towards Bitcoin. 
 \item Alice transfers her BTC as collateral to a contract, and Bob transfers
 his USD to Alice 
-\item If Alice pays interest and notional on time (and Btc-price doesn't
-render collateral worthless) - she can get her collateral back, otherwise
-the loan gets liquidated and collateral is transferred to Bob. 
+\item If Alice pays the interest and notional on time, and the BTC price does not
+render collateral worthless, she can get her collateral back; otherwise
+the loan gets liquidated and the collateral is transferred to Bob. 
 \end{enumerate}
 
 \section{Modelling financial contracts}

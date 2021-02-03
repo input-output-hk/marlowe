@@ -54,28 +54,21 @@
 \renewcommand{\lstlistingname}{Listing}
 
 \begin{document}
-\title{Standardized crypto-loans on Cardano blockchain\textquotedblright \thanks{Supported by organization x.}}
-
-\maketitle
-%\titlerunning{Abbreviated paper title}
-% If the paper title is too long for the running head, you can set
-% an abbreviated paper title here
-
-\author{First Author\inst{1}\orcidID{0000-1111-2222-3333} \and Second
-Author\inst{2,3}\orcidID{1111-2222-3333-4444} \and Third Author\inst{3}\orcidID{2222--3333-4444-5555}}
+\title{Standardized crypto-loans on Cardano blockchain\thanks{Supported by Cardano Foundation.}}
+\author{First Author\inst{1}\orcidID{0000-1111-2222-3333} \and
+Second Author\inst{2,3}\orcidID{1111-2222-3333-4444} \and
+Third Author\inst{3}\orcidID{2222--3333-4444-5555}}
+%
 \authorrunning{F. Author et al.}
-
-% First names are abbreviated in the running head.
-% If there are more than two authors, 'et al.' is used.
-
-\institute{Princeton University, Princeton NJ 08544, USA \and Springer Heidelberg,
-Tiergartenstr. 17, 69121 Heidelberg, Germany }
-\email{lncs@springer.com}
-\institute{\\
- \url{http://www.springer.com/gp/computer-science/lncs} \and ABC
-Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
- }
-\email{\{abc,lncs\}@uni-heidelberg.de}
+\institute{Princeton University, Princeton NJ 08544, USA \and
+Springer Heidelberg, Tiergartenstr. 17, 69121 Heidelberg, Germany
+\email{lncs@springer.com}\\
+\url{http://www.springer.com/gp/computer-science/lncs} \and
+ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
+\email{\{abc,lncs\}@uni-heidelberg.de}}
+%
+\maketitle              % typeset the header of the contribution
+%
 \begin{abstract}
 Crypto-loans are unique and innovative financial instruments that
 allow trustless P2P lending, which could provide a safe and convenient
@@ -111,7 +104,7 @@ List of contributions:
 A loan is a form of debt incurred by an individual or other entity.
 The lender advances a sum of money to the borrower. In return, the
 borrower agrees to a certain set of terms including any finance charges,
-interest, repayment date, and other conditions.
+interest, repayment date, and other conditions \cite{loan}.
 
 Cryptocurrency-backed loans must have collaterals as there is no trust
 between party and counterparty. While loan is usually settled in a
@@ -189,10 +182,10 @@ of the asset that the interest rate driver represents.
 
 Counterparty might decide to reinvest profit received as interest
 from the same loan. In the simplest case, this renders as compound
-interest (TODO link). This can be modeled through interest accrual
-and capitalisation, for instance contracts from the ACTUS specification
-accrue interest between interest payments and can transfer interest
-to a notional during interest capitalisation event (IPCL).
+interest. This can be modeled through interest accrual and capitalisation,
+for instance contracts from the ACTUS specification accrue interest
+between interest payments and can transfer interest to a notional
+during interest capitalisation event (IPCL).
 
 Overall, variable interest rates introduce a certain risk for a lender,
 thus they are subject to hedging. While any instrument that depends
@@ -230,28 +223,28 @@ the loan gets liquidated and collateral is transferred to Bob.
 \subsection{Marlowe }
 
 Marlowe is a high-level, domain-specific language (DSL) for writing
-financial contracts on blockchain. Marlowe is defined by an executable
-semantics in Haskell, and has been implemented on the UTxO-based Cardano
-blockchain.
+financial contracts on blockchain\cite{marlowe}. Marlowe is defined
+by an executable semantics in Haskell, and has been implemented on
+the UTxO-based Cardano blockchain.
 
 The main advantage of using Marlowe to carry ACTUS logic is enhanced
-security that static analysis {[}TODO link{]} provides. SMT-solvers
-gain increasing popularity as an alternative to fuzzing when it comes
-to testing software for vulnerabilities {[}TODO link{]}. Smart contracts
-generated from ACTUS specification are quite complicated, so manually
-testing every possible execution path for every possible combination
-of contract terms is not feasible. Static analysis, in turn, can reduce
-the amount of ``dumb'' mistakes that could cost millions to the
-users by ensuring obvious properties of a contract. It is not a panacea,
-however, unlike with fuzzing, if SA says that certain property holds
-- it does it with 100\% assurance.
+security that static analysis provides. SMT-solvers gain increasing
+popularity as an alternative to fuzzing when it comes to testing software
+for vulnerabilities\cite{smt}. Smart contracts generated from ACTUS
+specification are quite complicated, so manually testing every possible
+execution path for every possible combination of contract terms is
+not feasible. Static analysis, in turn, can reduce the amount of ``dumb''
+mistakes that could cost millions to the users by ensuring obvious
+properties of a contract. It is not a panacea, however, unlike with
+fuzzing, if SA says that certain property holds - it does it with
+100\% assurance.
 
 \subsection{ACTUS}
 
 ACTUS defines the logic embedded in legal agreements that eventually
 turn the contract terms into actual cash flows, or more generally
-business events. Most of Its basic contract types represent different
-variations of lending contracts.
+business events \cite{actus}. Most of its basic contract types represent
+different variations of lending contracts.
 
 ACTUS relies on a state machine formalism in order to describe the
 behaviour of a given contract. Every payoff (transfer of funds in
@@ -290,26 +283,26 @@ riskfactor_{i}{}_{t}=O_{rf}(i,t)
 
 This is due to the risk factor's state not being known at instantiation
 time. In the case of Cardano blockchain, these values are usually
-provided through an ``Oracle'' mechanism. Oracle could be a trusted
-party providing necessary data or network of parties under consensus
-{[}find a quote{]}. From Marlowe DSL perspective, the exact mechanism
-that provides external data is less important, as Marlowe abstracts
-over IO by requiring particular type of input (``Choice'') protected
-with a cryptographic signature (Choice owner). As a result, the event
-of receiving data from Oracle is treated the same as receiving integer
-numbers from user input in other languages
+provided through an ``Oracle'' mechanism\cite{oracles}. Oracle
+could be a trusted party providing necessary data or network of parties
+under consensus {[}find a quote{]}. From Marlowe DSL perspective,
+the exact mechanism that provides external data is less important,
+as Marlowe abstracts over IO by requiring particular type of input
+(``Choice'') protected with a cryptographic signature (Choice owner).
+As a result, the event of receiving data from Oracle is treated the
+same as receiving integer numbers from user input in other languages
 
 \section{Building executable specification of ACTUS}
 
 \subsection{Mimicking the specification with Haskell code}
 
-The ACTUS standard is specified in terms of {[}link{]} scheduling,
-payoff and state transition functions that are polymorphic on event
-and contract type. The specification also follows quite specific naming
-conventions that are incompatible with Haskell's conventions. The
-executable specification follows original ACTUS conventions as close
-as possible in order to ease code base maintenance when faced with
-updates of original ACTUS spec (link to github).
+The ACTUS standard is specified in terms of scheduling, payoff and
+state transition functions that are polymorphic on event and contract
+type. The specification also follows quite specific naming conventions
+that are incompatible with Haskell's conventions. The executable specification
+follows original ACTUS conventions as close as possible in order to
+ease code base maintenance when faced with updates of original ACTUS
+spec (link to github).
 
 Using Haskell itself as a DSL for explicitly encoding formulas without
 using advanced language idioms also simplifies code generation, but
@@ -468,9 +461,8 @@ contract type to be merged
 
 \begin{figure}
 \includegraphics[width=1\textwidth]{modules} \caption{Modules responsible for contract generation.}
-\label{fig1-1} 
+\label{fig1} 
 \end{figure}
-
 
 Generated contract is essentially a continuation chain of smaller
 contracts:
@@ -485,7 +477,7 @@ chainlink(t)=receiveData(t)\circ calculatePayoff(t)\circ processPayoff(t)
 contract(ct)=collaterals(ct)\circ INIT(ct)\circ\prod_{t\in SCHED(ct)}chainlink(t)
 \end{equation}
 
-where $receiveData$ - is asking an Oracle for Marlowe Choice if needed,
+where $receiveData$ - is asking an oracle for Marlowe Choice if needed,
 $calculatePayoff$ - calculates payoff formula. For fixed-rate contracts
 this is optimised into a precalculated constant. $processPayoff$
 - awaits Deposit of payoff amount from a party: if deposit is transferred
@@ -496,7 +488,7 @@ using $SCHED()$function from ACTUS.
 
 \begin{figure}
 \includegraphics[width=1\textwidth]{flowchart} \caption{Chain of sub-contracts representing ACTUS logic}
-\label{fig1-1-1} 
+\label{fig2} 
 \end{figure}
 
 
@@ -547,8 +539,7 @@ We prototyped this approach in a separate branch, however it does
 seem more prone to errors comparing to rendering predefined schedules
 and more importantly it greatly affects static analysis as the amount
 of ``reduction steps'' grows from $N_{scheduled}=count(event)$
-to $N_{stateTransitions}=\frac{max(date(event))-min(date(event))}{precision}$.
-See \href{https://github.com/dk14/plutus/tree/ACTUS}{https://github.com/dk14/plutus/tree/ACTUS}
+to $N_{stateTransitions}=\frac{max(date(event))-min(date(event))}{precision}$. 
 
 \subsection{Fixed-point precision }
 
@@ -600,7 +591,7 @@ generateSetter(name, t, formula) =
 \begin{figure} 
 \includegraphics[width=0.8\textwidth,natwidth=664,natheight=552]{labs.png}
 \caption{Actus Labs - online tool for generating Actus contracts for Marlowe.} 
-\label{fig2} 
+\label{fig3} 
 \end{figure} 
 
 In order to demonstrate and test the capabilities of Actus generators,
@@ -653,9 +644,9 @@ $getCashFlows()$ returns a set of $(date,payoff)$ tuples.
 
 \subsection{QuickCheck for verification}
 
-QuickCheck contract terms generators also allow to ensure arbitrary
-properties of a Marlowe contract. This could be enhanced with Marlowe's
-static analysis feature by utilising Assert operator:
+QuickCheck\cite{qc} contract terms generators also allow to ensure
+arbitrary properties of a Marlowe contract. This could be enhanced
+with Marlowe's static analysis feature by utilising Assert operator:
 
 \begin{lstlisting}
 ContractTerms := sample(qcgenerator) 
@@ -714,19 +705,17 @@ refund
 \item Bob loses notional 
 \end{enumerate}
 In order to prevent this from happening, an additional ''Auto-Refund''
-security check was introduced as part of Static Analysis {[}TODO link{]}
-tooling which notifies users about all ``Close'' constructs that
-can lead to automatic refunds and encourages users to write explicit
-logic for edge cases.
+security check was introduced as part of Static Analysis tooling which
+notifies users about all ``Close'' constructs that can lead to automatic
+refunds and encourages users to write explicit logic for edge cases.
 
 \section{Comparison with existing smart-contracts approaches }
 
-Unlike current popular DeFi lending approaches (like Harvest Finance)
-- Marlowe ACTUS-based implementation tends to rely on ``good old''
-matching instead of pooling. While pooling is proven to be superior
-to order-book based approaches when it comes to automated market makers,
-using it for lending has been shown to be more susceptible to attacks
-(for example ``\href{https://www.coindesk.com/harvest-finance-24m-attack-triggers-570m-bank-run-in-latest-defi-exploit}{flash loan}'').
+Unlike current popular DeFi lending approaches - Marlowe ACTUS-based
+implementation tends to rely on trade-matching instead of pooling.
+While asset pooling is proven to be superior to order-book based approaches
+when it comes to automated market makers, using it for lending has
+been shown to be more susceptible to attacks\cite{flash-loan}.
 
 Moving trade matching off-chain also improves scalability of the protocol
 - every loan is a separate contract, thus there is no global state.
@@ -746,38 +735,30 @@ requirements specified by the user.
 On top of that, Marlowe ACTUS provides a toolkit for cross-testing
 with original ACTUS spec, a framework for adding new contract types,
 cash-flow visualisations and verification tooling.
-
-\section*{TODO}
-
-For citations of references, we prefer the use of square brackets
-and consecutive numbers. Citations using labels or the author/year
-convention are also acceptable. The following bibliography provides
-a sample reference list with entries for journal articles~\cite{ref_article1},
-an LNCS chapter~\cite{ref_lncs1}, a book~\cite{ref_book1}, proceedings
-without editors~\cite{ref_proc1}, and a homepage~\cite{ref_url1}.
-Multiple citations are grouped \cite{ref_article1,ref_lncs1,ref_book1},
-\cite{ref_article1,ref_book1,ref_proc1,ref_url1}. % ---- Bibliography ----
-% BibTeX users should specify bibliography style 'splncs04'.
-% References will then be sorted and formatted in the correct style.
-% \bibliographystyle{splncs04}
-% \bibliography{mybibliography}
-
 \begin{thebibliography}{1}
-\bibitem{ref_article1} Author, F.: Article title. Journal \textbf{2}(5),
-99--110 (2016)
+\bibitem{loan} Loan definition, \url{https://www.investopedia.com/terms/l/loan.asp}
+Last accessed 2 Feb 2020
 
-\bibitem{ref_lncs1} Author, F., Author, S.: Title of a proceedings
-paper. In: Editor, F., Editor, S. (eds.) CONFERENCE 2016, LNCS, vol.
-9999, pp. 1--13. Springer, Heidelberg (2016). \doi{10.10007/1234567890}
+\bibitem{marlowe} Pablo Lamela Seijas \& Simon Thompson. (ISoLA 2018).
+Marlowe: financial contracts on blockchain 
 
-\bibitem{ref_book1} Author, F., Author, S., Author, T.: Book title.
-2nd edn. Publisher, Location (1999)
+\bibitem{smt}Vanegue, Julien \& Heelan, Sean \& Rolles, Rolf. (2012).
+SMT solvers for software security. 9-9.
 
-\bibitem{ref_proc1} Author, A.-B.: Contribution title. In: 9th International
-Proceedings on Proceedings, pp. 1--2. Publisher, Location (2010)
+\bibitem{actus} ACTUS Homepage, \url{https://www.actusfrf.org/}Last
+accessed 2 Feb 2020
 
-\bibitem{ref_url1} LNCS Homepage, \url{http://www.springer.com/lncs}.
-Last accessed 4 Oct 2017 
+\bibitem{oracles} Mammadzada, Kamran \& Iqbal, Mubashar \& Milani,
+Fredrik \& Garc�a-Ba�uelos, Luciano \& Matulevi\v{c}ius, Raimundas.
+(2020). Blockchain Oracles: A Framework for Blockchain-Based Applications.
+10.1007/978-3-030-58779-6\_2. 
+
+\bibitem{qc}Claessen, K., Hughes, J.: QuickCheck: a lightweight tool
+for random testing of Haskell programs. In: ICFP \textquoteright 00.
+pp. 268--279. ACM (2000)
+
+\bibitem{flash-loan}``flash-loan'' attacks \url{https://www.coindesk.com/harvest-finance-24m-attack-triggers-570m-bank-run-in-latest-defi-exploit}Last
+accessed 2 Feb 2020
 \end{thebibliography}
 
 \end{document}

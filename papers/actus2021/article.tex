@@ -92,14 +92,18 @@ Added overview at the end of the intro.
 Tidying up identifiers in math equations using the command \verb+\ident{...}+
 \item
 Biblio sorted out ordering (added keys). shortened author and editor lists
+\item
+Revised sections 2--4.
 \end{enumerate}
 
 \textbf{TO DO:}
 \begin{enumerate}
 \item
-Algorithmic Contract Types Unified Standards (ACTUS) -- for first use. Also reference.
+Deal with inline comments in source code: \verb+% SJT ...+
 \item
-Do we include Alex as co-author?
+Write introduction [SJT]
+\item
+Should we include Alex as co-author?
 \item
 What about R (shiny)?
 \end{enumerate}
@@ -277,19 +281,21 @@ the loan gets liquidated and the collateral is transferred to Bob.
 \section{Modelling financial contracts}
 \label{modelling}
 
-This section introduces the Marlowe DSL and the ACTUS standard for financial contracts.
+This section introduces the Marlowe domain-specific language (DSL) and the ACTUS standard for financial contracts.
 
 \subsection{Marlowe}
 
-Marlowe is a high-level, domain-specific language (DSL) for writing
-financial contracts on blockchain\cite{marlowe}. Marlowe is defined
+Marlowe~\cite{marlowe} is a high-level DSL for writing
+financial contracts on blockchain. Marlowe is defined
 by an executable semantics in Haskell, and has been implemented on
-the UTxO-based Cardano blockchain.
+the UTxO-based Cardano blockchain. 
+% SJT added this
+Marlowe contracts are finite, and moreover have defined finite lifetime. This means that it is possible to perform \emph{static analysis} on them. For example, it is possible symbolically to check \emph{all} execution paths without running a contract, and in particular checking that every \texttt{Pay} construct can be executed in full.
 
 The main advantage of using Marlowe to carry ACTUS logic is enhanced
-security that static analysis provides. SMT-solvers gain increasing
+security that such a static analysis provides. SMT-solvers~\cite{smt} are gaining
 popularity as an alternative to fuzzing when it comes to testing software
-for vulnerabilities\cite{smt}. Smart contracts generated from ACTUS
+for vulnerabilities. Smart contracts generated from ACTUS
 specification are quite complicated, so manually testing every possible
 execution path for every possible combination of contract terms is
 not feasible. Static analysis, in turn, can reduce the amount of ``dumb''
@@ -299,102 +305,115 @@ fuzzing, if SA says that certain property holds - it does it with
 100\% assurance.
 
 \subsection{ACTUS}
+\label{ACTUS}
 
-ACTUS defines the logic embedded in legal agreements that eventually
+The Algorithmic Contract Types Unified Standards (ACTUS)~\cite{actus} define the logic embedded in legal agreements that eventually
 turn the contract terms into actual cash flows, or more generally
-business events \cite{actus}. Most of its basic contract types represent
+business events. Most of its basic contract types represent
 different variations of lending contracts.
 
 ACTUS relies on a state machine formalism in order to describe the
-behaviour of a given contract. Every payoff (transfer of funds in
-or out of a contract) can be inferred for any given state. Every state
-can be inferred from previous events and observed risk factors:
+behaviour of a given contract. Every \emph{payoff} -- i.e. transfer of funds in
+or out of a contract -- can be inferred for any given state. Every state
+can be derived from previous events and observed risk factors:
 
 \noindent 
 \begin{equation}
-\mbox{\emph{payoff}}_{i}=POF(state_{i})
+\ident{payoff}_{i}=\ident{POF}(\ident{state}_{i})
+\end{equation}
+
+\newcommand{\STF}{\ident{STF}}
+\noindent 
+\begin{equation}
+\ident{path}=\STF_{1}(ct,ev_{1})\circ \STF_{2}(ct,ev_{2}).\circ\ldots\circ \STF_{i}(ct,ev_{n})
 \end{equation}
 
 \noindent 
 \begin{equation}
-path=STF_{1}(ct,ev_{1})\circ STF_{2}(ct,ev_{2}).\circ\ldots\circ STF_{i}(ct,ev_{n})
+\ident{state}_{i}=\ident{path}(\ident{INIT}(ct)),
 \end{equation}
+\noindent
+where \emph{ct} stands for contract terms, \emph{INIT} returns initial state, \emph{sched}
+returns scheduled events, \emph{STF} takes \emph{contractterms}, \emph{event}, and \emph{state}
+and returns the next state, and \emph{POF} returns the payoff in a state.
 
-\noindent 
-\begin{equation}
-state_{i}=path(INIT(ct)),
-\end{equation}
-
-where $ct$ is contract terms, $INIT$ returns initial state, $sched$
-returns scheduled events, $STF$ takes ${contractterms,event,state}$
-and returns next state, $POF$ returns payoff.
-
-\subsection{Necessity for Oracles}
+\subsection{Oracles}
 
 In order to support variable interest rates and scaling, ACTUS requires
-a smart contract to be able to observe the value of a given risk factor
-(such as interest rate) at a particular point in time t:
+a smart contract to be able to observe the value of a given risk factor,
+such as an interest rate, at a particular point in time $t$. This is due to the state of the risk factor not being known at instantiation
+time. 
 
+% SJT - the "i" and "t" subscripts here look a bit odd: is that what's intended?
 \noindent 
 \begin{equation}
-\mbox{\emph{riskfactor}}_{i}{}_{t}=O_{rf}(i,t)
+\ident{riskfactor}_{i}{}_{t}=O_{\footnotesize\ident{rf}}(i,t)
 \end{equation}
-
-This is due to the risk factor's state not being known at instantiation
-time. In the case of Cardano blockchain, these values are usually
-provided through an ``Oracle'' mechanism\cite{oracles}. Oracle
+\noindent
+In the case of the Cardano blockchain, these values are usually
+provided through an \emph{oracle} mechanism\cite{oracles}. An oracle
 could be a trusted party providing necessary data or network of parties
-under consensus {[}find a quote{]}. From Marlowe DSL perspective,
+under consensus {[}find a reference{]}. 
+% SJT REF needed
+From a Marlowe DSL perspective,
 the exact mechanism that provides external data is less important,
-as Marlowe abstracts over IO by requiring particular type of input
-(``Choice'') protected with a cryptographic signature (Choice owner).
-As a result, the event of receiving data from Oracle is treated the
-same as receiving integer numbers from user input in other languages
+as Marlowe abstracts over IO by requiring a particular type of input -- a 
+\texttt{Choice} -- that is protected with a cryptographic signature by the source of the choice.
+% SJT changed from "owner" to "source".
+As a result, the event of receiving data from an oracle is treated the
+same as receiving numeric input in other languages
 
 \section{Building an executable specification of ACTUS}
 \label{executable}
 
-\subsection{Mimicking the specification with Haskell code}
+ACTUS is defined in a textual specification\footnote{Available from \url{https://www.actusfrf.org/techspecs}.} which, while expressed in mathematical notation, is essentially informal. In this section we describe how this specification is turned into an \emph{executable} version by rendering it in Haskell. This translation is in fact a transliteration, since notation, variable names and so forth are respected.
+% SJT: are you happy with this? If not, let's rephrase,
+% but it would be good include something to this effect.
+
+\subsection{Rendering the specification in Haskell}
 
 The ACTUS standard is specified in terms of scheduling, payoff and
 state transition functions that are polymorphic on event and contract
-type. The specification also follows quite specific naming conventions
+type, as noted in Section \ref{ACTUS} above. The specification also follows quite specific naming conventions
 that are incompatible with Haskell's conventions. The executable specification
-follows original ACTUS conventions as close as possible in order to
-ease code base maintenance when faced with updates of original ACTUS
-spec (link to github).
+follows original ACTUS conventions as closely as possible in order to
+ease code base maintenance when faced with updates of the ACTUS
+spec repository\footnote{\url{https://github.com/actusfrf/actus-techspecs}}.
 
 Using Haskell itself as a DSL for explicitly encoding formulas without
-using advanced language idioms also simplifies code generation, but
-in case of ACTUS comes at a cost reduced type-safety, handling nullable
+using advanced language idioms also simplifies code generation. 
+In case of ACTUS this comes at a cost reduced type-safety, handling nullable
 values explicitly introduces risk of exceptions. However this risk
-is addressed using QuickCheck generators.
+is addressed using property-based testing, and in particular QuickCheck generators. This is discussed in more detail in Section \ref{verification} below.
+% SJT Added x-ref to section 7.
 
 \subsection{Utilizing polymorphism to abstract over basic operations}
 
-In order to keep our executable specification independent of the carrier
-(whether its smart-contract engine, proof assistant, analytical framework
-or even machine learning model) - we abstract over underlying representations
-of state variables and arithmetic operations:
+In order to keep our executable specification independent of the carrier -- whether it is a smart-contract engine, proof assistant, analytical framework
+or even machine learning model -- we abstract over the underlying representation
+of state variables,
 
 \begin{verbatim}
 -- Definitions/ContractState.hs 
 data ContractStatePoly a b = ContractStatePoly  
 {  
-tmd     :: b  
-, nt    :: a  
-, ipnr  :: a  
-, ipac  :: a  
-, feac  :: a  
-, fac   :: a  
-, nsc   :: a  
-, isc   :: a  
-, prf   :: ContractStatus  
-, sd    :: b  
-, prnxt :: a  
-, ipcb  :: a  
+  tmd     :: b  
+  , nt    :: a  
+  , ipnr  :: a  
+  , ipac  :: a  
+  , feac  :: a  
+  , fac   :: a  
+  , nsc   :: a  
+  , isc   :: a  
+  , prf   :: ContractStatus  
+  , sd    :: b  
+  , prnxt :: a  
+  , ipcb  :: a  
 } deriving (Show) 
-
+\end{verbatim}
+\noindent
+and arithmetic operations,
+\begin{verbatim}
 -- Ops.hs
 class ActusOps a where    
    _min :: a -> a -> a
@@ -417,103 +436,107 @@ class DateOps a b where
 class RoleSignOps a where
    _r :: ContractRole -> a
 \end{verbatim}
-
-Thus, every formula in the executable spec could either be instantiated
+\noindent
+Thus, every formula in the executable spec could be instantiated
 to: 
 \begin{itemize}
-\item formula on some ``atomic'' type (like Double, Day) - could be used
+\item a formula on some \emph{atomic} type, like \texttt{Double} or \texttt{Day}, which could be used
 to directly compute cash-flows for analytical purposes or precompute
-payoffs for smart contracts that don't depend on oracles 
-\item formula representing piece of AST (Marlowe Value, Observation) - could
+payoffs for smart contracts that do not depend on oracles; or 
+\item a formula representing a piece of \emph{abstract syntax}, e.g. a Marlowe \texttt{Value} or \texttt{Observation}, that could
 be used to generate smart contracts that depend on oracles or to generate
-code in another language (like Agda) 
+code in another language, such as Agda.
 \end{itemize}
 This approach of abstracting formulas has a limitation of not allowing
-conditionals to be expressed in an abstract way (There is no ActusIf
-typeclass) - luckily most of conditional expressions in ACTUS specification
-don't depend on variable state of a contract - they depend on ContractTerms
+conditionals to be expressed in an abstract way: in other words, there is no \texttt{ActusIf}
+typeclass. Luckily most of conditional expressions in ACTUS specification
+don't depend on variable state of a contract, they depend on \texttt{ContractTerms}
 that are known in advance during contract generation. This allows
 us to dispatch appropriate formulas during generation rather than
 execution.
 
-The only exception to this are rare situations where we need to compare
-2 state variables and either choose formula1 or 0 depending on comparison
+The only exception to this are the rare situations where we need to compare
+2 state variables and choose either $\ident{formula}^\prime$ or 0 depending on the result of the comparison
 result:
 
 \begin{equation}
-formula(st)=\begin{cases}
-formula'(st) & var1(st)<var2(st)\\
-0 & otherwise
+\ident{formula}(st)=\begin{cases}
+\ident{formula}^\prime(st) & \ident{var}_1(st)<\ident{var}_2(st)\\
+0 & \ident{otherwise}
 \end{cases}
 \end{equation}
-
-We rely on pseudo-boolean ``less than'' function in order to address
+We rely on a pseudo-Boolean \emph{less than} function in order to address
 that:
 
 \noindent 
 \begin{equation}
-formula(st)=pseudoLt(var1(s1),var2(st)))*formula'
+\ident{formula}(st)=\ident{pseudoLt}(\ident{var}_1(st),\ident{var}_2(st)))*\ident{formula}^\prime
 \end{equation}
 
 \noindent 
 \begin{equation}
-pseudoLt(a,b)=Cond(a>b,1,0)
+\ident{pseudoLt}(a,b)=\ident{Cond}(a>b,1,0)
 \end{equation}
 
 
 \subsection{Contract terms representation and explicit applicability}
 
-In order to simplify serialisation/deserialisation of contract terms
-across Actus related services maintained by Cardano - we rely on ``superposed''
-representation of contract terms - all ACTUS contract types are represented
-with the same type. While such representation allows both encoder
-and decoder to express any ACTUS contract terms, it also allows for
-invalid combinations of terms (for example PRNXT cannot be applied
-to PAM-contract), which means contracts require specific validation
-that is implemented by means of applicability function:
+In order to simplify serialisation and deserialisation of contract terms
+across ACTUS related services maintained by Cardano we rely on ``superposed''
+representation of contract terms: all ACTUS contract types are represented
+with the same type. 
 
+While such a representation allows both encoder
+and decoder to express any ACTUS contract terms, it also allows for
+invalid combinations of terms (for example \emph{PRNXT} cannot be applied
+to a PAM contract), which means contracts require specific validation
+that is implemented by means of the applicability function:
+
+% SJT - do you mean \mapsto or \rightarrow here?
 \noindent 
 \begin{equation}
-Applicability:ContractTerms\mapsto Bool
+\ident{Applicability}:\ident{ContractTerms}\mapsto \ident{Bool}
 \end{equation}
 
 ACTUS defines a family of applicability functions polymorphic on contract
 type (TODO link to ACTUS applicability):
+% SJT something needed here.
 
+\smallskip
+% SJT changed ContractTerm to ContractTerms
 \noindent 
 \begin{equation}
-Applicability:ContractType\times ContractTerm\mapsto ApplicabilityType,
+\ident{Applicability} : \ident{ContractType} \times \ident{ContractTerms} \mapsto \ident{ApplicabilityType}
 \end{equation}
+\noindent
+where applicability could be: \emph{none}, \emph{always}, \emph{nullable}, or \emph{multiple}.
 
-where applicability could be: none, always, nullable, multiple
-
-In order to build superposed contract terms type for such function,
-we have to resolve conflicting applicability for contract terms merged
+In order to build superposed contract terms type for such functions,
+we have to resolve conflicting applicability types for merged contract terms
 using the following resolution rules:
 
 \noindent 
 \begin{equation}
-weaken(a_{1},a_{2})=\begin{cases}
-nullable & a_{1}=none\wedge a_{2}=always\\
-nullable & a_{1}=always\wedge a_{2}=none\\
-a_{1} & priority(a_{1})>priority(a_{2})\\
-a_{2} & otherwise
+\ident{weaken}(a_{1},a_{2})=\begin{cases}
+\ident{nullable} & a_{1}=\ident{none}\wedge a_{2}=\ident{always}\\
+\ident{nullable} & a_{1}=\ident{always}\wedge a_{2}=\ident{none}\\
+a_{1} & \ident{priority}(a_{1})>\ident{priority}(a_{2})\\
+a_{2} & \ident{otherwise}
 \end{cases}
 \end{equation}
 
 \noindent 
 \begin{equation}
-priority(x)=\begin{cases}
-0 & x=always\\
-1 & x=none\\
-2 & x=nullable\\
-3 & x=multiple
+\ident{priority}(x)=\begin{cases}
+0 & x=\ident{always}\\
+1 & x=\ident{none}\\
+2 & x=\ident{nullable}\\
+3 & x=\ident{multiple}
 \end{cases}
 \end{equation}
-
-Where $a_{1}$ - is applicability of a given term of first contract
-type to be merged $a_{2}$ - is applicability of a given term of second
-contract type to be merged
+\noindent
+where $a_{i}$ is the applicability of a given term of the \emph{i}th contract
+type to be merged.
 
 \section{Generating Marlowe contracts from ACTUS specs}%standardised ACTUS contract terms}
 \label{generation}

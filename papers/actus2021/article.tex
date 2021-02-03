@@ -79,7 +79,7 @@ explore a smart-contract framework for building standardized crypto-loans
 with Marlowe DSL and Algorithmic Contract Types Unified Standards
 at its core.
 
-\keywords{Cardano \and ACTUS \and blockchain \and finance \and Marlowe \and Haskell} 
+\keywords{ACTUS \and blockchain \and Cardano \and finance \and Haskell \and Marlowe} 
 \end{abstract}
 
 
@@ -170,11 +170,11 @@ of measurement: how much percentage points you would get for a usd-to-kilowatt
 and so on.
 
 In the context of ACTUS and other event-based frameworks, there is
-one more factor influencing interest rates thrrough scaling:
+one more factor influencing interest rates thorough scaling:
 
 \noindent 
 \begin{equation}
-interestPayment=interestScalingFactor*interstRate*notional
+interestPayment=interestScalingFactor*interestRate*notional
 \end{equation}
 
 This scaling is dynamic and loosely adjusts for variance (volatility)
@@ -255,7 +255,7 @@ can be inferred from previous events and observed risk factors:
 
 \noindent 
 \begin{equation}
-payoff_{i}=POF(state_{i})
+\mbox{\emph{payoff}}_{i}=POF(state_{i})
 \end{equation}
 
 \noindent 
@@ -280,7 +280,7 @@ a smart contract to be able to observe the value of a given risk factor
 
 \noindent 
 \begin{equation}
-riskfactor_{i}{}_{t}=O_{rf}(i,t)
+\mbox{\emph{riskfactor}}_{i}{}_{t}=O_{rf}(i,t)
 \end{equation}
 
 This is due to the risk factor's state not being known at instantiation
@@ -294,7 +294,7 @@ as Marlowe abstracts over IO by requiring particular type of input
 As a result, the event of receiving data from Oracle is treated the
 same as receiving integer numbers from user input in other languages
 
-\section{Building executable specification of ACTUS}
+\section{Building an executable specification of ACTUS}
 
 \subsection{Mimicking the specification with Haskell code}
 
@@ -481,7 +481,7 @@ contract(ct)=collaterals(ct)\circ INIT(ct)\circ\prod_{t\in SCHED(ct)}chainlink(t
 
 where $receiveData$ - is asking an oracle for Marlowe Choice if needed,
 $calculatePayoff$ - calculates payoff formula. For fixed-rate contracts
-this is optimised into a precalculated constant. $processPayoff$
+this is optimised into a pre-calculated constant. $processPayoff$
 - awaits Deposit of payoff amount from a party: if deposit is transferred
 it redirects the funds to a counterparty - otherwise it transfers
 the collateral to a counterparty and closes the contract. The chain
@@ -636,12 +636,13 @@ In order to test the equivalence between Executable Haskell implementation
 of ACTUS for smart-contracts and original Java implementation for
 analytics - a simple property test was introduced:
 
+\smallskip
 \noindent 
 \begin{equation}
 \forall ct\forall rf.getCashFlows("haskell",ct,rf)\equiv getCashFlows("java",ct,rf)
 \end{equation}
 
-Where $ct$ represnts contract terms, $rf$ is risk factor model and
+Where $ct$ represents contract terms, $rf$ is risk factor model and
 $getCashFlows()$ returns a set of $(date,payoff)$ tuples.
 
 \subsection{QuickCheck for verification}

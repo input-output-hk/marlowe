@@ -54,18 +54,22 @@
 \renewcommand{\lstlistingname}{Listing}
 
 \begin{document}
-\title{Standardized crypto-loans on Cardano blockchain\thanks{Supported by Cardano Foundation.}}
-\author{First Author\inst{1}\orcidID{0000-1111-2222-3333} \and
-Second Author\inst{2,3}\orcidID{1111-2222-3333-4444} \and
-Third Author\inst{3}\orcidID{2222--3333-4444-5555}}
-%
-\authorrunning{F. Author et al.}
-\institute{Princeton University, Princeton NJ 08544, USA \and
-Springer Heidelberg, Tiergartenstr. 17, 69121 Heidelberg, Germany
-\email{lncs@springer.com}\\
-\url{http://www.springer.com/gp/computer-science/lncs} \and
-ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
-\email{\{abc,lncs\}@uni-heidelberg.de}}
+\title{Standardized crypto-loans on\\ the Cardano blockchain}%\thanks{Supported by Cardano Foundation.}}
+
+
+\author{Dmytro Kondratiuk\inst{1}\orcidID{XXXX} \and
+				Pablo {Lamela Seijas}\inst{1}\orcidID{0000-0002-1730-1219} \and
+                Simon Thompson\inst{1,2}\orcidID{0000-0002-2350-301X}}
+
+\authorrunning{D. Kondratiuk, et al.}
+
+\institute{IOHK, Hong Kong,
+\email{dmytro.kondratiuk@iohk.io, pablo.lamela@iohk.io, simon.thompson@iohk.io}  \and
+School of Computing, University of Kent, UK,
+\email{s.j.thompson@kent.ac.uk}}
+
+
+
 %
 \maketitle              % typeset the header of the contribution
 %
@@ -77,7 +81,7 @@ explore a smart-contract framework for building standardized crypto-loans
 with Marlowe DSL and Algorithmic Contract Types Unified Standards
 at its core.
 
-\keywords{cardano \and actus \and blockchain \and finance} 
+\keywords{Cardano \and ACTUS \and blockchain \and finance \and Marlowe \and Haskell} 
 \end{abstract}
 
 
@@ -317,7 +321,7 @@ In order to keep our executable specification independent of the carrier
 or even machine learning model) - we abstract over underlying representations
 of state variables and arithmetic operations:
 
-\begin{lstlisting}
+\begin{verbatim}
 -- Definitions/ContractState.hs 
 data ContractStatePoly a b = ContractStatePoly  
 {  
@@ -356,7 +360,7 @@ class DateOps a b where
 
 class RoleSignOps a where
    _r :: ContractRole -> a
-\end{lstlisting}
+\end{verbatim}
 
 Thus, every formula in the executable spec could either be instantiated
 to: 
@@ -497,7 +501,7 @@ using $SCHED()$function from ACTUS.
 Marlowe doesn't allow functions and recursion. Naive usage of If operator
 in Marlowe could lead to exponential growth of a contract, for example:
 
-\begin{lstlisting}
+\begin{verbatim}
 if condition 
 	then 
 		perform_something1()
@@ -505,7 +509,7 @@ if condition
 	else 
 		perform_something2 
 		continue()
-\end{lstlisting}
+\end{verbatim}
 
 would inline contents of $continue()$ twice and given that ACTUS
 contracts are essentially generated using continuation as an accumulator
@@ -546,11 +550,11 @@ to $N_{stateTransitions}=\frac{max(date(event))-min(date(event))}{precision}$.
 Marlowe only supports Integers, while ACTUS is expressed in terms
 of real numbers. In order to model a real number in such a setup -
 we rely on fixed point precision. The algebra looks like this: 
-\begin{lstlisting}
+\begin{verbatim}
 (+)   = AddValue
 (-)   = SubValue
 a * b = Scale (1 % marloweFixedPoint) $ MulValue a b
-\end{lstlisting}
+\end{verbatim}
 
 
 \subsection{Representing Actus state in a Marlowe contract}
@@ -576,20 +580,20 @@ st_{t+1}=unpack(stateTransition(pack(st_{t-1}))),
 Marlowe doesn't support mutable variables, so we have to represent
 state at t ($st_{t}$) literally through naming convention:
 
-\begin{lstlisting}
+\begin{verbatim}
 variableName(name, t) = 
 	concat(name, '_', t) 
 generateAccessor(name, t) = 
 	UseValue variableName(name, t) 
 generateSetter(name, t, formula) = 
 	Let variableName(name, t) formula 
-\end{lstlisting}
+\end{verbatim}
 
 
 \subsection{ActusLabs}
 
 \begin{figure} 
-\includegraphics[width=0.8\textwidth,natwidth=664,natheight=552]{labs.png}
+\includegraphics[width=0.8\textwidth]{labs.png}
 \caption{Actus Labs - online tool for generating Actus contracts for Marlowe.} 
 \label{fig3} 
 \end{figure} 
@@ -648,12 +652,12 @@ QuickCheck\cite{qc} contract terms generators also allow to ensure
 arbitrary properties of a Marlowe contract. This could be enhanced
 with Marlowe's static analysis feature by utilising Assert operator:
 
-\begin{lstlisting}
+\begin{verbatim}
 ContractTerms := sample(qcgenerator) 
 Contract := generateMarloweContract(ContractTerms) 
 ContractWithAssert := appendAssertion(Contract, assertion) 
 runStaticAnalysis(ContractWithAssert)
-\end{lstlisting}
+\end{verbatim}
 
 While it doesn't cover all possible contracts it could guarantee that
 property holds for a statistically significant fraction of a contract.

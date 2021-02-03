@@ -1,5 +1,3 @@
-%% LyX 2.3.6.2 created this file.  For more info, see http://www.lyx.org/.
-%% Do not edit unless you really know what you are doing.
 \documentclass[runningheads]{llncs}
 \usepackage[latin9]{inputenc}
 \usepackage{url}
@@ -464,7 +462,7 @@ contract type to be merged
 \subsection{Overall architecture }
 
 \begin{figure}
-\includegraphics[width=1\textwidth]{modules} \caption{Modules responsible for contract generation.}
+\includegraphics[width=1\textwidth]{images/modules} \caption{Modules responsible for contract generation.}
 \label{fig1} 
 \end{figure}
 
@@ -491,7 +489,7 @@ is generated from the fixed (known in advance) schedule of events
 using $SCHED()$function from ACTUS.
 
 \begin{figure}
-\includegraphics[width=1\textwidth]{flowchart} \caption{Chain of sub-contracts representing ACTUS logic}
+\includegraphics[width=1\textwidth]{images/flowchart} \caption{Chain of sub-contracts representing ACTUS logic}
 \label{fig2} 
 \end{figure}
 
@@ -593,7 +591,7 @@ generateSetter(name, t, formula) =
 \subsection{ActusLabs}
 
 \begin{figure} 
-\includegraphics[width=0.8\textwidth]{labs.png}
+\includegraphics[width=0.8\textwidth]{images/labs.png}
 \caption{Actus Labs - online tool for generating Actus contracts for Marlowe.} 
 \label{fig3} 
 \end{figure} 
@@ -739,30 +737,15 @@ requirements specified by the user.
 On top of that, Marlowe ACTUS provides a toolkit for cross-testing
 with original ACTUS spec, a framework for adding new contract types,
 cash-flow visualisations and verification tooling.
-\begin{thebibliography}{1}
-\bibitem{loan} Loan definition, \url{https://www.investopedia.com/terms/l/loan.asp}
-Last accessed 2 Feb 2020
 
-\bibitem{marlowe} Pablo Lamela Seijas \& Simon Thompson. (ISoLA 2018).
-Marlowe: financial contracts on blockchain 
-
-\bibitem{smt}Vanegue, Julien \& Heelan, Sean \& Rolles, Rolf. (2012).
-SMT solvers for software security. 9-9.
-
-\bibitem{actus} ACTUS Homepage, \url{https://www.actusfrf.org/}Last
-accessed 2 Feb 2020
-
-\bibitem{oracles} Mammadzada, Kamran \& Iqbal, Mubashar \& Milani,
-Fredrik \& Garc�a-Ba�uelos, Luciano \& Matulevi\v{c}ius, Raimundas.
-(2020). Blockchain Oracles: A Framework for Blockchain-Based Applications.
-10.1007/978-3-030-58779-6\_2. 
-
-\bibitem{qc}Claessen, K., Hughes, J.: QuickCheck: a lightweight tool
-for random testing of Haskell programs. In: ICFP \textquoteright 00.
-pp. 268--279. ACM (2000)
-
-\bibitem{flash-loan}``flash-loan'' attacks \url{https://www.coindesk.com/harvest-finance-24m-attack-triggers-570m-bank-run-in-latest-defi-exploit}Last
-accessed 2 Feb 2020
-\end{thebibliography}
+%
+% ---- Bibliography ----
+%
+% BibTeX users should specify bibliography style 'splncs04'.
+% References will then be sorted and formatted in the correct style.
+%
+\bibliographystyle{splncs04}
+\bibliography{article}
+%
 
 \end{document}

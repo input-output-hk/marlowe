@@ -5,6 +5,7 @@
 *.pdf
 *.gz
 *.out
+*.brf
 stack.yaml.lock
 .stack-work/
 .vscode/

@@ -1,6 +1,6 @@
 \documentclass[runningheads]{llncs}
 \usepackage[latin9]{inputenc}
-\usepackage{url}
+\usepackage{url}[obeyspaces]
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage[unicode=true,
@@ -25,8 +25,8 @@
 
 
 
-
-
+% SJT use this to get nicer formatting of textual identifiers in math mode
+\newcommand{\ident}[1]{\mbox{\emph{#1}}}
 
 
 \usepackage{listings}
@@ -72,19 +72,44 @@ School of Computing, University of Kent, UK,
 \maketitle              % typeset the header of the contribution
 %
 \begin{abstract}
-Crypto-loans are unique and innovative financial instruments that
-allow trustless P2P lending, which could provide a safe and convenient
-source of liquidity for cryptocurrency holders. In this article, we
-explore a smart-contract framework for building standardized crypto-loans
-with Marlowe DSL and Algorithmic Contract Types Unified Standards
-at its core.
+Crypto-loans are %unique and 
+innovative financial instruments that
+allow trustless peer-to-peer %P2P 
+lending, and potentially providing a safe and convenient
+source of liquidity for cryptocurrency holders. In this paper we
+explore a smart contract framework for building standardized crypto-loans
+using the Marlowe domain-specific language and with the ACTUS standard at its core.
 
 \keywords{ACTUS \and blockchain \and Cardano \and finance \and Haskell \and Marlowe} 
 \end{abstract}
 
 
+\textbf{DONE:}
+\begin{enumerate}
+\item
+Added overview at the end of the intro.
+\item
+Tidying up identifiers in math equations using the command \verb+\ident{...}+
+\item
+Biblio sorted out ordering (added keys). shortened author and editor lists
+\end{enumerate}
+
+\textbf{TO DO:}
+\begin{enumerate}
+\item
+Algorithmic Contract Types Unified Standards (ACTUS) -- for first use. Also reference.
+\item
+Do we include Alex as co-author?
+\item
+What about R (shiny)?
+\end{enumerate}
+
+
 \section{Introduction}
 
+
+
+\bigskip\noindent
 List of contributions:
 \begin{itemize}
 \item \textquotedblleft Marlowe Labs\textquotedblright{} editor on Playground
@@ -101,72 +126,87 @@ List of contributions:
 \item Verification with QC + SMT (Dmytro) 
 \end{itemize}
 
-\section{Background}
+% SJT: added this overview of the paper
+% it is traditional to end the introduction like this,
+% 'signposting' what is in the rest of the paper.
+Section \ref{background} of the paper covers the relevant financial background, and Section \ref{modelling} introduces Marlowe as well as the ACTUS financial standard. Section \ref{executable} builds an executable specification of ACTUS in Haskell, and this is used in Section \ref{generation} to generate  the Marlowe code for an ACTUS contract from the terms of the contract. Section \ref{tokenization} explains how tokens are used to represent ownership of roles in a running contract, and Section \ref{verification} presents how we provide assurance of the contract correctness. Section \ref{related} examines related work and Section \ref{conclusion} concludes.
+
+
+
+\section{Financial contracts}
+\label{background}
 
 A loan is a form of debt incurred by an individual or other entity.
 The lender advances a sum of money to the borrower. In return, the
 borrower agrees to a certain set of terms including any finance charges,
 interest, repayment date, and other conditions \cite{loan}.
 
-Cryptocurrency-backed loans must have collaterals as there is no trust
-between party and counterparty. While loan is usually settled in a
-stable-coin currency (e.g. USDT/USDC), the typical collateral is denominated
-in a cryptocurrency (e.g. BTC). The purpose of this loan is to give
+Cryptocurrency-backed loans must have \emph{collateral} when there is no trust
+between party and counterparty. While a loan is usually settled in a
+stable-coin currency (e.g. USDT/USDC), collateral is typically denominated
+in a cryptocurrency (e.g. BTC). The purpose of such a loan is to give
 the borrower access to the fiat value of their crypto-funds without
-actually selling them for fiat. Borrower pays interest In exchange
-for provided liquidity.
+actually selling them for fiat. The borrower pays interest in exchange
+for gaining liquidity.
 
 Every loan has a positive net payoff (return minus investment) that
-is either rendered as a one-time payment (see ZCB) or as a scheduled
+is either rendered as a one-time payment -- often called a \emph{zero-coupon bond} (ZCB) -- or by scheduling
 payment of the interest. The rate of interest could be fixed throughout
-the lifetime of a contract - for example zero-risk bonds have an fixed
-interest proportional to inflation rate.
+the lifetime of a contract: for example, zero-risk bonds have a fixed
+interest proportional to the inflation rate.
+However, in the generic case the interest rate is variable and depends
+on an external factor agreed in advance, and the rate is periodically
+updated by observing the state of that factor. 
 
-However, in a generic case - the interest rate is variable and depends
-on an external factor agreed in advance, while the interest is periodically
-updated by observing the state of that factor. Such loans usually
-represent an investment in a particular venture or the industry. As
+Such loans often represent an investment in a particular venture or industry. As
 a somewhat fictional example, one could imagine a cryptocurrency miner
-who decided to scale their crypto-farm: the loan (in USD) with variable
+who decided to scale their crypto-farm: a loan (in USD) with variable
 interest that directly depends on cryptocurrency prices would be more
 attractive for a miner because it would directly correlate with miner's
 profits. For example, if the price of the cryptocurrency goes down
-in a particular month - miners would have to pay lower interest -
-one always pays ``fixed share'' of the profits. In a more traditional
-setup - the canonical example would be a power plant taking a loan
-with interest depending on electricity prices. In both cases, either
-cryptocurrency or electricity prices become a driver for the interest
+in a particular month the borrower would have to pay lower interest, and so would always pay a fixed share of the profits. In a more traditional
+setup the interest rate could depend on prices of other commodities: the canonical example would be a power plant taking a loan
+with interest depending on electricity prices. 
+
+In both cases, the prices of
+cryptocurrency or electricity become a driver for the interest
 rate.
-
-Although, one can't just take the bare price of the asset and turn
-it into a rate. In order to make ``units of measurement'' compatible
-- adjustments should be made. Fluctuations of the interest rate driver
-are embedded as:
+However, one cannot simply take the bare price of the asset and turn
+it into a rate. In order to make \emph{units of measurement} compatible
+%SJT compatible with what??
+adjustments should be made. Fluctuations of the interest rate driver
+are embedded thus:
 
 \noindent 
 \begin{equation}
-\Delta_{r}=capfloor(driver*multiplier+spread-interestRate_{t-1})
+\Delta_{r}=\ident{capfloor}(\ident{driver}*\ident{multiplier}+\ident{spread}-\ident{interestRate}_{t-1})
 \end{equation}
 
 \noindent 
 \begin{equation}
-interestRate_{t+1}=capfloor(interestRate_{t-1}+\Delta_{r}),
+\ident{interestRate}_{t+1}=\ident{capfloor}(\ident{interestRate}_{t-1}+\Delta_{r}),
 \end{equation}
 
-Where capfloor is a function that limits the range of fluctuation
-(thus limiting lender's risk exposure):
+\noindent
+where \emph{capfloor} is a function that limits the range of fluctuation,  
+and so limiting the lender's exposure to risk:
 
 \noindent 
 \begin{equation}
-capfloor(x)=max(min(x,floor),cap)
+\ident{capfloor}(x)=\ident{max(min}(x,\ident{floor}),\ident{cap})
 \end{equation}
 
-Here, the spread parameter loosely represents the difference between
-the average prime rate that the lender expects (benchmark yield) and
+\noindent
+The \emph{spread} parameter here loosely represents the difference between
+the average prime 
+% SJT explain "prime" here.
+rate that the lender expects (the benchmark yield) and
 the rate imposed by the driver - the higher the spread, the higher
-the resulting interest rate is. Multiplier effectively rescales the
-interest rate plot in order to represent the difference between units
-of measurement: how much percentage points you would get for a usd-to-kilowatt
+the resulting interest rate. The multiplier %effectively 
+rescales the interest rate value 
+% SJT used value here rather than plot: is that OK?
+in order to represent the changes to be made converting between different units
+of measurement: how many percentage points you would get for a usd-to-kilowatt conversion
 and so on.
 
 In the context of ACTUS and other event-based frameworks, there is
@@ -184,7 +224,7 @@ of the asset that the interest rate driver represents.
 
 Counterparty might decide to reinvest profit received as interest
 from the same loan. In the simplest case, this renders as compound
-interest. This can be modeled through interest accrual and capitalisation,
+interest. This can be modelled through interest accrual and capitalisation,
 for instance contracts from the ACTUS specification accrue interest
 between interest payments and can transfer interest to a notional
 during interest capitalisation event (IPCL).
@@ -220,9 +260,12 @@ render collateral worthless) - she can get her collateral back, otherwise
 the loan gets liquidated and collateral is transferred to Bob. 
 \end{enumerate}
 
-\section{Modeling financial contracts}
+\section{Modelling financial contracts}
+\label{modelling}
 
-\subsection{Marlowe }
+This section introduces the Marlowe DSL and the ACTUS standard for financial contracts.
+
+\subsection{Marlowe}
 
 Marlowe is a high-level, domain-specific language (DSL) for writing
 financial contracts on blockchain\cite{marlowe}. Marlowe is defined
@@ -295,6 +338,7 @@ As a result, the event of receiving data from Oracle is treated the
 same as receiving integer numbers from user input in other languages
 
 \section{Building an executable specification of ACTUS}
+\label{executable}
 
 \subsection{Mimicking the specification with Haskell code}
 
@@ -457,7 +501,8 @@ Where $a_{1}$ - is applicability of a given term of first contract
 type to be merged $a_{2}$ - is applicability of a given term of second
 contract type to be merged
 
-\section{Generating Marlowe contracts from standardised ACTUS contract terms}
+\section{Generating Marlowe contracts from ACTUS specs}%standardised ACTUS contract terms}
+\label{generation}
 
 \subsection{Overall architecture }
 
@@ -471,7 +516,7 @@ contracts:
 
 \noindent 
 \begin{equation}
-chainlink(t)=receiveData(t)\circ calculatePayoff(t)\circ processPayoff(t)
+chainlink(t)=receiveData(t)\circ \mbox{\emph{calculatePayoff(t)}}\circ \mbox{\emph{processPayoff(t)}}
 \end{equation}
 
 \noindent 
@@ -480,13 +525,13 @@ contract(ct)=collaterals(ct)\circ INIT(ct)\circ\prod_{t\in SCHED(ct)}chainlink(t
 \end{equation}
 
 where $receiveData$ - is asking an oracle for Marlowe Choice if needed,
-$calculatePayoff$ - calculates payoff formula. For fixed-rate contracts
-this is optimised into a pre-calculated constant. $processPayoff$
+$\mbox{\emph{calculatePayoff}}$ - calculates payoff formula. For fixed-rate contracts
+this is optimised into a pre-calculated constant. $\mbox{\emph{processPayoff}}$
 - awaits Deposit of payoff amount from a party: if deposit is transferred
 it redirects the funds to a counterparty - otherwise it transfers
 the collateral to a counterparty and closes the contract. The chain
 is generated from the fixed (known in advance) schedule of events
-using $SCHED()$function from ACTUS.
+using the $SCHED()$ function from ACTUS.
 
 \begin{figure}
 \includegraphics[width=1\textwidth]{images/flowchart} \caption{Chain of sub-contracts representing ACTUS logic}
@@ -508,10 +553,10 @@ if condition
 		perform_something2 
 		continue()
 \end{verbatim}
-
-would inline contents of $continue()$ twice and given that ACTUS
+\noindent
+would inline contents of \texttt{continue()} twice and given that ACTUS
 contracts are essentially generated using continuation as an accumulator
-- this would lead to exponential explosion of the size of any actus
+- this would lead to exponential explosion of the size of any ACTUS
 contract that has conditionals in their state transition logic.
 
 Example of such logic would be cap/floor limitations on interest rate:
@@ -521,15 +566,15 @@ Example of such logic would be cap/floor limitations on interest rate:
 adjusted=max(min(original,floor),cap)
 \end{equation}
 
-We addressed this issue by introducing ``Cond'' construct in order
-to represent ``if'' expressions. So instead of using the ``If''
+We addressed this issue by introducing the \texttt{Cond} construct in order
+to represent conditional expressions. So instead of using the \texttt{If}
 contract to decide the value of some variable - we use conditional
-assignment instead as ``Cond'' is essentially just a pure function
-that returns value depending on condition in contrast to the ``If''
+assignment instead as \texttt{Cond} is essentially just a pure function
+that returns value depending on condition in contrast to the \texttt{If}
 contract that performs action instead of returning value. The name
 is borrowed from a similar function in Lisp.
 
-\subsection{Limitations due to termination }
+\subsection{Limitations due to termination}
 
 Marlowe doesn't allow perpetual contracts even if their recursion
 is productive (example: perpetual swap) - thus we can't support certain
@@ -540,8 +585,16 @@ could be represented as actors with finite amounts of state transitions.
 We prototyped this approach in a separate branch, however it does
 seem more prone to errors comparing to rendering predefined schedules
 and more importantly it greatly affects static analysis as the amount
-of ``reduction steps'' grows from $N_{scheduled}=count(event)$
-to $N_{stateTransitions}=\frac{max(date(event))-min(date(event))}{precision}$. 
+of ``reduction steps'' grows from 
+\noindent 
+\begin{equation}
+N_{scheduled}=count(event)
+\end{equation}
+to 
+\noindent 
+\begin{equation}
+N_{stateTransitions}=\frac{max(date(event))-min(date(event))}{precision} 
+\end{equation}
 
 \subsection{Fixed-point precision }
 
@@ -603,6 +656,7 @@ generate a corresponding Marlowe contract and try it out in a simulated
 environment.
 
 \section{Tokenization}
+\label{tokenization}
 
 Every participant of an ACTUS contract is described by a Role which
 is in its turn represented through a special unique non-fungible token.
@@ -629,6 +683,7 @@ is locked with token1 and Bob's income is locked with token2 - then
 atomic swap of those tokens is equivalent to a swap of cash flows.
 
 \section{Verification and testing}
+\label{verification}
 
 \subsection{QuickCheck for cross-testing}
 
@@ -712,7 +767,11 @@ security check was introduced as part of Static Analysis tooling which
 notifies users about all ``Close'' constructs that can lead to automatic
 refunds and encourages users to write explicit logic for edge cases.
 
-\section{Comparison with existing smart-contracts approaches }
+\section{Related work}\label{related}
+
+% SJT changed title from {Comparison with existing smart-contracts approaches }
+% it's traditional to call this "relatyed work".
+
 
 Unlike current popular DeFi lending approaches - Marlowe ACTUS-based
 implementation tends to rely on trade-matching instead of pooling.
@@ -728,6 +787,7 @@ foundation provides a set of tools allowing Monte-Carlo simulations
 of ACTUS contracts.
 
 \section{Conclusion}
+\label{conclusion}
 
 Marlowe language was explicitly designed as a set of building blocks
 for financial contracts that could be combined by anyone familiar

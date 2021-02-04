@@ -2,6 +2,7 @@
 \usepackage[latin9]{inputenc}
 \usepackage{url}[obeyspaces]
 \usepackage{amsmath}
+\usepackage{alltt}
 \usepackage{graphicx}
 \usepackage[unicode=true,
  bookmarks=false,
@@ -611,15 +612,15 @@ using the \ident{SCHED()} function from ACTUS, as shown in Figure \ref{fig2}.
 
 Marlowe contracts are finite, and in particular Marlowe itself does not have constructs for functions or recursion; these \emph{are} available in the Haskell and JavaScript embeddings of Marlowe, but they are unrolled on translation to pure Marlowe. Naive usage of the \texttt{If} operator in Marlowe could lead to exponential growth of a contract, as in this pesudocode example:
 
-\begin{verbatim}
+\begin{alltt}
 if condition 
-	then 
-		perform\_something1()
-		continue() 
-	else 
-		perform\_something2() 
-		continue()
-\end{verbatim}
+  then 
+    perform\_something1()
+    continue() 
+  else 
+    perform\_something2() 
+    continue()
+\end{alltt}
 \noindent
 Translating this to Marlowe would inline contents of \texttt{continue()} twice and, given that ACTUS
 contracts are essentially generated using continuation as an accumulator,

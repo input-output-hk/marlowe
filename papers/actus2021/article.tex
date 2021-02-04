@@ -366,11 +366,13 @@ provided through an \emph{oracle} mechanism\cite{oracles}. An oracle
 could be a trusted party providing necessary data or network of parties
 under consensus {[}find a reference{]}. 
 % SJT REF needed
+
 From a Marlowe DSL perspective,
 the exact mechanism that provides external data is less important,
 as Marlowe abstracts over IO by requiring a particular type of input -- a 
 \texttt{Choice} -- that is protected with a cryptographic signature by the source of the choice.
 % SJT changed from "owner" to "source".
+% dk14 OK
 As a result, the event of receiving data from an oracle is treated the
 same as receiving numeric input in other languages
 
@@ -380,6 +382,7 @@ same as receiving numeric input in other languages
 ACTUS is defined in a textual specification\footnote{Available from \url{https://www.actusfrf.org/techspecs}.} which, while expressed in mathematical notation, is essentially informal. In this section we describe how this specification is turned into an \emph{executable} version by rendering it in Haskell. This translation is in fact a transliteration, since notation, variable names and so forth are respected.
 % SJT: are you happy with this? If not, let's rephrase,
 % but it would be good include something to this effect.
+% dk14 thanks for adding this
 
 \subsection{Rendering the specification in Haskell}
 
@@ -504,7 +507,7 @@ to a PAM contract), which means contracts require specific validation
 that is implemented by means of the applicability function:
 
 % SJT - do you mean \mapsto or \rightarrow here?
-% dk14 - it is a mapping, but could be morphism too
+% dk14 - it is a mapping, but could be function/morphism too
 \noindent 
 \begin{equation}
 \ident{Applicability}:\ident{ContractTerms}\rightarrow \ident{Bool}
@@ -632,6 +635,7 @@ that returns a value depending on a condition, in contrast to the \texttt{If}
 contract that chooses between two continuation contracts. 
 % SJT I don't think we need to say this.
 %The name is borrowed from a similar function in Lisp.
+% dk14 - Oh sure. I was going to remove it too :)
 
 \subsection{Limitations due to termination}
 
@@ -839,6 +843,7 @@ refunds and encourages users to write explicit logic for edge cases.
 
 % SJT changed title from {Comparison with existing smart-contracts approaches }
 % it's traditional to call this "relatyed work".
+% dk14. sure this is better
 
 
 Unlike current popular DeFi lending approaches - Marlowe ACTUS-based

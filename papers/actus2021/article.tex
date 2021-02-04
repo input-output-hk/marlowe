@@ -170,7 +170,7 @@ In both cases, the prices of
 cryptocurrency or electricity become a driver for the interest
 rate.
 However, one cannot simply take the bare price of the asset and turn
-it into a rate. In order to make \emph{units of measurement} compatible
+it into a rate. In order to make \emph{units of measurement} compatible with each other
 %SJT compatible with what??
 adjustments should be made. Fluctuations of the interest rate driver
 are embedded thus:
@@ -213,7 +213,7 @@ the average prime
 rate that the lender expects -- the \emph{benchmark yield} -- and
 the rate imposed by the driver - the higher the spread, the higher
 the resulting interest rate. The multiplier %effectively 
-rescales the interest rate value 
+rescales the interest rate curve 
 % SJT used value here rather than plot: is that OK?
 % dk14 maybe "curve" would be better
 in order to represent the changes to be made converting between different units
@@ -223,7 +223,7 @@ of measurement: how many rate percentage points
 you would get for a USD-to-kilowatt conversion
 and so on.
 
-In the context of ACTUS and simillar frameworks, 
+In the context of ACTUS and similar frameworks, 
 % SJT - need to explain "event-based" in this context.
 % dk14. "Event-driven" but it has no relation to scaling, so I'll remove it
 there is
@@ -244,7 +244,7 @@ from the %same
 % SJT I think "same" is superfluous here: is that OK?
 % dk14 sure
 loan. In the simplest case, this renders as compound
-interest. This can be modelled through interest accrual and capitalisation;
+interest. This can be modelled through interest accrual and capitalisation (conversion of income or assets into capital);
 % SJT what does "capitalisation" mean?
 % dk14 "conversion of income or assets into capital" it's quite googlable financial terms so idk if I should note it explicitly
 for instance, contracts from the ACTUS specification accrue interest
@@ -581,7 +581,9 @@ where the component \emph{receiveData} asks an oracle for Marlowe Choice if need
 this is optimised into a pre-calculated constant function. The \emph{processPayoff} function
 awaits the \texttt{Deposit} of a payoff amount from a party: if the deposit is made them 
 it directs the funds to a counterparty, otherwise it transfers
-the collateral to the counterparty and closes the contract. The principal components of the system are shown in Figure \ref{fig1}. There are 3 categories of components representing ACTUS functions: specification with formulas, formula wiring for fixed rates (produces precomputed payoffs) and formula wiring for variable rates (produces Marlowe-code that computes payoffs). Different types of wiring correspond to different implementations of \emph{ActusOps} implemetations (either \emph{Double} or \emph{Value}). 
+the collateral to the counterparty and closes the contract. 
+
+The principal components of the system are shown in Figure \ref{fig1}. There are three categories of components representing ACTUS functions: specification with formulas, formula wiring for fixed rates (produces precomputed payoffs) and formula wiring for variable rates, which  produces Marlowe-code that computes payoffs. Different types of wiring correspond to different implementations of \emph{ActusOps} implementations (either \emph{Double} or \emph{Value}). 
 % SJT added this figure ref: OK?
 % Do we need to add a little more to explain Fig1?
 % dk14 OK, added few sentences about Fig1
@@ -699,7 +701,7 @@ where \emph{pack} is a chain of \texttt{UseValue} constructs and \ident{unpack} 
 
 \paragraph{Representing state transitions in Marlowe}
 
-Marlowe is a declarative language, and so in partticular does support mutable variables. We therefore represent the state at stage $t$ ($st_{t}$) literally through this naming convention:
+Marlowe is a declarative language, and so in particular it does not support mutable variables. We therefore represent the state at stage $t$ ($st_{t}$) literally through this naming convention:
 
 \begin{verbatim}
   variableName(name, t) = 

@@ -106,6 +106,9 @@ Write introduction [SJT]
 Should we include Alex as co-author?
 \item
 What about R (shiny)?
+\item
+We use \verb+equation+ environment which numbers equations, but the numbering isn't used I think.
+So I'd suggest moving to \verb+equation*+ instead (easy edit).
 \end{enumerate}
 
 
@@ -479,7 +482,7 @@ that:
 \end{equation}
 
 
-\subsection{Contract terms representation and explicit applicability}
+\subsection{Contract term representation and explicit applicability}
 
 In order to simplify serialisation and deserialisation of contract terms
 across ACTUS related services maintained by Cardano we rely on ``superposed''
@@ -538,8 +541,10 @@ a_{2} & \ident{otherwise}
 where $a_{i}$ is the applicability of a given term of the \emph{i}th contract
 type to be merged.
 
-\section{Generating Marlowe contracts from ACTUS specs}%standardised ACTUS contract terms}
+\section{Generating Marlowe contracts from standardised ACTUS contract terms}
 \label{generation}
+
+In this section we describe how concrete Marlowe contracts are generate from the terms -- i.e. parameters -- of standard ACTUS contracts; we also describe the implementation of the system, and reflect on the limitations of generating contracts in Marlowe, where contracts have a a predefined lifetime and collection of interactions with contract participants.
 
 \subsection{Overall architecture }
 
@@ -548,27 +553,32 @@ type to be merged.
 \label{fig1} 
 \end{figure}
 
-Generated contract is essentially a continuation chain of smaller
-contracts:
+A generated contract is essentially a continuation chain of smaller contracts:
 
 \noindent 
 \begin{equation}
-chainlink(t)=receiveData(t)\circ \mbox{\emph{calculatePayoff(t)}}\circ \mbox{\emph{processPayoff(t)}}
+\ident{chainlink}(t)=\ident{receiveData}(t)\circ \ident{calculatePayoff(t)}\circ \ident{processPayoff(t)}
 \end{equation}
 
 \noindent 
 \begin{equation}
-contract(ct)=collaterals(ct)\circ INIT(ct)\circ\prod_{t\in SCHED(ct)}chainlink(t)
+\ident{contract}(ct)=\ident{collaterals}(ct)\circ \ident{INIT}(ct)\circ\prod_{\footnotesize t\in \ident{SCHED(ct)}}\ident{chainlink(t)}
 \end{equation}
 
-where $receiveData$ - is asking an oracle for Marlowe Choice if needed,
-$\mbox{\emph{calculatePayoff}}$ - calculates payoff formula. For fixed-rate contracts
-this is optimised into a pre-calculated constant. $\mbox{\emph{processPayoff}}$
-- awaits Deposit of payoff amount from a party: if deposit is transferred
-it redirects the funds to a counterparty - otherwise it transfers
-the collateral to a counterparty and closes the contract. The chain
-is generated from the fixed (known in advance) schedule of events
-using the $SCHED()$ function from ACTUS.
+\noindent
+where the component \emph{receiveData} asks an oracle for Marlowe Choice if needed, and
+\mbox{\emph{calculatePayoff}} calculates the payoff formula. For fixed-rate contracts
+this is optimised into a pre-calculated constant function. The \emph{processPayoff} function
+awaits the \texttt{Deposit} of a payoff amount from a party: if the deposit is made them 
+it directs the funds to a counterparty, otherwise it transfers
+the collateral to the counterparty and closes the contract. The principal components of the system are shown in Figure \ref{fig1}.
+% SJT added this figure ref: OK?
+% Do we need to add a little more to explain Fig1?
+
+The chain
+is generated from the fixed schedule of events, known in advance of execution, 
+using the \ident{SCHED()} function from ACTUS, as shown in Figure \ref{fig2}.
+% SJT added this figure ref: OK?
 
 \begin{figure}
 \includegraphics[width=1\textwidth]{images/flowchart} \caption{Chain of sub-contracts representing ACTUS logic}
@@ -578,118 +588,123 @@ using the $SCHED()$ function from ACTUS.
 
 \subsection{Avoiding exponential growth }
 
-Marlowe doesn't allow functions and recursion. Naive usage of If operator
-in Marlowe could lead to exponential growth of a contract, for example:
+Marlowe contracts are finite, and in particular Marlowe itself does not have constructs for functions or recursion; these \emph{are} available in the Haskell and JavaScript embeddings of Marlowe, but they are unrolled on translation to pure Marlowe. Naive usage of the \texttt{If} operator in Marlowe could lead to exponential growth of a contract, as in this pesudocode example:
 
 \begin{verbatim}
 if condition 
 	then 
-		perform_something1()
+		perform\_something1()
 		continue() 
 	else 
-		perform_something2 
+		perform\_something2() 
 		continue()
 \end{verbatim}
 \noindent
-would inline contents of \texttt{continue()} twice and given that ACTUS
-contracts are essentially generated using continuation as an accumulator
-- this would lead to exponential explosion of the size of any ACTUS
+Translating this to Marlowe would inline contents of \texttt{continue()} twice and, given that ACTUS
+contracts are essentially generated using continuation as an accumulator,
+this would lead to exponential explosion of the size of any ACTUS
 contract that has conditionals in their state transition logic.
 
-Example of such logic would be cap/floor limitations on interest rate:
+An example of such logic would be cap/floor limitations on interest rates:
 
 \noindent 
 \begin{equation}
-adjusted=max(min(original,floor),cap)
+\ident{adjusted}=\ident{max(min(original,floor),cap)}
 \end{equation}
-
-We addressed this issue by introducing the \texttt{Cond} construct in order
-to represent conditional expressions. So instead of using the \texttt{If}
-contract to decide the value of some variable - we use conditional
-assignment instead as \texttt{Cond} is essentially just a pure function
-that returns value depending on condition in contrast to the \texttt{If}
-contract that performs action instead of returning value. The name
-is borrowed from a similar function in Lisp.
+\noindent
+We addressed this issue by introducing the \texttt{Cond} expression construct in order
+to represent conditional expressions, rather than only conditional contracts as was the case before. Instead of using the \texttt{If}
+contract to decide the value of some variable, we use a conditional expression instead.  
+\texttt{Cond} is  a pure function
+that returns a value depending on a condition, in contrast to the \texttt{If}
+contract that chooses between two continuation contracts. 
+% SJT I don't think we need to say this.
+%The name is borrowed from a similar function in Lisp.
 
 \subsection{Limitations due to termination}
 
-Marlowe doesn't allow perpetual contracts even if their recursion
-is productive (example: perpetual swap) - thus we can't support certain
+Marlowe doesn't allow contracts that run indefinitely, even if their recursion
+is productive, as would be the case in a perpetual swap contract, for example. We therefore cannot support certain
 contract types from ACTUS specification, namely the ones that don't
-have a defined maturity date (like UMP). In a long-term perspective
-- there is a possible workaround: contracts with no maturity date
-could be represented as actors with finite amounts of state transitions.
-We prototyped this approach in a separate branch, however it does
-seem more prone to errors comparing to rendering predefined schedules
-and more importantly it greatly affects static analysis as the amount
-of ``reduction steps'' grows from 
+have a defined maturity date (like UMP). 
+
+% In a long-term perspective
+There is a possible workaround: contracts with no maturity date
+could be represented as actors with a finite number of state transitions.
+% SJT is this ^^^ rephrasing OK?
+We prototyped this approach, % in a separate branch, 
+however it does
+seem more prone to errors comparing to rendering predefined schedules.
+More importantly, it greatly affects static analysis because the number
+of reduction steps in the contract grows from 
 \noindent 
-\begin{equation}
-N_{scheduled}=count(event)
-\end{equation}
+\begin{equation*}
+N_{\footnotesize \ident{scheduled}}=\ident{count(event)}
+\end{equation*}
 to 
 \noindent 
 \begin{equation}
-N_{stateTransitions}=\frac{max(date(event))-min(date(event))}{precision} 
+N_{\footnotesize \ident{stateTransitions}}=\frac{\ident{max(date(event))}-\ident{min(date(event))}}{\ident{precision}} 
 \end{equation}
 
 \subsection{Fixed-point precision }
 
-Marlowe only supports Integers, while ACTUS is expressed in terms
-of real numbers. In order to model a real number in such a setup -
-we rely on fixed point precision. The algebra looks like this: 
+For numeric types Marlowe supports Integers, while ACTUS is expressed in terms
+of real numbers. In order to model a real number in such a setup
+we rely on fixed-point precision. The algebra looks like this: 
 \begin{verbatim}
-(+)   = AddValue
-(-)   = SubValue
-a * b = Scale (1 % marloweFixedPoint) $ MulValue a b
+  (+)   = AddValue
+  (-)   = SubValue
+  a * b = Scale (1 % marloweFixedPoint) $ MulValue a b
 \end{verbatim}
-
+% SJT this needs more explanation here ^^^
+\noindent
+We plan to move Marlowe to fixed-precision numbers for the on-blockchain implementation available later in 2021.
 
 \subsection{Representing Actus state in a Marlowe contract}
 
-Unfortunately, Marlowe DSL doesn't support any notion of records,
-the variables can only be of type ``Integer''. Thus, in order to
-map contract state (ContractStatePoly) we first pack a set of Marlowe
-variables (Value Observation) representing previous $t-1$ state into
-ContractStatePoly, then we apply polymorphic state transition, and
-finally unpack ContractState poly into a set of Marlowe variables
-into $t+1$ state:
-
+The Marlowe DSL does not support any notion of records,
+the variables can only be of type ``Integer''. In order to
+map contract state -- \emph{ContractStatePoly} -- we pack a set of Marlowe
+variables of type \texttt{Value} and \texttt{Observation}, representing the previous ($t-1$) state, passing them into
+\emph{ContractStatePoly}, to apply the polymorphic state transition, and
+finally unpack \emph{ContractStatePoly} into a set of Marlowe variables representing the 
+ state at $t+1$:
+% SJT again I am confused about t-1 to t+1 transition. Why not just one step?  
 \noindent 
 \begin{equation}
 st_{t+1}=unpack(stateTransition(pack(st_{t-1}))),
 \end{equation}
+\noindent
+where \emph{pack} is a chain of \texttt{UseValue} constructs and \ident{unpack} is a chain of
+\texttt{Let}s.
 
-,where pack is a chain of ``UseValue'' and unpack is a chain of
-``Let''
+\paragraph{Representing state transitions in Marlowe}
 
-\paragraph{Representing state transitions in Marlowe (unfolding)}
-
-Marlowe doesn't support mutable variables, so we have to represent
-state at t ($st_{t}$) literally through naming convention:
+Marlowe is a declarative language, and so in partticular does support mutable variables. We therefore represent the state at stage $t$ ($st_{t}$) literally through this naming convention:
 
 \begin{verbatim}
-variableName(name, t) = 
-	concat(name, '_', t) 
-generateAccessor(name, t) = 
-	UseValue variableName(name, t) 
-generateSetter(name, t, formula) = 
-	Let variableName(name, t) formula 
+  variableName(name, t) = 
+    concat(name, '_', t) 
+  generateAccessor(name, t) = 
+    UseValue variableName(name, t) 
+  generateSetter(name, t, formula) = 
+    Let variableName(name, t) formula 
 \end{verbatim}
 
 
 \subsection{ActusLabs}
 
-\begin{figure} 
+\begin{figure}[t]
 \includegraphics[width=0.8\textwidth]{images/labs.png}
-\caption{Actus Labs - online tool for generating Actus contracts for Marlowe.} 
+\caption{Actus Labs - an online tool for generating Actus contracts for Marlowe.} 
 \label{fig3} 
 \end{figure} 
 
 In order to demonstrate and test the capabilities of Actus generators,
-a visual online Blockly-based tool was developed for Marlowe Playground.
-The Actus Labs tool allows users to construct contract terms visually,
-generate a corresponding Marlowe contract and try it out in a simulated
+a visual online Blockly-based tool was developed for the Marlowe Playground.
+The Actus Labs tool, shown in Figure \ref{fig3}, allows users to construct contract terms visually
+to generate a corresponding Marlowe contract and then to try it out in a simulation 
 environment.
 
 \section{Tokenization}

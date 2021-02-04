@@ -137,6 +137,7 @@ A note on notation: \texttt{typewriter} font will be used for Marlowe constructs
 % SJT and fragments?
 while \emph{math} font will be used for mathematical formulas and pseudo-code.
 % Have I got this right?
+% dk14 looks right to me - I didn't know how to highlight Marlowe constructs properly
 
 % SJT: added this overview of the paper
 % it is traditional to end the introduction like this,
@@ -223,19 +224,23 @@ and so limiting the lender's exposure to risk:
 The \emph{spread} parameter here loosely represents the difference between
 the average prime 
 % SJT explain "prime" here.
+% it's standard financial terminology: https://www.investopedia.com/terms/p/primerate.asp
 rate that the lender expects -- the \emph{benchmark yield} -- and
 the rate imposed by the driver - the higher the spread, the higher
 the resulting interest rate. The multiplier %effectively 
 rescales the interest rate value 
 % SJT used value here rather than plot: is that OK?
+% dk14 maybe "curve" would be better
 in order to represent the changes to be made converting between different units
-of measurement: how many percentage points 
+of measurement: how many rate percentage points 
 % SJT percentage points of what?
+% dk14 rate
 you would get for a USD-to-kilowatt conversion
 and so on.
 
-In the context of ACTUS and other event-based frameworks, 
+In the context of ACTUS and simillar frameworks, 
 % SJT - need to explain "event-based" in this context.
+% dk14. "Event-driven" but it has no relation to scaling, so I'll remove it
 there is
 one more factor influencing interest rates thorough scaling:
 
@@ -526,6 +531,7 @@ type:
 
 \smallskip
 % SJT changed ContractTerm to ContractTerms
+% dk14 OK
 \noindent 
 \begin{equation}
 \ident{Applicability} : \ident{ContractType} \times \ident{ContractTerms} \rightarrow \ident{ApplicabilityType}
@@ -791,11 +797,13 @@ with Marlowe's static analysis feature by utilising the \texttt{Assert} operator
 
 % SJT what language is this written in?
 % can we turn it into Haskell? or Java?
+% dk14 it's pseudo-code but I'll make it more Haskell-y
 \begin{verbatim}
-ContractTerms := sample(qcgenerator) 
-Contract := generateMarloweContract(ContractTerms) 
-ContractWithAssert := appendAssertion(Contract, assertion) 
-runStaticAnalysis(ContractWithAssert)
+do
+let contractTerms = sample(qcgenerator) 
+    contract = generateMarloweContract(contractTerms) 
+    contractWithAssert = appendAssertion(contract, assertion) 
+runStaticAnalysis(contractWithAssert)
 \end{verbatim}
 
 While this scenario does not cover all possible contracts, it could guarantee that
@@ -804,6 +812,7 @@ property holds for a statistically significant fraction of a contract.
 \subsection{Static analysis for verification}
 % SJT added this as a separate sub section, as it covers the static analysis work.
 % references added.
+% dk14. Thanks
 
 Using static analysis for Marlowe~\cite{} it is possible fully to check a particular contract instead of using random
 sampling. That would allow some refinements: 

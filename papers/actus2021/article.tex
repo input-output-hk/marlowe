@@ -196,6 +196,10 @@ are embedded thus:
 % interest rate at t+1 defined from rate at t-1. I'd have expected just one difference, so
 % t+1 defined from t, or t defined from t-1.
 
+% dk14 
+% A1 it is from the ACTUS spec - I assume "r" means "rate"
+% A2 I meant "before vs after event", but I'll remove it
+
 \noindent 
 \begin{equation}
 \Delta_{r}=\ident{capfloor}(\ident{driver}*\ident{multiplier}+\ident{spread}-\ident{interestRate}_{t-1})
@@ -203,7 +207,7 @@ are embedded thus:
 
 \noindent 
 \begin{equation}
-\ident{interestRate}_{t+1}=\ident{capfloor}(\ident{interestRate}_{t-1}+\Delta_{r}),
+\ident{interestRate}_{t}=\ident{capfloor}(\ident{interestRate}_{t-1}+\Delta_{r}),
 \end{equation}
 
 \noindent
@@ -248,9 +252,11 @@ of the asset that the interest rate driver represents.
 A counterparty might decide to reinvest profit received as interest
 from the %same 
 % SJT I think "same" is superfluous here: is that OK?
+% dk14 sure
 loan. In the simplest case, this renders as compound
 interest. This can be modelled through interest accrual and capitalisation;
 % SJT what does "capitalisation" mean?
+% dk14 "conversion of income or assets into capital" it's quite googlable financial terms so idk if I should note it explicitly
 for instance, contracts from the ACTUS specification accrue interest
 between interest payments and can transfer interest to a notional
 during interest capitalisation event (IPCL).
@@ -298,6 +304,7 @@ financial contracts on blockchain. Marlowe is defined
 by an executable semantics in Haskell, and has been implemented on
 the UTxO-based Cardano blockchain. 
 % SJT added this
+%dk14 OK
 Marlowe contracts are finite, and moreover have defined finite lifetime. This means that it is possible to perform \emph{static analysis} on them. For example, it is possible symbolically to check \emph{all} execution paths without running a contract, and in particular checking that every \texttt{Pay} construct can be executed in full.
 
 The main advantage of using Marlowe to carry ACTUS logic is enhanced
@@ -353,21 +360,25 @@ such as an interest rate, at a particular point in time $t$. This is due to the 
 time. 
 
 % SJT - the "i" and "t" subscripts here look a bit odd: is that what's intended?
+% dk14 - fixed
 \noindent 
 \begin{equation}
-\ident{riskfactor}_{i}{}_{t}=O_{\footnotesize\ident{rf}}(i,t)
+\ident{riskfactor}_{it}=O_{\footnotesize\ident{rf}}(i,t)
 \end{equation}
 \noindent
 In the case of the Cardano blockchain, these values are usually
 provided through an \emph{oracle} mechanism\cite{oracles}. An oracle
 could be a trusted party providing necessary data or network of parties
-under consensus {[}find a reference{]}. 
+under consensus \cite{de-oracles}. 
 % SJT REF needed
+% dk14. I've found this one has explanation for oracles (ChainLink etc)
+
 From a Marlowe DSL perspective,
 the exact mechanism that provides external data is less important,
 as Marlowe abstracts over IO by requiring a particular type of input -- a 
 \texttt{Choice} -- that is protected with a cryptographic signature by the source of the choice.
 % SJT changed from "owner" to "source".
+% dk14 OK
 As a result, the event of receiving data from an oracle is treated the
 same as receiving numeric input in other languages
 
@@ -377,6 +388,7 @@ same as receiving numeric input in other languages
 ACTUS is defined in a textual specification\footnote{Available from \url{https://www.actusfrf.org/techspecs}.} which, while expressed in mathematical notation, is essentially informal. In this section we describe how this specification is turned into an \emph{executable} version by rendering it in Haskell. This translation is in fact a transliteration, since notation, variable names and so forth are respected.
 % SJT: are you happy with this? If not, let's rephrase,
 % but it would be good include something to this effect.
+% dk14 thanks for adding this
 
 \subsection{Rendering the specification in Haskell}
 
@@ -501,20 +513,22 @@ to a PAM contract), which means contracts require specific validation
 that is implemented by means of the applicability function:
 
 % SJT - do you mean \mapsto or \rightarrow here?
+% dk14 - it is a mapping, but could be function/morphism too
 \noindent 
 \begin{equation}
-\ident{Applicability}:\ident{ContractTerms}\mapsto \ident{Bool}
+\ident{Applicability}:\ident{ContractTerms}\rightarrow \ident{Bool}
 \end{equation}
 
-ACTUS defines a family of applicability functions polymorphic on contract
-type (TODO link to ACTUS applicability):
+ACTUS standard defines a family of applicability functions polymorphic on contract
+type:
 % SJT something needed here.
+% dk14 - we already gave a link to actusfrf, so I think I can skip references
 
 \smallskip
 % SJT changed ContractTerm to ContractTerms
 \noindent 
 \begin{equation}
-\ident{Applicability} : \ident{ContractType} \times \ident{ContractTerms} \mapsto \ident{ApplicabilityType}
+\ident{Applicability} : \ident{ContractType} \times \ident{ContractTerms} \rightarrow \ident{ApplicabilityType}
 \end{equation}
 \noindent
 where applicability could be: \emph{none}, \emph{always}, \emph{nullable}, or \emph{multiple}.
@@ -576,14 +590,16 @@ where the component \emph{receiveData} asks an oracle for Marlowe Choice if need
 this is optimised into a pre-calculated constant function. The \emph{processPayoff} function
 awaits the \texttt{Deposit} of a payoff amount from a party: if the deposit is made them 
 it directs the funds to a counterparty, otherwise it transfers
-the collateral to the counterparty and closes the contract. The principal components of the system are shown in Figure \ref{fig1}.
+the collateral to the counterparty and closes the contract. The principal components of the system are shown in Figure \ref{fig1}. There are 3 categories of components representing ACTUS functions: specification with formulas, formula wiring for fixed rates (produces precomputed payoffs) and formula wiring for variable rates (produces Marlowe-code that computes payoffs). Different types of wiring correspond to different implementations of \emph{ActusOps} implemetations (either \emph{Double} or \emph{Value}). 
 % SJT added this figure ref: OK?
 % Do we need to add a little more to explain Fig1?
+% dk14 OK, added few sentences about Fig1
 
 The chain
 is generated from the fixed schedule of events, known in advance of execution, 
 using the \ident{SCHED()} function from ACTUS, as shown in Figure \ref{fig2}.
 % SJT added this figure ref: OK?
+% dk14 OK
 
 \begin{figure}
 \includegraphics[width=1\textwidth]{images/flowchart} \caption{Chain of sub-contracts representing ACTUS logic}
@@ -625,6 +641,7 @@ that returns a value depending on a condition, in contrast to the \texttt{If}
 contract that chooses between two continuation contracts. 
 % SJT I don't think we need to say this.
 %The name is borrowed from a similar function in Lisp.
+% dk14 - Oh sure. I was going to remove it too :)
 
 \subsection{Limitations due to termination}
 
@@ -637,6 +654,7 @@ have a defined maturity date (like UMP).
 There is a possible workaround: contracts with no maturity date
 could be represented as actors with a finite number of state transitions.
 % SJT is this ^^^ rephrasing OK?
+% dk14 - sure
 We prototyped this approach, % in a separate branch, 
 however it does
 seem more prone to errors comparing to rendering predefined schedules.
@@ -658,11 +676,13 @@ For numeric types Marlowe supports Integers, while ACTUS is expressed in terms
 of real numbers. In order to model a real number in such a setup
 we rely on fixed-point precision. The algebra looks like this: 
 \begin{verbatim}
-  (+)   = AddValue
-  (-)   = SubValue
-  a * b = Scale (1 % marloweFixedPoint) $ MulValue a b
+  (+)   = AddValue -- x/n + y/n = (x + y)/n
+  (-)   = SubValue -- x/n - y/n = (x - y)/n
+  a * b = Scale (1 % marloweFixedPoint) $ MulValue a b -- x/n * y/n = (x * y)/n^2
 \end{verbatim}
+We scale all numbers with \emph{marloweFixedPoint} factor - which only requires modification of \emph{MulValue}.
 % SJT this needs more explanation here ^^^
+% dk14 I've added some
 \noindent
 We plan to move Marlowe to fixed-precision numbers for the on-blockchain implementation available later in 2021.
 
@@ -676,9 +696,10 @@ variables of type \texttt{Value} and \texttt{Observation}, representing the prev
 finally unpack \emph{ContractStatePoly} into a set of Marlowe variables representing the 
  state at $t+1$:
 % SJT again I am confused about t-1 to t+1 transition. Why not just one step?  
+% dk14. I'll change that. I imagined t as time of event while t+1 is after event 
 \noindent 
 \begin{equation}
-st_{t+1}=unpack(stateTransition(pack(st_{t-1}))),
+st_{t}=unpack(stateTransition(pack(st_{t-1}))),
 \end{equation}
 \noindent
 where \emph{pack} is a chain of \texttt{UseValue} constructs and \ident{unpack} is a chain of
@@ -842,6 +863,7 @@ refunds and encourages users to write explicit logic for edge cases.
 
 % SJT changed title from {Comparison with existing smart-contracts approaches }
 % it's traditional to call this "relatyed work".
+% dk14. sure this is better
 
 
 Unlike current popular DeFi lending approaches - Marlowe ACTUS-based

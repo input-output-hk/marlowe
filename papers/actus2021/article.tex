@@ -824,8 +824,9 @@ sets of risk factors, and so different search spaces. For instance, a
 contract with 3 risk factors (e.g. 3 observations of an interest rate)
 would span over $n^3$ values while a contract with 10 risk
 factors would span over $n^{10}$. Meanwhile, the space of
-all risk factors in all contracts doesn't linearly depend on the coverage.
+all risk factors in all contracts doesn't linearly depend on the coverage - some contracts might have more risk factor observations and some - less. So covering 10\% of all contracts doesn't necessary mean covering 10\% of all possible observations.
 % SJT explain last sentence. 
+% dk14 added explanation. Maybe it could be phrased better. The idea is that if I have contracts A and B as population and only A is covered then coverage is 50%. Meanwhile contract A has 9 observatioins and B has 1 so risk factors have 90% coverage. Idk how to put it nicely.
 \item Dependency tracking: an SMT-solver is potentially likely to be more aware of execution
 paths that lead to the failure of a test, a feature that could significantly reduce
 search space. 

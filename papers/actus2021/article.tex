@@ -93,7 +93,7 @@ Tidying up identifiers in math equations using the command \verb+\ident{...}+
 \item
 Biblio sorted out ordering (added keys). shortened author and editor lists
 \item
-Revised sections 2--4.
+Revised sections 2--7.
 \end{enumerate}
 
 \textbf{TO DO:}
@@ -133,10 +133,15 @@ List of contributions:
 \item Verification with QC + SMT (Dmytro) 
 \end{itemize}
 
+A note on notation: \texttt{typewriter} font will be used for Marlowe constructs
+% SJT and fragments?
+while \emph{math} font will be used for mathematical formulas and pseudo-code.
+% Have I got this right?
+
 % SJT: added this overview of the paper
 % it is traditional to end the introduction like this,
 % 'signposting' what is in the rest of the paper.
-Section \ref{background} of the paper covers the relevant financial background, and Section \ref{modelling} introduces Marlowe as well as the ACTUS financial standard. Section \ref{executable} builds an executable specification of ACTUS in Haskell, and this is used in Section \ref{generation} to generate  the Marlowe code for an ACTUS contract from the terms of the contract. Section \ref{tokenization} explains how tokens are used to represent ownership of roles in a running contract, and Section \ref{verification} presents how we provide assurance of the contract correctness. Section \ref{related} examines related work and Section \ref{conclusion} concludes.
+Section \ref{background} of the paper covers the relevant financial background, and Section \ref{modelling} introduces Marlowe as well as the ACTUS financial standard. Section \ref{executable} builds an executable specification of ACTUS in Haskell, and this is used in Section \ref{generation} to generate  the Marlowe code for an ACTUS contract from the terms of the contract. Section \ref{tokenization} explains how tokens are used to represent ownership of roles in a running contract, and Section \ref{assurance} describes how we provide assurance that  contracts behave as they should. Section \ref{related} examines related work and Section \ref{conclusion} concludes. 
 
 
 
@@ -710,54 +715,61 @@ environment.
 \section{Tokenization}
 \label{tokenization}
 
-Every participant of an ACTUS contract is described by a Role which
-is in its turn represented through a special unique non-fungible token.
-This makes every Marlowe contract a tradable security, allowing a
-participant to sell its ``share'' in a contract by selling a corresponding
+Every participant of a Marlowe contact %ACTUS contract 
+is described by a \texttt{Role} which
+is in its turn represented through a unique non-fungible token, created at the time that the contract instantiated on the blockchain.
+This makes every ACTUS contract a tradable security, allowing a
+participant to sell its \emph{share} in a contract by selling a corresponding
 role token.
 
-Role tokens can potentially allow more complex manipulation over shares,
-especially when share represents an incoming cash flow: participants
-only send funds to a party represented by a given token. Such a token
-would represent a positive cashflow which in turn could not just become
-tradable but would also allow to derive tokens only representing fractions
+Role tokens can potentially allow more complex manipulation over such shares,
+especially when the share represents an incoming cash flow; in that case, participants
+send funds to a party represented by a given token. Such a token
+would represent a positive cashflow, which in turn could not only become
+tradable but could also allow the derivation of tokens representing \emph{fractional parts}
 of a particular cash flow in a contract.
 
-Moreover, it turns Actus-loans into derivatives, for example contracts
-like Interest Rate Swap (and Swaps in general) could be approximated
-by an Atomic Swap of tokens representing incoming cash flows from
-lending.
-
-For example, if Alice has fixed income from a loan (or some other
-investment) and Bob has comparable but variable (fluctuating) income
-- Bob can hedge by swapping cash flows with Alice. If Alice's income
-is locked with token1 and Bob's income is locked with token2 - then
+Moreover, this process turns ACTUS loans into derivatives. For example, contracts
+like \emph{Interest Rate Swap} (and \emph{Swaps} in general) could be approximated
+by an \emph{Atomic Swap} of tokens representing incoming cash flows from
+loans. 
+For example, if Alice has fixed income from a loan, or some other
+investment, and Bob has comparable but variable (fluctuating) income,
+Bob can hedge by swapping cash flows with Alice. If Alice's income
+is locked with \texttt{token1} and Bob's income is locked with \texttt{token2} then an
 atomic swap of those tokens is equivalent to a swap of cash flows.
 
-\section{Verification and testing}
-\label{verification}
+\section{Assurance}
+\label{assurance}
+
+We provide assurance to users of our Marlowe ACTUS contracts in a number of ways, as described here. 
 
 \subsection{QuickCheck for cross-testing}
 
-In order to test the equivalence between Executable Haskell implementation
-of ACTUS for smart-contracts and original Java implementation for
-analytics - a simple property test was introduced:
+First, we are able to test the executable Haskell implementation
+of ACTUS for smart-contracts by comparing it with an existing implementation written in Java. To do this  
+%original Java implementation for analytics - 
+a simple property-based test in QuickCheck~\cite{qc} was introduced, where we generate contract terms and risk factors randomly to test the property.
 
+\newcommand{\rf}{\ident{rf}}
+\newcommand{\ct}{\ident{ct}}
 \smallskip
 \noindent 
 \begin{equation}
-\forall ct\forall rf.getCashFlows("haskell",ct,rf)\equiv getCashFlows("java",ct,rf)
+\forall \ct.\forall \rf. \; \ident{getCashFlows}(\ident{"haskell"},\ct,\rf)\equiv \ident{getCashFlows}(\ident{"java"},\ct,\rf)
 \end{equation}
-
-Where $ct$ represents contract terms, $rf$ is risk factor model and
-$getCashFlows()$ returns a set of $(date,payoff)$ tuples.
+\noindent
+where \emph{ct} represents contract terms, \emph{rf} is risk factor model, and
+\emph{getCashFlows()} returns a set of \emph{(date,payoff)} tuples.
 
 \subsection{QuickCheck for verification}
 
-QuickCheck\cite{qc} contract terms generators also allow to ensure
-arbitrary properties of a Marlowe contract. This could be enhanced
-with Marlowe's static analysis feature by utilising Assert operator:
+QuickCheck contract terms generators also allow us to check
+other properties of a Marlowe contract. This could be enhanced
+with Marlowe's static analysis feature by utilising the \texttt{Assert} operator:
 
+% SJT what language is this written in?
+% can we turn it into Haskell? or Java?
 \begin{verbatim}
 ContractTerms := sample(qcgenerator) 
 Contract := generateMarloweContract(ContractTerms) 
@@ -765,58 +777,65 @@ ContractWithAssert := appendAssertion(Contract, assertion)
 runStaticAnalysis(ContractWithAssert)
 \end{verbatim}
 
-While it doesn't cover all possible contracts it could guarantee that
+While this scenario does not cover all possible contracts, it could guarantee that
 property holds for a statistically significant fraction of a contract.
-Using Static Analysis to check a particular contract instead of randomly
-sampling allows: 
+
+\subsection{Static analysis for verification}
+% SJT added this as a separate sub section, as it covers the static analysis work.
+% references added.
+
+Using static analysis for Marlowe~\cite{} it is possible fully to check a particular contract instead of using random
+sampling. That would allow some refinements: 
 \begin{itemize}
-\item more balanced sampling: Space of contract terms depends linearly on
+\item More balanced sampling: the space of contract terms depends linearly on
 the coverage, e.g. if we cover 10\% of all possible contract terms
 - we'll cover 10\% of all contracts. Different contracts have different
-amount of risk factors thus different search space, for instance a
+sets of risk factors, and so different search spaces. For instance, a
 contract with 3 risk factors (e.g. 3 observations of an interest rate)
-would span over n\textasciicircum 3 while a contract with 10 risk
-factors would span over n\textasciicircum 10. Meanwhile, space of
-all risk factors in all contracts doesn't linearly depend on the coverage. 
-\item dependency tracking: SMT-solver would likely be more aware of execution
-paths leading to failure of a test, which could significantly reduce
-search space 
-\item completeness: If not timed out, SMT-solver is decidable while sampling
+would span over $n^3$ values while a contract with 10 risk
+factors would span over $n^{10}$. Meanwhile, the space of
+all risk factors in all contracts doesn't linearly depend on the coverage.
+% SJT explain last sentence. 
+\item Dependency tracking: an SMT-solver is potentially likely to be more aware of execution
+paths that lead to the failure of a test, a feature that could significantly reduce
+search space. 
+\item Completeness: if not timed out, SMT-solving is decidable while sampling
 is semi-decidable. 
 \end{itemize}
 
 \subsection{Securing collateral logic with auto-refund warnings}
 
-By design, the Marlowe interpreter always refunds assets held in a
+By design, the Marlowe interpreter always refunds any assets held in a
 contract when it terminates. This is done in order to ensure that
 no funds are lost forever. The funds are returned to whoever's internal
-account actually holds them.
+account  holds them.
 
 However, this presents as a problem in certain cases where ownership
-of the funds could not be automatically determined. For example if
-Alice puts collateral in a crypto-loan contract - she would formally
+of the funds could not be  determined automatically. For example, if
+Alice puts collateral in a crypto-loan contract she would formally
 maintain ownership, which means she would get automatically refunded
-when Close contract is reached.
+when a \texttt{Close} construct is reached.
 
 This implicit refund is easy to overlook by smart-contract developers
-as plain Close is often used as a default action in case of unexpected
-behaviour like timeouts(especially Choice timeout). This can easily
-lead to multi-million dollar mistakes if malicious Alice decides to
+as plain \texttt{Close} is often used as a default action in case of unexpected
+behaviour like timeouts, and especially a \texttt{Choice} timeout. This can easily
+lead to costly %multi-million dollar 
+mistakes if  Alice maliciously decides to
 exploit an auto-refund feature in order to get her collateral without
-paying back. Here's the example of simple attack vector: 
+paying back, as in the following scenario:
 \begin{enumerate}
-\item Alice creates a contract where Deposit timeout would lead to Close 
-\item Bob doesn't know or test the timeout path. Even if Bob is a programmer
-- he might not be aware that Closing contract would cause collateral
-refund 
-\item Alice puts collateral and gets notional from Bob 
-\item Alice doesn't pay for a loan (Deposit timeout) 
-\item Alice gets her collateral back 
-\item Bob loses notional 
+\item Alice creates a contract where a \texttt{Deposit} timeout would lead to \texttt{Close} 
+\item Bob doesn't know or test the timeout path. Even if Bob is a programmer,
+he might not be aware that \texttt{Close}ing the contract would cause the collateral
+to be refunded to Alice.
+\item Alice puts her collateral in the contract and gets the notional from Bob.
+\item Alice doesn't pay for the loan: i.e. there is a \texttt{Deposit} timeout. 
+\item Alice gets her collateral back. 
+\item Bob loses his notional. 
 \end{enumerate}
-In order to prevent this from happening, an additional ''Auto-Refund''
-security check was introduced as part of Static Analysis tooling which
-notifies users about all ``Close'' constructs that can lead to automatic
+In order to prevent this from happening, an additional \texttt{Auto-Refund}
+security check was introduced as part of static analysis tooling which
+notifies users about all \texttt{Close} constructs that can lead to automatic
 refunds and encourages users to write explicit logic for edge cases.
 
 \section{Related work}\label{related}

@@ -56,14 +56,15 @@
 \title{Standardized crypto-loans on\\ the Cardano blockchain}%\thanks{Supported by Cardano Foundation.}}
 
 
-\author{Dmytro Kondratiuk\inst{1}\orcidID{XXXX} \and
+\author{Dmytro Kondratiuk\inst{1} \and
 				Pablo {Lamela Seijas}\inst{1}\orcidID{0000-0002-1730-1219} \and
+				Alexander Nemish\inst{1} \and
                 Simon Thompson\inst{1,2}\orcidID{0000-0002-2350-301X}}
 
 \authorrunning{D. Kondratiuk, et al.}
 
 \institute{IOHK, Hong Kong,
-\email{dmytro.kondratiuk@iohk.io, pablo.lamela@iohk.io, simon.thompson@iohk.io}  \and
+\email{dmytro.kondratiuk@iohk.io, pablo.lamela@iohk.io, alexander.nemish@iohk.io, simon.thompson@iohk.io}  \and
 School of Computing, University of Kent, UK,
 \email{s.j.thompson@kent.ac.uk}}
 
@@ -81,20 +82,9 @@ source of liquidity for cryptocurrency holders. In this paper we
 explore a smart contract framework for building standardized crypto-loans
 using the Marlowe domain-specific language and with the ACTUS standard at its core.
 
-\keywords{ACTUS \and blockchain \and Cardano \and finance \and Haskell \and Marlowe} 
+\keywords{ACTUS \and blockchain \and Cardano \and finance \and Haskell \and Marlowe
+\and smart contract \and static analysis} 
 \end{abstract}
-
-
-
-\textbf{TO DO:}
-\begin{enumerate}
-\item
-Deal with inline comments in source code: \verb+% SJT ...+
-\item
-Write introduction [SJT]
-\item
-Should we include Alex as co-author?
-\end{enumerate}
 
 
 \section{Introduction}
@@ -117,6 +107,21 @@ List of contributions:
 \item Verification with QC + SMT (Dmytro) 
 \end{itemize}
 
+
+
+Smart contracts -- programs that run in a blockchain environment --  can be defined in a variety of ways~\cite{cryptoeprint:2016:1156}. Many such languages are general purpose, and can be used to program any kind of contract it makes sense to run on a blockchain; moreover, they tend to be expressive enough to be Turing complete (in some cases with restrictions on the runtime environment). For example, Plutus, the general-purpose language running on the Cardano blockchain~\cite{utxo-vs-accounts}, is a dialect of Haskell. Another approach is to develop special-purpose or \emph{domain-specific languages} (DSLs) which embody a particular application domain: Marlowe~\cite{marlowe} is a high-level DSL for writing
+financial contracts on the Cardano blockchain. 
+
+In this paper we explore ways in which contracts described in ACTUS (Algorithmic Contract Types Unified Standards) can be defined in Marlowe, Plutus and Haskell. Of course, Plutus or Haskell are able to express these contracts, but rendering them in Marlowe brings extra advantages. Marlowe is defined to provide a range of guarantees by design: a Marlowe contract will only make a finite number of interactions with its environment, and its lifetime can be read off from the code for a contract; moreover, when the contract terminates, any assets held by the contract will automatically be returned to the participants. None of these guarantees can be provided by a general purpose language. 
+
+Each Marlowe contract has a finite set of possible execution paths, and so it is possible to analyse the complete behaviour of a contract without running it. Such \emph{static analysis}, based on SMT solving~\cite{smt}, can be used to check properties of a contract; for example, it is possible to check whether a contract will honour all \texttt{Pay} constructs, however it is executed. In the case that a \texttt{Pay} can fail, the analysis gives an example trace showing how that failure can happen.
+The language design and static analysis provide assurance that Marlowe contracts are much less likely to ``misbehave'' than contracts written in a general-purpose language like Solidity. 
+
+In implementing ACTUS we are able to provide further assurance in three other ways. First, we are able to use the declarative nature of Haskell to transliterate ACTUS formulae term-by-term into an executable form. Secondly, we are able to use random, property-based testing to validate the Haskell implementation against a Java one. Finally, we are able to automatically \emph{generate} ACTUS contracts in Marlowe from the terms -- i.e. parameters -- of the contracts; for a simple loan these would include the start and end dates of the loan and the amount loaned (the `principal'). The generated contracts use the executable spec in calculating values of cash flows in the Marlowe contracts.
+
+Implementing ACTUS provides a suitable benchmark against which to assess Marlowe, and we illustrate how the implementation has led to the addition of a conditional expression construct to the language. 
+
+
 A note on notation: \texttt{typewriter} font will be used for Marlowe constructs
 % SJT and fragments?
 while \emph{math} font will be used for mathematical formulas and pseudo-code.
@@ -126,12 +131,16 @@ while \emph{math} font will be used for mathematical formulas and pseudo-code.
 % SJT: added this overview of the paper
 % it is traditional to end the introduction like this,
 % 'signposting' what is in the rest of the paper.
-Section \ref{background} of the paper covers the relevant financial background, and Section \ref{modelling} introduces Marlowe as well as the ACTUS financial standard. Section \ref{executable} builds an executable specification of ACTUS in Haskell, and this is used in Section \ref{generation} to generate  the Marlowe code for an ACTUS contract from the terms of the contract. Section \ref{tokenization} explains how tokens are used to represent ownership of roles in a running contract, and Section \ref{assurance} describes how we provide assurance that  contracts behave as they should. Section \ref{related} examines related work and Section \ref{conclusion} concludes. 
+Section \ref{background} of the paper covers the relevant financial background together with the ACTUS financial standard. Section \ref{executable} builds an executable specification of ACTUS in Haskell, and this is used in Section \ref{generation} to generate  the Marlowe code for an ACTUS contract from the terms of the contract. Section \ref{tokenization} explains how tokens are used to represent ownership of roles in a running contract, and Section \ref{assurance} describes how we provide assurance that  contracts behave as they should. Section \ref{related} examines related work and Section \ref{conclusion} concludes. 
 
 
 
 \section{Financial contracts}
 \label{background}
+
+In this section we give a brief introduction to financial contracts, and loans in particular, and then describe the ACTUS financial standard.
+
+\subsection{Crypto-loans}
 
 A loan is a form of debt incurred by an individual or other entity.
 The lender advances a sum of money to the borrower. In return, the
@@ -281,32 +290,32 @@ render collateral worthless, she can get her collateral back; otherwise
 the loan gets liquidated and the collateral is transferred to Bob. 
 \end{enumerate}
 
-\section{Modelling financial contracts}
-\label{modelling}
+%\section{Modelling financial contracts}
+%\label{modelling}
 
-This section introduces the Marlowe domain-specific language (DSL) and the ACTUS standard for financial contracts.
-
-\subsection{Marlowe}
-
-Marlowe~\cite{marlowe} is a high-level DSL for writing
-financial contracts on blockchain. Marlowe is defined
-by an executable semantics in Haskell, and has been implemented on
-the UTxO-based Cardano blockchain. 
-% SJT added this
-%dk14 OK
-Marlowe contracts are finite, and moreover have defined finite lifetime. This means that it is possible to perform \emph{static analysis} on them. For example, it is possible symbolically to check \emph{all} execution paths without running a contract, and in particular checking that every \texttt{Pay} construct can be executed in full.
-
-The main advantage of using Marlowe to carry ACTUS logic is enhanced
-security that such a static analysis provides. SMT-solvers~\cite{smt} are gaining
-popularity as an alternative to fuzzing when it comes to testing software
-for vulnerabilities. Smart contracts generated from ACTUS
-specification are quite complicated, so manually testing every possible
-execution path for every possible combination of contract terms is
-not feasible. Static analysis, in turn, can reduce the amount of ``dumb''
-mistakes that could cost millions to the users by ensuring obvious
-properties of a contract. It is not a panacea, however, unlike with
-fuzzing, if SA says that certain property holds - it does it with
-100\% assurance.
+%This section introduces the Marlowe domain-specific language (DSL) and the ACTUS standard for financial contracts.
+%
+%\subsection{Marlowe}
+%
+%Marlowe~\cite{marlowe} is a high-level DSL for writing
+%financial contracts on blockchain. Marlowe is defined
+%by an executable semantics in Haskell, and has been implemented on
+%the UTxO-based Cardano blockchain. 
+%% SJT added this
+%%dk14 OK
+%Marlowe contracts are finite, and moreover have defined finite lifetime. This means that it is possible to perform \emph{static analysis} on them. For example, it is possible symbolically to check \emph{all} execution paths without running a contract, and in particular checking that every \texttt{Pay} construct can be executed in full.
+%
+%The main advantage of using Marlowe to carry ACTUS logic is enhanced
+%security that such a static analysis provides. SMT-solvers~\cite{smt} are gaining
+%popularity as an alternative to fuzzing when it comes to testing software
+%for vulnerabilities. Smart contracts generated from ACTUS
+%specification are quite complicated, so manually testing every possible
+%execution path for every possible combination of contract terms is
+%not feasible. Static analysis, in turn, can reduce the amount of ``dumb''
+%mistakes that could cost millions to the users by ensuring obvious
+%properties of a contract. It is not a panacea, however, unlike with
+%fuzzing, if SA says that certain property holds - it does it with
+%100\% assurance.
 
 \subsection{ACTUS}
 \label{ACTUS}
@@ -393,7 +402,7 @@ Using Haskell itself as a DSL for explicitly encoding formulas without
 using advanced language idioms also simplifies code generation. 
 In case of ACTUS this comes at a cost reduced type-safety, handling nullable
 values explicitly introduces risk of exceptions. However this risk
-is addressed using property-based testing, and in particular QuickCheck generators. This is discussed in more detail in Section \ref{verification} below.
+is addressed using property-based testing, and in particular QuickCheck generators. This is discussed in more detail in Section \ref{assurance} below.
 % SJT Added x-ref to section 7.
 
 \subsection{Utilizing polymorphism to abstract over basic operations}
@@ -878,9 +887,9 @@ Actus provides additional benefit of being regulatory friendly, ACTUS
 foundation provides a set of tools allowing Monte-Carlo simulations
 of ACTUS contracts.
 
-There are frameworks like ISDA Common Domain Model \cite{isda-cdm} providing 
-more precise representation of business processes involved in institutional trading 
-as well as code-generation capabilities. However, due to it's structural simplicity ACTUS 
+There are frameworks, like ISDA Common Domain Model \cite{isda-cdm}, providing a
+more precise representation of the business processes involved in institutional trading 
+as well as code-generation capabilities. However, due to its structural simplicity, ACTUS 
 is much more suited for generating code in a financial domain specific language 
 like Marlowe rather than general-purpose one like Java or Haskell.
 
@@ -896,6 +905,8 @@ requirements specified by the user.
 On top of that, Marlowe ACTUS provides a toolkit for cross-testing
 with original ACTUS spec, a framework for adding new contract types,
 cash-flow visualisations and verification tooling.
+
+We are grateful to Finley and Kegan McIlwaine of the University of Wyoming for their implementation of the LAM contract in ActusLabs, and to colleagues at Quanterall\footnote{\url{https://quanterall.com/}} for their contribution of utility functions to our ACTUS codebase.
 
 %
 % ---- Bibliography ----

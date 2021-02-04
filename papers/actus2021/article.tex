@@ -2,6 +2,7 @@
 \usepackage[latin9]{inputenc}
 \usepackage{url}[obeyspaces]
 \usepackage{amsmath}
+\usepackage{alltt}
 \usepackage{graphicx}
 \usepackage[unicode=true,
  bookmarks=false,
@@ -84,17 +85,6 @@ using the Marlowe domain-specific language and with the ACTUS standard at its co
 \end{abstract}
 
 
-\textbf{DONE:}
-\begin{enumerate}
-\item
-Added overview at the end of the intro.
-\item
-Tidying up identifiers in math equations using the command \verb+\ident{...}+
-\item
-Biblio sorted out ordering (added keys). shortened author and editor lists
-\item
-Revised sections 2--7.
-\end{enumerate}
 
 \textbf{TO DO:}
 \begin{enumerate}
@@ -104,11 +94,6 @@ Deal with inline comments in source code: \verb+% SJT ...+
 Write introduction [SJT]
 \item
 Should we include Alex as co-author?
-\item
-What about R (shiny)?
-\item
-We use \verb+equation+ environment which numbers equations, but the numbering isn't used I think.
-So I'd suggest moving to \verb+equation*+ instead (easy edit).
 \end{enumerate}
 
 
@@ -185,7 +170,7 @@ In both cases, the prices of
 cryptocurrency or electricity become a driver for the interest
 rate.
 However, one cannot simply take the bare price of the asset and turn
-it into a rate. In order to make \emph{units of measurement} compatible
+it into a rate. In order to make \emph{units of measurement} compatible with each other
 %SJT compatible with what??
 adjustments should be made. Fluctuations of the interest rate driver
 are embedded thus:
@@ -202,23 +187,23 @@ are embedded thus:
 % A2 I meant "before vs after event", but I'll remove it
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \Delta_{r}=\ident{capfloor}(\ident{driver}*\ident{multiplier}+\ident{spread}-\ident{interestRate}_{t-1})
-\end{equation}
+\end{equation*}
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{interestRate}_{t}=\ident{capfloor}(\ident{interestRate}_{t-1}+\Delta_{r}),
-\end{equation}
+\end{equation*}
 
 \noindent
 where \emph{capfloor} is a function that limits the range of fluctuation,  
 and so limiting the lender's exposure to risk:
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{capfloor}(x)=\ident{max(min}(x,\ident{floor}),\ident{cap})
-\end{equation}
+\end{equation*}
 
 \noindent
 The \emph{spread} parameter here loosely represents the difference between
@@ -228,7 +213,7 @@ the average prime
 rate that the lender expects -- the \emph{benchmark yield} -- and
 the rate imposed by the driver - the higher the spread, the higher
 the resulting interest rate. The multiplier %effectively 
-rescales the interest rate value 
+rescales the interest rate curve 
 % SJT used value here rather than plot: is that OK?
 % dk14 maybe "curve" would be better
 in order to represent the changes to be made converting between different units
@@ -238,16 +223,16 @@ of measurement: how many rate percentage points
 you would get for a USD-to-kilowatt conversion
 and so on.
 
-In the context of ACTUS and simillar frameworks, 
+In the context of ACTUS and similar frameworks, 
 % SJT - need to explain "event-based" in this context.
 % dk14. "Event-driven" but it has no relation to scaling, so I'll remove it
 there is
 one more factor influencing interest rates thorough scaling:
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 interestPayment=interestScalingFactor*interestRate*notional
-\end{equation}
+\end{equation*}
 \noindent
 This scaling is dynamic and loosely adjusts for variance (volatility)
 of the asset that the interest rate driver represents.
@@ -259,7 +244,7 @@ from the %same
 % SJT I think "same" is superfluous here: is that OK?
 % dk14 sure
 loan. In the simplest case, this renders as compound
-interest. This can be modelled through interest accrual and capitalisation;
+interest. This can be modelled through interest accrual and capitalisation (conversion of income or assets into capital);
 % SJT what does "capitalisation" mean?
 % dk14 "conversion of income or assets into capital" it's quite googlable financial terms so idk if I should note it explicitly
 for instance, contracts from the ACTUS specification accrue interest
@@ -338,20 +323,20 @@ or out of a contract -- can be inferred for any given state. Every state
 can be derived from previous events and observed risk factors:
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{payoff}_{i}=\ident{POF}(\ident{state}_{i})
-\end{equation}
+\end{equation*}
 
 \newcommand{\STF}{\ident{STF}}
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{path}=\STF_{1}(ct,ev_{1})\circ \STF_{2}(ct,ev_{2}).\circ\ldots\circ \STF_{i}(ct,ev_{n})
-\end{equation}
+\end{equation*}
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{state}_{i}=\ident{path}(\ident{INIT}(ct)),
-\end{equation}
+\end{equation*}
 \noindent
 where \emph{ct} stands for contract terms, \emph{INIT} returns initial state, \emph{sched}
 returns scheduled events, \emph{STF} takes \emph{contractterms}, \emph{event}, and \emph{state}
@@ -367,9 +352,9 @@ time.
 % SJT - the "i" and "t" subscripts here look a bit odd: is that what's intended?
 % dk14 - fixed
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{riskfactor}_{it}=O_{\footnotesize\ident{rf}}(i,t)
-\end{equation}
+\end{equation*}
 \noindent
 In the case of the Cardano blockchain, these values are usually
 provided through an \emph{oracle} mechanism\cite{oracles}. An oracle
@@ -484,24 +469,24 @@ The only exception to this are the rare situations where we need to compare
 2 state variables and choose either $\ident{formula}^\prime$ or 0 depending on the result of the comparison
 result:
 
-\begin{equation}
+\begin{equation*}
 \ident{formula}(st)=\begin{cases}
 \ident{formula}^\prime(st) & \ident{var}_1(st)<\ident{var}_2(st)\\
 0 & \ident{otherwise}
 \end{cases}
-\end{equation}
+\end{equation*}
 We rely on a pseudo-Boolean \emph{less than} function in order to address
 that:
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{formula}(st)=\ident{pseudoLt}(\ident{var}_1(st),\ident{var}_2(st)))*\ident{formula}^\prime
-\end{equation}
+\end{equation*}
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{pseudoLt}(a,b)=\ident{Cond}(a>b,1,0)
-\end{equation}
+\end{equation*}
 
 
 \subsection{Contract term representation and explicit applicability}
@@ -520,9 +505,9 @@ that is implemented by means of the applicability function:
 % SJT - do you mean \mapsto or \rightarrow here?
 % dk14 - it is a mapping, but could be function/morphism too
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{Applicability}:\ident{ContractTerms}\rightarrow \ident{Bool}
-\end{equation}
+\end{equation*}
 
 ACTUS standard defines a family of applicability functions polymorphic on contract
 type:
@@ -533,9 +518,9 @@ type:
 % SJT changed ContractTerm to ContractTerms
 % dk14 OK
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{Applicability} : \ident{ContractType} \times \ident{ContractTerms} \rightarrow \ident{ApplicabilityType}
-\end{equation}
+\end{equation*}
 \noindent
 where applicability could be: \emph{none}, \emph{always}, \emph{nullable}, or \emph{multiple}.
 
@@ -544,24 +529,24 @@ we have to resolve conflicting applicability types for merged contract terms
 using the following resolution rules:
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{weaken}(a_{1},a_{2})=\begin{cases}
 \ident{nullable} & a_{1}=\ident{none}\wedge a_{2}=\ident{always}\\
 \ident{nullable} & a_{1}=\ident{always}\wedge a_{2}=\ident{none}\\
 a_{1} & \ident{priority}(a_{1})>\ident{priority}(a_{2})\\
 a_{2} & \ident{otherwise}
 \end{cases}
-\end{equation}
+\end{equation*}
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{priority}(x)=\begin{cases}
 0 & x=\ident{always}\\
 1 & x=\ident{none}\\
 2 & x=\ident{nullable}\\
 3 & x=\ident{multiple}
 \end{cases}
-\end{equation}
+\end{equation*}
 \noindent
 where $a_{i}$ is the applicability of a given term of the \emph{i}th contract
 type to be merged.
@@ -581,14 +566,14 @@ In this section we describe how concrete Marlowe contracts are generate from the
 A generated contract is essentially a continuation chain of smaller contracts:
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{chainlink}(t)=\ident{receiveData}(t)\circ \ident{calculatePayoff(t)}\circ \ident{processPayoff(t)}
-\end{equation}
+\end{equation*}
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{contract}(ct)=\ident{collaterals}(ct)\circ \ident{INIT}(ct)\circ\prod_{\footnotesize t\in \ident{SCHED(ct)}}\ident{chainlink(t)}
-\end{equation}
+\end{equation*}
 
 \noindent
 where the component \emph{receiveData} asks an oracle for Marlowe Choice if needed, and
@@ -596,7 +581,9 @@ where the component \emph{receiveData} asks an oracle for Marlowe Choice if need
 this is optimised into a pre-calculated constant function. The \emph{processPayoff} function
 awaits the \texttt{Deposit} of a payoff amount from a party: if the deposit is made them 
 it directs the funds to a counterparty, otherwise it transfers
-the collateral to the counterparty and closes the contract. The principal components of the system are shown in Figure \ref{fig1}. There are 3 categories of components representing ACTUS functions: specification with formulas, formula wiring for fixed rates (produces precomputed payoffs) and formula wiring for variable rates (produces Marlowe-code that computes payoffs). Different types of wiring correspond to different implementations of \emph{ActusOps} implemetations (either \emph{Double} or \emph{Value}). 
+the collateral to the counterparty and closes the contract. 
+
+The principal components of the system are shown in Figure \ref{fig1}. There are three categories of components representing ACTUS functions: specification with formulas, formula wiring for fixed rates (produces precomputed payoffs) and formula wiring for variable rates, which  produces Marlowe-code that computes payoffs. Different types of wiring correspond to different implementations of \emph{ActusOps} implementations (either \emph{Double} or \emph{Value}). 
 % SJT added this figure ref: OK?
 % Do we need to add a little more to explain Fig1?
 % dk14 OK, added few sentences about Fig1
@@ -617,15 +604,15 @@ using the \ident{SCHED()} function from ACTUS, as shown in Figure \ref{fig2}.
 
 Marlowe contracts are finite, and in particular Marlowe itself does not have constructs for functions or recursion; these \emph{are} available in the Haskell and JavaScript embeddings of Marlowe, but they are unrolled on translation to pure Marlowe. Naive usage of the \texttt{If} operator in Marlowe could lead to exponential growth of a contract, as in this pesudocode example:
 
-\begin{verbatim}
+\begin{alltt}
 if condition 
-	then 
-		perform\_something1()
-		continue() 
-	else 
-		perform\_something2() 
-		continue()
-\end{verbatim}
+  then 
+    perform\_something1()
+    continue() 
+  else 
+    perform\_something2() 
+    continue()
+\end{alltt}
 \noindent
 Translating this to Marlowe would inline contents of \texttt{continue()} twice and, given that ACTUS
 contracts are essentially generated using continuation as an accumulator,
@@ -635,9 +622,9 @@ contract that has conditionals in their state transition logic.
 An example of such logic would be cap/floor limitations on interest rates:
 
 \noindent 
-\begin{equation}
+\begin{equation*}
 \ident{adjusted}=\ident{max(min(original,floor),cap)}
-\end{equation}
+\end{equation*}
 \noindent
 We addressed this issue by introducing the \texttt{Cond} expression construct in order
 to represent conditional expressions, rather than only conditional contracts as was the case before. Instead of using the \texttt{If}
@@ -672,9 +659,9 @@ N_{\footnotesize \ident{scheduled}}=\ident{count(event)}
 \end{equation*}
 to 
 \noindent 
-\begin{equation}
+\begin{equation*}
 N_{\footnotesize \ident{stateTransitions}}=\frac{\ident{max(date(event))}-\ident{min(date(event))}}{\ident{precision}} 
-\end{equation}
+\end{equation*}
 
 \subsection{Fixed-point precision }
 
@@ -684,7 +671,8 @@ we rely on fixed-point precision. The algebra looks like this:
 \begin{verbatim}
   (+)   = AddValue -- x/n + y/n = (x + y)/n
   (-)   = SubValue -- x/n - y/n = (x - y)/n
-  a * b = Scale (1 % marloweFixedPoint) $ MulValue a b -- x/n * y/n = (x * y)/n^2
+  a * b = Scale (1 % marloweFixedPoint) $ MulValue a b 
+                            -- x/n * y/n = (x * y)/n^2
 \end{verbatim}
 We scale all numbers with \emph{marloweFixedPoint} factor - which only requires modification of \emph{MulValue}.
 % SJT this needs more explanation here ^^^
@@ -704,16 +692,16 @@ finally unpack \emph{ContractStatePoly} into a set of Marlowe variables represen
 % SJT again I am confused about t-1 to t+1 transition. Why not just one step?  
 % dk14. I'll change that. I imagined t as time of event while t+1 is after event 
 \noindent 
-\begin{equation}
+\begin{equation*}
 st_{t}=unpack(stateTransition(pack(st_{t-1}))),
-\end{equation}
+\end{equation*}
 \noindent
 where \emph{pack} is a chain of \texttt{UseValue} constructs and \ident{unpack} is a chain of
 \texttt{Let}s.
 
 \paragraph{Representing state transitions in Marlowe}
 
-Marlowe is a declarative language, and so in partticular does support mutable variables. We therefore represent the state at stage $t$ ($st_{t}$) literally through this naming convention:
+Marlowe is a declarative language, and so in particular it does not support mutable variables. We therefore represent the state at stage $t$ ($st_{t}$) literally through this naming convention:
 
 \begin{verbatim}
   variableName(name, t) = 
@@ -782,9 +770,9 @@ a simple property-based test in QuickCheck~\cite{qc} was introduced, where we ge
 \newcommand{\ct}{\ident{ct}}
 \smallskip
 \noindent 
-\begin{equation}
+\begin{equation*}
 \forall \ct.\forall \rf. \; \ident{getCashFlows}(\ident{"haskell"},\ct,\rf)\equiv \ident{getCashFlows}(\ident{"java"},\ct,\rf)
-\end{equation}
+\end{equation*}
 \noindent
 where \emph{ct} represents contract terms, \emph{rf} is risk factor model, and
 \emph{getCashFlows()} returns a set of \emph{(date,payoff)} tuples.

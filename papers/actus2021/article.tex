@@ -318,17 +318,17 @@ can be derived from previous events and observed risk factors:
 \newcommand{\STF}{\ident{STF}}
 \noindent 
 \begin{equation*}
-\ident{path}=\STF_{1}(ct,ev_{1})\circ \STF_{2}(ct,ev_{2}).\circ\ldots\circ \STF_{i}(ct,ev_{n})
+\ident{path}_{i}=\STF(ct,ev_{1})\circ \STF(ct,ev_{2})\circ\ldots\circ \STF(ct,ev_{i})
 \end{equation*}
 
 \noindent 
 \begin{equation*}
-\ident{state}_{i}=\ident{path}(\ident{INIT}(ct)),
+\ident{state}_{i}=\ident{path}_{i}(\ident{INIT}(ct)),
 \end{equation*}
 \noindent
 where \emph{ct} stands for contract terms, \emph{INIT} returns initial state, \emph{sched}
-returns scheduled events, \emph{STF} takes \emph{contractterms}, \emph{event}, and \emph{state}
-and returns the next state, and \emph{POF} returns the payoff in a state.
+returns scheduled events, \emph{STF} takes \emph{contract terms}, \emph{event}, and \emph{state}
+and returns the next state, and \emph{POF} returns the \emph{payoff} from a state.
 
 \subsection{Oracles}
 

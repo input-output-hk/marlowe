@@ -79,8 +79,8 @@ innovative financial instruments that
 allow trustless peer-to-peer %P2P 
 lending, and potentially providing a safe and convenient
 source of liquidity for cryptocurrency holders. In this paper we
-explore a smart contract framework for building standardized crypto-loans
-using the Marlowe domain-specific language and with the ACTUS standard at its core.
+explore a smart contract framework for building standardised crypto-loans
+using the Marlowe domain-specific language and the ACTUS standard for financial contracts.
 
 \keywords{ACTUS \and blockchain \and Cardano \and finance \and Haskell \and Marlowe
 \and smart contract \and static analysis} 
@@ -91,12 +91,12 @@ using the Marlowe domain-specific language and with the ACTUS standard at its co
 
 
 
-Smart contracts -- programs that run in a blockchain environment --  can be defined in a variety of ways~\cite{cryptoeprint:2016:1156}. Many such languages are general purpose, and can be used to program any kind of contract it makes sense to run on a blockchain; moreover, they tend to be expressive enough to be Turing complete (in some cases with restrictions on the runtime environment). For example, Plutus, the general-purpose language running on the Cardano blockchain~\cite{utxo-vs-accounts}, is a dialect of Haskell. Another approach is to develop special-purpose or \emph{domain-specific languages} (DSLs) which embody a particular application domain: Marlowe~\cite{marlowe} is a high-level DSL for writing
+Smart contracts -- programs that run in a blockchain environment --  can be defined in a variety of ways~\cite{cryptoeprint:2016:1156}. Many such approaches are general purpose, and can be used to program any kind of contract it makes sense to run on a blockchain; moreover, they tend to be expressive enough to be Turing complete (in some cases with restrictions on the runtime environment). For example, Plutus, the general-purpose language running on the Cardano blockchain~\cite{utxo-vs-accounts}, is a dialect of Haskell. Another approach is to develop special-purpose or \emph{domain-specific languages} (DSLs) which embody a particular application domain: Marlowe~\cite{marlowe} is a high-level DSL for writing
 financial contracts on the Cardano blockchain. 
 
 In this paper we explore ways in which contracts described in ACTUS (Algorithmic Contract Types Unified Standards) can be defined in the contract languages Marlowe, Plutus and Haskell. Of course, Plutus or Haskell are able to express these contracts, but rendering them in Marlowe brings extra advantages. Marlowe is defined to provide a range of guarantees by design: a Marlowe contract will only make a finite number of interactions with its environment, and its lifetime can be read off from the code for a contract; moreover, when the contract terminates, any assets held by the contract will automatically be returned to the participants. None of these guarantees can be provided by a general purpose language. 
 
-Each Marlowe contract has a finite set of possible execution paths, and so it is possible to analyse the complete behaviour of a contract without running it. Such \emph{static analysis}, based on SMT solving~\cite{smt}, can be used to check properties of a contract; for example, it is possible to check whether a contract will honour all \texttt{Pay} constructs, however it is executed. In the case that a \texttt{Pay} can fail, the analysis gives an example trace showing how that failure can happen.
+Each Marlowe contract has a finite set of possible execution paths, and so it is possible to analyse the complete behaviour of a contract without running it. Such \emph{static analysis}, based on SMT solving~\cite{smt}, can be used to check properties of a contract; for example, it is possible to check whether a contract will honour all the \texttt{Pay} constructs that it contains, however it is executed. In the case that a \texttt{Pay} can fail, the analysis gives an example trace showing how that failure happens.
 The language design and static analysis provide assurance that Marlowe contracts are much less likely to ``misbehave'' than contracts written in a general-purpose language like Solidity. 
 
 In implementing ACTUS on Cardano we are able to provide further assurance in three other ways. First, we are able to use the declarative nature of Haskell to transliterate ACTUS formulas term-by-term into an executable form in Haskell. Secondly, we are able to use random, property-based testing to validate the Haskell implementation against another written in Java. Finally, we are able to automatically \emph{generate} ACTUS contracts in Marlowe from the terms -- i.e. parameters -- of the contracts; for a simple loan these would include the start and end dates of the loan and the amount loaned (the `principal'). The generated contracts use the executable spec in calculating values of cash flows in the Marlowe contracts.
@@ -146,7 +146,7 @@ interest that directly depends on cryptocurrency prices would be more
 attractive for a miner because it would directly correlate with miner's
 profits. For example, if the price of the cryptocurrency goes down
 in a particular month the borrower would have to pay lower interest, and so would always pay a fixed share of the profits. In a more traditional
-setup the interest rate could depend on prices of other commodities: the canonical example would be a power plant taking a loan
+setup the interest rate could depend on prices of other commodities: a canonical example would be a power plant taking a loan
 with interest depending on electricity prices. 
 
 In both cases, the prices of
@@ -169,6 +169,7 @@ are embedded thus:
 % A1 it is from the ACTUS spec - I assume "r" means "rate"
 % A2 I meant "before vs after event", but I'll remove it
 
+\smallskip
 \noindent 
 \begin{equation*}
 \Delta_{r}=\ident{capfloor}(\ident{driver}*\ident{multiplier}+\ident{spread}-\ident{interestRate}_{t-1})
@@ -183,6 +184,7 @@ are embedded thus:
 where \emph{capfloor} is a function that limits the range of fluctuation,  
 and so limiting the lender's exposure to risk:
 
+\smallskip
 \noindent 
 \begin{equation*}
 \ident{capfloor}(x)=\ident{max(min}(x,\ident{floor}),\ident{cap})
@@ -194,7 +196,7 @@ the average prime
 % SJT explain "prime" here.
 % it's standard financial terminology: https://www.investopedia.com/terms/p/primerate.asp
 rate that the lender expects -- the \emph{benchmark yield} -- and
-the rate imposed by the driver - the higher the spread, the higher
+the rate imposed by the driver: the higher the spread, the higher
 the resulting interest rate. The multiplier %effectively 
 rescales the interest rate curve 
 % SJT used value here rather than plot: is that OK?
@@ -212,6 +214,7 @@ In the context of ACTUS and similar frameworks,
 there is
 one more factor influencing interest rates thorough scaling:
 
+\smallskip
 \noindent 
 \begin{equation*}
 interestPayment=interestScalingFactor*interestRate*notional
@@ -385,7 +388,7 @@ values explicitly introduces risk of exceptions. However this risk
 is addressed using property-based testing, and in particular QuickCheck generators. This is discussed in more detail in Section \ref{assurance} below.
 % SJT Added x-ref to section 7.
 
-\subsection{Utilizing polymorphism to abstract over basic operations}
+\subsection{Utilising polymorphism to abstract over basic operations}
 
 In order to keep our executable specification independent of the carrier -- whether it is a smart-contract engine, proof assistant, analytical framework
 or even machine learning model -- we abstract over the underlying representation
@@ -542,7 +545,7 @@ type to be merged.
 \section{Generating Marlowe contracts from standardised ACTUS contract terms}
 \label{generation}
 
-In this section we describe how concrete Marlowe contracts are generate from the terms -- i.e. parameters -- of standard ACTUS contracts; we also describe the implementation of the system, and reflect on the limitations of generating contracts in Marlowe, where contracts have a a predefined lifetime and collection of interactions with contract participants.
+In this section we describe how concrete Marlowe contracts are generated from the terms -- i.e. parameters -- of standard ACTUS contracts. We also describe the implementation of the system, and reflect on the limitations of generating contracts in Marlowe, where contracts have a predefined lifetime and a predefined collection of interactions with contract participants.
 
 \subsection{Overall architecture }
 
@@ -553,11 +556,13 @@ In this section we describe how concrete Marlowe contracts are generate from the
 
 A generated contract is essentially a continuation chain of smaller contracts:
 
+\medskip
 \noindent 
 \begin{equation*}
 \ident{chainlink}(t)=\ident{receiveData}(t)\circ \ident{calculatePayoff(t)}\circ \ident{processPayoff(t)}
 \end{equation*}
 
+\medskip
 \noindent 
 \begin{equation*}
 \ident{contract}(ct)=\ident{collaterals}(ct)\circ \ident{INIT}(ct)\circ\prod_{\footnotesize t\in \ident{SCHED(ct)}}\ident{chainlink(t)}
@@ -701,7 +706,7 @@ Marlowe is a declarative language, and so in particular it does not support muta
 \end{verbatim}
 
 
-\subsection{ActusLabs}
+\subsection{Actus Labs}
 
 \begin{figure}[t]
 \includegraphics[width=0.8\textwidth]{images/labs.png}
@@ -754,6 +759,7 @@ of ACTUS for smart-contracts by comparing it with an existing implementation wri
 %original Java implementation for analytics - 
 a simple property-based test in QuickCheck~\cite{qc} was introduced, where we generate contract terms and risk factors randomly to test the property.
 
+\smallskip
 \newcommand{\rf}{\ident{rf}}
 \newcommand{\ct}{\ident{ct}}
 \smallskip
@@ -854,36 +860,32 @@ refunds and encourages users to write explicit logic for edge cases.
 % dk14. sure this is better
 
 
-Unlike current mainstream DeFi lending approaches - Marlowe ACTUS-based
-implementation tends to rely on trade-matching instead of pooling.
+Unlike current mainstream DeFi lending approaches, our Marlowe ACTUS implementation relies on trade-matching instead of pooling.
 While asset pooling is proven to be superior to order-book based approaches
 when it comes to automated market makers, using it for lending has
 been shown to be more susceptible to attacks~\cite{flash-loan}.
-
 Moving trade matching off-chain also improves scalability of the protocol
 - every loan is a separate contract, thus there is no global state.
 
 There are frameworks, like ISDA Common Domain Model \cite{isda-cdm}, providing a
 more precise representation of the business processes involved in institutional trading 
 as well as code-generation capabilities. However, due to its structural simplicity, ACTUS 
-is much more suited for generating code in a financial domain specific language 
+is more suited for generating code in a financial domain specific language 
 like Marlowe rather than general-purpose one like Java or Haskell.
 
 \section{Conclusion}
 \label{conclusion}
 
-Marlowe language was explicitly designed as a set of building blocks
+The Marlowe language was explicitly designed as a set of building blocks
 for financial contracts that could be combined by anyone familiar
-with basic programming. Marlowe ACTUS generators improve on that by
-providing a way to automatically combine blocks based on standardized
-requirements specified by the user.
-
-On top of that, Marlowe ACTUS provides a toolkit for cross-testing
-with original ACTUS spec, a framework for adding new contract types,
+with basic programming. The Marlowe ACTUS generators improve on that by
+providing a way to automatically combine blocks based on standardised
+requirements specified by the user. Marlowe ACTUS also provides a toolkit for cross-testing
+against the original ACTUS spec, a framework for adding new contract types,
 cash-flow visualisations and verification tooling.
 
-We are very grateful to Finley and Kegan McIlwaine of the University of Wyoming for their implementation of the LAM contract in ActusLabs, and to colleagues at Quanterall%\footnote{\url{https://quanterall.com/}} 
-for their contributions to the Marlowe ACTUS codebase.
+We are very grateful to colleagues at Quanterall and Finley and Kegan McIlwaine of the University of Wyoming for their %implementation of the LAM contract in Actus Labs, and to colleagues at Quanterall %\footnote{\url{https://quanterall.com/}} 
+contributions to this project.
 
 %
 % ---- Bibliography ----

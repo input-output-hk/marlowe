@@ -490,7 +490,7 @@ lemma reductionStep_only_makes_smaller :
     apply (simp only:if_True Let_def)
     apply blast
     apply (simp only:if_False Let_def)
-    apply (cases "giveMoney payee token (min (moneyInAccount accountId token (accounts state)) (evalValue env state val))
+    apply (cases "giveMoney accountId payee token (min (moneyInAccount accountId token (accounts state)) (evalValue env state val))
            (updateMoneyInAccount accountId token
              (moneyInAccount accountId token (accounts state) -
               min (moneyInAccount accountId token (accounts state)) (evalValue env state val))

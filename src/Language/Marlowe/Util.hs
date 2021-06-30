@@ -72,5 +72,5 @@ getAccountsDiff payments inputs =
     foldl' (\acc (p, m) -> addAccountsDiff p m acc) emptyAccountsDiff (incomes ++ outcomes)
   where
     incomes  = [ (p,  m) | IDeposit _ p m <- inputs ]
-    outcomes = [ (p, -m) | Payment p m  <- payments ]
+    outcomes = [ (p, -m) | Payment _ (Party p) m  <- payments ]
 

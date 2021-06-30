@@ -44,7 +44,7 @@ lemma addMoneyToAccountPositive :
 
 lemma giveMoney_gtZero :
     "\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
-       (eff, newAccs) = giveMoney payee tok2 money accs \<Longrightarrow>
+       (eff, newAccs) = giveMoney src payee tok2 money accs \<Longrightarrow>
        positiveMoneyInAccountOrNoAccount y tok3 newAccs"
   apply (cases payee)
   apply (simp del:positiveMoneyInAccountOrNoAccount.simps addMoneyToAccount.simps)
@@ -94,7 +94,7 @@ lemma reduceContractStep_gtZero_Refund :
   "valid_state state \<Longrightarrow>
    \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
    refundOne (accounts state) = Some ((party, tok2, money), newAccount) \<Longrightarrow>
-   Reduced ReduceNoWarning (ReduceWithPayment (Payment party tok2 money)) (state\<lparr>accounts := newAccount\<rparr>) Close =
+   Reduced ReduceNoWarning (ReduceWithPayment (Payment party (Party party) tok2 money)) (state\<lparr>accounts := newAccount\<rparr>) Close =
       Reduced wa eff newState newCont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y tok3 (accounts newState)"
   by (metis (mono_tags) ReduceStepResult.inject State.simps(1) State.surjective State.update_convs(1) reduceOne_gtZero valid_state_valid_accounts)
@@ -117,12 +117,15 @@ lemma reduceContractStep_gtZero_Pay :
   apply (simp only:reduceContractStep.simps)
   apply (cases "evalValue env state val \<le> 0")
   apply simp
-  apply (cases "giveMoney payee tok2 (min (moneyInAccount accId tok2 (accounts state)) (evalValue env state val))
+  apply (cases "giveMoney accId payee tok2 (min (moneyInAccount accId tok2 (accounts state)) (evalValue env state val))
                 (updateMoneyInAccount accId tok2
                   (moneyInAccount accId tok2 (accounts state) - min (moneyInAccount accId tok2 (accounts state)) (evalValue env state val))
                   (accounts state))")
   apply (simp del:positiveMoneyInAccountOrNoAccount.simps valid_state.simps updateMoneyInAccount.simps)
-  by (metis (no_types, lifting) ReduceStepResult.inject State.simps(1) State.surjective State.update_convs(1) giveMoney_gtZero reduceContractStep_gtZero_Pay_aux)
+  apply (cases payee)
+  apply (simp only:addMoneyToAccountPositive reduceContractStep_gtZero_Pay_aux)
+  apply (metis (no_types, lifting) Payee.simps(5) ReduceStepResult.inject State.simps(1) State.surjective State.update_convs(1) addMoneyToAccountPositive reduceContractStep_gtZero_Pay_aux)
+  by (metis (no_types, lifting) Payee.simps(6) ReduceStepResult.inject State.iffs State.surjective State.update_convs(1) reduceContractStep_gtZero_Pay_aux)
 
 lemma reduceContractStep_gtZero_Let :
   "valid_state state \<Longrightarrow>

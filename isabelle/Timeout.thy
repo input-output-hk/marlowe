@@ -64,9 +64,9 @@ lemma maxTimeNotAmbiguous_reduceStep :
     apply simp
     apply (cases "let moneyToPay = evalValue \<lparr>slotInterval = (iniSlot, endSlot)\<rparr> state x24;
                       balance = case lookup (x21, x23) (accounts state) of None \<Rightarrow> 0 | Some x \<Rightarrow> x; paidMoney = min balance moneyToPay
-                  in giveMoney x22 x23 paidMoney (if balance \<le> moneyToPay then MList.delete (x21, x23) (accounts state)
-                                                  else MList.insert (x21, x23) (balance - paidMoney) (accounts state))")
-    by (metis ReduceStepResult.distinct(3) case_prod_conv)
+                  in giveMoney x21 x22 x23 paidMoney (if balance \<le> moneyToPay then MList.delete (x21, x23) (accounts state)
+                                                      else MList.insert (x21, x23) (balance - paidMoney) (accounts state))")
+    by (meson ReduceStepResult.distinct(3))
   using maxTimeWhen apply blast
   by (meson ReduceStepResult.distinct(3))
 
@@ -90,10 +90,10 @@ lemma maxTimeOnlyDecreases_reduceStep :
     apply simp
     apply (cases "let moneyToPay = evalValue inte state x24; balance = case lookup (x21, x23) (accounts state) of None \<Rightarrow> 0 | Some x \<Rightarrow> x;
                       paidMoney = min balance moneyToPay
-                  in giveMoney x22 x23 paidMoney
+                  in giveMoney x21 x22 x23 paidMoney
                                (if balance \<le> moneyToPay then MList.delete (x21, x23) (accounts state)
                                 else MList.insert (x21, x23) (balance - paidMoney) (accounts state))")
-    by (metis ReduceStepResult.inject case_prod_conv eq_iff)
+    by (metis ReduceStepResult.inject eq_iff)
     apply auto[1]
   apply (simp add: maxTimeOnlyDecreases_reduceStepWhen)
   apply (metis ReduceStepResult.inject eq_iff maxTimeContract.simps(6) reduceContractStep.simps(5))
@@ -150,7 +150,7 @@ lemma timedOutReduceStep_does_not_modify_minSlot :
                     in moneyToPay \<le> 0")
       apply auto[1]
       apply simp
-      apply (cases "giveMoney x22 x23
+      apply (cases "giveMoney x21 x22 x23
            (min (case lookup (x21, x23) (accounts sta) of None \<Rightarrow> 0 | Some x \<Rightarrow> x)
              (evalValue \<lparr>slotInterval = (iniSlot, endSlot)\<rparr> sta x24))
            (if (case lookup (x21, x23) (accounts sta) of None \<Rightarrow> 0 | Some x \<Rightarrow> x)

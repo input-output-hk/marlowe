@@ -3,7 +3,8 @@ imports Semantics PositiveAccounts
 begin
 
 fun moneyInPayment :: "Payment \<Rightarrow> int" where
-"moneyInPayment (Payment _ _ x) = x"
+"moneyInPayment (Payment _ (Party _) _ x) = x" |
+"moneyInPayment (Payment _ (Account _) _ _) = 0"
 
 fun moneyInReduceEffect :: "ReduceEffect \<Rightarrow> int" where
 "moneyInReduceEffect (ReduceWithPayment p) = moneyInPayment p" |
@@ -190,7 +191,7 @@ lemma updateMoneyInAccount_money2 :
   done
 
 lemma giveMoneyToParty_does_not_modify_accs :
-  "(snd (giveMoney (Party p) tok paidMoney accs)) = accs"
+  "(snd (giveMoney src (Party p) tok paidMoney accs)) = accs"
   by simp
 
 lemma removeMoneyFromAccount_preservation :
@@ -199,7 +200,7 @@ lemma removeMoneyFromAccount_preservation :
    moneyToPay \<ge> 0 \<Longrightarrow>
    balance = moneyInAccount accId tok accs \<Longrightarrow>
    paidMoney = min balance moneyToPay \<Longrightarrow>
-   moneyInAccounts (snd (giveMoney (Party p) tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) accs))) =
+   moneyInAccounts (snd (giveMoney accId (Party p) tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) accs))) =
    moneyInAccounts accs - paidMoney"
   by (metis giveMoneyToParty_does_not_modify_accs updateMoneyInAccount_money)
 
@@ -215,14 +216,14 @@ lemma reduceContractStep_preserves_money_acc_to_party :
    paidMoney = min balance moneyToPay \<Longrightarrow>
    moneyInAccounts (accounts state) =
    moneyInReduceStepResult state
-    (case giveMoney (Party x2) tok paidMoney
+    (case giveMoney accId (Party x2) tok paidMoney
              (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state)) of
      (payment, finalAccs) \<Rightarrow>
        Reduced (if paidMoney < moneyToPay
                 then ReducePartialPay accId (Party x2) tok paidMoney moneyToPay
                 else ReduceNoWarning)
                payment (state\<lparr>accounts := finalAccs\<rparr>) cont)"
-  apply (cases "giveMoney (Party x2) tok paidMoney
+  apply (cases "giveMoney accId (Party x2) tok paidMoney
                           (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state))")
   subgoal for a b
     apply (cases a)
@@ -231,7 +232,7 @@ lemma reduceContractStep_preserves_money_acc_to_party :
       apply (cases x2a)
       apply (simp only:prod.case moneyInReduceStepResult.simps moneyInReduceEffect.simps)
       apply (simp only:moneyInState.simps "state_account_red")
-      by (metis add_diff_cancel_left' add_diff_eq giveMoney.simps(1) le_less moneyInPayment.simps moneyInReduceEffect.simps(1) prod.inject updateMoneyInAccount_money)
+      by (metis (no_types) Payee.simps(6) ReduceEffect.inject add.commute eq_diff_eq giveMoney.simps le_less moneyInPayment.simps(1) prod.inject updateMoneyInAccount_money)
     done
   done
 
@@ -298,14 +299,14 @@ lemma transferMoneyBetweenAccounts_preserves :
    moneyToPay > 0 \<Longrightarrow>
    balance = moneyInAccount accId tok accs \<Longrightarrow>
    paidMoney = min balance moneyToPay \<Longrightarrow>
-   moneyInAccounts (snd (giveMoney (Account acc) tok2 paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) accs))) =
+   moneyInAccounts (snd (giveMoney accId (Account acc) tok2 paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) accs))) =
    moneyInAccounts accs"
   apply (simp only:giveMoney.simps addMoneyToAccount.simps Let_def)
   apply (cases "min (moneyInAccount accId tok accs) moneyToPay = 0")
   apply (simp only:bool.case if_True snd_def prod.case)
   apply (simp only:Orderings.preorder_class.order_refl if_True)
-  apply (metis diff_zero min.commute min.right_idem order_refl updateMoneyInAccount_money)
-  by (smt addMoneyToAccountIf_ge_zero snd_conv transferMoneyBetweenAccounts_preserves_aux3)
+  apply (metis Payee.simps(5) add.right_neutral diff_zero order_refl updateMoneyInAccount_money2)
+  using addMoneyToAccountIf_ge_zero transferMoneyBetweenAccounts_preserves_aux3 by fastforce
 
 lemma reduceContractStep_preserves_money_acc_to_acc_aux :
   "validAndPositive_state state \<Longrightarrow>
@@ -314,7 +315,7 @@ lemma reduceContractStep_preserves_money_acc_to_acc_aux :
    moneyToPay = evalValue env state val \<Longrightarrow>
   balance = moneyInAccount accId tok (accounts state) \<Longrightarrow>
    paidMoney = min balance moneyToPay \<Longrightarrow>
-  rgm = giveMoney (Account x1) tok paidMoney
+  rgm = giveMoney accId (Account x1) tok paidMoney
           (updateMoneyInAccount accId tok
             (moneyInAccount accId tok (accounts state) - paidMoney) (accounts state)) \<Longrightarrow>
   moneyInAccounts (snd rgm) = moneyInAccounts (accounts state)"
@@ -340,15 +341,15 @@ lemma reduceContractStep_preserves_money_acc_to_acc :
    paidMoney = min balance moneyToPay \<Longrightarrow>
    moneyInAccounts (accounts state)
     = moneyInReduceStepResult state
-          (case giveMoney payee tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state)) of
+          (case giveMoney accId payee tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state)) of
                 (payment, finalAccs) \<Rightarrow> Reduced wa payment (state\<lparr>accounts := finalAccs\<rparr>) cont)"
-  apply (cases "giveMoney payee tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state))")
+  apply (cases "giveMoney accId payee tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state))")
   apply (simp del:valid_map.simps allAccountsPositive.simps moneyInAccount.simps moneyInAccounts.simps giveMoney.simps updateMoneyInAccount.simps)
   subgoal for a b
     apply (cases a)
     apply (simp only:moneyInReduceEffect.simps)
     apply (metis add.left_neutral not_le snd_conv transferMoneyBetweenAccounts_preserves)
-    by simp
+    using reduceContractStep_preserves_money_acc_to_acc_aux by auto
   done
 
 lemma reduceContractStep_preserves_money :

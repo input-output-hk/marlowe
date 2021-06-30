@@ -38,9 +38,10 @@ lemma updateMoneyInAccount_preserves_valid_map :
 
 lemma giveMoney_preserves_valid_map :
   "valid_map accs \<Longrightarrow>
-   giveMoney payee tok ammount accs = (a, newAccs) \<Longrightarrow>
+   giveMoney src payee tok ammount accs = (a, newAccs) \<Longrightarrow>
    valid_map newAccs"
-  by (metis addMoneyToAccount.simps giveMoney.elims snd_conv updateMoneyInAccount_preserves_valid_map)
+  apply (cases payee)
+  using updateMoneyInAccount_preserves_valid_map by auto
 
 lemma reductionStep_preserves_valid_state_Pay :
   "valid_state state \<Longrightarrow> reduceContractStep env state (Pay accId payee tok val cont) = Reduced wa ef newState newCont \<Longrightarrow>
@@ -48,7 +49,7 @@ lemma reductionStep_preserves_valid_state_Pay :
   apply (simp only:reduceContractStep.simps)
   apply (cases "evalValue env state val \<le> 0")
   apply simp
-  apply (cases "giveMoney payee tok (min (moneyInAccount accId tok (accounts state)) (evalValue env state val))
+  apply (cases "giveMoney accId payee tok (min (moneyInAccount accId tok (accounts state)) (evalValue env state val))
            (updateMoneyInAccount accId tok (moneyInAccount accId tok (accounts state) - min (moneyInAccount accId tok (accounts state)) (evalValue env state val))
              (accounts state))")
   apply (simp only:Product_Type.prod.case if_False Let_def)

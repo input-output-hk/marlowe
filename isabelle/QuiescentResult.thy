@@ -11,7 +11,7 @@ lemma reduceContractStepPayIsQuiescent :
            else let balance = moneyInAccount x21 tok (accounts sta); paidMoney = min balance moneyToPay; newBalance = balance - paidMoney;
                     newAccs = updateMoneyInAccount x21 tok newBalance (accounts sta);
                     warning = if paidMoney < moneyToPay then ReducePartialPay x21 x22 tok paidMoney moneyToPay else ReduceNoWarning;
-                    (payment, finalAccs) = giveMoney x22 tok paidMoney newAccs
+                    (payment, finalAccs) = giveMoney x21 x22 tok paidMoney newAccs
                 in Reduced warning payment (sta\<lparr>accounts := finalAccs\<rparr>) x24) =
        NotReduced \<Longrightarrow>
        cont = Pay x21 x22 tok x23 x24 \<Longrightarrow> False"
@@ -20,12 +20,12 @@ lemma reduceContractStepPayIsQuiescent :
   apply (cases "min (moneyInAccount x21 tok (accounts sta)) (evalValue env sta x23) < (evalValue env sta x23)")
   apply (cases "lookup (x21, tok) (accounts sta)")
   apply simp
-  apply (metis (mono_tags, lifting) ReduceStepResult.distinct(1) case_prod_unfold)
+  apply (meson ReduceStepResult.distinct(1))
   apply (cases "evalValue env sta x23 \<le> 0")
   apply simp
   apply (cases "min (moneyInAccount x21 tok (accounts sta)) (evalValue env sta x23) < evalValue env sta x23")
   apply simp
-  apply (metis (no_types, lifting) ReduceStepResult.distinct(1) case_prod_unfold)
+  apply (meson ReduceStepResult.distinct(1))
   apply simp
   by (smt ReduceStepResult.distinct(1) case_prod_unfold)
 

@@ -240,7 +240,7 @@ refundOne accounts = do
     else refundOne rest
 
 
-data Payment = Payment Party Money
+data Payment = Payment Party Payee Money
   deriving (Eq,Ord,Show,Read)
 
 data ReduceEffect = ReduceWithPayment Payment
@@ -273,12 +273,12 @@ addMoneyToAccount accId money accounts = let
 {-| Gives the given amount of money to the given payee.
     Returns the appropriate effect and updated accounts
 -}
-giveMoney :: Payee -> Money -> Map Party Money -> (ReduceEffect, Map Party Money)
-giveMoney payee money accounts = case payee of
-    Party party   -> (ReduceWithPayment (Payment party money), accounts)
-    Account accId -> let
-        newAccs = addMoneyToAccount accId money accounts
-        in (ReduceNoPayment, newAccs)
+giveMoney :: Party -> Payee -> Money -> Map Party Money -> (ReduceEffect, Map Party Money)
+giveMoney accountId payee amount accounts =
+  let newAccounts = case payee of
+                      Party _ -> accounts
+                      Account accId -> addMoneyToAccount accId amount accounts
+  in (ReduceWithPayment (Payment accountId payee amount), newAccounts)
 
 -- REDUCE
 
@@ -306,7 +306,7 @@ reduceContractStep env state contract = case contract of
     Close -> case refundOne (accounts state) of
         Just ((party, money), newAccounts) -> let
             newState = state { accounts = newAccounts }
-            in Reduced ReduceNoWarning (ReduceWithPayment (Payment party money)) newState Close
+            in Reduced ReduceNoWarning (ReduceWithPayment (Payment party (Party party) money)) newState Close
         Nothing -> NotReduced
 
     Pay accId payee val cont -> let
@@ -322,7 +322,7 @@ reduceContractStep env state contract = case contract of
                 warning = if paidMoney < moneyToPay
                           then ReducePartialPay accId payee paidMoney moneyToPay
                           else ReduceNoWarning
-                (payment, finalAccs) = giveMoney payee paidMoney newAccs
+                (payment, finalAccs) = giveMoney accId payee paidMoney newAccs
                 in Reduced warning payment (state { accounts = finalAccs }) cont
 
     If obs cont1 cont2 -> let

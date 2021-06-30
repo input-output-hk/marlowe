@@ -501,7 +501,7 @@ lemma refundOneShortens : "refundOne acc = Some (c, nacc) \<Longrightarrow>
   by (metis Pair_inject length_Cons less_Suc_eq list.distinct(1)
             list.inject option.inject refundOne.elims)
 
-datatype Payment = Payment Party Token Money
+datatype Payment = Payment AccountId Payee Token Money
 
 datatype ReduceEffect = ReduceNoPayment
                       | ReduceWithPayment Payment
@@ -527,15 +527,15 @@ fun addMoneyToAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Money \<Ri
    then accountsV
    else updateMoneyInAccount accId token newBalance accountsV)"
 
-fun giveMoney :: "Payee \<Rightarrow> Token \<Rightarrow> Money \<Rightarrow> Accounts \<Rightarrow>
+fun giveMoney :: "AccountId \<Rightarrow> Payee \<Rightarrow> Token \<Rightarrow> Money \<Rightarrow> Accounts \<Rightarrow>
                   (ReduceEffect \<times> Accounts)" where
-"giveMoney (Party party) token money accountsV =
-  (ReduceWithPayment (Payment party token money), accountsV)" |
-"giveMoney (Account accId) token money accountsV =
-  (let newAccs = addMoneyToAccount accId token money accountsV in
-    (ReduceNoPayment, newAccs))"
+"giveMoney accountId payee token money accountsV =
+  (let newAccounts = case payee of
+                        Party _ \<Rightarrow> accountsV
+                      | Account accId \<Rightarrow> addMoneyToAccount accId token money accountsV
+   in (ReduceWithPayment (Payment accountId payee token money), newAccounts))"
 
-lemma giveMoneyIncOne : "giveMoney p t m a = (e, na) \<Longrightarrow> length na \<le> length a + 1"
+lemma giveMoneyIncOne : "giveMoney sa p t m a = (e, na) \<Longrightarrow> length na \<le> length a + 1"
   apply (cases p)
   apply (cases "m \<le> 0")
   apply auto
@@ -558,7 +558,7 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
   (case refundOne (accounts state) of
      Some ((party, token, money), newAccount) \<Rightarrow>
        let newState = state \<lparr> accounts := newAccount \<rparr> in
-       Reduced ReduceNoWarning (ReduceWithPayment (Payment party token money)) newState Close
+       Reduced ReduceNoWarning (ReduceWithPayment (Payment party (Party party) token money)) newState Close
    | None \<Rightarrow> NotReduced)" |
 "reduceContractStep env state (Pay accId payee token val cont) =
   (let moneyToPay = evalValue env state val in
@@ -572,7 +572,7 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
          let warning = (if paidMoney < moneyToPay
                         then ReducePartialPay accId payee token paidMoney moneyToPay
                         else ReduceNoWarning) in
-         let (payment, finalAccs) = giveMoney payee token paidMoney newAccs in
+         let (payment, finalAccs) = giveMoney accId payee token paidMoney newAccs in
          Reduced warning payment (state \<lparr> accounts := finalAccs \<rparr>) cont)))" |
 "reduceContractStep env state (If obs cont1 cont2) =
   (let cont = (if evalObservation env state obs
@@ -613,7 +613,7 @@ lemma reduceContractStepReducesSize_Refund_aux :
   by (simp add: refundOneShortens)
 
 lemma reduceContractStepReducesSize_Refund_aux2 :
-  "Reduced ReduceNoWarning (ReduceWithPayment (Payment party token money))
+  "Reduced ReduceNoWarning (ReduceWithPayment (Payment accId (Party party) token money))
           (sta\<lparr>accounts := newAccount\<rparr>) Close =
    Reduced twa tef nsta nc \<Longrightarrow>
    c = Close \<Longrightarrow>
@@ -625,7 +625,7 @@ lemma reduceContractStepReducesSize_Refund_aux2 :
 lemma reduceContractStepReducesSize_Refund :
   "(case a of
           ((party, token, money), newAccount) \<Rightarrow>
-            Reduced ReduceNoWarning (ReduceWithPayment (Payment party token money))
+            Reduced ReduceNoWarning (ReduceWithPayment (Payment accId (Party party) token money))
              (sta\<lparr>accounts := newAccount\<rparr>) Close) =
          Reduced twa tef nsta nc \<Longrightarrow>
          c = Close \<Longrightarrow>
@@ -640,31 +640,31 @@ lemma zeroMinIfGT : "x > 0 \<Longrightarrow> min 0 x = (0 :: int)"
 
 lemma reduceContractStepReducesSize_Pay_aux :
   "length z \<le> length x \<Longrightarrow>
-   giveMoney x22 tok a z = (tef, y) \<Longrightarrow>
+   giveMoney accId x22 tok a z = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
-  using giveMoneyIncOne by fastforce
+  by (metis (no_types, lifting) Suc_eq_plus1 giveMoneyIncOne leI le_trans not_less_eq_eq)
 
 lemma reduceContractStepReducesSize_Pay_aux2 :
-  "giveMoney dst tok a (MList.delete (src, tok) x) = (tef, y) \<Longrightarrow>
+  "giveMoney accId dst tok a (MList.delete (src, tok) x) = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
   using delete_length reduceContractStepReducesSize_Pay_aux by blast
 
 lemma reduceContractStepReducesSize_Pay_aux3 :
   "sta\<lparr>accounts := b\<rparr> = nsta \<Longrightarrow>
-   giveMoney dst tok a (MList.delete (src, tok) (accounts sta)) = (tef, b) \<Longrightarrow>
+   giveMoney accId dst tok a (MList.delete (src, tok) (accounts sta)) = (tef, b) \<Longrightarrow>
    length (accounts nsta) < Suc (Suc (length (accounts sta)))"
   using reduceContractStepReducesSize_Pay_aux2 by fastforce
 
 lemma reduceContractStepReducesSize_Pay_aux4 :
   "lookup (k, tok) x = Some w \<Longrightarrow>
-   giveMoney dst tok a (MList.insert (k, tok) v x) = (tef, y) \<Longrightarrow>
+   giveMoney accId dst tok a (MList.insert (k, tok) v x) = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
   by (metis One_nat_def add.right_neutral add_Suc_right giveMoneyIncOne insert_existing_length le_imp_less_Suc)
 
 lemma reduceContractStepReducesSize_Pay_aux5 :
 "sta\<lparr>accounts := ba\<rparr> = nsta \<Longrightarrow>
  lookup (src, tok) (accounts sta) = Some a \<Longrightarrow>
- giveMoney dst tok (evalValue env sta am) (MList.insert (src, tok) (a - evalValue env sta am) (accounts sta)) = (tef, ba) \<Longrightarrow>
+ giveMoney accId dst tok (evalValue env sta am) (MList.insert (src, tok) (a - evalValue env sta am) (accounts sta)) = (tef, ba) \<Longrightarrow>
  length (accounts nsta) < Suc (Suc (length (accounts sta)))"
   using reduceContractStepReducesSize_Pay_aux4 by fastforce
 
@@ -676,15 +676,15 @@ lemma reduceContractStepReducesSize_Pay_aux6 :
    evalBound nsta nc < evalBound sta c"
   apply (cases "a < evalValue env sta am")
   apply (simp add:min_absorb1)
-  apply (cases "giveMoney dst tok a (MList.delete (src, tok) (accounts sta))")
+  apply (cases "giveMoney src dst tok a (MList.delete (src, tok) (accounts sta))")
   using reduceContractStepReducesSize_Pay_aux3 apply fastforce
   apply (cases "a = evalValue env sta am")
-  apply (cases "giveMoney dst tok (evalValue env sta am) (MList.delete (src, tok) (accounts sta))")
+  apply (cases "giveMoney src dst tok (evalValue env sta am) (MList.delete (src, tok) (accounts sta))")
   apply (simp add:min_absorb2)
-  using reduceContractStepReducesSize_Pay_aux3 apply blast
-  apply (cases "giveMoney dst tok (evalValue env sta am) (MList.insert (src, tok) (a - evalValue env sta am) (accounts sta))")
+  using reduceContractStepReducesSize_Pay_aux3 apply fastforce
+  apply (cases "giveMoney src dst tok (evalValue env sta am) (MList.insert (src, tok) (a - evalValue env sta am) (accounts sta))")
   apply (simp add:min_absorb2)
-  using reduceContractStepReducesSize_Pay_aux5 by blast
+  using reduceContractStepReducesSize_Pay_aux5 by fastforce
 
 lemma reduceContractStepReducesSize_Pay :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
@@ -693,9 +693,9 @@ lemma reduceContractStepReducesSize_Pay :
   apply auto[1]
   apply (cases "lookup (src, tok) (accounts sta)")
   apply (cases "evalValue env sta am > 0")
-  apply (cases "giveMoney dst tok 0 (MList.delete (src, tok) (accounts sta))")
+  apply (cases "giveMoney src dst tok 0 (MList.delete (src, tok) (accounts sta))")
   apply (simp add:zeroMinIfGT)
-  using reduceContractStepReducesSize_Pay_aux3 apply blast
+  using reduceContractStepReducesSize_Pay_aux3 apply fastforce
   apply simp
   using reduceContractStepReducesSize_Pay_aux6 by auto
 
@@ -733,7 +733,7 @@ lemma reduceContractStepReducesSize :
   apply (cases "refundOne (accounts sta)")
   apply simp
   apply simp
-  apply (simp add:reduceContractStepReducesSize_Refund)
+  using reduceContractStepReducesSize_Refund apply fastforce
   using reduceContractStepReducesSize_Pay apply blast
   apply auto[1]
   apply (meson eq_fst_iff reduceContractStepReducesSize_When)
@@ -939,7 +939,7 @@ fun combineOutcomes :: "TransactionOutcomes \<Rightarrow> TransactionOutcomes \<
 "combineOutcomes x y = MList.unionWith plus x y"
 
 fun getPartiesFromReduceEffect :: "ReduceEffect list \<Rightarrow> (Party \<times> Token \<times> Money) list" where
-"getPartiesFromReduceEffect (Cons (ReduceWithPayment (Payment p tok m)) t) =
+"getPartiesFromReduceEffect (Cons (ReduceWithPayment (Payment src (Party p) tok m)) t) =
    Cons (p, tok, -m) (getPartiesFromReduceEffect t)" |
 "getPartiesFromReduceEffect (Cons x t) = getPartiesFromReduceEffect t" |
 "getPartiesFromReduceEffect Nil = Nil"

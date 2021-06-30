@@ -997,10 +997,10 @@ lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_PartialPay : "validA
                           in Reduced (if min balance moneyToPay < moneyToPay
                                       then ReducePartialPay accountId payee token paidMoney moneyToPay
                                       else ReduceNoWarning)
-                                     (fst (giveMoney payee token paidMoney2
+                                     (fst (giveMoney accountId payee token paidMoney2
                                                      (updateMoneyInAccount accountId token (balance2 - paidMoney2) (accounts fixedSt))))
                                      (st\<lparr> minSlot := max lo (minSlot st),
-                                          accounts := snd (giveMoney payee token paidMoney2
+                                          accounts := snd (giveMoney accountId payee token paidMoney2
                                                                      (updateMoneyInAccount accountId token (balance2 - paidMoney2) (accounts fixedSt))) \<rparr>)
                                      subCont
                            = Reduced reduceWarning reduceEffect reduceState reduceContract")

@@ -45,9 +45,9 @@ lemma reduceContractStep_not_quiescent_reduces : "\<not> isQuiescent c st \<Long
       apply (cases "let moneyToPay = evalValue env state val;
                         balance = case lookup (accId, Token tok curr) (accounts state) of None \<Rightarrow> 0 | Some x \<Rightarrow> x;
                         paidMoney = min balance moneyToPay
-                    in giveMoney payee (Token tok curr) paidMoney (if balance \<le> moneyToPay
-                                                                   then MList.delete (accId, Token tok curr) (accounts state)
-                                                                   else MList.insert (accId, Token tok curr) (balance - paidMoney) (accounts state))")
+                    in giveMoney accId payee (Token tok curr) paidMoney (if balance \<le> moneyToPay
+                                                                         then MList.delete (accId, Token tok curr) (accounts state)
+                                                                         else MList.insert (accId, Token tok curr) (balance - paidMoney) (accounts state))")
       apply (simp add:Let_def)
     done
   done

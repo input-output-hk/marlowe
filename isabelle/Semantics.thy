@@ -1,32 +1,118 @@
 theory Semantics
-imports Main MList SList ListTools "HOL-Library.Product_Lexorder"
+imports Main MList SList ListTools "HOL-Library.Product_Lexorder" Serialisation
 begin
 
 type_synonym Slot = int
 
-type_synonym PubKey = int
+type_synonym PubKey = ByteString
 
 type_synonym Ada = int
-type_synonym CurrencySymbol = int
-type_synonym TokenName = int
+type_synonym CurrencySymbol = ByteString
+type_synonym TokenName = ByteString
 
-type_synonym Party = PubKey
-type_synonym ChoiceName = int
+type_synonym ChoiceName = ByteString
 type_synonym NumAccount = int
 type_synonym Timeout = Slot
 type_synonym Money = Ada
 type_synonym ChosenNum = int
 
+datatype Party = PubKey ByteString
+               | Role CurrencySymbol
+
 type_synonym AccountId = Party
 
+
+(* BEGIN Proof of linorder for Party *)
+fun less_eq_Party :: "Party \<Rightarrow> Party \<Rightarrow> bool" where
+"less_eq_Party (PubKey _) (Role _) = True" |
+"less_eq_Party (Role _) (PubKey _) = False" |
+"less_eq_Party (PubKey x) (PubKey y) = less_eq_BS x y" |
+"less_eq_Party (Role x) (Role y) = less_eq_BS x y"
+
+fun less_Party :: "Party \<Rightarrow> Party \<Rightarrow> bool" where
+"less_Party a b = (\<not> (less_eq_Party b a))"
+
+instantiation "Party" :: "ord"
+begin
+definition "a \<le> b = less_eq_Party a b"
+definition "a < b = less_Party a b"
+instance
+proof
+qed
+end
+
+lemma linearParty : "x \<le> y \<or> y \<le> (x::Party)"
+  apply (cases x)
+  subgoal for x
+    apply (cases y)
+    subgoal for y
+      using less_eq_Party.simps(3) less_eq_Party_def oneLessEqBS by blast
+    subgoal for y
+      by (simp add: less_eq_Party_def)
+    done
+  subgoal for x
+    apply (cases y)
+    subgoal for y
+      by (simp add: less_eq_Party_def)
+    subgoal for y
+      using less_eq_Party.simps(4) less_eq_Party_def oneLessEqBS by blast
+    done
+  done
+
+instantiation "Party" :: linorder
+begin
+instance
+proof
+  fix x y
+  have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: Party))"
+    by (meson less_Party.simps less_Party_def less_eq_Party_def linearParty)
+  thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
+next
+  fix x
+  have "x \<le> (x :: Party)" by (meson linearParty)
+  thus "x \<le> x" by simp
+next
+  fix x y z
+  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: Party)"
+    apply (auto simp add:less_eq_Party_def)
+    apply (cases x)
+     apply (cases y)
+      apply (cases z)
+    using byteStringOrder less_eq_Party.simps(3) apply blast
+      apply simp_all
+     apply (metis Party.exhaust less_eq_Party.simps(1) less_eq_Party.simps(2))
+     apply (cases y)
+      apply (cases z)
+      apply simp_all
+    by (metis Party.exhaust byteStringOrder less_eq_Party.simps(2) less_eq_Party.simps(4))
+  thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
+next
+  fix x y z
+  have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Party)"
+    apply (auto simp add:less_eq_Party_def)
+    apply (cases x)
+     apply (cases y)
+    apply (simp add: byteStringLessEqTwiceEq)
+     apply simp
+     apply (cases y)
+     apply simp
+    by (simp add: byteStringLessEqTwiceEq)
+  thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Party)" by simp
+next
+  fix x y
+  from linearParty have "x \<le> y \<or> y \<le> (x :: Party)" by simp
+  thus "x \<le> y \<or> y \<le> x" by simp
+qed
+end
+(* END Proof of linorder for Party *)
 
 datatype Token = Token CurrencySymbol TokenName
 
 (* BEGIN Proof of linorder for Token *)
 fun less_eq_Tok :: "Token \<Rightarrow> Token \<Rightarrow> bool" where
 "less_eq_Tok (Token a b) (Token c d) =
-   (if a < c then True
-    else (if (a > c) then False else b \<le> d))"
+   (if less_BS a c then True
+    else (if (less_BS c a) then False else less_eq_BS b d))"
 
 fun less_Tok :: "Token \<Rightarrow> Token \<Rightarrow> bool" where
 "less_Tok a b = (\<not> (less_eq_Tok b a))"
@@ -41,7 +127,7 @@ qed
 end
 
 lemma linearToken : "x \<le> y \<or> y \<le> (x::Token)"
-  by (smt less_eq_Tok.elims(3) less_eq_Tok.simps less_eq_Token_def)
+  by (smt Token.simps(1) less_eq_Tok.elims(3) less_eq_Token_def lineaBS)
 
 instantiation "Token" :: linorder
 begin
@@ -49,7 +135,7 @@ instance
 proof
   fix x y
   have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: Token))"
-    by (meson less_Tok.elims(2) less_Tok.elims(3) less_Token_def less_eq_Token_def linearToken)
+    by (meson less_Tok.simps less_Token_def less_eq_Token_def linearToken)
   thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
 next
   fix x
@@ -58,12 +144,12 @@ next
 next
   fix x y z
   have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: Token)"
-    by (smt less_eq_Tok.elims(2) less_eq_Tok.simps less_eq_Token_def)
+    by (smt byteStringOrder less_BS.simps less_eq_Tok.elims(2) less_eq_Tok.simps less_eq_Token_def oneLessEqBS)
   thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
 next
   fix x y z
   have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Token)"
-    by (smt less_eq_Tok.elims(2) less_eq_Tok.simps less_eq_Token_def)
+    by (smt Token.simps(1) byteStringLessEqTwiceEq less_BS.simps less_eq_Tok.elims(2) less_eq_Token_def oneLessEqBS)
   thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Token)" by simp
 next
   fix x y
@@ -78,8 +164,8 @@ datatype ChoiceId = ChoiceId ChoiceName Party
 (* BEGIN Proof of linorder for ChoiceId *)
 fun less_eq_ChoId :: "ChoiceId \<Rightarrow> ChoiceId \<Rightarrow> bool" where
 "less_eq_ChoId (ChoiceId a b) (ChoiceId c d) =
-   (if a < c then True
-    else (if (a > c) then False else b \<le> d))"
+   (if less_BS a c then True
+    else (if (less_BS c a) then False else b \<le> d))"
 
 fun less_ChoId :: "ChoiceId \<Rightarrow> ChoiceId \<Rightarrow> bool" where
 "less_ChoId a b = (\<not> (less_eq_ChoId b a))"
@@ -94,7 +180,7 @@ qed
 end
 
 lemma linearChoiceId : "x \<le> y \<or> y \<le> (x::ChoiceId)"
-  by (smt less_eq_ChoId.elims(3) less_eq_ChoId.simps less_eq_ChoiceId_def)
+  by (smt ChoiceId.simps(1) leI less_eq_ChoId.elims(3) less_eq_ChoiceId_def order_le_less)
 
 instantiation "ChoiceId" :: linorder
 begin
@@ -111,12 +197,16 @@ next
 next
   fix x y z
   have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: ChoiceId)"
-    by (smt less_eq_ChoId.elims(2) less_eq_ChoId.simps less_eq_ChoiceId_def)
+    apply (cases x)
+    apply (cases y)
+    apply (cases z)
+    apply (simp only:less_eq_ChoiceId_def)
+    by (smt byteStringOrder less_BS.simps less_eq_ChoId.simps oneLessEqBS order.trans)
   thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
 next
   fix x y z
   have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ChoiceId)"
-    by (smt less_eq_ChoId.elims(2) less_eq_ChoId.simps less_eq_ChoiceId_def)
+    by (smt byteStringLessEqTwiceEq eq_iff less_BS.simps less_eq_ChoId.elims(2) less_eq_ChoId.simps less_eq_ChoiceId_def oneLessEqBS)
   thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ChoiceId)" by simp
 next
   fix x y
@@ -178,14 +268,14 @@ end
 (* END Proof of linorder for OracleId *)
 *)
 
-datatype ValueId = ValueId int
+datatype ValueId = ValueId ByteString
 
 (* BEGIN Proof of linorder for ValueId *)
 fun less_eq_ValId :: "ValueId \<Rightarrow> ValueId \<Rightarrow> bool" where
-"less_eq_ValId (ValueId a) (ValueId b) = (a \<le> b)"
+"less_eq_ValId (ValueId a) (ValueId b) = less_eq_BS a b"
 
 fun less_ValId :: "ValueId \<Rightarrow> ValueId \<Rightarrow> bool" where
-"less_ValId (ValueId a) (ValueId b) = (a < b)"
+"less_ValId (ValueId a) (ValueId b) = less_BS a b"
 
 instantiation "ValueId" :: "ord"
 begin
@@ -197,7 +287,7 @@ qed
 end
 
 lemma linearValueId : "x \<le> y \<or> y \<le> (x::ValueId)"
-  by (smt ValueId.inject less_eq_ValId.elims(3) less_eq_ValueId_def)
+  by (metis ValueId.simps(1) less_eq_ValId.elims(3) less_eq_ValueId_def oneLessEqBS)
 
 instantiation "ValueId" :: linorder
 begin
@@ -205,7 +295,7 @@ instance
 proof
   fix x y
   have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: ValueId))"
-    by (metis ValueId.exhaust dual_order.order_iff_strict less_ValId.simps less_ValueId_def less_eq_ValId.simps less_eq_ValueId_def not_le)
+    by (metis ValueId.exhaust less_BS.simps less_ValId.simps less_ValueId_def less_eq_ValId.simps less_eq_ValueId_def linearValueId)
   thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
 next
   fix x
@@ -214,12 +304,12 @@ next
 next
   fix x y z
   have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: ValueId)"
-    by (smt ValueId.inject less_eq_ValId.elims(2) less_eq_ValId.elims(3) less_eq_ValueId_def)
+    by (smt ValueId.simps(1) byteStringOrder less_eq_ValId.elims(2) less_eq_ValId.elims(3) less_eq_ValueId_def)
   thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
 next
   fix x y z
   have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ValueId)"
-    by (smt less_eq_ValId.elims(2) less_eq_ValId.simps less_eq_ValueId_def)
+    by (metis ValueId.simps(1) byteStringLessEqTwiceEq less_eq_ValId.elims(2) less_eq_ValueId_def)
   thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ValueId)" by simp
 next
   fix x y

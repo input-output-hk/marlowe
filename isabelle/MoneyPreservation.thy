@@ -232,7 +232,7 @@ lemma reduceContractStep_preserves_money_acc_to_party :
       apply (cases x2a)
       apply (simp only:prod.case moneyInReduceStepResult.simps moneyInReduceEffect.simps)
       apply (simp only:moneyInState.simps "state_account_red")
-      by (metis (no_types) Payee.simps(6) ReduceEffect.inject add.commute eq_diff_eq giveMoney.simps le_less moneyInPayment.simps(1) prod.inject updateMoneyInAccount_money)
+      by (metis Payee.simps(6) add.commute eq_diff_eq giveMoney.simps le_less moneyInPayment.simps(1) moneyInReduceEffect.simps(1) prod.inject updateMoneyInAccount_money)
     done
   done
 

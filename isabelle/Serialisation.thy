@@ -70,4 +70,45 @@ fun getByteString :: "ByteString \<Rightarrow> (ByteString \<times> ByteString) 
 lemma addAndGetByteString : "getByteString (addByteString x y) = Some (x, y)"
   by (simp del:positiveIntToByteString.simps add:positiveIntToByteStringToPositiveInt)
 
+
+fun less_eq_BS :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
+"less_eq_BS Nil Nil = True" |
+"less_eq_BS (Cons _ _) Nil = False" |
+"less_eq_BS Nil (Cons _ _) = True" |
+"less_eq_BS (Cons h1 t1) (Cons h2 t2) =
+   (if h2 < h1 then False
+    else (if h1 = h2 then less_eq_BS t1 t2 else True))"
+
+fun less_BS :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
+"less_BS a b = (\<not> (less_eq_BS b a))"
+
+lemma oneLessEqBS : "\<not> less_eq_BS bs2 bs1 \<Longrightarrow> less_eq_BS bs1 bs2"
+  apply (induction bs1 bs2 rule:less_eq_BS.induct)
+  apply simp_all
+  by (metis le_less not_le)
+
+lemma lineaBS : "less_eq_BS x y \<or> less_eq_BS y x"
+  using oneLessEqBS by blast
+
+
+lemma byteStringOrder : "less_eq_BS x y \<Longrightarrow> less_eq_BS y z \<Longrightarrow> less_eq_BS x z"
+  apply (induction x z arbitrary:y rule:less_eq_BS.induct)
+    apply auto
+  subgoal for hx tx y
+    by (metis less_eq_BS.elims(2) list.distinct(1))
+  subgoal for t1 h2 t2 y
+    by (metis (full_types) byteStringToPositiveInt.cases less_eq_BS.simps(2) less_eq_BS.simps(4) not_less_iff_gr_or_eq)
+  subgoal for h1 t1 h2 t2 y
+    by (metis (mono_tags, hide_lams) \<open>\<And>ya tx hx. \<lbrakk>less_eq_BS (hx # tx) ya; less_eq_BS ya []\<rbrakk> \<Longrightarrow> False\<close> byteStringToPositiveInt.cases less_eq_BS.simps(4) not_le not_less_iff_gr_or_eq order_trans)
+  done
+
+lemma byteStringLessEqTwiceEq : "less_eq_BS x y \<Longrightarrow> less_eq_BS y x \<Longrightarrow> x = y"
+  apply (induction x y rule:less_eq_BS.induct)
+  apply auto
+  subgoal for h1 t1 h2 t2
+    by (meson not_less_iff_gr_or_eq)
+  subgoal for h1 t1 h2 t2
+    by (meson not_less_iff_gr_or_eq)
+  done
+
 end

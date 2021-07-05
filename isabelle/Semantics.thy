@@ -17,7 +17,7 @@ type_synonym Money = Ada
 type_synonym ChosenNum = int
 
 datatype Party = PubKey ByteString
-               | Role CurrencySymbol
+               | Role TokenName
 
 type_synonym AccountId = Party
 

@@ -4,6 +4,10 @@ begin
 
 type_synonym ByteString = "(8 word) list"
 
+lemma intToWordToUint : "x \<ge> 0 \<Longrightarrow> x < 256 \<Longrightarrow> uint (word_of_int x :: 8 word) = (x :: int)"
+  apply (simp only:uint_word_of_int)
+  by auto
+
 fun positiveIntToByteString :: "int \<Rightarrow> ByteString" where
 "positiveIntToByteString x =
   (if x < 128 then [word_of_int x] else (word_of_int ((x mod 128) + 128)) # positiveIntToByteString ((x div 128) - 1))"
@@ -17,10 +21,6 @@ fun byteStringToPositiveInt :: "ByteString \<Rightarrow> (int \<times> ByteStrin
      else (case byteStringToPositiveInt rest of
              None \<Rightarrow> None
            | Some (y, extra) \<Rightarrow> Some ((x - 128) + 128 * (y + 1), extra))))"
-
-lemma intToWordToUint : "x \<ge> 0 \<Longrightarrow> x < 256 \<Longrightarrow> uint (word_of_int x :: 8 word) = (x :: int)"
-  apply (simp only:uint_word_of_int)
-  by auto
 
 lemma smallerIntInductionRestrictedToNat : "(\<And> x :: nat. (\<And> y :: nat . y < x \<Longrightarrow> P (int y)) \<Longrightarrow> P (int x)) \<Longrightarrow> P (int z)"
   apply (induct rule:Orderings.wellorder_class.less_induct)
@@ -39,10 +39,88 @@ lemma positiveIntToByteStringToPositiveInt_inductionStep : "0 \<le> x \<Longrigh
   apply (simp only:positiveIntToByteString.simps[of x] if_False intToWordToUint)
   by (simp del:positiveIntToByteString.simps add:Let_def intToWordToUint positiveIntToByteString.simps[of "-1"])
 
-lemma positiveIntToByteStringToPositiveInt : "(x :: int) \<ge> 0 \<Longrightarrow> byteStringToPositiveInt ((positiveIntToByteString x) @ y) = Some (x, y)"
+theorem positiveIntToByteStringToPositiveInt : "(x :: int) \<ge> 0 \<Longrightarrow> byteStringToPositiveInt ((positiveIntToByteString x) @ y) = Some (x, y)"
   apply (rule smallerIntInduction[of "\<lambda> x. byteStringToPositiveInt (positiveIntToByteString x @ y) = Some (x, y)"])
   using positiveIntToByteStringToPositiveInt_inductionStep apply blast
   by simp
+
+lemma byteStringToPositiveIntIsPositive : "byteStringToPositiveInt x = Some (a, b) \<Longrightarrow> a \<ge> 0"
+  apply (induction x arbitrary:a b rule:byteStringToPositiveInt.induct)
+  apply simp
+  subgoal for xw rest a b
+    apply (cases "uint xw < 128")
+    apply auto
+    apply (cases "byteStringToPositiveInt rest")
+    by auto
+  done
+
+lemma unitRestoration : "a \<ge> 0 \<Longrightarrow> xh \<ge> 128 \<Longrightarrow> xh < 256 \<Longrightarrow> (xh + 128 * aaa) mod 128 + 128 = (xh :: int)"
+  apply simp
+  by (smt eq_mod_iff mod_double_modulus)
+
+lemma inductiveStepInjection_aux : "Some (xh - 128 + 128 * (aaa + 1), aab) = Some (a, b) \<Longrightarrow> xh < 256 \<Longrightarrow> xh \<ge> (128 :: int) \<Longrightarrow>
+                                    byteStringToPositiveInt xt = Some (aaa, aab) \<Longrightarrow> a \<ge> 128 \<Longrightarrow> byteStringToPositiveInt xt = Some (a div 128 - 1, b)"
+  by auto
+
+lemma inductiveStepInjection_aux2 : "(\<And>a b. byteStringToPositiveInt xt = Some (a, b) \<Longrightarrow> positiveIntToByteString a @ b = xt) \<Longrightarrow>
+    Some (uint (xh :: 8 word) - 128 + 128 * (aaa + 1), aab) = Some (a, b) \<Longrightarrow> uint xh \<ge> 128 \<Longrightarrow> byteStringToPositiveInt xt = Some aa \<Longrightarrow> aa = (aaa, aab) \<Longrightarrow> a \<ge> 128 \<Longrightarrow> positiveIntToByteString (a div 128 - 1) @ b = xt"
+  subgoal premises fact
+    apply (rule fact(1))
+    apply (rule inductiveStepInjection_aux[of "uint xh" aaa aab a b xt])
+    using fact(2) apply blast
+  apply (cases "xh")
+       apply auto
+    subgoal for n2
+      by (simp add: intToWordToUint word_of_nat)
+      apply (simp add: fact(3))
+     apply (simp add: fact(4) fact(5))
+    by (simp add: fact(6))
+  done
+
+lemma splitAnd1 : "b \<Longrightarrow> c \<Longrightarrow> b \<and> c"
+  by simp
+
+lemma splitAnd2 : "(a \<Longrightarrow> b) \<Longrightarrow> (a \<Longrightarrow> c) \<Longrightarrow> a \<longrightarrow> b \<and> c"
+  by simp
+
+lemma inductiveStepInjection : "(\<And>a b. byteStringToPositiveInt xt = Some (a, b) \<Longrightarrow> positiveIntToByteString a @ b = xt) \<Longrightarrow>
+    Some (uint xh - 128 + 128 * (aaa + 1), aab) = Some (a, b) \<Longrightarrow>
+    \<not> uint (xh :: 8 word) < 128 \<Longrightarrow> byteStringToPositiveInt xt = Some aa \<Longrightarrow> aa = (aaa, aab) \<Longrightarrow> (a < 128 \<longrightarrow> word_of_int a = xh \<and> b = xt) \<and> (\<not> a < 128 \<longrightarrow> word_of_int (a mod 128 + 128) = xh \<and> positiveIntToByteString (a div 128 - 1) @ b = xt)"
+  apply (rule splitAnd1)
+  using byteStringToPositiveIntIsPositive apply fastforce
+  apply (rule splitAnd2)
+  apply (cases "xh")
+  subgoal for n
+  apply auto[1]
+    by (metis intToWordToUint mod_mult_self2 not_less of_nat_0_le_iff of_nat_less_iff of_nat_numeral unitRestoration word_of_nat)
+  apply (rule inductiveStepInjection_aux2)
+  by auto
+
+theorem byteStrintToPositiveInt_inverseRoundtrip : "byteStringToPositiveInt x = Some (a, b) \<Longrightarrow> positiveIntToByteString a @ b = x"
+  apply (induction x arbitrary:a b)
+   apply simp
+  subgoal for xh xt a b
+    apply (simp only:positiveIntToByteString.simps[of a] byteStringToPositiveInt.simps)
+    apply (cases "uint xh < 128")
+     apply (simp del:positiveIntToByteString.simps byteStringToPositiveInt.simps)
+    using word_of_int_uint apply blast
+     apply (simp del:positiveIntToByteString.simps byteStringToPositiveInt.simps)
+    apply (cases "byteStringToPositiveInt xt")
+    apply simp
+    subgoal for aa
+      apply (cases aa)
+      subgoal for aaa aab
+        apply (rule inductiveStepInjection)
+        by auto
+      done
+    done
+  done
+
+lemma byteStringToPositiveInt_injective : "byteStringToPositiveInt x = Some (a, b) \<Longrightarrow> byteStringToPositiveInt y = Some (a, b) \<Longrightarrow> x = y"
+  using byteStrintToPositiveInt_inverseRoundtrip by blast
+
+lemma byteStringToPositiveInt_injective2 : "x \<noteq> y \<Longrightarrow> (byteStringToPositiveInt x \<noteq> byteStringToPositiveInt y) \<or> (byteStringToPositiveInt x = None) \<or> (byteStringToPositiveInt y = None)"
+  using byteStringToPositiveInt_injective by force
 
 fun intToByteString :: "int \<Rightarrow> ByteString" where
 "intToByteString x = (if x \<ge> 0 then positiveIntToByteString (x * 2) else positiveIntToByteString (- (x * 2 + 1)))"
@@ -53,9 +131,30 @@ fun byteStringToInt :: "ByteString \<Rightarrow> (int \<times> ByteString) optio
      None \<Rightarrow> None
    | Some (y, extra) \<Rightarrow> Some (if (y mod 2 = 0) then y div 2 else (- (y div 2 + 1)), extra))"
 
-lemma intToByteStringToInt : "byteStringToInt ((intToByteString x) @ y) = Some (x, y)"
+theorem intToByteStringToInt : "byteStringToInt ((intToByteString x) @ y) = Some (x, y)"
   apply (cases x)
   by (simp_all del:byteStringToPositiveInt.simps positiveIntToByteString.simps add:positiveIntToByteStringToPositiveInt)
+
+
+theorem byteStringToInt_inverseRoundtrip : "byteStringToInt x = Some (a, b) \<Longrightarrow> intToByteString a @ b = x"
+  apply (simp only:byteStringToInt.simps intToByteString.simps)
+  apply (cases "byteStringToPositiveInt x")
+  apply simp
+  subgoal for aa
+    apply (cases aa)
+    subgoal for aaa aab
+      apply (auto simp del:byteStringToPositiveInt.simps positiveIntToByteString.simps simp add:byteStrintToPositiveInt_inverseRoundtrip)
+      apply (simp add: byteStringToPositiveIntIsPositive)
+      apply (smt byteStringToPositiveIntIsPositive)
+      by (metis add.commute byteStrintToPositiveInt_inverseRoundtrip diff_add_cancel minus_mod_eq_mult_div mult.commute)
+    done
+  done
+
+lemma byteStringToInt_injective : "byteStringToInt x = Some (a, b) \<Longrightarrow> byteStringToInt y = Some (a, b) \<Longrightarrow> x = y"
+  using byteStringToInt_inverseRoundtrip by blast
+
+lemma byteStringToInt_injective2 : "x \<noteq> y \<Longrightarrow> (byteStringToInt x \<noteq> byteStringToInt y) \<or> (byteStringToInt x = None) \<or> (byteStringToInt y = None)"
+  using byteStringToInt_injective by force
 
 fun addByteString :: "ByteString \<Rightarrow> ByteString \<Rightarrow> ByteString" where
 "addByteString bs1 bs2 = positiveIntToByteString (int (length bs1)) @ bs1 @ bs2"

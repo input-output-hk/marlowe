@@ -6,7 +6,7 @@ type_synonym ByteString = "(8 word) list"
 
 fun positiveIntToByteString :: "int \<Rightarrow> ByteString" where
 "positiveIntToByteString x =
-  (if x < 128 then [word_of_int x] else (word_of_int ((x mod 128) + 128)) # positiveIntToByteString (x div 128))"
+  (if x < 128 then [word_of_int x] else (word_of_int ((x mod 128) + 128)) # positiveIntToByteString ((x div 128) - 1))"
 
 fun byteStringToPositiveInt :: "ByteString \<Rightarrow> (int \<times> ByteString) option" where
 "byteStringToPositiveInt Nil = None" |
@@ -16,7 +16,7 @@ fun byteStringToPositiveInt :: "ByteString \<Rightarrow> (int \<times> ByteStrin
      then (Some (x, rest))
      else (case byteStringToPositiveInt rest of
              None \<Rightarrow> None
-           | Some (y, extra) \<Rightarrow> Some ((x - 128) + 128 * y, extra))))"
+           | Some (y, extra) \<Rightarrow> Some ((x - 128) + 128 * (y + 1), extra))))"
 
 lemma intToWordToUint : "x \<ge> 0 \<Longrightarrow> x < 256 \<Longrightarrow> uint (word_of_int x :: 8 word) = (x :: int)"
   apply (simp only:uint_word_of_int)
@@ -35,7 +35,9 @@ lemma smallerIntInduction : "(\<And> x :: int. x \<ge> 0 \<Longrightarrow> (\<An
 lemma positiveIntToByteStringToPositiveInt_inductionStep : "0 \<le> x \<Longrightarrow> (\<And>ya. 0 \<le> ya \<Longrightarrow> ya < x \<Longrightarrow> byteStringToPositiveInt (positiveIntToByteString ya @ y) = Some (ya, y))
                                                                   \<Longrightarrow> byteStringToPositiveInt (positiveIntToByteString x @ y) = Some (x, y)"
   apply (cases "x < 128")
-  by (simp_all add:Let_def uint_word_of_int)
+  apply (simp add:intToWordToUint)
+  apply (simp only:positiveIntToByteString.simps[of x] if_False intToWordToUint)
+  by (simp del:positiveIntToByteString.simps add:Let_def intToWordToUint positiveIntToByteString.simps[of "-1"])
 
 lemma positiveIntToByteStringToPositiveInt : "(x :: int) \<ge> 0 \<Longrightarrow> byteStringToPositiveInt ((positiveIntToByteString x) @ y) = Some (x, y)"
   apply (rule smallerIntInduction[of "\<lambda> x. byteStringToPositiveInt (positiveIntToByteString x @ y) = Some (x, y)"])

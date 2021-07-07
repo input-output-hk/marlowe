@@ -156,8 +156,8 @@ lemma byteStringToInt_injective : "byteStringToInt x = Some (a, b) \<Longrightar
 lemma byteStringToInt_injective2 : "x \<noteq> y \<Longrightarrow> (byteStringToInt x \<noteq> byteStringToInt y) \<or> (byteStringToInt x = None) \<or> (byteStringToInt y = None)"
   using byteStringToInt_injective by force
 
-fun addByteString :: "ByteString \<Rightarrow> ByteString \<Rightarrow> ByteString" where
-"addByteString bs1 bs2 = positiveIntToByteString (int (length bs1)) @ bs1 @ bs2"
+fun packByteString :: "ByteString \<Rightarrow> ByteString" where
+"packByteString bs = positiveIntToByteString (int (length bs)) @ bs"
 
 fun getByteString :: "ByteString \<Rightarrow> (ByteString \<times> ByteString) option" where
 "getByteString bs =
@@ -168,9 +168,19 @@ fun getByteString :: "ByteString \<Rightarrow> (ByteString \<times> ByteString) 
    | None \<Rightarrow> None
   )"
 
-lemma addAndGetByteString : "getByteString (addByteString x y) = Some (x, y)"
+lemma addAndGetByteString : "getByteString (packByteString x @ y) = Some (x, y)"
   by (simp del:positiveIntToByteString.simps add:positiveIntToByteStringToPositiveInt)
 
+lemma addAndGetByteString_inverseRoundtrip : "getByteString x = Some (y, z) \<Longrightarrow> packByteString y @ z = x"
+  apply (simp only:getByteString.simps packByteString.simps split:option.splits prod.splits)
+   apply blast
+   subgoal for x2 x1 x2a
+    apply (cases "int (length x2a) < x1")
+      apply (simp_all del:byteStringToPositiveInt.simps positiveIntToByteString.simps split:option.splits prod.splits)
+        apply (subst byteStrintToPositiveInt_inverseRoundtrip[of x])
+     apply (smt add.commute add_diff_cancel_left' atd_lem byteStringToPositiveIntIsPositive diff_diff_cancel int_eq_iff length_append length_drop nat_le_iff option.inject prod.inject)
+     by blast
+   done
 
 fun less_eq_BS :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
 "less_eq_BS Nil Nil = True" |

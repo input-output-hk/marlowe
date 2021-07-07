@@ -222,4 +222,28 @@ lemma byteStringLessEqTwiceEq : "less_eq_BS x y \<Longrightarrow> less_eq_BS y x
     by (meson not_less_iff_gr_or_eq)
   done
 
+lemma byteStringToPositiveInt_reduceslist [simp] : "byteStringToPositiveInt x = Some (a, b) \<Longrightarrow>
+                                                    size b < size x"
+  apply (induction x rule:byteStringToPositiveInt.induct)
+  apply simp
+  subgoal for xw rest
+    apply (simp add:Let_def refl)
+    apply (cases "byteStringToPositiveInt rest")
+     apply (smt le_imp_less_Suc le_less option.distinct(1) option.inject option.simps(4) prod.inject)
+    subgoal for aa
+      apply (cases "uint xw < 128")
+       apply (auto split:prod.splits)
+      using byteStrintToPositiveInt_inverseRoundtrip by fastforce
+    done
+  done
+
+lemma byteStringToInt_reduceslist [simp] : "byteStringToInt x = Some (a, b) \<Longrightarrow>
+                                                    size b < size x"
+  using byteStringToInt_inverseRoundtrip by fastforce
+
+
+lemma getByteString_reduceslist [simp] : "getByteString x = Some (a, b) \<Longrightarrow>
+                                                    size b < size x"
+  using addAndGetByteString_inverseRoundtrip by fastforce
+
 end

@@ -11,10 +11,14 @@ cabal-version:          >= 1.10
 executable marlowe
     default-language:   Haskell2010
     build-depends:      base >=4.9,
+                        base16-bytestring,
+                        bytestring,
                         containers,
+                        cryptohash,
                         QuickCheck,
                         mtl,
                         sbv,
+                        serialise,
                         tasty,
                         tasty-hunit,
                         tasty-smallcheck,

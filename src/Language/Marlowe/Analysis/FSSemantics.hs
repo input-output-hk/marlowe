@@ -5,7 +5,7 @@ module Language.Marlowe.Analysis.FSSemantics where
 import           Data.List       (foldl')
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import           Data.Ratio
+import           Data.Ratio (denominator, numerator)
 import           Data.Set        (Set)
 import qualified Data.Set        as S
 import           Data.SBV
@@ -15,8 +15,8 @@ import qualified Data.SBV.Either as SE
 import qualified Data.SBV.Maybe as SM
 import qualified Data.SBV.List as SL
 import qualified Language.Marlowe.Analysis.IntegerArray as IntegerArray
-import           Language.Marlowe.Analysis.IntegerArray(IntegerArray, NIntegerArray)
-import           Language.Marlowe.Analysis.Numbering
+import           Language.Marlowe.Analysis.IntegerArray (IntegerArray, NIntegerArray)
+import Language.Marlowe.Analysis.Numbering (Numbering, emptyNumbering, getNumbering, getLabel, numberOfLabels)
 import           Language.Marlowe.Analysis.MkSymb(mkSymbolicDatatype)
 import qualified Language.Marlowe.Semantics as MS
 
@@ -956,6 +956,12 @@ convertCaseList (MS.Case action cont : rest) maps =
   where (newAction, mapsWithAction) = convertAction action maps
         (newCont, actionsWithCont, mapsWithCont) = convertContract cont mapsWithAction
         (newRest, actionsWithRest, mapsWithRest) = convertCaseList rest mapsWithCont
+convertCaseList (MS.MerkleizedCase action _ : rest) maps =
+    ( newRest
+    , actionsWithRest
+    , mapsWithRest )
+  where (newAction, mapsWithAction) = convertAction action maps
+        (newRest, actionsWithRest, mapsWithRest) = convertCaseList rest mapsWithAction
 
 convertContract :: MS.Contract -> Mappings -> (Contract, MaxActions, Mappings)
 convertContract MS.Close maps = (Close, 0, maps)
@@ -1015,19 +1021,19 @@ revertChoId (ChoiceId choId _) maps = getLabel choId (choiceM maps)
 revertValId :: ValueId -> Mappings -> MS.ValueId
 revertValId (ValueId valId) maps = getLabel valId (valueM maps)
 
-revertInput :: Input -> Mappings -> MS.Input
-revertInput (IDeposit accId party mon) maps = MS.IDeposit newAccId newParty newMon
+revertInputContent :: Input -> Mappings -> MS.InputContent
+revertInputContent (IDeposit accId party mon) maps = MS.IDeposit newAccId newParty newMon
   where newAccId = revertParty accId maps
         newParty = revertParty party maps
         newMon = revertMoney mon
-revertInput (IChoice choId chosenNum) maps = MS.IChoice newChoId chosenNum
+revertInputContent (IChoice choId chosenNum) maps = MS.IChoice newChoId chosenNum
   where newChoId = revertChoId (unNestChoiceId choId) maps
-revertInput INotify _ = MS.INotify
+revertInputContent INotify _ = MS.INotify
 
 revertTransactionList :: [NTransaction] -> Mappings -> [MS.TransactionInput]
 revertTransactionList list maps =
   [MS.TransactionInput { MS.txInterval = revertInterval slotInter
-                       , MS.txInputs = map (((flip revertInput) maps) . unNestInput) nInput }
+                       , MS.txInputs = map ((MS.NormalInput . flip revertInputContent maps) . unNestInput) nInput }
    | (slotInter, nInput) <- list]
 
 revertPayee :: Payee -> Mappings -> MS.Payee

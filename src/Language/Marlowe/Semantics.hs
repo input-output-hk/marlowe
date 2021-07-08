@@ -5,6 +5,10 @@
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 module Language.Marlowe.Semantics where
 
+import           Codec.Serialise (deserialise, Serialise)
+import           Crypto.Hash.SHA256 (hash)
+import           Data.ByteString (ByteString)
+import           Data.ByteString.Lazy (fromStrict)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
@@ -16,7 +20,7 @@ import           Text.PrettyPrint.Leijen (text)
 
 newtype Slot = Slot { getSlot :: Integer }
   deriving stock (Eq,Ord,Generic)
-  deriving newtype (Pretty)
+  deriving newtype (Pretty,Serialise)
 
 instance Show Slot where
   showsPrec p (Slot n) r = showsPrec p n r
@@ -34,6 +38,7 @@ instance Num Slot where
 newtype Ada = Lovelace { getLovelace :: Integer }
   deriving stock (Eq,Ord,Generic)
   deriving anyclass Pretty
+  deriving anyclass Serialise
 
 instance Show Ada where
     showsPrec p (Lovelace n) r = showsPrec p n r
@@ -49,7 +54,8 @@ instance Num Ada where
     negate (Lovelace l) = Lovelace (negate l)
 
 newtype PubKey = PubKey Text
-  deriving (Eq,Ord)
+  deriving (Eq,Ord,Generic)
+  deriving anyclass Serialise
 
 instance Pretty PubKey where
   prettyFragment = text . show
@@ -67,10 +73,11 @@ type Money = Ada
 type ChosenNum = Integer
 
 data ChoiceId = ChoiceId ChoiceName Party
-  deriving (Eq,Ord,Show,Read,Generic,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
 newtype ValueId = ValueId Text
   deriving stock (Eq,Ord,Generic)
+  deriving anyclass Serialise
 
 instance Pretty ValueId where
   prettyFragment = text . show
@@ -92,7 +99,7 @@ data Value = AvailableMoney Party
             | SlotIntervalEnd
             | UseValue ValueId
             | Cond Observation Value Value
-  deriving (Eq,Ord,Show,Read,Generic,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
 data Observation = AndObs Observation Observation
                   | OrObs Observation Observation
@@ -105,10 +112,10 @@ data Observation = AndObs Observation Observation
                   | ValueEQ Value Value
                   | TrueObs
                   | FalseObs
-  deriving (Eq,Ord,Show,Read,Generic,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
 data SlotInterval = SlotInterval Slot Slot
-  deriving (Eq,Ord,Show,Read,Generic,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
 ivFrom, ivTo :: SlotInterval -> Slot
 
@@ -116,7 +123,7 @@ ivFrom (SlotInterval from _) = from
 ivTo   (SlotInterval _ to)   = to
 
 data Bound = Bound Integer Integer
-  deriving (Eq,Ord,Show,Read,Generic,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
 inBounds :: ChosenNum -> [Bound] -> Bool
 inBounds num = any (\(Bound l u) -> num >= l && num <= u)
@@ -124,14 +131,19 @@ inBounds num = any (\(Bound l u) -> num >= l && num <= u)
 data Action = Deposit Party Party Value
             | Choice ChoiceId [Bound]
             | Notify Observation
-  deriving (Eq,Ord,Show,Read,Generic,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
 data Payee = Account Party
-            | Party Party
-  deriving (Eq,Ord,Show,Read,Generic,Pretty)
+           | Party Party
+  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
 data Case = Case Action Contract
-  deriving (Eq,Ord,Show,Read,Generic,Pretty)
+          | MerkleizedCase Action ByteString
+  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+
+getAction :: Case -> Action
+getAction (Case action _) = action
+getAction (MerkleizedCase action _) = action
 
 data Contract = Close
               | Pay Party Payee Value Contract
@@ -139,7 +151,7 @@ data Contract = Close
               | When [Case] Timeout Contract
               | Let ValueId Value Contract
               | Assert Observation Contract
-  deriving (Eq,Ord,Show,Read,Generic,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
 data State = State { accounts    :: Map Party Money
                    , choices     :: Map ChoiceId ChosenNum
@@ -156,11 +168,18 @@ emptyState sn = State { accounts = Map.empty
 newtype Environment = Environment { slotInterval :: SlotInterval }
   deriving (Eq,Ord,Show,Read)
 
-data Input = IDeposit Party Party Money
-            | IChoice ChoiceId ChosenNum
-            | INotify
+data InputContent = IDeposit Party Party Money
+                  | IChoice ChoiceId ChosenNum
+                  | INotify
   deriving (Eq,Ord,Show,Read)
 
+data Input = NormalInput InputContent
+           | MerkleizedInput InputContent ByteString
+  deriving (Eq,Ord,Show,Read)
+
+getInputContent :: Input -> InputContent
+getInputContent (NormalInput inputContent) = inputContent
+getInputContent (MerkleizedInput inputContent _) = inputContent
 
 -- Processing of slot interval
 data IntervalError = InvalidInterval SlotInterval
@@ -382,30 +401,62 @@ data ApplyWarning = ApplyNoWarning
                   | ApplyNonPositiveDeposit Party Party Integer
   deriving (Eq,Ord,Show,Read)
 
-data ApplyResult = Applied ApplyWarning State Contract
-                 | ApplyNoMatchError
+data ApplyAction = AppliedAction ApplyWarning State
+                 | NotAppliedAction
   deriving (Eq,Ord,Show,Read)
 
--- Apply a single Input to the contract (assumes the contract is reduced)
+-- | Try to apply a single input contentent to a single action
+applyAction :: Environment -> State -> InputContent -> Action -> ApplyAction
+applyAction env state (IDeposit accId1 party1 money) (Deposit accId2 party2 val) =
+    let amount = evalValue env state val
+    in if accId1 == accId2 && party1 == party2 && getLovelace money == amount
+       then let warning = if amount > 0
+                          then ApplyNoWarning
+                          else ApplyNonPositiveDeposit party1 accId2 amount
+                newState = state { accounts = addMoneyToAccount accId1 money (accounts state) }
+            in AppliedAction warning newState
+       else NotAppliedAction
+applyAction env state (IChoice choId1 choice) (Choice choId2 bounds) =
+    if choId1 == choId2 && inBounds choice bounds
+    then let newState = state { choices = Map.insert choId1 choice (choices state) }
+         in AppliedAction ApplyNoWarning newState
+    else NotAppliedAction
+applyAction env state INotify (Notify obs) =
+    if evalObservation env state obs
+    then AppliedAction ApplyNoWarning state
+    else NotAppliedAction
+applyAction _ _ _ _ = NotAppliedAction
+
+-- | Try to get a continuation from a pair of Input and Case
+getContinuation :: Input -> Case -> Maybe Contract
+getContinuation (NormalInput _) (Case _ continuation) = Just continuation
+getContinuation (MerkleizedInput _ serialisedContinuation) (MerkleizedCase _ continuationHash) =
+  if hash serialisedContinuation == continuationHash
+  then either (const Nothing) Just (deserialise $ fromStrict serialisedContinuation :: Either String Contract)
+  else Nothing
+getContinuation _ _ = Nothing
+
+ 
+data ApplyResult = Applied ApplyWarning State Contract
+                 | ApplyNoMatchError
+                 | ApplyHashMismatch
+  deriving (Eq,Ord,Show,Read)
+
+-- | Apply a single, potentially merkleized Input to the contract (assumes the contract is reduced)
 applyCases :: Environment -> State -> Input -> [Case] -> ApplyResult
-applyCases env state input cases = case (input, cases) of
-    (IDeposit accId1 party1 money, Case (Deposit accId2 party2 val) cont : rest) -> let
-        amount = evalValue env state val
-        warning = if amount > 0
-                  then ApplyNoWarning
-                  else ApplyNonPositiveDeposit party1 accId2 amount
-        newState = state { accounts = addMoneyToAccount accId1 money (accounts state) }
-        in if accId1 == accId2 && party1 == party2 && getLovelace money == amount
-        then Applied warning newState cont
-        else applyCases env state input rest
-    (IChoice choId1 choice, Case (Choice choId2 bounds) cont : rest) -> let
-        newState = state { choices = Map.insert choId1 choice (choices state) }
-        in if choId1 == choId2 && inBounds choice bounds
-        then Applied ApplyNoWarning newState cont
-        else applyCases env state input rest
-    (INotify, Case (Notify obs) cont : _) | evalObservation env state obs -> Applied ApplyNoWarning state cont
-    (_, _ : rest) -> applyCases env state input rest
-    (_, []) -> ApplyNoMatchError
+applyCases env state input (headCase : tailCase) =
+  let inputContent = getInputContent input :: InputContent 
+      action = getAction headCase :: Action
+      maybeContinuation = getContinuation input headCase :: Maybe Contract
+  in
+  case applyAction env state inputContent action of
+    AppliedAction warning newState ->
+      case maybeContinuation of
+        Just continuation -> Applied warning newState continuation
+        Nothing -> ApplyHashMismatch
+    NotAppliedAction -> applyCases env state input tailCase
+
+applyCases env state input [] = ApplyNoMatchError
 
 
 applyInput :: Environment -> State -> Input -> Contract -> ApplyResult
@@ -446,6 +497,7 @@ convertApplyWarning warn =
             [TransactionNonPositiveDeposit party accId amount]
 
 data ApplyAllResult = ApplyAllSuccess [TransactionWarning] [Payment] State Contract
+                    | ApplyAllHashMismatch
                     | ApplyAllNoMatchError
                     | ApplyAllAmbiguousSlotIntervalError
   deriving (Eq,Ord,Show)
@@ -474,10 +526,12 @@ applyAllInputs env state contract inputs = let
                                       (warnings ++ convertReduceWarnings reduceWarns
                                                 ++ convertApplyWarning applyWarn)
                                       (payments ++ pays)
+                    ApplyHashMismatch -> ApplyAllHashMismatch
                     ApplyNoMatchError -> ApplyAllNoMatchError
     in applyAllLoop env state contract inputs [] []
 
 data TransactionError = TEAmbiguousSlotIntervalError
+                      | TEApplyHashMismatch
                       | TEApplyNoMatchError
                       | TEIntervalError IntervalError
                       | TEUselessTransaction
@@ -512,6 +566,7 @@ computeTransaction tx state contract = let
                                                 , txOutPayments = payments
                                                 , txOutState = newState
                                                 , txOutContract = cont })
+            ApplyAllHashMismatch -> Error TEApplyHashMismatch
             ApplyAllNoMatchError -> Error TEApplyNoMatchError
             ApplyAllAmbiguousSlotIntervalError -> Error TEAmbiguousSlotIntervalError
         IntervalError error -> Error (TEIntervalError error)

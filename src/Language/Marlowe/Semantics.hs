@@ -9,9 +9,9 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Ratio
-import GHC.Generics (Generic)
-import Language.Marlowe.Pretty (Pretty, prettyFragment)
+import           Data.Ratio (denominator, numerator)
+import           GHC.Generics (Generic)
+import           Language.Marlowe.Pretty (Pretty, prettyFragment)
 import           Text.PrettyPrint.Leijen (text)
 
 newtype Slot = Slot { getSlot :: Integer }
@@ -466,13 +466,13 @@ applyAllInputs env state contract inputs = let
         case reduceContractUntilQuiescent env state contract of
             RRAmbiguousSlotIntervalError -> ApplyAllAmbiguousSlotIntervalError
             ContractQuiescent reduceWarns pays curState cont -> case inputs of
-                [] -> ApplyAllSuccess (warnings ++ (convertReduceWarnings reduceWarns))
+                [] -> ApplyAllSuccess (warnings ++ convertReduceWarnings reduceWarns)
                                                     (payments ++ pays) curState cont
                 (input : rest) -> case applyInput env curState input cont of
                     Applied applyWarn newState cont ->
                         applyAllLoop env newState cont rest
-                                      (warnings ++ (convertReduceWarnings reduceWarns)
-                                                ++ (convertApplyWarning applyWarn))
+                                      (warnings ++ convertReduceWarnings reduceWarns
+                                                ++ convertApplyWarning applyWarn)
                                       (payments ++ pays)
                     ApplyNoMatchError -> ApplyAllNoMatchError
     in applyAllLoop env state contract inputs [] []
@@ -506,7 +506,7 @@ computeTransaction tx state contract = let
     in case fixInterval (txInterval tx) state of
         IntervalTrimmed env fixState -> case applyAllInputs env fixState contract inputs of
             ApplyAllSuccess warnings payments newState cont -> let
-                in  if (contract == cont) && ((contract /= Close) || (Map.null $ accounts state))
+                in  if (contract == cont) && ((contract /= Close) || Map.null (accounts state))
                     then Error TEUselessTransaction
                     else TransactionOutput (TOR { txOutWarnings = warnings
                                                 , txOutPayments = payments
@@ -518,23 +518,23 @@ computeTransaction tx state contract = let
 
 playTraceAux :: TOR -> [TransactionInput] -> TransactionOutput
 playTraceAux res [] = TransactionOutput res
-playTraceAux (TOR { txOutWarnings = warnings
-                  , txOutPayments = payments
-                  , txOutState = state
-                  , txOutContract = cont }) (h:t) =
+playTraceAux TOR { txOutWarnings = warnings
+                 , txOutPayments = payments
+                 , txOutState = state
+                 , txOutContract = cont } (h:t) =
   let transRes = computeTransaction h state cont in
   case transRes of
     TransactionOutput transResRec ->
-      playTraceAux (transResRec { txOutPayments = payments ++ (txOutPayments transResRec)
-                                , txOutWarnings = warnings ++ (txOutWarnings transResRec)})
+      playTraceAux (transResRec { txOutPayments = payments ++ txOutPayments transResRec
+                                , txOutWarnings = warnings ++ txOutWarnings transResRec})
                    t
     Error _ -> transRes
 
 playTrace :: Slot -> Contract -> [TransactionInput] -> TransactionOutput
-playTrace sl c t = playTraceAux (TOR { txOutWarnings = []
-                                     , txOutPayments = []
-                                     , txOutState = emptyState sl
-                                     , txOutContract = c }) t
+playTrace sl c = playTraceAux (TOR { txOutWarnings = []
+                                   , txOutPayments = []
+                                   , txOutState = emptyState sl
+                                   , txOutContract = c })
 
 -- | Calculates an upper bound for the maximum lifespan of a contract
 contractLifespanUpperBound :: Contract -> Integer

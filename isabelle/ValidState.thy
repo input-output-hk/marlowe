@@ -75,20 +75,20 @@ lemma reductionLoop_preserves_valid_state_aux :
        reduceContractStep env state contract = Reduced x11 x12 x13 x14 \<Longrightarrow>
        x = (if x11 = ReduceNoWarning then warnings else x11 # warnings) \<Longrightarrow>
        xa = (case x12 of ReduceNoPayment \<Rightarrow> payments | ReduceWithPayment payment \<Rightarrow> payment # payments) \<Longrightarrow>
-       valid_state x13 \<Longrightarrow> reductionLoop env x13 x14 x xa = ContractQuiescent newWa newPa newState newCont \<Longrightarrow> valid_state newState) \<Longrightarrow>
-   valid_state state \<Longrightarrow> reductionLoop env state contract warnings payments = ContractQuiescent newWa newPa newState newCont \<Longrightarrow> valid_state newState"
-  apply (simp only:reductionLoop.simps [of env state contract warnings payments])
+       valid_state x13 \<Longrightarrow> reductionLoop True env x13 x14 x xa = ContractQuiescent newReduced newWa newPa newState newCont \<Longrightarrow> valid_state newState) \<Longrightarrow>
+   valid_state state \<Longrightarrow> reductionLoop reduced env state contract warnings payments = ContractQuiescent newReduced newWa newPa newState newCont \<Longrightarrow> valid_state newState"
+  apply (simp only:reductionLoop.simps [of True env state contract warnings payments])
   apply (cases "reduceContractStep env state contract")
-  apply (simp only:HOL.Let_def ReduceStepResult.case)
-  apply (metis reductionStep_preserves_valid_state)
+  apply (simp only:HOL.Let_def reductionLoop.simps[of reduced])
+  apply (metis (no_types, lifting) ReduceStepResult.simps(8) reductionStep_preserves_valid_state)
   by simp_all
 
 lemma reductionLoop_preserves_valid_state :
   "valid_state state \<Longrightarrow>
-   reductionLoop env state cont wa pa =
-     ContractQuiescent newWa newPa newState newCont \<Longrightarrow>
+   reductionLoop oldReduced env state cont wa pa =
+     ContractQuiescent newReduced newWa newPa newState newCont \<Longrightarrow>
    valid_state newState"
-  apply (induction env state cont wa pa rule:reductionLoop.induct)
+  apply (induction oldReduced env state cont wa pa rule:reductionLoop.induct)
   using reductionLoop_preserves_valid_state_aux by blast
 
 lemma applyCases_preserves_valid_state :
@@ -118,21 +118,21 @@ lemma applyInput_preserves_valid_state :
 
 lemma applyAllLoop_preserves_valid_state :
   "valid_state state \<Longrightarrow>
-   applyAllLoop env state cont inp wa pa = ApplyAllSuccess newWa newPa newState newCont \<Longrightarrow>
+   applyAllLoop reduced env state cont inp wa pa = ApplyAllSuccess newReduced newWa newPa newState newCont \<Longrightarrow>
    valid_state newState"
-  apply (induct env state cont inp wa pa rule:applyAllLoop.induct)
-  subgoal for env state contract inputs warnings payments
-    apply (simp only:applyAllLoop.simps [of env state contract inputs warnings payments])
+  apply (induct reduced env state cont inp wa pa rule:applyAllLoop.induct)
+  subgoal for reduced env state contract inputs warnings payments
+    apply (simp only:applyAllLoop.simps [of reduced env state contract inputs warnings payments])
     apply (cases inputs)
     apply (simp only:list.case)
     apply (cases "reduceContractUntilQuiescent env state contract")
-    apply (metis ApplyAllResult.inject ReduceResult.simps(4) reduceContractUntilQuiescent.simps reductionLoop_preserves_valid_state)
+    apply (metis (no_types, lifting) ApplyAllResult.inject ReduceResult.simps(4) reduceContractUntilQuiescent.simps reductionLoop_preserves_valid_state)
     apply simp
     apply (simp only:list.case)
     apply (cases "reduceContractUntilQuiescent env state contract")
     apply (simp only:ReduceResult.case)
-    subgoal for a list x11 x12 x13 x14
-      apply (cases "applyInput env x13 a x14")
+    subgoal for a list x11 x12 x13 x14 x15
+      apply (cases "applyInput env x14 a x15")
       apply (simp only:ApplyResult.case)
       apply (metis applyInput_preserves_valid_state reduceContractUntilQuiescent.simps reductionLoop_preserves_valid_state)
       by simp
@@ -141,7 +141,7 @@ lemma applyAllLoop_preserves_valid_state :
 
 lemma applyAllInputs_preserves_valid_state :
   "valid_state state \<Longrightarrow>
-   applyAllInputs env state cont inp = ApplyAllSuccess wa pa newState newCont \<Longrightarrow>
+   applyAllInputs env state cont inp = ApplyAllSuccess reduced wa pa newState newCont \<Longrightarrow>
    valid_state newState"
   by (metis applyAllInputs.simps applyAllLoop_preserves_valid_state)
 
@@ -158,19 +158,6 @@ lemma fixInterval_preserves_valid_state :
   by auto
 
 lemma computeTransaction_preserves_valid_state_aux :
-  "valid_state newState \<Longrightarrow>
-    (case applyAllInputs newEnv newState cont (inputs \<lparr>interval = intervalI, inputs = inputsI\<rparr>) of
-       ApplyAllSuccess warnings payments newState conta \<Rightarrow>
-         if cont = conta then TransactionError TEUselessTransaction
-         else TransactionOutput \<lparr>txOutWarnings = warnings, txOutPayments = payments, txOutState = newState, txOutContract = conta\<rparr>
-     | ApplyAllNoMatchError \<Rightarrow> TransactionError TEApplyNoMatchError | ApplyAllAmbiguousSlotIntervalError \<Rightarrow> TransactionError TEAmbiguousSlotIntervalError)
-     = TransactionOutput \<lparr>txOutWarnings = txOutWarningsO, txOutPayments = txOutPaymentsO, txOutState = txOutStateO, txOutContract = txOutContractO\<rparr> \<Longrightarrow>
-   valid_state txOutStateO"
-  apply (cases "applyAllInputs newEnv newState cont (inputs \<lparr>interval = intervalI, inputs = inputsI\<rparr>)")
-  apply (smt ApplyAllResult.simps(8) TransactionOutput.distinct(2) TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) applyAllInputs.simps applyAllLoop_preserves_valid_state)
-  by simp_all
-
-lemma computeTransaction_preserves_valid_state_aux2 :
   "valid_state state \<Longrightarrow>
    computeTransaction  \<lparr>interval = intervalI, inputs = inputsI\<rparr> state cont
       = TransactionOutput \<lparr>txOutWarnings = txOutWarningsO, txOutPayments = txOutPaymentsO, txOutState = txOutStateO, txOutContract = txOutContractO\<rparr> \<Longrightarrow>
@@ -188,7 +175,7 @@ lemma computeTransaction_preserves_valid_state_aux2 :
 
 lemma computeTransaction_preserves_valid_state :
   "valid_state state \<Longrightarrow> computeTransaction tran state cont = TransactionOutput out \<Longrightarrow> valid_state (txOutState out) "
-  by (metis (full_types) Transaction.surjective TransactionOutputRecord.surjective computeTransaction_preserves_valid_state_aux2 old.unit.exhaust)
+  by (metis (full_types) Transaction.surjective TransactionOutputRecord.surjective computeTransaction_preserves_valid_state_aux old.unit.exhaust)
 
 lemma playTraceAux_preserves_valid_state :
   "valid_state (txOutState txIn) \<Longrightarrow>

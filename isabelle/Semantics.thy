@@ -806,7 +806,7 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
                  else ReduceAssertionFailed
    in Reduced warning ReduceNoPayment state cont)"
 
-datatype ReduceResult = ContractQuiescent "ReduceWarning list" "Payment list"
+datatype ReduceResult = ContractQuiescent bool "ReduceWarning list" "Payment list"
                                           State Contract
                       | RRAmbiguousSlotIntervalError
 
@@ -946,9 +946,9 @@ lemma reduceContractStepReducesSize :
   using reduceContractStepReducesSize_Let apply blast
   by simp
 
-function (sequential) reductionLoop :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceWarning list \<Rightarrow>
+function (sequential) reductionLoop :: "bool \<Rightarrow> Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceWarning list \<Rightarrow>
                                         Payment list \<Rightarrow> ReduceResult" where
-"reductionLoop env state contract warnings payments =
+"reductionLoop reduced env state contract warnings payments =
   (case reduceContractStep env state contract of
      Reduced warning effect newState ncontract \<Rightarrow>
        let newWarnings = (if warning = ReduceNoWarning
@@ -957,17 +957,17 @@ function (sequential) reductionLoop :: "Environment \<Rightarrow> State \<Righta
        let newPayments = (case effect of
                             ReduceWithPayment payment \<Rightarrow> payment # payments
                           | ReduceNoPayment \<Rightarrow> payments) in
-       reductionLoop env newState ncontract newWarnings newPayments
+       reductionLoop True env newState ncontract newWarnings newPayments
    | AmbiguousSlotIntervalReductionError \<Rightarrow> RRAmbiguousSlotIntervalError
-   | NotReduced \<Rightarrow> ContractQuiescent (rev warnings) (rev payments) state contract)"
+   | NotReduced \<Rightarrow> ContractQuiescent reduced (rev warnings) (rev payments) state contract)"
   by pat_completeness auto
 termination reductionLoop
-  apply (relation "measure (\<lambda>(_, (state, (contract, _))) . evalBound state contract)")
+  apply (relation "measure (\<lambda>(_, (_, (state, (contract, _)))) . evalBound state contract)")
   apply blast
   using reduceContractStepReducesSize by auto
 
 fun reduceContractUntilQuiescent :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceResult" where
-"reduceContractUntilQuiescent env state contract = reductionLoop env state contract [] []"
+"reduceContractUntilQuiescent env state contract = reductionLoop False env state contract [] []"
 
 datatype ApplyWarning = ApplyNoWarning
                       | ApplyNonPositiveDeposit Party AccountId Token int
@@ -1035,25 +1035,25 @@ fun convertApplyWarning :: "ApplyWarning \<Rightarrow> TransactionWarning list" 
 "convertApplyWarning (ApplyNonPositiveDeposit party accId tok amount) =
    Cons (TransactionNonPositiveDeposit party accId tok amount) Nil"
 
-datatype ApplyAllResult = ApplyAllSuccess "TransactionWarning list" "Payment list"
+datatype ApplyAllResult = ApplyAllSuccess bool "TransactionWarning list" "Payment list"
                                      State Contract
                         | ApplyAllNoMatchError
                         | ApplyAllAmbiguousSlotIntervalError
 
-fun applyAllLoop :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
+fun applyAllLoop :: "bool \<Rightarrow> Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
                     TransactionWarning list \<Rightarrow> Payment list \<Rightarrow>
                     ApplyAllResult" where
-"applyAllLoop env state contract inputs warnings payments =
+"applyAllLoop contractChanged env state contract inputs warnings payments =
    (case reduceContractUntilQuiescent env state contract of
       RRAmbiguousSlotIntervalError \<Rightarrow> ApplyAllAmbiguousSlotIntervalError
-    | ContractQuiescent reduceWarns pays curState cont \<Rightarrow>
+    | ContractQuiescent reduced reduceWarns pays curState cont \<Rightarrow>
        (case inputs of
-          Nil \<Rightarrow> ApplyAllSuccess (warnings @ (convertReduceWarnings reduceWarns))
+          Nil \<Rightarrow> ApplyAllSuccess (contractChanged \<or> reduced) (warnings @ (convertReduceWarnings reduceWarns))
                                  (payments @ pays) curState cont
         | Cons input rest \<Rightarrow>
            (case applyInput env curState input cont of
               Applied applyWarn newState cont \<Rightarrow>
-                  applyAllLoop env newState cont rest
+                  applyAllLoop True env newState cont rest
                                (warnings @ (convertReduceWarnings reduceWarns)
                                          @ (convertApplyWarning applyWarn))
                                (payments @ pays)
@@ -1061,7 +1061,7 @@ fun applyAllLoop :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Ri
 
 fun applyAllInputs :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
                  ApplyAllResult" where
-"applyAllInputs env state contract inputs = applyAllLoop env state contract inputs Nil Nil"
+"applyAllInputs env state contract inputs = applyAllLoop False env state contract inputs Nil Nil"
 
 type_synonym TransactionSignatures = "Party list"
 
@@ -1087,8 +1087,8 @@ fun computeTransaction :: "Transaction \<Rightarrow> State \<Rightarrow> Contrac
    case fixInterval (interval tx) state of
      IntervalTrimmed env fixSta \<Rightarrow>
        (case applyAllInputs env fixSta contract inps of
-          ApplyAllSuccess warnings payments newState cont \<Rightarrow>
-            if ((contract = cont) \<and> ((contract \<noteq> Close) \<or> (accounts state = [])))
+          ApplyAllSuccess reduced warnings payments newState cont \<Rightarrow>
+            if ((\<not> reduced) \<and> ((contract \<noteq> Close) \<or> (accounts state = [])))
             then TransactionError TEUselessTransaction
             else TransactionOutput \<lparr> txOutWarnings = warnings
                                    , txOutPayments = payments

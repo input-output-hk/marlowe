@@ -222,7 +222,7 @@ lemma byteStringLessEqTwiceEq : "less_eq_BS x y \<Longrightarrow> less_eq_BS y x
     by (meson not_less_iff_gr_or_eq)
   done
 
-lemma byteStringToPositiveInt_reduceslist [simp] : "byteStringToPositiveInt x = Some (a, b) \<Longrightarrow>
+lemma byteStringToPositiveInt_reduceslist : "byteStringToPositiveInt x = Some (a, b) \<Longrightarrow>
                                                     size b < size x"
   apply (induction x rule:byteStringToPositiveInt.induct)
   apply simp
@@ -237,12 +237,12 @@ lemma byteStringToPositiveInt_reduceslist [simp] : "byteStringToPositiveInt x = 
     done
   done
 
-lemma byteStringToInt_reduceslist [simp] : "byteStringToInt x = Some (a, b) \<Longrightarrow>
+lemma byteStringToInt_reduceslist : "byteStringToInt x = Some (a, b) \<Longrightarrow>
                                                     size b < size x"
   using byteStringToInt_inverseRoundtrip by fastforce
 
 
-lemma getByteString_reduceslist [simp] : "getByteString x = Some (a, b) \<Longrightarrow>
+lemma getByteString_reduceslist : "getByteString x = Some (a, b) \<Longrightarrow>
                                                     size b < size x"
   using addAndGetByteString_inverseRoundtrip by fastforce
 

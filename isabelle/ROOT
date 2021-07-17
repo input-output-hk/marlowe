@@ -4,11 +4,15 @@ session Test = HOL +
     "HOL-Library"
     "HOL-Word"
   theories
+     Serialisation
      Semantics
      MoneyPreservation
      PositiveAccounts
      QuiescentResult
+     Timeout
      ValidState
      CloseSafe
      TransactionBound
      SingleInputTransactions
+     StaticAnalysis
+

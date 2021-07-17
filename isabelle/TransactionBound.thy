@@ -57,11 +57,11 @@ lemma reduceContractStep_doesnt_increase_maxTransactions : "reduceContractStep e
                                                             maxTransactions nc nst \<le> maxTransactions c st"
   using reduceContractStep_not_quiescent_reduces reduceContractStep_quiescent_reduces by fastforce
 
-lemma reductionLoop_doesnt_increase_maxTransactions : "reductionLoop env st c wa ef = ContractQuiescent nwa nef nst nc \<Longrightarrow>
+lemma reductionLoop_doesnt_increase_maxTransactions : "reductionLoop reduced env st c wa ef = ContractQuiescent newReduced nwa nef nst nc \<Longrightarrow>
                                                        maxTransactions nc nst \<le> maxTransactions c st"
-  apply (induction env st c wa ef rule:reductionLoop.induct)
-  subgoal for env state contract warnings payments
-    apply (subst (asm) reductionLoop.simps[of env state contract warnings payments])
+  apply (induction reduced env st c wa ef rule:reductionLoop.induct)
+  subgoal for reduced env state contract warnings payments
+    apply (subst (asm) reductionLoop.simps[of reduced env state contract warnings payments])
     apply (cases "reduceContractStep env state contract")
     subgoal for x11 x12 x13 x14
       apply (simp only:ReduceStepResult.simps)
@@ -70,24 +70,24 @@ lemma reductionLoop_doesnt_increase_maxTransactions : "reductionLoop env st c wa
   done
 
 lemma reductionLoop_reduces_maxTransactions : "validAndPositive_state st \<Longrightarrow>
-                                               reductionLoop env st c wa ef = ContractQuiescent nwa nef nst nc \<Longrightarrow>
-                                               maxTransactions nc nst < maxTransactions c st \<or> c = nc"
-  apply (induction env st c wa ef rule:reductionLoop.induct)
-  subgoal for env state contract warnings payments
-    apply (subst (asm) reductionLoop.simps[of env state contract warnings payments])
-    apply (cases "reduceContractStep env state contract")
-    subgoal for x11 x12 x13 x14
-      apply (simp only:ReduceStepResult.simps)
-      by (metis dual_order.trans leD leI le_imp_less_Suc maxTransactions.elims reduceContractStep_doesnt_increase_maxTransactions reduceContractStep_not_quiescent_reduces reduceContractStep_preserves_validAndPositive_state reduceContractStep_quiescent_reduces reductionLoopIsQuiescent)
+                                               reductionLoop reduced env st c wa ef = ContractQuiescent newReduced nwa nef nst nc \<Longrightarrow>
+                                               (maxTransactions nc nst < maxTransactions c st \<or> (c = nc \<and> reduced = newReduced))"
+  apply (induction reduced env st c wa ef rule:reductionLoop.induct)
+  subgoal for reduced env state contract warnings payments
+    apply (subst (asm) reductionLoop.simps[of reduced env state contract warnings payments])
+     apply (cases "reduceContractStep env state contract")
+     subgoal for x11 x12 x13 x14
+       apply (simp only:ReduceStepResult.simps)
+       by (metis le_imp_less_Suc less_le_trans maxTransactions.elims reduceContractStep_doesnt_increase_maxTransactions reduceContractStep_not_quiescent_reduces reduceContractStep_preserves_validAndPositive_state reduceContractStep_quiescent_reduces reductionLoopIsQuiescent)
       apply simp
       by simp
     done
 
-lemma reductionLoop_doesnt_increase_countWhens : "reductionLoop env st c wa ef = ContractQuiescent nwa nef nst nc \<Longrightarrow>
+lemma reductionLoop_doesnt_increase_countWhens : "reductionLoop reduced env st c wa ef = ContractQuiescent newReduced nwa nef nst nc \<Longrightarrow>
                                                   countWhens nc \<le> countWhens c"
-  apply (induction env st c wa ef rule:reductionLoop.induct)
-  subgoal for env state contract warnings payments
-    apply (subst (asm) reductionLoop.simps[of env state contract warnings payments])
+  apply (induction reduced env st c wa ef rule:reductionLoop.induct)
+  subgoal for reduced env state contract warnings payments
+    apply (subst (asm) reductionLoop.simps[of reduced env state contract warnings payments])
     apply (cases "reduceContractStep env state contract")
     subgoal for x11 x12 x13 x14
       apply (simp only:ReduceStepResult.simps)
@@ -141,51 +141,51 @@ lemma applyInput_doesnt_increase_maxTransactions :
 
 lemma applyAllLoop_doesnt_increase_maxTransactions :
   "validAndPositive_state sta \<Longrightarrow>
-   applyAllLoop env sta cont inpList wa pa = ApplyAllSuccess nwa npa nsta ncont \<Longrightarrow>
+   applyAllLoop reduced env sta cont inpList wa pa = ApplyAllSuccess newReduced nwa npa nsta ncont \<Longrightarrow>
    maxTransactions ncont nsta \<le> maxTransactions cont sta"
-  apply (induction inpList arbitrary:env sta cont wa pa)
-  subgoal for env sta cont wa pa
-  apply (simp only:applyAllLoop.simps[of env sta cont "[]" wa pa] list.case)
+  apply (induction inpList arbitrary:reduced env sta cont wa pa)
+  subgoal for reduced env sta cont wa pa
+  apply (simp only:applyAllLoop.simps[of reduced env sta cont "[]" wa pa] list.case)
   apply (cases "reduceContractUntilQuiescent env sta cont")
-  subgoal for x11 x12 x13 x14
+  subgoal for x11 x12 x13 x14 x15
     apply (simp only:ReduceResult.case)
     using reductionLoop_doesnt_increase_maxTransactions by auto
     by simp
-  subgoal for head tail env sta cont wa pa
-    apply (simp only:applyAllLoop.simps[of env sta cont "head # tail" wa pa] list.case)
+  subgoal for head tail reduced env sta cont wa pa
+    apply (simp only:applyAllLoop.simps[of reduced env sta cont "head # tail" wa pa] list.case)
     apply (cases "reduceContractUntilQuiescent env sta cont")
-    subgoal for x11 x12 x13 x14
+    subgoal for x11 x12 x13 x14 x15
       apply (simp only:ReduceResult.case)
-      apply (cases "applyInput env x13 head x14")
-      apply (simp only:ApplyResult.case)
-      apply (metis applyInput_doesnt_increase_maxTransactions applyInput_preserves_preserves_validAndPositive_state dual_order.strict_trans2 leD leI reduceContractUntilQuiescent.simps reduceContractUntilQuiescent_preserves_validAndPositive_state reductionLoop_doesnt_increase_maxTransactions)
+      apply (cases "applyInput env x14 head x15")
+       apply (simp only:ApplyResult.case)
+      apply (metis (full_types) applyInput_doesnt_increase_maxTransactions applyInput_preserves_preserves_validAndPositive_state le_trans reduceContractUntilQuiescent.simps reduceContractUntilQuiescent_preserves_validAndPositive_state reductionLoop_doesnt_increase_maxTransactions)
       by simp
     by simp
   done
 
 lemma reduceContractUntilQuiescent_doesnt_increase_countWhens : "validAndPositive_state state \<Longrightarrow>
-      reduceContractUntilQuiescent env state contract = ContractQuiescent x11 x12 x13 x14 \<Longrightarrow>
-      countWhens x14 \<le> countWhens contract"
+      reduceContractUntilQuiescent env state contract = ContractQuiescent x11 x12 x13 x14 x15 \<Longrightarrow>
+      countWhens x15 \<le> countWhens contract"
   by (simp add: reductionLoop_doesnt_increase_countWhens)
 
 lemma applyAllLoop_doesnt_increase_countWhens :
   "validAndPositive_state sta \<Longrightarrow>
-   applyAllLoop env sta cont inpList wa pa = ApplyAllSuccess nwa npa nsta ncont \<Longrightarrow>
+   applyAllLoop reduced env sta cont inpList wa pa = ApplyAllSuccess newReduced nwa npa nsta ncont \<Longrightarrow>
    countWhens ncont \<le> countWhens cont"
-  apply (induction env sta cont inpList wa pa rule:applyAllLoop.induct)
-  subgoal for env state contract inputs warnings payments
-    apply (simp only:applyAllLoop.simps[of env state contract inputs warnings payments])
+  apply (induction reduced env sta cont inpList wa pa rule:applyAllLoop.induct)
+  subgoal for reduced env state contract inputs warnings payments
+    apply (simp only:applyAllLoop.simps[of reduced env state contract inputs warnings payments])
     apply (cases "reduceContractUntilQuiescent env state contract")
-    subgoal for x11 x12 x13 x14
+    subgoal for x11 x12 x13 x14 x15
       apply (simp only:ReduceResult.case)
       apply (cases "inputs")
-      apply (simp only:list.case)
-      apply (metis ApplyAllResult.inject Suc_leD Suc_le_eq Suc_le_mono eq_iff maxTransactions.elims reduceContractUntilQuiescent.elims reductionLoop_reduces_maxTransactions)
+       apply (simp only:list.case)
+      apply (simp add: reductionLoop_doesnt_increase_countWhens)
       subgoal for head tail
         apply (simp only:list.case)
-        apply (cases "applyInput env x13 head x14")
+        apply (cases "applyInput env x14 head x15")
         apply (simp only:ApplyResult.case)
-        apply (metis applyInput_decreases_countWhens applyInput_preserves_preserves_validAndPositive_state dual_order.trans leD le_cases reduceContractUntilQuiescent_doesnt_increase_countWhens reduceContractUntilQuiescent_preserves_validAndPositive_state)
+        apply (smt applyInput_decreases_countWhens applyInput_preserves_preserves_validAndPositive_state leI less_le_trans less_not_refl order.strict_trans reduceContractUntilQuiescent_doesnt_increase_countWhens reduceContractUntilQuiescent_preserves_validAndPositive_state)
         by simp
       done
     by simp
@@ -193,23 +193,23 @@ lemma applyAllLoop_doesnt_increase_countWhens :
 
 lemma applyAllLoop_decreases_maxTransactions :
   "validAndPositive_state sta \<Longrightarrow>
-   applyAllLoop env sta cont inpList wa pa = ApplyAllSuccess nwa npa nsta ncont \<Longrightarrow>
-   maxTransactions ncont nsta < maxTransactions cont sta \<or> cont = ncont"
-  apply (induction env sta cont inpList wa pa rule:applyAllLoop.induct)
-  subgoal for env state contract inputs warnings payments
-    apply (simp only:applyAllLoop.simps[of env state contract inputs warnings payments] list.case)
+   applyAllLoop reduced env sta cont inpList wa pa = ApplyAllSuccess newReduced nwa npa nsta ncont \<Longrightarrow>
+   maxTransactions ncont nsta < maxTransactions cont sta \<or> (reduced = newReduced)"
+  apply (induction reduced env sta cont inpList wa pa rule:applyAllLoop.induct)
+  subgoal for reduced env state contract inputs warnings payments
+    apply (simp only:applyAllLoop.simps[of reduced env state contract inputs warnings payments] list.case)
     apply (cases "reduceContractUntilQuiescent env state contract")
-    subgoal for rwa rpa rsta rcon
+    subgoal for newReduced rwa rpa rsta rcon
       apply (simp only:ReduceResult.case)
       apply (cases inputs)
-      using reductionLoop_reduces_maxTransactions apply auto[1]
+      using reductionLoop_reduces_maxTransactions apply fastforce
       apply (simp only:list.case)
       subgoal for head tail
         apply (cases "applyInput env rsta head rcon")
         subgoal for awa asta acon
           apply (simp only:ApplyResult.case)
           apply (cases "isQuiescent contract state")
-          apply (simp only:maxTransactions.simps)
+           apply (simp only:maxTransactions.simps)
           apply (metis (mono_tags) applyAllInputsLoopIsQuiescent applyAllLoop_doesnt_increase_countWhens applyInput_decreases_countWhens applyInput_preserves_preserves_validAndPositive_state max.coboundedI2 max_absorb1 not_le reduceContractUntilQuiescent_doesnt_increase_countWhens reduceContractUntilQuiescent_preserves_validAndPositive_state)
           apply (simp only:maxTransactions.simps if_False)
           by (metis (mono_tags, lifting) applyAllInputsLoopIsQuiescent applyAllLoop_doesnt_increase_countWhens applyInput_decreases_countWhens applyInput_preserves_preserves_validAndPositive_state dual_order.strict_trans1 le_less_trans less_SucI reduceContractUntilQuiescent_doesnt_increase_countWhens reduceContractUntilQuiescent_preserves_validAndPositive_state)
@@ -239,10 +239,10 @@ lemma fixInterval_preserves_maxTransactions :
 
 lemma computeTransaction_decreases_maxTransactions_aux :
   "validAndPositive_state fixedState \<Longrightarrow>
-   applyAllInputs env fixedState cont inps = ApplyAllSuccess nwarn npay nstate ncont \<Longrightarrow>
-   cont \<noteq> ncont \<Longrightarrow> maxTransactions ncont nstate < maxTransactions cont fixedState"
+   applyAllInputs env fixedState cont inps = ApplyAllSuccess reduced nwarn npay nstate ncont \<Longrightarrow>
+   reduced \<Longrightarrow> maxTransactions ncont nstate < maxTransactions cont fixedState"
   using applyAllLoop_decreases_maxTransactions by fastforce
-
+                   
 lemma computeTransaction_decreases_maxTransactions :
   "validAndPositive_state sta \<Longrightarrow>
    computeTransaction tra sta cont = TransactionOutput txOut \<Longrightarrow>
@@ -252,11 +252,12 @@ lemma computeTransaction_decreases_maxTransactions :
   apply (simp only:IntervalResult.case)
   subgoal for env fixedState
     apply (cases "applyAllInputs env fixedState cont (inputs tra)")
-    subgoal for nwarn npay nstate ncont
-      apply (cases "cont = ncont \<and> (cont \<noteq> Close \<or> accounts sta = [])")
-      apply simp
+    subgoal for newReduced nwarn npay nstate ncont
+      apply (cases "\<not> newReduced \<and> (cont = Close \<longrightarrow> accounts sta = [])")
+      apply (simp only:Let_def ApplyAllResult.case)
+      apply (simp add:refl Let_def)
       apply (simp del:validAndPositive_state.simps fixInterval.simps applyAllInputs.simps maxTransactions.simps)
-      by (metis TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) TransactionOutputRecord.select_convs(4) applyAllInputsIsQuiescent computeTransaction_decreases_maxTransactions_aux fixInterval_preserves_maxTransactions fixInterval_preserves_preserves_validAndPositive_state isQuiescent.simps(1) less_irrefl maxTransactions.simps not_less_eq)
+      by (metis TransactionOutputRecord.select_convs(3) TransactionOutputRecord.select_convs(4) applyAllInputs.simps applyAllInputsIsQuiescent applyAllLoop_doesnt_increase_countWhens computeTransaction_decreases_maxTransactions_aux fixInterval_preserves_maxTransactions fixInterval_preserves_preserves_validAndPositive_state isQuiescent.simps(1) le_neq_implies_less maxTransactions.simps not_less_eq not_less_iff_gr_or_eq)
      apply simp
     by simp
   by simp

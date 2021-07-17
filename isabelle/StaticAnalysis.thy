@@ -685,20 +685,20 @@ fun calculateSymVars :: "State option \<Rightarrow> Transaction list \<Rightarro
 
 (* Test1 for calculateSymVars *)
 
-definition role_alice :: PubKey where
-"role_alice = 1"
+definition role_alice :: Party where
+"role_alice = Role [1]"
 
-definition role_bob :: PubKey where
-"role_bob = 2"
+definition role_bob :: Party where
+"role_bob = Role [2]"
 
-definition role_carol :: PubKey where
-"role_carol = 3"
+definition role_carol :: Party where
+"role_carol = Role [3]"
 
 definition token_ada :: Token where
-"token_ada = Token 0 0"
+"token_ada = Token [] []"
 
 definition choice_choice :: ChoiceName where
-"choice_choice = 1"
+"choice_choice = [1]"
 
 definition badEscrow_aux :: Contract where
 "badEscrow_aux = (When [
@@ -834,11 +834,11 @@ lemma symEval_eval_equivalence : "symEvalVal val symState = evalValue (symStateT
   apply (induction val symState and obs symState rule:symEvalVal_symEvalObs.induct)
   by auto
 
-lemma closeContractRemains_reduceContractUntilQuiescent : "reduceContractUntilQuiescent env fixSta Close = ContractQuiescent reduceWarns pays curState cont \<Longrightarrow> cont = Close"
+lemma closeContractRemains_reduceContractUntilQuiescent : "reduceContractUntilQuiescent env fixSta Close = ContractQuiescent reduced reduceWarns pays curState cont \<Longrightarrow> cont = Close"
   by (simp add: reduceClose_is_Close)
 
-lemma closeContractRemains_applyAllLoop : "applyAllLoop env fixSta Close inps warn pay = ApplyAllSuccess newWarn newPay newState cont \<Longrightarrow> cont = Close"
-  apply (simp only:applyAllLoop.simps[of env fixSta "Close" inps warn pay])
+lemma closeContractRemains_applyAllLoop : "applyAllLoop reduced env fixSta Close inps warn pay = ApplyAllSuccess newReduced newWarn newPay newState cont \<Longrightarrow> cont = Close"
+  apply (simp only:applyAllLoop.simps[of reduced env fixSta "Close" inps warn pay])
   apply (cases "reduceContractUntilQuiescent env fixSta Close")
   subgoal for reduceWarns pays curState cont
     apply (simp only:refl ReduceResult.case)
@@ -875,9 +875,9 @@ fun isNonPositivePay :: "Environment \<Rightarrow> State \<Rightarrow> Value \<R
 fun isPartialPay :: "Environment \<Rightarrow> State \<Rightarrow> AccountId \<Rightarrow> Token \<Rightarrow> Value \<Rightarrow> bool" where
 "isPartialPay env state accId tok val = (moneyInAccount accId tok (accounts state) < evalValue env state val)"
 
-lemma reductionLoop_keepsWarnings : "reductionLoop env state contract warnings effects = ContractQuiescent reduceWarns reduceEffects reduceState reduceNewContract \<Longrightarrow> \<exists>suff. reduceWarns = (rev warnings) @ suff"
-  apply (induction env state contract warnings effects arbitrary: reduceWarns reduceEffects reduceState reduceNewContract rule:reductionLoop.induct)
-  subgoal for env state contract warnings payments reduceWarns reduceEffects reduceState reduceNewContract
+lemma reductionLoop_keepsWarnings : "reductionLoop reduced env state contract warnings effects = ContractQuiescent newReduced reduceWarns reduceEffects reduceState reduceNewContract \<Longrightarrow> \<exists>suff. reduceWarns = (rev warnings) @ suff"
+  apply (induction reduced env state contract warnings effects arbitrary: newReduced reduceWarns reduceEffects reduceState reduceNewContract rule:reductionLoop.induct)
+  subgoal for reduced env state contract warnings payments newReduced reduceWarns reduceEffects reduceState reduceNewContract
     apply (subst (asm) (2) reductionLoop.simps)
     apply (cases "reduceContractStep env state contract")
     subgoal for stepWarns stepEffects stepState stepNewContract
@@ -888,7 +888,7 @@ lemma reductionLoop_keepsWarnings : "reductionLoop env state contract warnings e
   done
 
 lemma onceAWarningAlwaysAWarning_reductionLoop_reduceContractStep : "reduceContractStep env state contract = Reduced warnings effects newState newContract \<Longrightarrow>
-                                                                     reductionLoop env state contract wa ef = ContractQuiescent reduceWarns reduceEffects reduceState reduceNewContract \<Longrightarrow>
+                                                                     reductionLoop reduced env state contract wa ef = ContractQuiescent newReduced reduceWarns reduceEffects reduceState reduceNewContract \<Longrightarrow>
                                                                      warnings \<noteq> ReduceNoWarning \<Longrightarrow> reduceWarns \<noteq> []"
   apply (simp only: reductionLoop.simps)
   apply (cases "reduceContractStep env state contract")
@@ -917,7 +917,7 @@ lemma onceAWarningAlwaysAWarning_reductionLoop_reduceContractStep_plus_aux2 : "w
   by (metis append_Cons convertReduceWarnings.simps(2) onceAWarningAlwaysAWarning_reductionLoop_reduceContractStep_plus_aux)
 
 lemma onceAWarningAlwaysAWarning_reductionLoop_reduceContractStep_plus : "reduceContractStep env state contract = Reduced warnings effects newState newContract \<Longrightarrow>
-                                                                          reductionLoop env state contract wa ef = ContractQuiescent reduceWarns reduceEffects reduceState reduceNewContract \<Longrightarrow>
+                                                                          reductionLoop reduced env state contract wa ef = ContractQuiescent newReduced reduceWarns reduceEffects reduceState reduceNewContract \<Longrightarrow>
                                                                           warnings \<noteq> ReduceNoWarning \<Longrightarrow> convertReduceWarnings reduceWarns \<noteq> []"
   apply (simp only: reductionLoop.simps)
   apply (cases "reduceContractStep env state contract")
@@ -930,16 +930,16 @@ lemma onceAWarningAlwaysAWarning_reductionLoop_reduceContractStep_plus : "reduce
   by simp_all
 
 lemma onceAWarningAlwaysAWarning_applyAllLoop_reduceContractStep : "reduceContractStep env st c = Reduced warnings effects newState newContract \<Longrightarrow>
-                                                                    applyAllLoop env st c inp wa ef = ApplyAllSuccess applyWarnings applyEffects applyNewState applyNewContract \<Longrightarrow>
+                                                                    applyAllLoop reduced env st c inp wa ef = ApplyAllSuccess newReduced applyWarnings applyEffects applyNewState applyNewContract \<Longrightarrow>
                                                                     warnings \<noteq> ReduceNoWarning \<Longrightarrow> applyWarnings \<noteq> []"
-  apply (subst (asm) applyAllLoop.simps[of env st c inp wa ef])
+  apply (subst (asm) applyAllLoop.simps[of reduced env st c inp wa ef])
   apply (subst (asm) reduceContractUntilQuiescent.simps)
-  apply (cases "reductionLoop env st c [] []")
+  apply (cases "reductionLoop False env st c [] []")
   apply (simp only:refl ReduceResult.case)
   apply (cases inp)
   using onceAWarningAlwaysAWarning_reductionLoop_reduceContractStep_plus apply auto[1]
   apply (simp only:refl list.case)
-  subgoal for reduceWarns reduceEffects reduceState reduceNewContract h t
+  subgoal for newReduced reduceWarns reduceEffects reduceState reduceNewContract h t
     apply (cases "applyInput env reduceState h reduceNewContract")
     apply (simp only:refl ApplyResult.case)
     using applyAllInputsPrefix1 onceAWarningAlwaysAWarning_reductionLoop_reduceContractStep_plus apply fastforce
@@ -951,23 +951,23 @@ lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_NonPositivePay : "va
     env = \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> \<Longrightarrow> fixedSt = (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) \<Longrightarrow> hi \<ge> lo \<Longrightarrow> hi \<ge> minSlot st \<Longrightarrow> isNonPositivePay env fixedSt val \<Longrightarrow> False"
   apply (simp only:computeTransaction.simps Let_def)
   apply (simp del:validAndPositive_state.simps applyAllLoop.simps isPartialPay.simps isNonPositivePay.simps add:Let_def)
-  apply (cases "applyAllLoop \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) (Pay accountId payee token val subCont) [] [] []")
-  subgoal for applyWarnings applyEffects applyNewState applyNewContract
+  apply (cases "applyAllLoop False \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) (Pay accountId payee token val subCont) [] [] []")
+  subgoal for newReduced applyWarnings applyEffects applyNewState applyNewContract
     apply (simp only:ApplyAllResult.case refl)
+    apply (cases newReduced)
     apply (auto split:"if_split" simp del:validAndPositive_state.simps evalValue.simps applyAllLoop.simps isPartialPay.simps isNonPositivePay.simps)
     apply (cases "Pay accountId payee token val subCont = applyNewContract")
      apply (simp only:refl if_True)
-     apply blast
+    apply (metis State.ext_inject State.surjective State.update_convs(4) allAccountsPositiveState.simps applyAllInputsLoopIsQuiescent isQuiescent.simps(3) validAndPositive_state.simps valid_state.simps)
     apply (simp only:refl if_False)
     apply (cases "reduceContractStep \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) (Pay accountId payee token val subCont)")
     subgoal for reduceWarning reduceEffect reduceState reduceContract
       apply (subgoal_tac "reduceWarning \<noteq> ReduceNoWarning")
-      apply (metis TransactionOutput.inject(1) TransactionOutputRecord.ext_inject onceAWarningAlwaysAWarning_applyAllLoop_reduceContractStep)
-      apply (simp only:reduceContractStep.simps)
+      using onceAWarningAlwaysAWarning_applyAllLoop_reduceContractStep apply blast
       by auto
-     apply auto[1]
+     apply simp
     by simp
-   apply simp
+   apply auto[1]
   by simp
 
 lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_PartialPay : "validAndPositive_state st \<Longrightarrow>
@@ -975,18 +975,19 @@ lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_PartialPay : "validA
     env = \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> \<Longrightarrow> fixedSt = (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) \<Longrightarrow> hi \<ge> lo \<Longrightarrow> hi \<ge> minSlot st \<Longrightarrow> isPartialPay env fixedSt accountId token val \<Longrightarrow> \<not> isNonPositivePay env fixedSt val \<Longrightarrow> False"
   apply (simp only:computeTransaction.simps Let_def)
   apply (simp del:validAndPositive_state.simps applyAllLoop.simps isPartialPay.simps isNonPositivePay.simps add:Let_def)
-  apply (cases "applyAllLoop \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) (Pay accountId payee token val subCont) [] [] []")
-  subgoal for applyWarnings applyEffects applyNewState applyNewContract
+  apply (cases "applyAllLoop False \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) (Pay accountId payee token val subCont) [] [] []")
+  subgoal for newReduced applyWarnings applyEffects applyNewState applyNewContract
     apply (simp only:ApplyAllResult.case refl)
+    apply (cases newReduced)
     apply (auto split:"if_split" simp del:validAndPositive_state.simps evalValue.simps applyAllLoop.simps isPartialPay.simps isNonPositivePay.simps)
     apply (cases "Pay accountId payee token val subCont = applyNewContract")
      apply (simp only:refl if_True)
-     apply blast
+    apply (metis State.ext_inject State.surjective State.update_convs(4) allAccountsPositiveState.simps applyAllInputsLoopIsQuiescent isQuiescent.simps(3) validAndPositive_state.simps valid_state.simps)
     apply (simp only:refl if_False)
     apply (cases "reduceContractStep \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) (Pay accountId payee token val subCont)")
     subgoal for reduceWarning reduceEffect reduceState reduceContract
       apply (subgoal_tac "reduceWarning \<noteq> ReduceNoWarning")
-      apply (metis TransactionOutput.inject(1) TransactionOutputRecord.ext_inject onceAWarningAlwaysAWarning_applyAllLoop_reduceContractStep)
+      using onceAWarningAlwaysAWarning_applyAllLoop_reduceContractStep apply blast
       apply (simp only:reduceContractStep.simps)
       apply (subgoal_tac "let moneyToPay = evalValue \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) val;
                               balance = moneyInAccount accountId token (accounts (st\<lparr>minSlot := max lo (minSlot st)\<rparr>));

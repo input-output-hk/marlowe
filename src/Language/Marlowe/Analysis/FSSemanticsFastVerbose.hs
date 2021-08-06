@@ -1,18 +1,19 @@
 module Language.Marlowe.Analysis.FSSemanticsFastVerbose where
 
-import           Data.List                  (foldl', genericIndex)
-import           Data.Map.Strict            (Map)
-import qualified Data.Map.Strict            as M
-import           Data.Maybe                 (isNothing)
+import           Data.List                       (foldl', genericIndex)
+import           Data.Map.Strict                 (Map)
+import qualified Data.Map.Strict                 as M
+import           Data.Maybe                      (isNothing)
 import           Data.SBV
-import qualified Data.SBV.Either            as SE
-import           Data.SBV.Internals         (SMTModel (..))
-import qualified Data.SBV.List              as SL
-import qualified Data.SBV.Maybe             as SM
-import qualified Data.SBV.Tuple             as ST
-import           Data.Set                   (Set)
-import qualified Data.Set                   as S
+import qualified Data.SBV.Either                 as SE
+import           Data.SBV.Internals              (SMTModel (..))
+import qualified Data.SBV.List                   as SL
+import qualified Data.SBV.Maybe                  as SM
+import qualified Data.SBV.Tuple                  as ST
+import           Data.Set                        (Set)
+import qualified Data.Set                        as S
 import           Language.Marlowe.Semantics
+import           Language.Marlowe.SemanticsTypes
 
 ---------------------------------------------------
 -- Static analysis logic and symbolic operations --

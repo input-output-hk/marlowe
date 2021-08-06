@@ -16,9 +16,10 @@ import qualified Data.SBV.Maybe as SM
 import qualified Data.SBV.List as SL
 import qualified Language.Marlowe.Analysis.IntegerArray as IntegerArray
 import           Language.Marlowe.Analysis.IntegerArray (IntegerArray, NIntegerArray)
-import Language.Marlowe.Analysis.Numbering (Numbering, emptyNumbering, getNumbering, getLabel, numberOfLabels)
-import           Language.Marlowe.Analysis.MkSymb(mkSymbolicDatatype)
-import qualified Language.Marlowe.Semantics as MS
+import           Language.Marlowe.Analysis.Numbering (Numbering, emptyNumbering, getNumbering, getLabel, numberOfLabels)
+import           Language.Marlowe.Analysis.MkSymb (mkSymbolicDatatype)
+import qualified Language.Marlowe.Semantics      as MS
+import qualified Language.Marlowe.SemanticsTypes as MS
 
 data Bounds = Bounds { numParties :: Integer
                      , numChoices :: Integer

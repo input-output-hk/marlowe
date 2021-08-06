@@ -5,6 +5,8 @@ session Test = HOL +
     "HOL-Word"
   theories
      Serialisation
+     SemanticsTypes
+     SemanticsSerialisation
      Semantics
      MoneyPreservation
      PositiveAccounts

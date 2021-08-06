@@ -246,4 +246,35 @@ lemma getByteString_reduceslist : "getByteString x = Some (a, b) \<Longrightarro
                                                     size b < size x"
   using addAndGetByteString_inverseRoundtrip by fastforce
 
+
+fun listToByteString_aux :: "('a \<Rightarrow> ByteString) \<Rightarrow> 'a list \<Rightarrow> ByteString" where
+"listToByteString_aux f (Cons h t) = f h @ listToByteString_aux f t" |
+"listToByteString_aux f Nil = Nil"
+
+fun listToByteString :: "('a \<Rightarrow> ByteString) \<Rightarrow> 'a list \<Rightarrow> ByteString" where
+"listToByteString f l = (let listLength = length l in positiveIntToByteString (int listLength) @ listToByteString_aux f l)"
+
+fun byteStringToList_aux :: "(ByteString \<Rightarrow> ('a \<times> ByteString) option) \<Rightarrow> int \<Rightarrow> ByteString \<Rightarrow> ('a list \<times> ByteString) option" where
+"byteStringToList_aux f n bs =
+  (if n > 0
+   then (case f bs of
+           None \<Rightarrow> None
+         | Some (a, nbs) \<Rightarrow> (case byteStringToList_aux f (n - 1) nbs of
+                               None \<Rightarrow> None
+                             | Some (lr, fbs) \<Rightarrow> Some (a # lr, fbs)))
+   else (Some (Nil, bs)))"
+
+fun byteStringToList :: "(ByteString \<Rightarrow> ('a \<times> ByteString) option) \<Rightarrow> ByteString \<Rightarrow> ('a list \<times> ByteString) option" where
+"byteStringToList f bs =
+  (case byteStringToPositiveInt bs of
+     None \<Rightarrow> None
+   | Some (listLength, nbs) \<Rightarrow> byteStringToList_aux f listLength nbs)"
+
+theorem listToByteStringTolist : "(\<And> x y. decode ((encode x) @ y) = Some (x, y)) \<Longrightarrow> byteStringToList decode ((listToByteString encode x) @ y) = Some (x, y)"
+  oops
+
+theorem byteStringToList_inverseRoundtrip : "(\<And> x a b. decode x = Some (a, b) \<Longrightarrow> encode a @ b = x) \<Longrightarrow> byteStringToList decode x = Some (a, b) \<Longrightarrow> listToByteString encode a @ b = x"
+  oops
+
+
 end

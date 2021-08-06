@@ -640,7 +640,8 @@ fun byteStringToPayee :: "ByteString \<Rightarrow> (Payee \<times> ByteString) o
 
 function (sequential) caseToByteString :: "Case \<Rightarrow> ByteString" and
                       contractToByteString :: "Contract \<Rightarrow> ByteString" where
-"caseToByteString (Case action cont) = actionToByteString action @ contractToByteString cont" |
+"caseToByteString (Case action cont) = positiveIntToByteString 0 @ actionToByteString action @ contractToByteString cont" |
+"caseToByteString (MerkleizedCase action bs) = positiveIntToByteString 1 @ actionToByteString action @ packByteString bs" |
 "contractToByteString Close = positiveIntToByteString 0" |
 "contractToByteString (Pay accId payee token val cont) = positiveIntToByteString 1 @ partyToByteString accId @ payeeToByteString payee
                                                        @ tokenToByteString token @ valueToByteString val @ contractToByteString cont" |
@@ -653,12 +654,23 @@ function (sequential) caseToByteString :: "Case \<Rightarrow> ByteString" and
 termination
   sorry
 
-
 function (sequential) byteStringToCase :: "ByteString \<Rightarrow> (Case \<times> ByteString) option" and
                       byteStringToContract :: "ByteString \<Rightarrow> (Contract \<times> ByteString) option" where
-"byteStringToCase t1 = (case byteStringToAction t1 of None \<Rightarrow> None | Some (action, t2) \<Rightarrow>
-                       (case byteStringToContract t2 of None \<Rightarrow> None | Some (cont, t3) \<Rightarrow>
-                       Some (Case action cont, t3)))" |
+"byteStringToCase x =
+  (case byteStringToPositiveInt x of
+       None \<Rightarrow> None
+     | Some (y, t1) \<Rightarrow>
+   (if y < 1
+    then (if y = 0
+          then ((case byteStringToAction t1 of None \<Rightarrow> None | Some (action, t2) \<Rightarrow>
+                (case byteStringToContract t2 of None \<Rightarrow> None | Some (cont, t3) \<Rightarrow>
+                   Some (Case action cont, t3))))
+          else None)
+    else (if y = 1
+          then ((case byteStringToAction t1 of None \<Rightarrow> None | Some (action, t2) \<Rightarrow>
+                (case getByteString t2 of None \<Rightarrow> None | Some (bs, t3) \<Rightarrow>
+                   Some (MerkleizedCase action bs, t3))))
+          else None)))" |
 "byteStringToContract x =
   (case byteStringToPositiveInt x of
      None \<Rightarrow> None

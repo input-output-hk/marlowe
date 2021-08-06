@@ -1,5 +1,5 @@
 theory Semantics
-imports Main MList SList ListTools "HOL-Library.Product_Lexorder" Serialisation SemanticsTypes
+imports Main MList SList ListTools "HOL-Library.Product_Lexorder" Serialisation SemanticsTypes SemanticsSerialisation
 begin
 
 (* EVALUATION *)
@@ -471,37 +471,66 @@ fun reduceContractUntilQuiescent :: "Environment \<Rightarrow> State \<Rightarro
 datatype ApplyWarning = ApplyNoWarning
                       | ApplyNonPositiveDeposit Party AccountId Token int
 
+datatype ApplyAction = AppliedAction ApplyWarning State
+                     | NotAppliedAction
+
+fun applyAction :: "Environment \<Rightarrow> State \<Rightarrow> InputContent \<Rightarrow> Action \<Rightarrow> ApplyAction" where
+"applyAction env state (IDeposit accId1 party1 token1 amount) (Deposit accId2 party2 token2 val) =
+   (if (accId1 = accId2 \<and> party1 = party2 \<and> token1 = token2
+            \<and> amount = evalValue env state val)
+    then let warning = if amount > 0
+                       then ApplyNoWarning
+                       else ApplyNonPositiveDeposit party1 accId2 token2 amount;
+             newState = state \<lparr> accounts := addMoneyToAccount accId1 token1 amount (accounts state) \<rparr>
+         in AppliedAction warning newState
+    else NotAppliedAction)" |
+"applyAction env state (IChoice choId1 choice) (Choice choId2 bounds) =
+   (if choId1 = choId2 \<and> inBounds choice bounds
+    then let newState = state \<lparr> choices := MList.insert choId1 choice (choices state) \<rparr>
+         in AppliedAction ApplyNoWarning newState
+    else NotAppliedAction)" |
+"applyAction env state INotify (Notify obs) =
+   (if evalObservation env state obs
+    then AppliedAction ApplyNoWarning state
+    else NotAppliedAction)" |
+"applyAction _ _ _ (Choice _ _) = NotAppliedAction" |
+"applyAction _ _ _ _ = NotAppliedAction"
+
+(* dummy hash function *)
+fun hash :: "ByteString \<Rightarrow> ByteString" where
+"hash x = x"
+
+fun exactByteStringToContract :: "ByteString \<Rightarrow> Contract option" where
+"exactByteStringToContract bs =
+  (case byteStringToContract bs of
+     Some (contract, nbs) \<Rightarrow> (if nbs = [] then Some contract else None)
+   | None \<Rightarrow> None)"
+
+fun getContinuation :: "Input \<Rightarrow> Case \<Rightarrow> Contract option" where
+"getContinuation (NormalInput _) (Case _ continuation) = Some continuation" |
+"getContinuation (MerkleizedInput _ serialisedContinuation) (MerkleizedCase _ continuationHash) =
+  (if hash serialisedContinuation = continuationHash
+   then exactByteStringToContract serialisedContinuation
+   else None)" |
+"getContinuation _ _ = None"
+
 datatype ApplyResult = Applied ApplyWarning State Contract
                      | ApplyNoMatchError
+                     | ApplyHashMismatch
 
 fun applyCases :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightarrow> Case list \<Rightarrow> ApplyResult" where
-"applyCases env state (IDeposit accId1 party1 tok1 amount)
-            (Cons (Case (Deposit accId2 party2 tok2 val) cont) rest) =
-  (if (accId1 = accId2 \<and> party1 = party2 \<and> tok1 = tok2
-        \<and> amount = evalValue env state val)
-   then let warning = if amount > 0
-                      then ApplyNoWarning
-                      else ApplyNonPositiveDeposit party1 accId2 tok2 amount in
-        let newState = state \<lparr> accounts := addMoneyToAccount accId1 tok1 amount (accounts state) \<rparr> in
-        Applied warning newState cont
-   else applyCases env state (IDeposit accId1 party1 tok1 amount) rest)" |
-"applyCases env state (IChoice choId1 choice)
-            (Cons (Case (Choice choId2 bounds) cont) rest) =
-  (if (choId1 = choId2 \<and> inBounds choice bounds)
-   then let newState = state \<lparr> choices := MList.insert choId1 choice (choices state) \<rparr> in
-        Applied ApplyNoWarning newState cont
-   else applyCases env state (IChoice choId1 choice) rest)" |
-"applyCases env state INotify (Cons (Case (Notify obs) cont) rest) =
-  (if evalObservation env state obs
-   then Applied ApplyNoWarning state cont
-   else applyCases env state INotify rest)" |
-"applyCases env state (IDeposit accId1 party1 tok1 amount) (Cons _ rest) =
-  applyCases env state (IDeposit accId1 party1 tok1 amount) rest" |
-"applyCases env state (IChoice choId1 choice) (Cons _ rest) =
-  applyCases env state (IChoice choId1 choice) rest" |
-"applyCases env state INotify (Cons _ rest) =
-  applyCases env state INotify rest" |
-"applyCases env state acc Nil = ApplyNoMatchError"
+"applyCases env state input (headCase # tailCase) =
+ (let inputContent = getInputContent input :: InputContent ;
+      action = getAction headCase :: Action ;
+      maybeContinuation = getContinuation input headCase :: Contract option
+  in
+  case applyAction env state inputContent action of
+    AppliedAction warning newState \<Rightarrow>
+     (case maybeContinuation of
+        Some continuation \<Rightarrow> Applied warning newState continuation
+      | None \<Rightarrow> ApplyHashMismatch)
+  | NotAppliedAction \<Rightarrow> applyCases env state input tailCase)" |
+"applyCases env state input [] = ApplyNoMatchError"
 
 fun applyInput :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightarrow> Contract \<Rightarrow> ApplyResult" where
 "applyInput env state input (When cases t cont) = applyCases env state input cases" |
@@ -536,6 +565,7 @@ fun convertApplyWarning :: "ApplyWarning \<Rightarrow> TransactionWarning list" 
 
 datatype ApplyAllResult = ApplyAllSuccess "TransactionWarning list" "Payment list"
                                      State Contract
+                        | ApplyAllHashMismatch
                         | ApplyAllNoMatchError
                         | ApplyAllAmbiguousSlotIntervalError
 
@@ -556,6 +586,7 @@ fun applyAllLoop :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Ri
                                (warnings @ (convertReduceWarnings reduceWarns)
                                          @ (convertApplyWarning applyWarn))
                                (payments @ pays)
+            | ApplyHashMismatch \<Rightarrow> ApplyAllHashMismatch
             | ApplyNoMatchError \<Rightarrow> ApplyAllNoMatchError)))"
 
 fun applyAllInputs :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
@@ -565,6 +596,7 @@ fun applyAllInputs :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<
 type_synonym TransactionSignatures = "Party list"
 
 datatype TransactionError = TEAmbiguousSlotIntervalError
+                          | TEApplyHashMismatch
                           | TEApplyNoMatchError
                           | TEIntervalError IntervalError
                           | TEUselessTransaction
@@ -650,7 +682,9 @@ fun getPartiesFromReduceEffect :: "ReduceEffect list \<Rightarrow> (Party \<time
 "getPartiesFromReduceEffect Nil = Nil"
 
 fun getPartiesFromInput :: "Input list \<Rightarrow> (Party \<times> Token \<times> Money) list" where
-"getPartiesFromInput (Cons (IDeposit _ p tok m) t) =
+"getPartiesFromInput (Cons (NormalInput (IDeposit _ p tok m)) t) =
+   Cons (p, tok, m) (getPartiesFromInput t)" |
+"getPartiesFromInput (Cons (MerkleizedInput (IDeposit _ p tok m) _) t) =
    Cons (p, tok, m) (getPartiesFromInput t)" |
 "getPartiesFromInput (Cons x t) = getPartiesFromInput t" |
 "getPartiesFromInput Nil = Nil"
@@ -660,28 +694,37 @@ fun getOutcomes :: "ReduceEffect list \<Rightarrow> Input list \<Rightarrow> Tra
    foldl (\<lambda> acc (p, t, m) . addOutcome p m acc) emptyOutcome
          ((getPartiesFromReduceEffect eff) @ (getPartiesFromInput inp))"
 
-fun addSig :: "Party list \<Rightarrow> Input \<Rightarrow> Party list" where
+fun addSig :: "Party list \<Rightarrow> InputContent \<Rightarrow> Party list" where
 "addSig acc (IDeposit _ p _ _) = SList.insert p acc" |
 "addSig acc (IChoice (ChoiceId _ p) _) = SList.insert p acc" |
 "addSig acc INotify = acc"
 
 fun getSignatures :: "Input list \<Rightarrow> TransactionSignatures" where
-"getSignatures l = foldl addSig SList.empty l"
+"getSignatures l = foldl (\<lambda> acc x. addSig acc (getInputContent x)) SList.empty l"
 
 fun isQuiescent :: "Contract \<Rightarrow> State \<Rightarrow> bool" where
 "isQuiescent Close state = (accounts state = [])" |
 "isQuiescent (When _ _ _) _ = True" |
 "isQuiescent _ _ = False"
 
-fun maxTimeContract :: "Contract \<Rightarrow> int"
-and maxTimeCase :: "Case \<Rightarrow> int" where
-"maxTimeContract Close = 0" |
+fun maxTimeContract :: "Contract \<Rightarrow> int option"
+and maxTimeCase :: "Case \<Rightarrow> int option" where
+"maxTimeContract Close = Some 0" |
 "maxTimeContract (Pay _ _ _ _ contract) = maxTimeContract contract" |
-"maxTimeContract (If _ contractTrue contractFalse) = max (maxTimeContract contractTrue) (maxTimeContract contractFalse)" |
-"maxTimeContract (When Nil timeout contract) = max timeout (maxTimeContract contract)" |
-"maxTimeContract (When (Cons head tail) timeout contract) = max (maxTimeCase head) (maxTimeContract (When tail timeout contract))" |
+"maxTimeContract (If _ contractTrue contractFalse) =
+    (case maxTimeContract contractTrue of None \<Rightarrow> None | Some maxTimeContractTrue \<Rightarrow>
+    (case maxTimeContract contractFalse of None \<Rightarrow> None | Some maxTimeContractFalse \<Rightarrow>
+     Some (max maxTimeContractTrue maxTimeContractFalse)))" |
+"maxTimeContract (When Nil timeout contract) =
+    (case maxTimeContract contract of None \<Rightarrow> None | Some maxTimeCont \<Rightarrow>
+     Some (max timeout maxTimeCont))" |
+"maxTimeContract (When (Cons head tail) timeout contract) =
+    (case maxTimeCase head of None \<Rightarrow> None | Some headMaxTime \<Rightarrow>
+    (case maxTimeContract (When tail timeout contract) of None \<Rightarrow> None | Some maxTimeWhen \<Rightarrow>
+     Some (max headMaxTime maxTimeWhen)))" |
 "maxTimeContract (Let _ _ contract) = maxTimeContract contract" |
 "maxTimeContract (Assert _ contract) = maxTimeContract contract" |
-"maxTimeCase (Case _ contract) = maxTimeContract contract"
+"maxTimeCase (Case _ contract) = maxTimeContract contract" |
+"maxTimeCase (MerkleizedCase _ _) = None"
 
 end

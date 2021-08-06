@@ -360,12 +360,17 @@ datatype Payee = Account AccountId
                | Party Party
 
 datatype Case = Case Action Contract
+              | MerkleizedCase Action ByteString
 and Contract = Close
              | Pay AccountId Payee Token Value Contract
              | If Observation Contract Contract
              | When "Case list" Timeout Contract
              | Let ValueId Value Contract
              | Assert Observation Contract
+
+fun getAction :: "Case \<Rightarrow> Action" where
+"getAction (Case action _) = action" |
+"getAction (MerkleizedCase action _) = action"
 
 type_synonym Accounts = "((AccountId \<times> Token) \<times> Money) list"
 
@@ -381,9 +386,16 @@ fun valid_state :: "State \<Rightarrow> bool" where
 
 record Environment = slotInterval :: SlotInterval
 
-datatype Input = IDeposit AccountId Party Token Money
-               | IChoice ChoiceId ChosenNum
-               | INotify
+datatype InputContent = IDeposit AccountId Party Token int
+                      | IChoice ChoiceId ChosenNum
+                      | INotify
+
+datatype Input = NormalInput InputContent
+               | MerkleizedInput InputContent ByteString
+
+fun getInputContent :: "Input \<Rightarrow> InputContent" where
+"getInputContent (NormalInput inputContent) = inputContent" |
+"getInputContent (MerkleizedInput inputContent _) = inputContent"
 
 (* Processing of slot interval *)
 datatype IntervalError = InvalidInterval SlotInterval

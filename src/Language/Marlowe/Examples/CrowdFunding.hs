@@ -25,22 +25,22 @@ crowdfunding target maxContrib tim p lp =
                   (payAllAccsTo srcAccs (Account creatorAcc) Close)
                   Close
         srcAccs = lp
-        srcAvail = map AvailableMoney srcAccs
+        srcAvail = map (`AvailableMoney` ada) srcAccs
         creatorAcc = p
 
 -- Combines a list of Values using AddValue
 addAll :: [Value] -> Value
-addAll [] = (Constant 0)
+addAll [] = Constant 0
 addAll [a] = a
 addAll l = AddValue (addAll b) (addAll a)
-  where middle = (genericLength l) `div` (2 :: Integer)
+  where middle = genericLength l `div` (2 :: Integer)
         (b, a) = genericSplitAt middle l
 
 -- Pay all money into an account to a payee
 payAll :: Party -> Payee -> Contract -> Contract
 payAll acId payee cont =
-  If (ValueGT (AvailableMoney acId) (Constant 0))
-     (Pay acId payee (AvailableMoney acId) cont)
+  If (ValueGT (AvailableMoney acId ada) (Constant 0))
+     (Pay acId payee ada (AvailableMoney acId ada) cont)
      cont
 
 -- Pays all money available in a list of accounts to another account
@@ -56,7 +56,7 @@ type ContributionState = (Party, Bool)
 transitionFunction :: Integer -> ContributionState -> (Maybe ContributionState, Action)
 transitionFunction _ (party, True) =
   (Nothing,
-   Deposit (party) party (ChoiceValue (ChoiceId "1" party)))
+   Deposit party party ada (ChoiceValue (ChoiceId "1" party)))
 transitionFunction maxContrib (party, False) =
   (Just (party, True),
    Choice (ChoiceId "1" party) [Bound 1 maxContrib])

@@ -10,7 +10,7 @@ When
   bobClaims
     when
       carolAgrees
-        Pay "alice" "bob" price
+        Pay "alice" "bob" ada price
       carolDisagrees
         Close "alice"
   aliceClaims
@@ -18,12 +18,12 @@ When
       carolAgrees
         Close "alice"
       carolDisagrees
-        Pay "alice" "bob" price
+        Pay "alice" "bob" ada price
 
 -}
 
 contract :: Contract
-contract = When [Case (Deposit "alice" "alice" price)
+contract = When [Case (Deposit "alice" "alice" ada price)
                       (When [ processBobClaim
                             , processAliceClaim
                             ]
@@ -37,7 +37,7 @@ processBobClaim, processAliceClaim :: Case
 
 processBobClaim =
   Case bobClaims
-    (When [ Case carolAgrees (Pay "alice" (Party "bob") price Close)
+    (When [ Case carolAgrees (Pay "alice" (Party "bob") ada price Close)
           , Case carolDisagrees Close
           ]
          100
@@ -46,7 +46,7 @@ processBobClaim =
 processAliceClaim =
   Case aliceClaims
     (When [ Case carolAgrees Close,
-            Case carolDisagrees (Pay "alice" (Party "bob") price Close)
+            Case carolDisagrees (Pay "alice" (Party "bob") ada price Close)
           ]
        100
        Close)

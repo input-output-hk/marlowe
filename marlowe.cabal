@@ -33,6 +33,7 @@ executable marlowe
                         Language.Marlowe.Semantics
                         Language.Marlowe.Serialisation
                         Language.Marlowe.SemanticsTypes
+                        Language.Marlowe.SemanticsSerialisation
                         Language.Marlowe.Util
                         Language.Marlowe.ACTUS
                         Language.Marlowe.ACTUS.ActusContracts
@@ -50,7 +51,6 @@ executable marlowe
                         Language.Marlowe.Examples.ZCBG2
                         Language.Marlowe.Analysis.FSSet
                         Language.Marlowe.Analysis.FSMap
-                        Language.Marlowe.Analysis.FSSemantics
                         Language.Marlowe.Analysis.FSSemanticsFastVerbose
                         Language.Marlowe.Analysis.IntegerArray
                         Language.Marlowe.Analysis.Numbering

@@ -20,19 +20,18 @@ allActions l timeout cont timeoutCont =
        timeout timeoutCont
 
 payAll :: Party -> Payee -> Contract -> Contract
-payAll acId payee cont =
-  Pay acId payee (AvailableMoney acId) cont
+payAll acId payee = Pay acId payee ada (AvailableMoney acId ada)
 
 zeroCouponBondGuaranteed :: Party -> Party -> Party -> Integer -> Integer -> Timeout ->
                             Timeout -> Contract
 zeroCouponBondGuaranteed issuer investor guarantor notional discount startDate maturityDate =
-   allActions [ Deposit guarantorAcc guarantor (Constant notional)
-              , Deposit investorAcc investor (Constant (notional - discount)) ]
+   allActions [ Deposit guarantorAcc guarantor ada(Constant notional)
+              , Deposit investorAcc investor ada (Constant (notional - discount)) ]
               startDate
               (When []
                     startDate
                     (payAll investorAcc (Party issuer)
-                            (When [ Case (Deposit investorAcc issuer (Constant notional))
+                            (When [ Case (Deposit investorAcc issuer ada (Constant notional))
                                          Close
                                   ]
                                   maturityDate

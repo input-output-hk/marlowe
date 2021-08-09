@@ -4,13 +4,12 @@ module Language.Marlowe.Examples.DepositIncentive where
 import Language.Marlowe
 
 payAll :: Party -> Payee -> Contract -> Contract
-payAll acId payee cont =
-  Pay acId payee (AvailableMoney acId) cont
+payAll acId payee = Pay acId payee ada (AvailableMoney acId ada)
 
 contract :: Contract
 contract =
-  When [ Case (Deposit incentiveAcc incentiviser (incentiveAmt))
-              (When [ Case (Deposit depositAcc depositer (depositAmt))
+  When [ Case (Deposit incentiveAcc incentiviser ada incentiveAmt)
+              (When [ Case (Deposit depositAcc depositer ada depositAmt)
                            (When [ Case (Choice (ChoiceId "refund" depositer) [Bound 1 1])
                                         Close
                                  ]

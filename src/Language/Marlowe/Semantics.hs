@@ -14,7 +14,7 @@ import           GHC.Generics (Generic)
 import           Text.PrettyPrint.Leijen (text)
 import           Language.Marlowe.SemanticsTypes (IntervalResult(..), IntervalError(..), Input(..), InputContent(..), Environment(..), State(..),
                                                   Contract(..), Case(..), Payee(..), Action(..), SlotInterval(..), Observation(..), Value(..), ValueId,
-                                                  Money, Party, Ada(..), Slot(..), ivFrom, ivTo, inBounds, getAction, emptyState, getInputContent)
+                                                  Money, Party, Slot(..), ivFrom, ivTo, inBounds, getAction, emptyState, getInputContent, Accounts, Token (Token))
 
 -- EVALUATION
 
@@ -38,9 +38,7 @@ evalValue :: Environment -> State -> Value -> Integer
 evalValue env state value = let
     eval = evalValue env state
     in case value of
-        AvailableMoney accId -> let
-            balance = Map.findWithDefault (Lovelace 0) accId (accounts state)
-            in getLovelace balance
+        AvailableMoney accId token -> Map.findWithDefault 0 (accId, token) (accounts state)
         Constant integer     -> integer
         NegValue val         -> negate (eval val)
         AddValue lhs rhs     -> eval lhs + eval rhs
@@ -77,15 +75,14 @@ evalObservation env state obs = let
 
 
 -- | Pick the first account with money in it
-refundOne :: Map Party Money -> Maybe ((Party, Money), Map Party Money)
+refundOne :: Accounts  -> Maybe ((Party, Token, Money), Accounts)
 refundOne accounts = do
-    ((owner, money), rest) <- Map.minViewWithKey accounts
-    if getLovelace money > 0
-    then return ((owner, money), rest)
+    (((accId, tok), balance), rest) <- Map.minViewWithKey accounts
+    if balance > 0
+    then Just ((accId, tok, balance), rest)
     else refundOne rest
 
-
-data Payment = Payment Party Payee Money
+data Payment = Payment Party Payee Token Money
   deriving (Eq,Ord,Show,Read)
 
 data ReduceEffect = ReduceWithPayment Payment
@@ -94,36 +91,36 @@ data ReduceEffect = ReduceWithPayment Payment
 
 
 -- | Obtains the amount of money available an account
-moneyInAccount :: Party -> Map Party Money -> Money
-moneyInAccount = Map.findWithDefault (Lovelace 0)
+moneyInAccount :: Party -> Token -> Accounts -> Money
+moneyInAccount accId token = Map.findWithDefault 0 (accId, token)
 
 
 -- | Sets the amount of money available in an account
-updateMoneyInAccount :: Party -> Money -> Map Party Money -> Map Party Money
-updateMoneyInAccount accId money =
-    if getLovelace money <= 0 then Map.delete accId else Map.insert accId money
+updateMoneyInAccount :: Party -> Token -> Money -> Accounts -> Accounts
+updateMoneyInAccount accId token money =
+    if money <= 0 then Map.delete (accId, token) else Map.insert (accId, token) money
 
 
 {-| Add the given amount of money to an account (only if it is positive).
     Return the updated Map
 -}
-addMoneyToAccount :: Party -> Money -> Map Party Money -> Map Party Money
-addMoneyToAccount accId money accounts = let
-    balance = moneyInAccount accId accounts
+addMoneyToAccount :: Party -> Token -> Money -> Accounts -> Accounts
+addMoneyToAccount accId token money accounts = let
+    balance = moneyInAccount accId token accounts
     newBalance = balance + money
-    in if getLovelace money <= 0 then accounts
-    else updateMoneyInAccount accId newBalance accounts
+    in if money <= 0 then accounts
+    else updateMoneyInAccount accId token newBalance accounts
 
 
 {-| Gives the given amount of money to the given payee.
     Returns the appropriate effect and updated accounts
 -}
-giveMoney :: Party -> Payee -> Money -> Map Party Money -> (ReduceEffect, Map Party Money)
-giveMoney accountId payee amount accounts =
+giveMoney :: Party -> Payee -> Token -> Money -> Accounts -> (ReduceEffect, Accounts)
+giveMoney accountId payee token amount accounts =
   let newAccounts = case payee of
                       Party _ -> accounts
-                      Account accId -> addMoneyToAccount accId amount accounts
-  in (ReduceWithPayment (Payment accountId payee amount), newAccounts)
+                      Account accId -> addMoneyToAccount accId token amount accounts
+  in (ReduceWithPayment (Payment accountId payee token amount), newAccounts)
 
 -- REDUCE
 
@@ -149,25 +146,24 @@ reduceContractStep :: Environment -> State -> Contract -> ReduceStepResult
 reduceContractStep env state contract = case contract of
 
     Close -> case refundOne (accounts state) of
-        Just ((party, money), newAccounts) -> let
+        Just ((party, token, money), newAccounts) -> let
             newState = state { accounts = newAccounts }
-            in Reduced ReduceNoWarning (ReduceWithPayment (Payment party (Party party) money)) newState Close
+            in Reduced ReduceNoWarning (ReduceWithPayment (Payment party (Party party) token money)) newState Close
         Nothing -> NotReduced
 
-    Pay accId payee val cont -> let
-        amountToPay = evalValue env state val
-        in  if amountToPay <= 0
-            then Reduced (ReduceNonPositivePay accId payee amountToPay) ReduceNoPayment state cont
+    Pay accId payee token val cont -> let
+        moneyToPay = evalValue env state val
+        in  if moneyToPay <= 0
+            then Reduced (ReduceNonPositivePay accId payee moneyToPay) ReduceNoPayment state cont
             else let
-                balance    = moneyInAccount accId (accounts state) -- always positive
-                moneyToPay = Lovelace amountToPay -- always positive
+                balance    = moneyInAccount accId token (accounts state) -- always positive
                 paidMoney  = min balance moneyToPay -- always positive
                 newBalance = balance - paidMoney -- always positive
-                newAccs    = updateMoneyInAccount accId newBalance (accounts state)
+                newAccs    = updateMoneyInAccount accId token newBalance (accounts state)
                 warning = if paidMoney < moneyToPay
                           then ReducePartialPay accId payee paidMoney moneyToPay
                           else ReduceNoWarning
-                (payment, finalAccs) = giveMoney accId payee paidMoney newAccs
+                (payment, finalAccs) = giveMoney accId payee token paidMoney newAccs
                 in Reduced warning payment (state { accounts = finalAccs }) cont
 
     If obs cont1 cont2 -> let
@@ -233,13 +229,13 @@ data ApplyAction = AppliedAction ApplyWarning State
 
 -- | Try to apply a single input contentent to a single action
 applyAction :: Environment -> State -> InputContent -> Action -> ApplyAction
-applyAction env state (IDeposit accId1 party1 money) (Deposit accId2 party2 val) =
+applyAction env state (IDeposit accId1 party1 token1 money) (Deposit accId2 party2 token2 val) =
     let amount = evalValue env state val
-    in if accId1 == accId2 && party1 == party2 && getLovelace money == amount
+    in if accId1 == accId2 && party1 == party2 && token1 == token2 && money == amount
        then let warning = if amount > 0
                           then ApplyNoWarning
                           else ApplyNonPositiveDeposit party1 accId2 amount
-                newState = state { accounts = addMoneyToAccount accId1 money (accounts state) }
+                newState = state { accounts = addMoneyToAccount accId1 token1 money (accounts state) }
             in AppliedAction warning newState
        else NotAppliedAction
 applyAction env state (IChoice choId1 choice) (Choice choId2 bounds) =
@@ -427,7 +423,7 @@ playTrace sl c = playTraceAux (TOR { txOutWarnings = []
 contractLifespanUpperBound :: Contract -> Integer
 contractLifespanUpperBound contract = case contract of
     Close -> 0
-    Pay _ _ _ cont -> contractLifespanUpperBound cont
+    Pay _ _ _ _ cont -> contractLifespanUpperBound cont
     If _ contract1 contract2 ->
         max (contractLifespanUpperBound contract1) (contractLifespanUpperBound contract2)
     When cases timeout subContract -> let

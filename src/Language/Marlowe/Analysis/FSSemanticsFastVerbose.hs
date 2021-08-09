@@ -20,7 +20,7 @@ import           Language.Marlowe.SemanticsTypes
 ---------------------------------------------------
 
 -- Symbolic version of Input (with symbolic value but concrete identifiers)
-data SymInput = SymDeposit Party Party SInteger
+data SymInput = SymDeposit Party Party Token SInteger
               | SymChoice ChoiceId SInteger
               | SymNotify
 
@@ -62,7 +62,7 @@ data SymState = SymState { lowSlot        :: SInteger
                          , paramTrace     :: [(SInteger, SInteger, SInteger, SInteger)]
                          , symInput       :: Maybe SymInput
                          , whenPos        :: Integer
-                         , symAccounts    :: Map Party SInteger
+                         , symAccounts    :: Map (Party, Token) SInteger
                          , symChoices     :: Map ChoiceId SInteger
                          , symBoundValues :: Map ValueId SInteger
                          }
@@ -119,7 +119,7 @@ mkInitialSymState pt (Just State { accounts = accs
                        , paramTrace = pt
                        , symInput = Nothing
                        , whenPos = 0
-                       , symAccounts = toSymMap $ M.map getLovelace accs
+                       , symAccounts = toSymMap accs
                        , symChoices = toSymMap cho
                        , symBoundValues = toSymMap bVal }
 
@@ -149,15 +149,15 @@ convertToSymbolicTrace ((lowS, highS, inp, pos):t) ((a, b, c, d):t2) =
   where
     getSymValFrom :: Maybe SymInput -> SInteger
     getSymValFrom Nothing                     = 0
-    getSymValFrom (Just (SymDeposit _ _ val)) = val
+    getSymValFrom (Just (SymDeposit _ _ _ val)) = val
     getSymValFrom (Just (SymChoice _ val))    = val
     getSymValFrom (Just SymNotify)            = 0
 convertToSymbolicTrace _ _ = error "Provided symbolic trace is not long enough"
 
 -- Symbolic version evalValue
 symEvalVal :: Value -> SymState -> SInteger
-symEvalVal (AvailableMoney accId) symState =
-  M.findWithDefault (literal 0) accId (symAccounts symState)
+symEvalVal (AvailableMoney accId tok) symState =
+  M.findWithDefault (literal 0) (accId, tok) (symAccounts symState)
 symEvalVal (Constant inte) symState = literal inte
 symEvalVal (NegValue val) symState = - symEvalVal val symState
 symEvalVal (AddValue lhs rhs) symState = symEvalVal lhs symState +
@@ -206,11 +206,11 @@ symEvalObs FalseObs _ = sFalse
 -- Update the symbolic state given a symbolic input (just the maps)
 updateSymInput :: Maybe SymInput -> SymState -> Symbolic SymState
 updateSymInput Nothing symState = return symState
-updateSymInput (Just (SymDeposit accId _ val)) symState =
-  let resultVal = M.findWithDefault 0 accId (symAccounts symState)
+updateSymInput (Just (SymDeposit accId _ tok val)) symState =
+  let resultVal = M.findWithDefault 0 (accId, tok) (symAccounts symState)
                    + smax (literal 0) val in
   return (symState {symAccounts =
-                       M.insert accId resultVal
+                       M.insert (accId, tok) resultVal
                                 (symAccounts symState)})
 updateSymInput (Just (SymChoice choId val)) symState =
   return (symState {symChoices = M.insert choId val (symChoices symState)})
@@ -286,18 +286,18 @@ isValidAndFailsAux hasErr Close sState =
   return (hasErr .&& convertToSymbolicTrace ((lowSlot sState, highSlot sState,
                                               symInput sState, whenPos sState)
                                               :traces sState) (paramTrace sState))
-isValidAndFailsAux hasErr (Pay accId payee val cont) sState =
+isValidAndFailsAux hasErr (Pay accId payee token val cont) sState =
   do let concVal = symEvalVal val sState
-     let originalMoney = M.findWithDefault 0 accId (symAccounts sState)
+     let originalMoney = M.findWithDefault 0 (accId, token) (symAccounts sState)
      let remainingMoneyInAccount = originalMoney - smax (literal 0) concVal
-     let newAccs = M.insert accId (smax (literal 0) remainingMoneyInAccount)
+     let newAccs = M.insert (accId, token) (smax (literal 0) remainingMoneyInAccount)
                                   (symAccounts sState)
      let finalSState = sState { symAccounts =
            case payee of
              (Account destAccId) ->
-                M.insert destAccId
+                M.insert (destAccId, token)
                          (smin originalMoney (smax (literal 0) concVal)
-                            + M.findWithDefault 0 destAccId newAccs)
+                            + M.findWithDefault 0 (destAccId, token) newAccs)
                          newAccs
              _ -> newAccs }
      isValidAndFailsAux ((remainingMoneyInAccount .< 0) -- Partial payment
@@ -358,17 +358,17 @@ isValidAndFailsWhen hasErr [] timeout cont previousMatch sState pos =
                <- applyInputConditions newLowSlot newHighSlot
                                        hasErr Nothing timeout sState 0 cont
      return (ite cond newTrace sFalse)
-isValidAndFailsWhen hasErr (Case (Deposit accId party val) cont:rest)
+isValidAndFailsWhen hasErr (Case (Deposit accId party token val) cont:rest)
                     timeout timCont previousMatch sState pos =
   do (newLowSlot, newHighSlot, sStateWithInput) <- addFreshSlotsToState sState
      let concVal = symEvalVal val sStateWithInput
-     let symInput = SymDeposit accId party concVal
+     let symInput = SymDeposit accId party token concVal
      let clashResult = previousMatch symInput sStateWithInput
      let newPreviousMatch otherSymInput pmSymState =
            let pmConcVal = symEvalVal val pmSymState in
            case otherSymInput of
-             SymDeposit otherAccId otherParty otherConcVal ->
-               if (otherAccId == accId) && (otherParty == party)
+             SymDeposit otherAccId otherParty otherToken otherConcVal ->
+               if (otherAccId == accId) && (otherParty == party) && (otherToken == token)
                then (otherConcVal .== pmConcVal) .|| previousMatch otherSymInput pmSymState
                else previousMatch otherSymInput pmSymState
              _ -> previousMatch otherSymInput pmSymState
@@ -417,13 +417,13 @@ isValidAndFailsWhen hasErr (Case (Notify obs) cont:rest)
                <- applyInputConditions newLowSlot newHighSlot
                                        hasErr (Just symInput) timeout sState pos cont
      return (ite (newCond .&& obsRes .&& sNot clashResult) newTrace contTrace)
-isValidAndFailsWhen hasErr (MerkleizedCase (Deposit accId party val) _:rest)
+isValidAndFailsWhen hasErr (MerkleizedCase (Deposit accId party token val) _:rest)
                     timeout timCont previousMatch sState pos =
     let newPreviousMatch otherSymInput pmSymState =
            let pmConcVal = symEvalVal val pmSymState in
            case otherSymInput of
-             SymDeposit otherAccId otherParty otherConcVal ->
-               if (otherAccId == accId) && (otherParty == party)
+             SymDeposit otherAccId otherParty otherToken otherConcVal ->
+               if (otherAccId == accId) && (otherParty == party) && (otherToken == token)
                then (otherConcVal .== pmConcVal) .|| previousMatch otherSymInput pmSymState
                else previousMatch otherSymInput pmSymState
              _ -> previousMatch otherSymInput pmSymState in
@@ -458,7 +458,7 @@ isValidAndFailsWhen hasErr (MerkleizedCase (Notify obs) _:rest)
 -- has been proven in TransactionBound.thy
 countWhens :: Contract -> Integer
 countWhens Close            = 0
-countWhens (Pay uv uw ux c) = countWhens c
+countWhens (Pay uv uw ux uy c) = countWhens c
 countWhens (If uz c c2)     = max (countWhens c) (countWhens c2)
 countWhens (When cl t c)    = 1 + max (countWhensCaseList cl) (countWhens c)
 countWhens (Let va vb c)    = countWhens c
@@ -528,9 +528,9 @@ caseToInput [] _ _ = error "Wrong number of cases interpreting result"
 caseToInput (Case h _:t) c v
   | c > 1 = caseToInput t (c - 1) v
   | c == 1 = NormalInput $ case h of
-               Deposit accId party _ -> IDeposit accId party (Lovelace v)
-               Choice choId _        -> IChoice choId v
-               Notify _              -> INotify
+               Deposit accId party tok _ -> IDeposit accId party tok v
+               Choice choId _            -> IChoice choId v
+               Notify _                  -> INotify
   | otherwise = error "Negative case number"
 caseToInput (MerkleizedCase _ _:t) c v
   | c > 1 = caseToInput t (c - 1) v

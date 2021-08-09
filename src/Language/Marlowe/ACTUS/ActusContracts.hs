@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NamedFieldPuns #-}
+
 module Language.Marlowe.ACTUS.ActusContracts where
 
 
@@ -60,8 +60,8 @@ genPrincialAtMaturnityContract investor issuer config@ContractConfig{..} = let
             to   = if daysum <= 0 then issuer else investor
             amount = abs daysum
             cont = if amount == 0 then id
-                   else \contract -> f $ When [Case (Deposit acc from $ Constant amount)
-                        (Pay acc (Party to) (Constant amount) contract)] (dayToSlot day) Close
+                   else \contract -> f $ When [Case (Deposit acc from ada $ Constant amount)
+                        (Pay acc (Party to) ada (Constant amount) contract)] (dayToSlot day) Close
             in (cont, newState)
 
 genPrincialAtMaturnityGuaranteedContract :: Party -> Party -> Party ->  ContractConfig -> Contract
@@ -76,7 +76,7 @@ genPrincialAtMaturnityGuaranteedContract investor issuer guarantor config@Contra
     cs = pamContractSchedule config state
     scheduledEvents = eventScheduleByDay cs
     startDate = dayToSlot initialExchangeDate
-    schedule = traceShow (totalPayoff) $ Map.toList scheduledEvents
+    schedule = traceShow totalPayoff $ Map.toList scheduledEvents
     totalPayoff = let
         (amount, _) = foldl (\(amount, st) (day, event) -> let
             (amount', st') = pamPayoffAndStateTransition RPA config event day st
@@ -84,7 +84,7 @@ genPrincialAtMaturnityGuaranteedContract investor issuer guarantor config@Contra
             (0, state) (eventScheduleByDay1 cs)
         in amount
 
-    guaranteed = When [Case (Deposit acc guarantor $ Constant totalPayoff) cont]
+    guaranteed = When [Case (Deposit acc guarantor ada $ Constant totalPayoff) cont]
                 startDate Close
 
     generator (f, state) (day, events) =
@@ -97,9 +97,9 @@ genPrincialAtMaturnityGuaranteedContract investor issuer guarantor config@Contra
             to   = if daysum <= 0 then issuer else investor
             amount = abs daysum
             cont = if amount == 0 then id
-                    else \contract -> f $ When [Case (Deposit acc from $ Constant amount)
-                        (Pay acc (Party to) (Constant amount)
+                    else \contract -> f $ When [Case (Deposit acc from ada $ Constant amount)
+                        (Pay acc (Party to) ada (Constant amount)
                             (if from == investor then contract
-                            else (Pay acc (Party guarantor) (Constant amount) contract)))]
+                            else Pay acc (Party guarantor) ada (Constant amount) contract))]
                         (dayToSlot day) Close
             in (cont, newState)

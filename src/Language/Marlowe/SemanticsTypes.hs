@@ -31,42 +31,17 @@ instance Num Slot where
     fromInteger = Slot
     negate (Slot l) = Slot (negate l)
 
-newtype Ada = Lovelace { getLovelace :: Integer }
-  deriving stock (Eq,Ord,Generic)
-  deriving anyclass Pretty
-  deriving anyclass Serialise
+data Party = PubKey ByteString
+           | Role ByteString
+  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
-instance Show Ada where
-    showsPrec p (Lovelace n) r = showsPrec p n r
-instance Read Ada where
-    readsPrec p x = [(Lovelace v, s) | (v, s) <- readsPrec p x]
-
-instance Num Ada where
-    Lovelace l + Lovelace r = Lovelace (l + r)
-    Lovelace l * Lovelace r = Lovelace (l * r)
-    abs (Lovelace l) = Lovelace (abs l)
-    signum (Lovelace l) = Lovelace (signum l)
-    fromInteger = Lovelace
-    negate (Lovelace l) = Lovelace (negate l)
-
-newtype PubKey = PubKey Text
-  deriving (Eq,Ord,Generic)
-  deriving anyclass Serialise
-
-instance Pretty PubKey where
-  prettyFragment = text . show
-
-instance Show PubKey where
-  showsPrec p (PubKey txt) r = showsPrec p (T.unpack txt) r
-instance Read PubKey where
-  readsPrec p x = [(PubKey (T.pack v), s) | (v, s) <- readsPrec p x]
-
-type Party = PubKey
-type ChoiceName = Text     -- Needs to be updated in playground.
+type AccountId = Party
+type ChoiceName = ByteString     -- Needs to be updated in playground.
 type NumAccount = Integer
 type Timeout = Slot
-type Money = Ada
+type Money = Integer
 type ChosenNum = Integer
+type Accounts = Map (AccountId, Token) Integer
 
 data ChoiceId = ChoiceId ChoiceName Party
   deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
@@ -74,6 +49,9 @@ data ChoiceId = ChoiceId ChoiceName Party
 newtype ValueId = ValueId Text
   deriving stock (Eq,Ord,Generic)
   deriving anyclass Serialise
+
+data Token = Token ByteString ByteString
+  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
 instance Pretty ValueId where
   prettyFragment = text . show
@@ -83,18 +61,18 @@ instance Show ValueId where
 instance Read ValueId where
   readsPrec p x = [(ValueId (T.pack v), s) | (v, s) <- readsPrec p x]
 
-data Value = AvailableMoney Party
-            | Constant Integer
-            | NegValue Value
-            | AddValue Value Value
-            | SubValue Value Value
-            | MulValue Value Value
-            | Scale Rational Value
-            | ChoiceValue ChoiceId
-            | SlotIntervalStart
-            | SlotIntervalEnd
-            | UseValue ValueId
-            | Cond Observation Value Value
+data Value = AvailableMoney Party Token
+           | Constant Integer
+           | NegValue Value
+           | AddValue Value Value
+           | SubValue Value Value
+           | MulValue Value Value
+           | Scale Rational Value
+           | ChoiceValue ChoiceId
+           | SlotIntervalStart
+           | SlotIntervalEnd
+           | UseValue ValueId
+           | Cond Observation Value Value
   deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
 data Observation = AndObs Observation Observation
@@ -124,7 +102,7 @@ data Bound = Bound Integer Integer
 inBounds :: ChosenNum -> [Bound] -> Bool
 inBounds num = any (\(Bound l u) -> num >= l && num <= u)
 
-data Action = Deposit Party Party Value
+data Action = Deposit Party Party Token Value
             | Choice ChoiceId [Bound]
             | Notify Observation
   deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
@@ -142,14 +120,14 @@ getAction (Case action _) = action
 getAction (MerkleizedCase action _) = action
 
 data Contract = Close
-              | Pay Party Payee Value Contract
+              | Pay Party Payee Token Value Contract
               | If Observation Contract Contract
               | When [Case] Timeout Contract
               | Let ValueId Value Contract
               | Assert Observation Contract
   deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
 
-data State = State { accounts    :: Map Party Money
+data State = State { accounts    :: Map (Party, Token) Money
                    , choices     :: Map ChoiceId ChosenNum
                    , boundValues :: Map ValueId Integer
                    , minSlot     :: Slot }
@@ -164,7 +142,7 @@ emptyState sn = State { accounts = Map.empty
 newtype Environment = Environment { slotInterval :: SlotInterval }
   deriving (Eq,Ord,Show,Read)
 
-data InputContent = IDeposit Party Party Money
+data InputContent = IDeposit Party Party Token Money
                   | IChoice ChoiceId ChosenNum
                   | INotify
   deriving (Eq,Ord,Show,Read)

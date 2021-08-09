@@ -2,9 +2,9 @@
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 module Language.Marlowe.Semantics where
 
-import           Codec.Serialise (deserialise, Serialise)
 import           Crypto.Hash.SHA256 (hash)
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (fromStrict)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -12,6 +12,7 @@ import           Data.Text (Text)
 import           Data.Ratio (denominator, numerator)
 import           GHC.Generics (Generic)
 import           Text.PrettyPrint.Leijen (text)
+import           Language.Marlowe.SemanticsDeserialisation (byteStringToContract)
 import           Language.Marlowe.SemanticsTypes (IntervalResult(..), IntervalError(..), Input(..), InputContent(..), Environment(..), State(..),
                                                   Contract(..), Case(..), Payee(..), Action(..), SlotInterval(..), Observation(..), Value(..), ValueId,
                                                   Money, Party, Slot(..), ivFrom, ivTo, inBounds, getAction, emptyState, getInputContent, Accounts, Token (Token))
@@ -254,7 +255,9 @@ getContinuation :: Input -> Case -> Maybe Contract
 getContinuation (NormalInput _) (Case _ continuation) = Just continuation
 getContinuation (MerkleizedInput _ serialisedContinuation) (MerkleizedCase _ continuationHash) =
   if hash serialisedContinuation == continuationHash
-  then either (const Nothing) Just (deserialise $ fromStrict serialisedContinuation :: Either String Contract)
+  then case byteStringToContract serialisedContinuation of
+        Nothing -> Nothing
+        Just (c, bs) -> if BS.null bs then Just c else Nothing
   else Nothing
 getContinuation _ _ = Nothing
 

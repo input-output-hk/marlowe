@@ -6,7 +6,6 @@ module Language.Marlowe.SemanticsTypes where
 
 import qualified Data.Text as T
 import           GHC.Generics (Generic)
-import           Codec.Serialise (Serialise)
 import           Data.Text (Text)
 import           Language.Marlowe.Pretty (Pretty, prettyFragment)
 import           Data.ByteString (ByteString)
@@ -16,7 +15,7 @@ import           Text.PrettyPrint.Leijen (text)
 
 newtype Slot = Slot { getSlot :: Integer }
   deriving stock (Eq,Ord,Generic)
-  deriving newtype (Pretty,Serialise)
+  deriving newtype (Pretty)
 
 instance Show Slot where
   showsPrec p (Slot n) r = showsPrec p n r
@@ -33,7 +32,7 @@ instance Num Slot where
 
 data Party = PubKey ByteString
            | Role ByteString
-  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 type AccountId = Party
 type ChoiceName = ByteString     -- Needs to be updated in playground.
@@ -44,14 +43,13 @@ type ChosenNum = Integer
 type Accounts = Map (AccountId, Token) Integer
 
 data ChoiceId = ChoiceId ChoiceName Party
-  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 newtype ValueId = ValueId Text
   deriving stock (Eq,Ord,Generic)
-  deriving anyclass Serialise
 
 data Token = Token ByteString ByteString
-  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 instance Pretty ValueId where
   prettyFragment = text . show
@@ -73,7 +71,7 @@ data Value = AvailableMoney Party Token
            | SlotIntervalEnd
            | UseValue ValueId
            | Cond Observation Value Value
-  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 data Observation = AndObs Observation Observation
                   | OrObs Observation Observation
@@ -86,10 +84,10 @@ data Observation = AndObs Observation Observation
                   | ValueEQ Value Value
                   | TrueObs
                   | FalseObs
-  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 data SlotInterval = SlotInterval Slot Slot
-  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 ivFrom, ivTo :: SlotInterval -> Slot
 
@@ -97,7 +95,7 @@ ivFrom (SlotInterval from _) = from
 ivTo   (SlotInterval _ to)   = to
 
 data Bound = Bound Integer Integer
-  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 inBounds :: ChosenNum -> [Bound] -> Bool
 inBounds num = any (\(Bound l u) -> num >= l && num <= u)
@@ -105,15 +103,15 @@ inBounds num = any (\(Bound l u) -> num >= l && num <= u)
 data Action = Deposit Party Party Token Value
             | Choice ChoiceId [Bound]
             | Notify Observation
-  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 data Payee = Account Party
            | Party Party
-  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 data Case = Case Action Contract
           | MerkleizedCase Action ByteString
-  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 getAction :: Case -> Action
 getAction (Case action _) = action
@@ -125,7 +123,7 @@ data Contract = Close
               | When [Case] Timeout Contract
               | Let ValueId Value Contract
               | Assert Observation Contract
-  deriving (Eq,Ord,Show,Read,Generic,Serialise,Pretty)
+  deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 data State = State { accounts    :: Map (Party, Token) Money
                    , choices     :: Map ChoiceId ChosenNum

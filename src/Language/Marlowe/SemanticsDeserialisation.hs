@@ -1,11 +1,11 @@
-module Language.Marlowe.SemanticsSerialisation (byteStringToContract) where
+module Language.Marlowe.SemanticsDeserialisation (byteStringToContract) where
 
 import Data.ByteString (ByteString)
 import Data.Ratio ((%))
 import Language.Marlowe.SemanticsTypes (Action(..), Bound(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Party(..), Payee(..), Slot(Slot), Token(..),
                                         Value(AddValue, AvailableMoney, ChoiceValue, Cond, Constant, NegValue, Scale, SlotIntervalEnd, SlotIntervalStart, SubValue, UseValue),
                                         ValueId(..),)
-import Language.Marlowe.Serialisation (byteStringToInt, byteStringToList, byteStringToPositiveInt, getByteString)
+import Language.Marlowe.Deserialisation (byteStringToInt, byteStringToList, byteStringToPositiveInt, getByteString)
 import Data.Text.Encoding (decodeUtf8)
 
 byteStringToParty :: ByteString -> Maybe (Party, ByteString)

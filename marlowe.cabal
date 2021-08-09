@@ -18,7 +18,6 @@ executable marlowe
                         QuickCheck,
                         mtl,
                         sbv,
-                        serialise,
                         tasty,
                         tasty-hunit,
                         tasty-smallcheck,
@@ -31,9 +30,9 @@ executable marlowe
                         Language.Marlowe
                         Language.Marlowe.Pretty
                         Language.Marlowe.Semantics
-                        Language.Marlowe.Serialisation
+                        Language.Marlowe.Deserialisation
                         Language.Marlowe.SemanticsTypes
-                        Language.Marlowe.SemanticsSerialisation
+                        Language.Marlowe.SemanticsDeserialisation
                         Language.Marlowe.Util
                         Language.Marlowe.ACTUS
                         Language.Marlowe.ACTUS.ActusContracts

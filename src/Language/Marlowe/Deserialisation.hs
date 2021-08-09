@@ -1,4 +1,4 @@
-module Language.Marlowe.Serialisation (byteStringToPositiveInt, getByteString, byteStringToInt, byteStringToList) where
+module Language.Marlowe.Deserialisation (byteStringToPositiveInt, getByteString, byteStringToInt, byteStringToList) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString as BS(ByteString, length, splitAt, uncons)

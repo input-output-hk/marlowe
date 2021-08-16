@@ -30,9 +30,12 @@ executable marlowe
                         Language.Marlowe
                         Language.Marlowe.Pretty
                         Language.Marlowe.Semantics
+                        Language.Marlowe.ExtendedBuilder
+                        Language.Marlowe.Serialisation
                         Language.Marlowe.Deserialisation
                         Language.Marlowe.SemanticsTypes
                         Language.Marlowe.SemanticsDeserialisation
+                        Language.Marlowe.SemanticsSerialisation
                         Language.Marlowe.Util
                         Language.Marlowe.ACTUS
                         Language.Marlowe.ACTUS.ActusContracts

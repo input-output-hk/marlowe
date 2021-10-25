@@ -57,15 +57,15 @@ lemma byteStringToParty_inverseRoundtrip : "byteStringToParty x = Some (a, b) \<
   done
 
 fun tokenToByteString :: "Token \<Rightarrow> ByteString" where
-"tokenToByteString (Token tn cs) = (packByteString tn) @ (packByteString cs)"
+"tokenToByteString (Token cs tn) = (packByteString cs) @ (packByteString tn)"
 
 fun byteStringToToken :: "ByteString \<Rightarrow> (Token \<times> ByteString) option" where
 "byteStringToToken x =
   (case getByteString x of
       None \<Rightarrow> None
-    | Some (tn, t1) \<Rightarrow> (case getByteString t1 of
+    | Some (cs, t1) \<Rightarrow> (case getByteString t1 of
                           None \<Rightarrow> None
-                        | Some (cs, t2) \<Rightarrow> Some (Token tn cs, t2)))"
+                        | Some (tn, t2) \<Rightarrow> Some (Token cs tn, t2)))"
 
 lemma tokenToByteStringToToken : "byteStringToToken ((tokenToByteString x) @ y) = Some (x, y)"
   apply (cases x)

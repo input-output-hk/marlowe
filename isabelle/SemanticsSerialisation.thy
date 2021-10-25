@@ -238,7 +238,7 @@ function (domintros) byteStringToValue :: "ByteString \<Rightarrow> (Value \<tim
          (if y < 4
          then Some (AddValue lhs rhs, t3)
          else Some (SubValue lhs rhs, t3))
-       else Some (SubValue lhs rhs, t3)))))
+       else Some (MulValue lhs rhs, t3)))))
    else 
      (if y < 9
      then 

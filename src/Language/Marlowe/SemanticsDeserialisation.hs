@@ -45,10 +45,10 @@ byteStringToToken :: ByteString -> Maybe (Token, ByteString)
 byteStringToToken x =
   case getByteString x of
     Nothing -> Nothing
-    Just (tn, t1) ->
+    Just (cs, t1) ->
       ( case getByteString t1 of
           Nothing -> Nothing
-          Just (cs, t2) -> Just (Token tn cs, t2)
+          Just (tn, t2) -> Just (Token cs tn, t2)
       )
 
 byteStringToObservation :: ByteString -> Maybe (Observation, ByteString)

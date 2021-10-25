@@ -19,7 +19,7 @@ valueIdToByteString :: ValueId -> ExtendedBuilder
 valueIdToByteString (ValueId n) = packByteString (ExtendedBuilder.byteString (Text.encodeUtf8 n))
 
 tokenToByteString :: Token -> ExtendedBuilder
-tokenToByteString (Token tn cs) = packByteString (ExtendedBuilder.byteString tn) <> packByteString (ExtendedBuilder.byteString cs)
+tokenToByteString (Token cs tn) = packByteString (ExtendedBuilder.byteString cs) <> packByteString (ExtendedBuilder.byteString tn)
 
 observationToByteString :: Observation -> ExtendedBuilder
 observationToByteString (NotObs subObs) = positiveIntToByteString 0 <> observationToByteString subObs

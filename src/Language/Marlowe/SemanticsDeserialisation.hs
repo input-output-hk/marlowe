@@ -175,11 +175,16 @@ byteStringToValue x =
                         ( case byteStringToValue t2 of
                             Nothing -> Nothing
                             Just (rhs, t3) ->
-                              ( if y < 5 && y < 4
+                              ( if y < 5
                                   then
-                                    Just (AddValue lhs rhs, t3)
+                                    ( if y < 4
+                                        then
+                                          Just (AddValue lhs rhs, t3)
+                                        else
+                                          Just (SubValue lhs rhs, t3)
+                                    )
                                   else
-                                    Just (SubValue lhs rhs, t3)
+                                    Just (MulValue lhs rhs, t3)
                               )
                         )
                   )

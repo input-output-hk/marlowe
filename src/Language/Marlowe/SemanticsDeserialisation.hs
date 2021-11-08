@@ -3,7 +3,7 @@ module Language.Marlowe.SemanticsDeserialisation (byteStringToContract) where
 import Data.ByteString (ByteString)
 import Data.Ratio ((%))
 import Language.Marlowe.SemanticsTypes (Action(..), Bound(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Party(..), Payee(..), Slot(Slot), Token(..),
-                                        Value(AddValue, AvailableMoney, ChoiceValue, Cond, Constant, NegValue, Scale, SlotIntervalEnd, SlotIntervalStart, SubValue, UseValue),
+                                        Value(AddValue, AvailableMoney, ChoiceValue, Cond, Constant, DivValue, NegValue, Scale, SlotIntervalEnd, SlotIntervalStart, SubValue, UseValue),
                                         ValueId(..),)
 import Language.Marlowe.Deserialisation (byteStringToInt, byteStringToList, byteStringToPositiveInt, getByteString)
 import Data.Text.Encoding (decodeUtf8)
@@ -242,6 +242,16 @@ byteStringToValue x =
                                           )
                                     )
                               )
+                            else if y == 12
+                              then
+                                ( case byteStringToValue t1 of
+                                    Nothing -> Nothing
+                                    Just (lhs, t2) ->
+                                      ( case byteStringToValue t2 of
+                                          Nothing -> Nothing
+                                          Just (rhs, t3) -> Just (DivValue lhs rhs, t3)
+                                      )
+                                )
                             else Nothing
                         )
                   )

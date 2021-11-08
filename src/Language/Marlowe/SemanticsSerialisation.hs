@@ -47,6 +47,7 @@ valueToByteString SlotIntervalStart = positiveIntToByteString 8
 valueToByteString SlotIntervalEnd = positiveIntToByteString 9
 valueToByteString (UseValue valId) = positiveIntToByteString 10 <> valueIdToByteString valId
 valueToByteString (Cond cond thn els) = positiveIntToByteString 11 <> observationToByteString cond <> valueToByteString thn <> valueToByteString els
+valueToByteString (DivValue lhs rhs) = positiveIntToByteString 12 <> valueToByteString lhs <> valueToByteString rhs
 
 payeeToByteString :: Payee -> ExtendedBuilder
 payeeToByteString (Account accId) = positiveIntToByteString 0 <> partyToByteString accId

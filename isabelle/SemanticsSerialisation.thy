@@ -616,7 +616,7 @@ fun byteStringToAction :: "ByteString \<Rightarrow> (Action \<times> ByteString)
           (case byteStringToList byteStringToBound t2 of None \<Rightarrow> None | Some (bounds, t3) \<Rightarrow>
                 Some (Choice choId bounds, t3))))
    else 
-     (if y = 3
+     (if y = 2
      then (case byteStringToObservation t1 of None \<Rightarrow> None | Some (obs, t2) \<Rightarrow>
                 Some (Notify obs, t2))
      else None)))"

@@ -319,7 +319,7 @@ byteStringToAction x =
                   )
             )
           else
-            ( if y == 3
+            ( if y == 2
                 then
                   ( case byteStringToObservation t1 of
                       Nothing -> Nothing

@@ -1,52 +1,57 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Language.Marlowe.Util where
-import           Data.List                  (foldl')
-import           Data.Map.Strict            (Map)
-import qualified Data.Map.Strict            as Map
-import           Data.String
-import qualified Data.Text                  as T
+import           Data.List                       (foldl')
+import           Data.Map.Strict                 (Map)
+import qualified Data.Map.Strict                 as Map
+import           Data.String                     (IsString(..))
+import qualified Data.Text                       as T
+import           Language.Marlowe.Semantics      (Payment(..))
+import           Language.Marlowe.SemanticsTypes (Input, InputContent(IDeposit), Payee(Party), ValueId(..),
+                                                  Money, Party(..), getInputContent, Token (Token))
+import           Data.Text.Encoding (encodeUtf8)
 
-import           Language.Marlowe.Semantics
+ada :: Token
+ada = Token "" ""
 
-instance IsString PubKey where
-    fromString s = PubKey (T.pack s)
+instance IsString Party where
+    fromString s = Role (encodeUtf8 $ T.pack s)
 
 instance IsString ValueId where
     fromString s = ValueId (T.pack s)
 
-alicePubKey :: PubKey
-alicePubKey = PubKey "Alice"
+aliceRole :: Party
+aliceRole = Role "Alice"
 
 aliceAcc :: Party
-aliceAcc = alicePubKey
+aliceAcc = aliceRole
 
-bobPubKey :: PubKey
-bobPubKey = PubKey "Bob"
+bobRole :: Party
+bobRole = Role "Bob"
 
 bobAcc :: Party
-bobAcc = bobPubKey
+bobAcc = bobRole
 
-carolPubKey :: PubKey
-carolPubKey = PubKey "Carol"
+carolRole :: Party
+carolRole = Role "Carol"
 
 carolAcc :: Party
-carolAcc = carolPubKey
+carolAcc = carolRole
 
-charliePubKey :: PubKey
-charliePubKey = PubKey "Charlie"
+charlieRole :: Party
+charlieRole = Role "Charlie"
 
 charlieAcc :: Party
-charlieAcc = charliePubKey
+charlieAcc = charlieRole
 
-evePubKey :: PubKey
-evePubKey = PubKey "Eve"
+eveRole :: Party
+eveRole = Role "Eve"
 
 eveAcc :: Party
-eveAcc = evePubKey
+eveAcc = eveRole
 
 
-type AccountsDiff = Map Party Money
+type AccountsDiff = Map (Party, Token) Money
 
 
 emptyAccountsDiff :: AccountsDiff
@@ -54,16 +59,16 @@ emptyAccountsDiff = Map.empty
 
 
 isEmptyAccountsDiff :: AccountsDiff -> Bool
-isEmptyAccountsDiff = all (== Lovelace 0)
+isEmptyAccountsDiff = all (== 0)
 
 
 -- Adds a value to the map of outcomes
-addAccountsDiff :: Party -> Money -> AccountsDiff -> AccountsDiff
-addAccountsDiff party diffValue trOut = let
-    newValue = case Map.lookup party trOut of
+addAccountsDiff :: (Party, Token) -> Money -> AccountsDiff -> AccountsDiff
+addAccountsDiff accId diffValue trOut = let
+    newValue = case Map.lookup accId trOut of
         Just value -> value + diffValue
         Nothing    -> diffValue
-    in Map.insert party newValue trOut
+    in Map.insert accId newValue trOut
 
 
 -- | Extract total outcomes from transaction inputs and outputs
@@ -71,6 +76,6 @@ getAccountsDiff :: [Payment] -> [Input] -> AccountsDiff
 getAccountsDiff payments inputs =
     foldl' (\acc (p, m) -> addAccountsDiff p m acc) emptyAccountsDiff (incomes ++ outcomes)
   where
-    incomes  = [ (p,  m) | IDeposit _ p m <- inputs ]
-    outcomes = [ (p, -m) | Payment p m  <- payments ]
+    incomes  = [ ((p, t),  m) | IDeposit _ p t m <- map getInputContent inputs ]
+    outcomes = [ ((p, t), -m) | Payment _ (Party p) t m  <- payments ]
 

@@ -44,7 +44,7 @@ lemma addMoneyToAccountPositive :
 
 lemma giveMoney_gtZero :
     "\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
-       (eff, newAccs) = giveMoney payee tok2 money accs \<Longrightarrow>
+       (eff, newAccs) = giveMoney src payee tok2 money accs \<Longrightarrow>
        positiveMoneyInAccountOrNoAccount y tok3 newAccs"
   apply (cases payee)
   apply (simp del:positiveMoneyInAccountOrNoAccount.simps addMoneyToAccount.simps)
@@ -94,7 +94,7 @@ lemma reduceContractStep_gtZero_Refund :
   "valid_state state \<Longrightarrow>
    \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
    refundOne (accounts state) = Some ((party, tok2, money), newAccount) \<Longrightarrow>
-   Reduced ReduceNoWarning (ReduceWithPayment (Payment party tok2 money)) (state\<lparr>accounts := newAccount\<rparr>) Close =
+   Reduced ReduceNoWarning (ReduceWithPayment (Payment party (Party party) tok2 money)) (state\<lparr>accounts := newAccount\<rparr>) Close =
       Reduced wa eff newState newCont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y tok3 (accounts newState)"
   by (metis (mono_tags) ReduceStepResult.inject State.simps(1) State.surjective State.update_convs(1) reduceOne_gtZero valid_state_valid_accounts)
@@ -117,12 +117,15 @@ lemma reduceContractStep_gtZero_Pay :
   apply (simp only:reduceContractStep.simps)
   apply (cases "evalValue env state val \<le> 0")
   apply simp
-  apply (cases "giveMoney payee tok2 (min (moneyInAccount accId tok2 (accounts state)) (evalValue env state val))
+  apply (cases "giveMoney accId payee tok2 (min (moneyInAccount accId tok2 (accounts state)) (evalValue env state val))
                 (updateMoneyInAccount accId tok2
                   (moneyInAccount accId tok2 (accounts state) - min (moneyInAccount accId tok2 (accounts state)) (evalValue env state val))
                   (accounts state))")
   apply (simp del:positiveMoneyInAccountOrNoAccount.simps valid_state.simps updateMoneyInAccount.simps)
-  by (metis (no_types, lifting) ReduceStepResult.inject State.simps(1) State.surjective State.update_convs(1) giveMoney_gtZero reduceContractStep_gtZero_Pay_aux)
+  apply (cases payee)
+  apply (simp only:addMoneyToAccountPositive reduceContractStep_gtZero_Pay_aux)
+  apply (metis (no_types, lifting) Payee.simps(5) ReduceStepResult.inject State.simps(1) State.surjective State.update_convs(1) addMoneyToAccountPositive reduceContractStep_gtZero_Pay_aux)
+  by (metis (no_types, lifting) Payee.simps(6) ReduceStepResult.inject State.iffs State.surjective State.update_convs(1) reduceContractStep_gtZero_Pay_aux)
 
 lemma reduceContractStep_gtZero_Let :
   "valid_state state \<Longrightarrow>
@@ -153,12 +156,12 @@ theorem reduceContractStep_gtZero :
 lemma reduceLoop_gtZero : 
   "valid_state state \<Longrightarrow>
     \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
-    reductionLoop env state contract warns pays = ContractQuiescent nwa npa newState ncont \<Longrightarrow>
+    reductionLoop reduced env state contract warns pays = ContractQuiescent nreduced nwa npa newState ncont \<Longrightarrow>
     positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
-  apply (induction env state contract warns pays rule: reductionLoop.induct)
-  subgoal for env state contract warns pays 
+  apply (induction reduced env state contract warns pays rule: reductionLoop.induct)
+  subgoal for reduced env state contract warns pays 
     apply (cases "reduceContractStep env state contract")
-    apply (simp only:reductionLoop.simps [of env state contract warns pays])
+    apply (simp only:reductionLoop.simps [of reduced env state contract warns pays])
       apply (metis (no_types, lifting) ReduceStepResult.simps(8) reduceContractStep_gtZero reductionStep_preserves_valid_state)
     apply fastforce
     by simp_all
@@ -167,7 +170,7 @@ lemma reduceLoop_gtZero :
 lemma reduceContractUntilQuiescent_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
-   reduceContractUntilQuiescent env state contract = ContractQuiescent nwa npa newState ncont \<Longrightarrow>
+   reduceContractUntilQuiescent env state contract = ContractQuiescent nreduced nwa npa newState ncont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
   apply (simp only:reduceContractUntilQuiescent.simps)
   using reduceLoop_gtZero by blast
@@ -210,21 +213,21 @@ lemma applyInput_gtZero :
 lemma applyAllLoop_gtZero : 
   "valid_state state \<Longrightarrow>
    \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
-   applyAllLoop env state cont inps warns pays = ApplyAllSuccess wa pa newState ncont \<Longrightarrow>
+   applyAllLoop reduced env state cont inps warns pays = ApplyAllSuccess newReduced wa pa newState ncont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
-  apply (induction  env state cont inps warns pays rule: applyAllLoop.induct)
-  subgoal for env state contract inputs warnings payments
+  apply (induction reduced env state cont inps warns pays rule: applyAllLoop.induct)
+  subgoal for reduced env state contract inputs warnings payments
     apply (cases inputs)
-    apply (simp only:list.case applyAllLoop.simps [of env state contract "[]" warnings payments])
+    apply (simp only:list.case applyAllLoop.simps [of reduced env state contract "[]" warnings payments])
     apply (cases "reduceContractUntilQuiescent env state contract")
     apply (simp only:ReduceResult.case)
     using reduceContractUntilQuiescent_gtZero apply auto[1]
     apply simp
     subgoal for h t
-      apply (simp only:list.case applyAllLoop.simps [of env state contract "h#t" warnings payments])
+      apply (simp only:list.case applyAllLoop.simps [of reduced env state contract "h#t" warnings payments])
       apply (cases "reduceContractUntilQuiescent env state contract")
       apply (simp only:ReduceResult.case)
-      subgoal for newWarns newPays newSta newCont
+      subgoal for newReduced newWarns newPays newSta newCont
         apply (cases "applyInput env newSta h newCont")
         apply (simp only:ApplyResult.case)
         apply (metis applyInput_gtZero applyInput_preserves_valid_state reduceContractUntilQuiescent.simps reduceLoop_gtZero reductionLoop_preserves_valid_state)
@@ -236,7 +239,7 @@ lemma applyAllLoop_gtZero :
 lemma applyAllInputs_gtZero :
   "valid_state state \<Longrightarrow>
    (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
-   applyAllInputs env state cont inps = ApplyAllSuccess wa pa newState ncont \<Longrightarrow>
+   applyAllInputs env state cont inps = ApplyAllSuccess newReduced wa pa newState ncont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
   apply (simp only:applyAllInputs.simps)
   using applyAllLoop_gtZero by blast
@@ -402,7 +405,7 @@ lemma reduceContractStep_preserves_validAndPositive_state :
 
 lemma reduceContractUntilQuiescent_preserves_validAndPositive_state :
   "validAndPositive_state state \<Longrightarrow>
-   reduceContractUntilQuiescent env state contract = ContractQuiescent nwa npa nstate ncont \<Longrightarrow>
+   reduceContractUntilQuiescent env state contract = ContractQuiescent nreduced nwa npa nstate ncont \<Longrightarrow>
    validAndPositive_state nstate"
   by (metis allAccountsPositiveState.elims(3) positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive reduceContractUntilQuiescent.simps reduceContractUntilQuiescent_gtZero reductionLoop_preserves_valid_state validAndPositiveImpliesPositive validAndPositiveImpliesValid validAndPositive_state.elims(3) valid_state.elims(2))
 
@@ -414,7 +417,7 @@ lemma applyInput_preserves_preserves_validAndPositive_state :
 
 lemma applyAllInputs_preserves_preserves_validAndPositive_state :
   "validAndPositive_state state \<Longrightarrow>
-   applyAllInputs env state cont inps = ApplyAllSuccess wa pa nstate ncont \<Longrightarrow>
+   applyAllInputs env state cont inps = ApplyAllSuccess nreduced wa pa nstate ncont \<Longrightarrow>
    validAndPositive_state nstate"
   by (metis allAccountsPositiveState.elims(3) applyAllInputs.simps applyAllInputs_gtZero applyAllLoop_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositiveImpliesPositive validAndPositiveImpliesValid validAndPositive_state.elims(3) valid_state.elims(2))
 
@@ -426,7 +429,7 @@ lemma fixInterval_preserves_preserves_validAndPositive_state :
 
 lemma applyAllLoop_preserves_preserves_validAndPositive_state :
   "validAndPositive_state state \<Longrightarrow>
-   applyAllLoop env state cont inp wa pa = ApplyAllSuccess nwa npa nstate ncont \<Longrightarrow>
+   applyAllLoop reduced env state cont inp wa pa = ApplyAllSuccess nreduced nwa npa nstate ncont \<Longrightarrow>
    validAndPositive_state nstate"
   by (meson allAccountsPositiveState.simps applyAllLoop_gtZero applyAllLoop_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositiveImpliesPositive validAndPositive_state.simps valid_state.simps)
 

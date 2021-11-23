@@ -18,10 +18,10 @@ splitEverywhere xs =
 -- Escrow example using embedding
 
 contract :: Contract
-contract = When [Case (Deposit aliceAcc alicePubKey price)
+contract = When [Case (Deposit aliceAcc aliceRole ada price)
                       (whenNOutOfMChoose
                          [ (refund, Close)
-                         , (pay, Pay aliceAcc (Party bobPubKey) price Close)]
+                         , (pay, Pay aliceAcc (Party bobRole) ada price Close)]
                          2
                          everybody
                          100
@@ -64,7 +64,7 @@ price = Constant 450
 -- Participants
 
 everybody :: [Party]
-everybody = [alicePubKey, bobPubKey, carolPubKey]
+everybody = [aliceRole, bobRole, carolRole]
 
 -- Possible votes
 refund, pay :: ChosenNum

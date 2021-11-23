@@ -4,6 +4,8 @@
 {-# LANGUAGE TypeOperators     #-}
 module Language.Marlowe.Pretty (pretty, Pretty, prettyFragment) where
 
+import           Data.ByteString         (ByteString)
+import           Data.ByteString.Base16  (encode)
 import           Data.Text               (Text)
 import qualified Data.Text               as Text
 import           GHC.Generics            ((:*:) ((:*:)), (:+:) (L1, R1), C, Constructor, D, Generic, K1 (K1), M1 (M1),
@@ -75,6 +77,9 @@ instance Pretty String where
 
 instance Pretty Text where
   prettyFragment = text . show . Text.unpack
+
+instance Pretty ByteString where
+  prettyFragment = text . show . encode
 
 instance Pretty Int where
   prettyFragment = text . show

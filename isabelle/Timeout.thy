@@ -22,9 +22,9 @@ lemma reduceStepClose_is_Close : "reduceContractStep env sta Close = Reduced re 
     done
   done
 
-lemma reductionLoopClose_is_Close : "reductionLoop env sta Close x y = ContractQuiescent re wa nsta ncon \<Longrightarrow> ncon = Close"
-  apply (induction env sta Close x y rule:reductionLoop.induct)
-  subgoal for env state warnings payments
+lemma reductionLoopClose_is_Close : "reductionLoop reduced env sta Close x y = ContractQuiescent newReduced re wa nsta ncon \<Longrightarrow> ncon = Close"
+  apply (induction reduced env sta Close x y rule:reductionLoop.induct)
+  subgoal for reduced env state warnings payments
     apply (simp only:reductionLoop.simps)
     apply (cases "reduceContractStep env state Close")
     subgoal for x11 x12 x13 x14
@@ -35,7 +35,7 @@ lemma reductionLoopClose_is_Close : "reductionLoop env sta Close x y = ContractQ
     done
   done
 
-lemma reduceClose_is_Close : "reduceContractUntilQuiescent env sta Close = ContractQuiescent re wa nsta ncon \<Longrightarrow> ncon = Close"
+lemma reduceClose_is_Close : "reduceContractUntilQuiescent env sta Close = ContractQuiescent reduced re wa nsta ncon \<Longrightarrow> ncon = Close"
   apply (simp del:reductionLoop.simps)
   using reductionLoopClose_is_Close by blast
 
@@ -64,9 +64,9 @@ lemma maxTimeNotAmbiguous_reduceStep :
     apply simp
     apply (cases "let moneyToPay = evalValue \<lparr>slotInterval = (iniSlot, endSlot)\<rparr> state x24;
                       balance = case lookup (x21, x23) (accounts state) of None \<Rightarrow> 0 | Some x \<Rightarrow> x; paidMoney = min balance moneyToPay
-                  in giveMoney x22 x23 paidMoney (if balance \<le> moneyToPay then MList.delete (x21, x23) (accounts state)
-                                                  else MList.insert (x21, x23) (balance - paidMoney) (accounts state))")
-    by (metis ReduceStepResult.distinct(3) case_prod_conv)
+                  in giveMoney x21 x22 x23 paidMoney (if balance \<le> moneyToPay then MList.delete (x21, x23) (accounts state)
+                                                      else MList.insert (x21, x23) (balance - paidMoney) (accounts state))")
+    by (meson ReduceStepResult.distinct(3))
   using maxTimeWhen apply blast
   by (meson ReduceStepResult.distinct(3))
 
@@ -90,10 +90,10 @@ lemma maxTimeOnlyDecreases_reduceStep :
     apply simp
     apply (cases "let moneyToPay = evalValue inte state x24; balance = case lookup (x21, x23) (accounts state) of None \<Rightarrow> 0 | Some x \<Rightarrow> x;
                       paidMoney = min balance moneyToPay
-                  in giveMoney x22 x23 paidMoney
+                  in giveMoney x21 x22 x23 paidMoney
                                (if balance \<le> moneyToPay then MList.delete (x21, x23) (accounts state)
                                 else MList.insert (x21, x23) (balance - paidMoney) (accounts state))")
-    by (metis ReduceStepResult.inject case_prod_conv eq_iff)
+    by (metis ReduceStepResult.inject eq_iff)
     apply auto[1]
   apply (simp add: maxTimeOnlyDecreases_reduceStepWhen)
   apply (metis ReduceStepResult.inject eq_iff maxTimeContract.simps(6) reduceContractStep.simps(5))
@@ -101,9 +101,9 @@ lemma maxTimeOnlyDecreases_reduceStep :
 
 lemma maxTimeNotAmbiguous_reduceLoop : "maxTimeContract cont \<le> iniSlot \<Longrightarrow>
     iniSlot \<le> endSlot \<Longrightarrow>
-    reductionLoop \<lparr>slotInterval = (iniSlot, endSlot)\<rparr> sta cont x y \<noteq> RRAmbiguousSlotIntervalError"
-  apply (induction "\<lparr>slotInterval = (iniSlot, endSlot)\<rparr>" sta cont x y rule:reductionLoop.induct)
-  subgoal premises facts for state contract warnings payments
+    reductionLoop reduced \<lparr>slotInterval = (iniSlot, endSlot)\<rparr> sta cont x y \<noteq> RRAmbiguousSlotIntervalError"
+  apply (induction reduced "\<lparr>slotInterval = (iniSlot, endSlot)\<rparr>" sta cont x y rule:reductionLoop.induct)
+  subgoal premises facts for reduced state contract warnings payments
     apply (cases "reduceContractStep \<lparr>slotInterval = (iniSlot, endSlot)\<rparr> state contract")
       apply (simp only:reductionLoop.simps ReduceStepResult.case)
       apply (simp only:Let_def)
@@ -150,7 +150,7 @@ lemma timedOutReduceStep_does_not_modify_minSlot :
                     in moneyToPay \<le> 0")
       apply auto[1]
       apply simp
-      apply (cases "giveMoney x22 x23
+      apply (cases "giveMoney x21 x22 x23
            (min (case lookup (x21, x23) (accounts sta) of None \<Rightarrow> 0 | Some x \<Rightarrow> x)
              (evalValue \<lparr>slotInterval = (iniSlot, endSlot)\<rparr> sta x24))
            (if (case lookup (x21, x23) (accounts sta) of None \<Rightarrow> 0 | Some x \<Rightarrow> x)
@@ -171,12 +171,12 @@ lemma timedOutReduceContractLoop_closes_contract : "minSlot sta \<le> iniSlot \<
     maxTimeContract cont \<le> iniSlot \<Longrightarrow>
     iniSlot \<le> endSlot \<Longrightarrow>
     minSlot sta = iniSlot \<Longrightarrow>
-    reductionLoop \<lparr>slotInterval = (iniSlot, endSlot)\<rparr> sta cont x y =
-    ContractQuiescent warning effect newState ncontract \<Longrightarrow>
+    reductionLoop reduced \<lparr>slotInterval = (iniSlot, endSlot)\<rparr> sta cont x y =
+    ContractQuiescent newReduced warning effect newState ncontract \<Longrightarrow>
     ncontract = Close"
-  apply (induction "\<lparr>slotInterval = (iniSlot, endSlot)\<rparr>" sta cont x y arbitrary: warning effect newState ncontract rule:reductionLoop.induct)
-  subgoal for state contract warnings payments warning effect newState ncontract
-    apply (simp only:reductionLoop.simps[of "\<lparr>slotInterval = (iniSlot, endSlot)\<rparr>" "(sta\<lparr>minSlot := iniSlot\<rparr>)" contract warnings payments])
+  apply (induction reduced "\<lparr>slotInterval = (iniSlot, endSlot)\<rparr>" sta cont x y arbitrary: warning effect newState ncontract rule:reductionLoop.induct)
+  subgoal for reduced state contract warnings payments warning effect newState ncontract
+    apply (simp only:reductionLoop.simps[of reduced "\<lparr>slotInterval = (iniSlot, endSlot)\<rparr>" "(sta\<lparr>minSlot := iniSlot\<rparr>)" contract warnings payments])
     apply (cases "reduceContractStep \<lparr>slotInterval = (iniSlot, endSlot)\<rparr> state contract")
     subgoal for x11 x12 x13 x14
       apply (simp only:ReduceStepResult.case Let_def)
@@ -202,7 +202,7 @@ lemma timedOutReduceContractUntilQuiescent_closes_contract :
    \<Longrightarrow> iniSlot \<ge> maxTimeContract cont
    \<Longrightarrow> endSlot \<ge> iniSlot
    \<Longrightarrow> reduceContractUntilQuiescent \<lparr>slotInterval = (max iniSlot (minSlot sta), endSlot)\<rparr> (sta\<lparr>minSlot := max iniSlot (minSlot sta)\<rparr>) cont
-   = ContractQuiescent warning effect newState ncontract \<Longrightarrow> ncontract = Close"
+   = ContractQuiescent reduced warning effect newState ncontract \<Longrightarrow> ncontract = Close"
   apply (simp only:reduceContractUntilQuiescent.simps)
   by (smt State.select_convs(4) State.surjective State.update_convs(4) timedOutReduceContractLoop_closes_contract)
 
@@ -212,7 +212,7 @@ lemma timedOutReduceContractStep_empties_accounts :
     maxTimeContract cont \<le> iniSlot \<Longrightarrow>
     iniSlot \<le> endSlot \<Longrightarrow>
     reduceContractUntilQuiescent \<lparr>slotInterval = (iniSlot, endSlot)\<rparr> (sta\<lparr>minSlot := iniSlot\<rparr>) cont
-     = ContractQuiescent warning effect newState ncontract \<Longrightarrow> accounts newState = []"
+     = ContractQuiescent reduced warning effect newState ncontract \<Longrightarrow> accounts newState = []"
   by (smt State.ext_inject State.surjective State.update_convs(4) allAccountsPositiveState.elims(3) isQuiescent.simps(1) positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive reduceContractUntilQuiecentIsQuiescent reduceContractUntilQuiescent.simps timedOutReduceContractLoop_closes_contract validAndPositiveImpliesPositive validAndPositiveImpliesValid validAndPositive_state.elims(3) valid_state.simps)
 
 theorem timedOutTransaction_closes_contract :
@@ -230,7 +230,12 @@ theorem timedOutTransaction_closes_contract :
   apply (simp del:validAndPositive_state.simps reduceContractUntilQuiescent.simps)
   apply (metis maxTimeContract.simps(1) reduceContractUntilQuiescent.simps reductionLoopClose_is_Close timedOutReduceContractStep_empties_accounts)
   apply (simp del:validAndPositive_state.simps reduceContractUntilQuiescent.simps)
-  apply (metis max.orderE timedOutReduceContractStep_empties_accounts timedOutReduceContractUntilQuiescent_closes_contract)
+  subgoal for x11 x12 x13 x14 x15
+     apply (rule mp[of x11])
+     apply (metis max.orderE timedOutReduceContractStep_empties_accounts timedOutReduceContractUntilQuiescent_closes_contract)
+    apply (rule mp[of "x15 = Close"])
+    apply (metis (no_types, lifting) ReduceResult.inject ReduceStepResult.exhaust ReduceStepResult.simps(8) ReduceStepResult.simps(9) maxTimeNotAmbiguous_reduceStep reduceContractUntilQuiescent.simps reductionLoop.simps reductionLoop_reduce_monotonic)
+    by (metis max.orderE timedOutReduceContractUntilQuiescent_closes_contract)     
   apply (simp del:validAndPositive_state.simps reduceContractUntilQuiescent.simps)
   using maxTimeNotAmbiguous by auto
 

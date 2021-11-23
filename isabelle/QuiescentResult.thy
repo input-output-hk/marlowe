@@ -11,7 +11,7 @@ lemma reduceContractStepPayIsQuiescent :
            else let balance = moneyInAccount x21 tok (accounts sta); paidMoney = min balance moneyToPay; newBalance = balance - paidMoney;
                     newAccs = updateMoneyInAccount x21 tok newBalance (accounts sta);
                     warning = if paidMoney < moneyToPay then ReducePartialPay x21 x22 tok paidMoney moneyToPay else ReduceNoWarning;
-                    (payment, finalAccs) = giveMoney x22 tok paidMoney newAccs
+                    (payment, finalAccs) = giveMoney x21 x22 tok paidMoney newAccs
                 in Reduced warning payment (sta\<lparr>accounts := finalAccs\<rparr>) x24) =
        NotReduced \<Longrightarrow>
        cont = Pay x21 x22 tok x23 x24 \<Longrightarrow> False"
@@ -20,12 +20,12 @@ lemma reduceContractStepPayIsQuiescent :
   apply (cases "min (moneyInAccount x21 tok (accounts sta)) (evalValue env sta x23) < (evalValue env sta x23)")
   apply (cases "lookup (x21, tok) (accounts sta)")
   apply simp
-  apply (metis (mono_tags, lifting) ReduceStepResult.distinct(1) case_prod_unfold)
+  apply (meson ReduceStepResult.distinct(1))
   apply (cases "evalValue env sta x23 \<le> 0")
   apply simp
   apply (cases "min (moneyInAccount x21 tok (accounts sta)) (evalValue env sta x23) < evalValue env sta x23")
   apply simp
-  apply (metis (no_types, lifting) ReduceStepResult.distinct(1) case_prod_unfold)
+  apply (meson ReduceStepResult.distinct(1))
   apply simp
   by (smt ReduceStepResult.distinct(1) case_prod_unfold)
 
@@ -52,45 +52,50 @@ lemma reductionLoopIsQuiescent_aux :
      reduceContractStep env state contract = Reduced x11 x12 x13 x14 \<Longrightarrow>
      x = (if x11 = ReduceNoWarning then warnings else x11 # warnings) \<Longrightarrow>
      xa = (case x12 of ReduceNoPayment \<Rightarrow> payments | ReduceWithPayment payment \<Rightarrow> payment # payments) \<Longrightarrow>
-     validAndPositive_state x13 \<Longrightarrow> reductionLoop env x13 x14 x xa = ContractQuiescent nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta) \<Longrightarrow>
-   validAndPositive_state state \<Longrightarrow> reductionLoop env state contract warnings payments = ContractQuiescent nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
-  apply (simp only:reductionLoop.simps [of env state contract warnings payments])
+     validAndPositive_state x13 \<Longrightarrow> reductionLoop True env x13 x14 x xa = ContractQuiescent newReduced nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta) \<Longrightarrow>
+   validAndPositive_state state \<Longrightarrow> reductionLoop reduced env state contract warnings payments = ContractQuiescent newReduced nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
+  apply (simp only:reductionLoop.simps [of reduced env state contract warnings payments])
   apply (cases "reduceContractStep env state contract")
   apply (metis (no_types, lifting) ReduceStepResult.simps(8) reduceContractStep_preserves_validAndPositive_state)
   apply (simp add: reduceContractStepIsQuiescent)
   by simp
 
 lemma reductionLoopIsQuiescent : "validAndPositive_state sta \<Longrightarrow>
-                                  reductionLoop env sta c wa ef = ContractQuiescent nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
-  apply (induction env sta c wa ef rule:reductionLoop.induct)
+                                  reductionLoop reduced env sta c wa ef = ContractQuiescent newReduced nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
+  apply (induction reduced env sta c wa ef rule:reductionLoop.induct)
   using reductionLoopIsQuiescent_aux by blast
 
 theorem reduceContractUntilQuiecentIsQuiescent : "validAndPositive_state sta \<Longrightarrow>
-                                                  reduceContractUntilQuiescent env sta c = ContractQuiescent wa ef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
+                                                  reduceContractUntilQuiescent env sta c = ContractQuiescent newReduced wa ef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
   by (simp only:reduceContractUntilQuiescent.simps reductionLoopIsQuiescent)
 
 lemma applyAllInputsLoopIsQuiescent_base : "validAndPositive_state fixSta \<Longrightarrow>
-                                            applyAllLoop env fixSta cont [] wa ef = ApplyAllSuccess nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
+                                            applyAllLoop reduced env fixSta cont [] wa ef = ApplyAllSuccess newReduced nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
   apply (cases "reduceContractUntilQuiescent env fixSta cont")
   by (simp_all del:reduceContractUntilQuiescent.simps validAndPositive_state.simps add:reduceContractUntilQuiecentIsQuiescent)
 
-lemma applyAllInputsLoopIsQuiescent_loop : "(\<And>env fixSta cont wa ef.
-           validAndPositive_state fixSta \<Longrightarrow> applyAllLoop env fixSta cont inps wa ef = ApplyAllSuccess nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta) \<Longrightarrow>
-       validAndPositive_state fixSta \<Longrightarrow> applyAllLoop env fixSta cont (a # inps) wa ef = ApplyAllSuccess nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
+lemma applyAllInputsLoopIsQuiescent_loop : "(\<And>reduced env fixSta cont wa ef.
+           validAndPositive_state fixSta \<Longrightarrow> applyAllLoop reduced env fixSta cont inps wa ef = ApplyAllSuccess newReduced nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta) \<Longrightarrow>
+       validAndPositive_state fixSta \<Longrightarrow> applyAllLoop reduced env fixSta cont (a # inps) wa ef = ApplyAllSuccess newReduced nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
   apply (cases "reduceContractUntilQuiescent env fixSta cont")
-  apply (unfold applyAllLoop.simps [of "env" "fixSta"])
+  apply (unfold applyAllLoop.simps [of "reduced" "env" "fixSta"])
   apply (simp only:ReduceResult.case list.case)
-  apply (metis (mono_tags, lifting) ApplyAllResult.distinct(1) ApplyResult.exhaust ApplyResult.simps(4) ApplyResult.simps(5) applyInput_preserves_preserves_validAndPositive_state reduceContractUntilQuiescent_preserves_validAndPositive_state)
+  subgoal for x11 x12 x13 x14 x15
+    apply (cases "applyInput env x14 a x15")
+    apply (simp only:ApplyResult.case)
+    apply (meson applyInput_preserves_preserves_validAndPositive_state reduceContractUntilQuiescent_preserves_validAndPositive_state)
+    apply (simp only:ApplyResult.case)
+    by blast
   by simp
 
 lemma applyAllInputsLoopIsQuiescent : "validAndPositive_state fixSta \<Longrightarrow>
-                                       applyAllLoop env fixSta cont inps wa ef = ApplyAllSuccess nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
-  apply (induction inps arbitrary:env fixSta cont wa ef)
+                                       applyAllLoop reduced env fixSta cont inps wa ef = ApplyAllSuccess newReduced nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
+  apply (induction inps arbitrary:reduced env fixSta cont wa ef)
   apply (simp add: applyAllInputsLoopIsQuiescent_base)
   using applyAllInputsLoopIsQuiescent_loop by blast
 
 lemma applyAllInputsIsQuiescent : "validAndPositive_state fixSta \<Longrightarrow>
-                                   applyAllInputs env fixSta cont inps = ApplyAllSuccess warnings payments newState newCont \<Longrightarrow> isQuiescent newCont newState"
+                                   applyAllInputs env fixSta cont inps = ApplyAllSuccess reduced warnings payments newState newCont \<Longrightarrow> isQuiescent newCont newState"
   by (simp add: applyAllInputsLoopIsQuiescent)
 
 lemma computeTransactionIsQuiescent_aux : "validAndPositive_state sta \<Longrightarrow>
@@ -128,5 +133,31 @@ lemma playTraceAuxIsQuiescent : "validAndPositive_state (txOutState traIn) \<Lon
 theorem playTraceIsQuiescent : "playTrace sl cont (Cons h t) = TransactionOutput traOut \<Longrightarrow>
                                 isQuiescent (txOutContract traOut) (txOutState traOut)"
   by (metis TransactionOutputRecord.select_convs(3) list.discI playTrace.simps playTraceAuxIsQuiescent validAndPositive_initial_state)
+
+
+lemma reductionLoop_reduce_monotonic : "reductionLoop True env sta cont wa ef = ContractQuiescent reduce nwa nef newState newCont \<Longrightarrow> reduce"
+  apply (induction True env sta cont wa ef arbitrary:reduce nwa nef newState newCont rule:reductionLoop.induct)
+  subgoal for env state contract warnings payments reduce nwa nef newState newCont
+    apply (cases "reduceContractStep env state contract")
+    apply (simp only:ReduceStepResult.case)
+    subgoal premises fact for x11 x12 x13 x14
+      apply (rule fact(1)[of x11 x12 x13 x14 "(if x11 = ReduceNoWarning then warnings else x11 # warnings)" "(case x12 of ReduceNoPayment \<Rightarrow> payments | ReduceWithPayment payment \<Rightarrow> payment # payments)" reduce nwa nef newState newCont])
+      apply simp
+      apply simp
+      apply simp
+      by (metis (lifting) ReduceStepResult.simps(8) fact(2) fact(3) reductionLoop.elims)
+     apply simp
+    by simp
+  done
+
+lemma reduceContractUntilQuiescent_ifDifferentReduced : "reduceContractUntilQuiescent si sta cont = ContractQuiescent reduce wa ef sta newCont \<Longrightarrow> cont \<noteq> newCont \<Longrightarrow> reduce"
+  apply (simp only:reduceContractUntilQuiescent.simps)
+  apply (simp only:reductionLoop.simps)
+  apply (cases "reduceContractStep si sta cont")
+  apply (simp only:ReduceStepResult.case Let_def)
+  using reductionLoop_reduce_monotonic apply blast
+   apply simp
+  by auto
+
 
 end

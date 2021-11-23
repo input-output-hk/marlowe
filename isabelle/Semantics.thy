@@ -1,303 +1,8 @@
 theory Semantics
-imports Main MList SList ListTools "HOL-Library.Product_Lexorder"
+imports Main MList SList ListTools "HOL-Library.Product_Lexorder" Serialisation SemanticsTypes
 begin
 
-type_synonym Slot = int
-
-type_synonym PubKey = int
-
-type_synonym Ada = int
-type_synonym CurrencySymbol = int
-type_synonym TokenName = int
-
-type_synonym Party = PubKey
-type_synonym ChoiceName = int
-type_synonym NumAccount = int
-type_synonym Timeout = Slot
-type_synonym Money = Ada
-type_synonym ChosenNum = int
-
-type_synonym AccountId = Party
-
-
-datatype Token = Token CurrencySymbol TokenName
-
-(* BEGIN Proof of linorder for Token *)
-fun less_eq_Tok :: "Token \<Rightarrow> Token \<Rightarrow> bool" where
-"less_eq_Tok (Token a b) (Token c d) =
-   (if a < c then True
-    else (if (a > c) then False else b \<le> d))"
-
-fun less_Tok :: "Token \<Rightarrow> Token \<Rightarrow> bool" where
-"less_Tok a b = (\<not> (less_eq_Tok b a))"
-
-instantiation "Token" :: "ord"
-begin
-definition "a \<le> b = less_eq_Tok a b"
-definition "a < b = less_Tok a b"
-instance
-proof
-qed
-end
-
-lemma linearToken : "x \<le> y \<or> y \<le> (x::Token)"
-  by (smt less_eq_Tok.elims(3) less_eq_Tok.simps less_eq_Token_def)
-
-instantiation "Token" :: linorder
-begin
-instance
-proof
-  fix x y
-  have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: Token))"
-    by (meson less_Tok.elims(2) less_Tok.elims(3) less_Token_def less_eq_Token_def linearToken)
-  thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
-next
-  fix x
-  have "x \<le> (x :: Token)" by (meson linearToken)
-  thus "x \<le> x" by simp
-next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: Token)"
-    by (smt less_eq_Tok.elims(2) less_eq_Tok.simps less_eq_Token_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
-next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Token)"
-    by (smt less_eq_Tok.elims(2) less_eq_Tok.simps less_eq_Token_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Token)" by simp
-next
-  fix x y
-  from linearToken have "x \<le> y \<or> y \<le> (x :: Token)" by simp
-  thus "x \<le> y \<or> y \<le> x" by simp
-qed
-end
-(* END Proof of linorder for Token *)
-
-datatype ChoiceId = ChoiceId ChoiceName Party
-
-(* BEGIN Proof of linorder for ChoiceId *)
-fun less_eq_ChoId :: "ChoiceId \<Rightarrow> ChoiceId \<Rightarrow> bool" where
-"less_eq_ChoId (ChoiceId a b) (ChoiceId c d) =
-   (if a < c then True
-    else (if (a > c) then False else b \<le> d))"
-
-fun less_ChoId :: "ChoiceId \<Rightarrow> ChoiceId \<Rightarrow> bool" where
-"less_ChoId a b = (\<not> (less_eq_ChoId b a))"
-
-instantiation "ChoiceId" :: "ord"
-begin
-definition "a \<le> b = less_eq_ChoId a b"
-definition "a < b = less_ChoId a b"
-instance
-proof
-qed
-end
-
-lemma linearChoiceId : "x \<le> y \<or> y \<le> (x::ChoiceId)"
-  by (smt less_eq_ChoId.elims(3) less_eq_ChoId.simps less_eq_ChoiceId_def)
-
-instantiation "ChoiceId" :: linorder
-begin
-instance
-proof
-  fix x y
-  have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: ChoiceId))"
-    by (meson less_ChoId.elims(2) less_ChoId.elims(3) less_ChoiceId_def less_eq_ChoiceId_def linearChoiceId)
-  thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
-next
-  fix x
-  have "x \<le> (x :: ChoiceId)" by (meson linearChoiceId)
-  thus "x \<le> x" by simp
-next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: ChoiceId)"
-    by (smt less_eq_ChoId.elims(2) less_eq_ChoId.simps less_eq_ChoiceId_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
-next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ChoiceId)"
-    by (smt less_eq_ChoId.elims(2) less_eq_ChoId.simps less_eq_ChoiceId_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ChoiceId)" by simp
-next
-  fix x y
-  from linearChoiceId have "x \<le> y \<or> y \<le> (x :: ChoiceId)" by simp
-  thus "x \<le> y \<or> y \<le> x" by simp
-qed
-end
-(* END Proof of linorder for ChoiceId *)
-
-(* datatype OracleId = OracleId PubKey
-
-(* BEGIN Proof of linorder for OracleId *)
-fun less_eq_OraId :: "OracleId \<Rightarrow> OracleId \<Rightarrow> bool" where
-"less_eq_OraId (OracleId a) (OracleId b) = (a \<le> b)"
-
-fun less_OraId :: "OracleId \<Rightarrow> OracleId \<Rightarrow> bool" where
-"less_OraId (OracleId a) (OracleId b) = (a < b)"
-
-instantiation "OracleId" :: "ord"
-begin
-definition "a \<le> b = less_eq_OraId a b"
-definition "a < b = less_OraId a b"
-instance
-proof
-qed
-end
-
-lemma linearOracleId : "x \<le> y \<or> y \<le> (x::OracleId)"
-  by (smt OracleId.inject less_eq_OraId.elims(3) less_eq_OracleId_def)
-
-instantiation "OracleId" :: linorder
-begin
-instance
-proof
-  fix x y
-  have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: OracleId))"
-    by (metis OracleId.exhaust dual_order.order_iff_strict less_OraId.simps less_OracleId_def less_eq_OraId.simps less_eq_OracleId_def not_le)
-  thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
-next
-  fix x
-  have "x \<le> (x :: OracleId)" by (meson linearOracleId)
-  thus "x \<le> x" by simp
-next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: OracleId)"
-    by (smt OracleId.inject less_eq_OraId.elims(2) less_eq_OraId.elims(3) less_eq_OracleId_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
-next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: OracleId)"
-    by (smt less_eq_OraId.elims(2) less_eq_OraId.simps less_eq_OracleId_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: OracleId)" by simp
-next
-  fix x y
-  from linearOracleId have "x \<le> y \<or> y \<le> (x :: OracleId)" by simp
-  thus "x \<le> y \<or> y \<le> x" by simp
-qed
-end
-(* END Proof of linorder for OracleId *)
-*)
-
-datatype ValueId = ValueId int
-
-(* BEGIN Proof of linorder for ValueId *)
-fun less_eq_ValId :: "ValueId \<Rightarrow> ValueId \<Rightarrow> bool" where
-"less_eq_ValId (ValueId a) (ValueId b) = (a \<le> b)"
-
-fun less_ValId :: "ValueId \<Rightarrow> ValueId \<Rightarrow> bool" where
-"less_ValId (ValueId a) (ValueId b) = (a < b)"
-
-instantiation "ValueId" :: "ord"
-begin
-definition "a \<le> b = less_eq_ValId a b"
-definition "a < b = less_ValId a b"
-instance
-proof
-qed
-end
-
-lemma linearValueId : "x \<le> y \<or> y \<le> (x::ValueId)"
-  by (smt ValueId.inject less_eq_ValId.elims(3) less_eq_ValueId_def)
-
-instantiation "ValueId" :: linorder
-begin
-instance
-proof
-  fix x y
-  have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: ValueId))"
-    by (metis ValueId.exhaust dual_order.order_iff_strict less_ValId.simps less_ValueId_def less_eq_ValId.simps less_eq_ValueId_def not_le)
-  thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
-next
-  fix x
-  have "x \<le> (x :: ValueId)" by (meson linearValueId)
-  thus "x \<le> x" by simp
-next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: ValueId)"
-    by (smt ValueId.inject less_eq_ValId.elims(2) less_eq_ValId.elims(3) less_eq_ValueId_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
-next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ValueId)"
-    by (smt less_eq_ValId.elims(2) less_eq_ValId.simps less_eq_ValueId_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ValueId)" by simp
-next
-  fix x y
-  from linearValueId have "x \<le> y \<or> y \<le> (x :: ValueId)" by simp
-  thus "x \<le> y \<or> y \<le> x" by simp
-qed
-end
-(* END Proof of linorder for ValueId *)
-
-datatype Value = AvailableMoney AccountId Token
-               | Constant int
-               | NegValue Value
-               | AddValue Value Value
-               | SubValue Value Value
-               | MulValue Value Value
-               | Scale int int Value
-               | ChoiceValue ChoiceId
-               | SlotIntervalStart
-               | SlotIntervalEnd
-               | UseValue ValueId
-               | Cond Observation Value Value
-and Observation = AndObs Observation Observation
-                     | OrObs Observation Observation
-                     | NotObs Observation
-                     | ChoseSomething ChoiceId
-                     | ValueGE Value Value
-                     | ValueGT Value Value
-                     | ValueLT Value Value
-                     | ValueLE Value Value
-                     | ValueEQ Value Value
-                     | TrueObs
-                     | FalseObs
-
-type_synonym SlotInterval = "Slot \<times> Slot"
-type_synonym Bound = "int \<times> int"
-
-fun inBounds :: "ChosenNum \<Rightarrow> Bound list \<Rightarrow> bool" where
-"inBounds num = any (\<lambda> (l, u) \<Rightarrow> num \<ge> l \<and> num \<le> u)"
-
-datatype Action = Deposit AccountId Party Token Value
-                | Choice ChoiceId "Bound list"
-                | Notify Observation
-
-datatype Payee = Account AccountId
-               | Party Party
-
-datatype Case = Case Action Contract
-and Contract = Close
-             | Pay AccountId Payee Token Value Contract
-             | If Observation Contract Contract
-             | When "Case list" Timeout Contract
-             | Let ValueId Value Contract
-             | Assert Observation Contract
-
-type_synonym Accounts = "((AccountId \<times> Token) \<times> Money) list"
-
-record State = accounts :: Accounts
-               choices :: "(ChoiceId \<times> ChosenNum) list"
-               boundValues :: "(ValueId \<times> int) list"
-               minSlot :: Slot
-
-fun valid_state :: "State \<Rightarrow> bool" where
-"valid_state state = (valid_map (accounts state)
-                     \<and> valid_map (choices state)
-                     \<and> valid_map (boundValues state))"
-
-record Environment = slotInterval :: SlotInterval
-
-datatype Input = IDeposit AccountId Party Token Money
-               | IChoice ChoiceId ChosenNum
-               | INotify
-
-(* Processing of slot interval *)
-datatype IntervalError = InvalidInterval SlotInterval
-                       | IntervalInPastError Slot SlotInterval
-
-datatype IntervalResult = IntervalTrimmed Environment State
-                        | IntervalError IntervalError
+(* EVALUATION *)
 
 fun fixInterval :: "SlotInterval \<Rightarrow> State \<Rightarrow> IntervalResult" where
 "fixInterval (low, high) state =
@@ -312,7 +17,6 @@ fun fixInterval :: "SlotInterval \<Rightarrow> State \<Rightarrow> IntervalResul
            then IntervalError (IntervalInPastError curMinSlot (low, high))
            else IntervalTrimmed env newState)))"
 
-(* EVALUATION *)
 
 fun signum :: "int \<Rightarrow> int" where
 "signum x = (if x > 0 then 1 else if x = 0 then 0 else -1)"
@@ -337,6 +41,18 @@ fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarr
     evalValue env state lhs - evalValue env state rhs" |
 "evalValue env state (MulValue lhs rhs) =
     evalValue env state lhs * evalValue env state rhs" |
+"evalValue env state (DivValue lhs rhs) = 
+   (let n = evalValue env state lhs in 
+    if n = 0 then 0 
+    else let d = evalValue env state rhs in 
+      if d = 0 then 0 else 
+        let (q, r) = n quotRem d in 
+        let ar = abs r * 2 in
+        let ad = abs d in 
+        if ar < ad then q
+        else if ar > ad then q + signum n * signum d
+        else let qIsEven = q rem 2 = 0 in 
+          if qIsEven then q else q + signum n * signum d)" |
 "evalValue env state (Scale n d rhs) = 
     (let nn = evalValue env state rhs * n in
      let (q, r) = nn quotRem d in
@@ -501,7 +217,7 @@ lemma refundOneShortens : "refundOne acc = Some (c, nacc) \<Longrightarrow>
   by (metis Pair_inject length_Cons less_Suc_eq list.distinct(1)
             list.inject option.inject refundOne.elims)
 
-datatype Payment = Payment Party Token Money
+datatype Payment = Payment AccountId Payee Token Money
 
 datatype ReduceEffect = ReduceNoPayment
                       | ReduceWithPayment Payment
@@ -527,15 +243,15 @@ fun addMoneyToAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Money \<Ri
    then accountsV
    else updateMoneyInAccount accId token newBalance accountsV)"
 
-fun giveMoney :: "Payee \<Rightarrow> Token \<Rightarrow> Money \<Rightarrow> Accounts \<Rightarrow>
+fun giveMoney :: "AccountId \<Rightarrow> Payee \<Rightarrow> Token \<Rightarrow> Money \<Rightarrow> Accounts \<Rightarrow>
                   (ReduceEffect \<times> Accounts)" where
-"giveMoney (Party party) token money accountsV =
-  (ReduceWithPayment (Payment party token money), accountsV)" |
-"giveMoney (Account accId) token money accountsV =
-  (let newAccs = addMoneyToAccount accId token money accountsV in
-    (ReduceNoPayment, newAccs))"
+"giveMoney accountId payee token money accountsV =
+  (let newAccounts = case payee of
+                        Party _ \<Rightarrow> accountsV
+                      | Account accId \<Rightarrow> addMoneyToAccount accId token money accountsV
+   in (ReduceWithPayment (Payment accountId payee token money), newAccounts))"
 
-lemma giveMoneyIncOne : "giveMoney p t m a = (e, na) \<Longrightarrow> length na \<le> length a + 1"
+lemma giveMoneyIncOne : "giveMoney sa p t m a = (e, na) \<Longrightarrow> length na \<le> length a + 1"
   apply (cases p)
   apply (cases "m \<le> 0")
   apply auto
@@ -558,7 +274,7 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
   (case refundOne (accounts state) of
      Some ((party, token, money), newAccount) \<Rightarrow>
        let newState = state \<lparr> accounts := newAccount \<rparr> in
-       Reduced ReduceNoWarning (ReduceWithPayment (Payment party token money)) newState Close
+       Reduced ReduceNoWarning (ReduceWithPayment (Payment party (Party party) token money)) newState Close
    | None \<Rightarrow> NotReduced)" |
 "reduceContractStep env state (Pay accId payee token val cont) =
   (let moneyToPay = evalValue env state val in
@@ -572,7 +288,7 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
          let warning = (if paidMoney < moneyToPay
                         then ReducePartialPay accId payee token paidMoney moneyToPay
                         else ReduceNoWarning) in
-         let (payment, finalAccs) = giveMoney payee token paidMoney newAccs in
+         let (payment, finalAccs) = giveMoney accId payee token paidMoney newAccs in
          Reduced warning payment (state \<lparr> accounts := finalAccs \<rparr>) cont)))" |
 "reduceContractStep env state (If obs cont1 cont2) =
   (let cont = (if evalObservation env state obs
@@ -600,7 +316,7 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
                  else ReduceAssertionFailed
    in Reduced warning ReduceNoPayment state cont)"
 
-datatype ReduceResult = ContractQuiescent "ReduceWarning list" "Payment list"
+datatype ReduceResult = ContractQuiescent bool "ReduceWarning list" "Payment list"
                                           State Contract
                       | RRAmbiguousSlotIntervalError
 
@@ -613,7 +329,7 @@ lemma reduceContractStepReducesSize_Refund_aux :
   by (simp add: refundOneShortens)
 
 lemma reduceContractStepReducesSize_Refund_aux2 :
-  "Reduced ReduceNoWarning (ReduceWithPayment (Payment party token money))
+  "Reduced ReduceNoWarning (ReduceWithPayment (Payment accId (Party party) token money))
           (sta\<lparr>accounts := newAccount\<rparr>) Close =
    Reduced twa tef nsta nc \<Longrightarrow>
    c = Close \<Longrightarrow>
@@ -625,7 +341,7 @@ lemma reduceContractStepReducesSize_Refund_aux2 :
 lemma reduceContractStepReducesSize_Refund :
   "(case a of
           ((party, token, money), newAccount) \<Rightarrow>
-            Reduced ReduceNoWarning (ReduceWithPayment (Payment party token money))
+            Reduced ReduceNoWarning (ReduceWithPayment (Payment accId (Party party) token money))
              (sta\<lparr>accounts := newAccount\<rparr>) Close) =
          Reduced twa tef nsta nc \<Longrightarrow>
          c = Close \<Longrightarrow>
@@ -640,31 +356,31 @@ lemma zeroMinIfGT : "x > 0 \<Longrightarrow> min 0 x = (0 :: int)"
 
 lemma reduceContractStepReducesSize_Pay_aux :
   "length z \<le> length x \<Longrightarrow>
-   giveMoney x22 tok a z = (tef, y) \<Longrightarrow>
+   giveMoney accId x22 tok a z = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
-  using giveMoneyIncOne by fastforce
+  by (metis (no_types, lifting) Suc_eq_plus1 giveMoneyIncOne leI le_trans not_less_eq_eq)
 
 lemma reduceContractStepReducesSize_Pay_aux2 :
-  "giveMoney dst tok a (MList.delete (src, tok) x) = (tef, y) \<Longrightarrow>
+  "giveMoney accId dst tok a (MList.delete (src, tok) x) = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
   using delete_length reduceContractStepReducesSize_Pay_aux by blast
 
 lemma reduceContractStepReducesSize_Pay_aux3 :
   "sta\<lparr>accounts := b\<rparr> = nsta \<Longrightarrow>
-   giveMoney dst tok a (MList.delete (src, tok) (accounts sta)) = (tef, b) \<Longrightarrow>
+   giveMoney accId dst tok a (MList.delete (src, tok) (accounts sta)) = (tef, b) \<Longrightarrow>
    length (accounts nsta) < Suc (Suc (length (accounts sta)))"
   using reduceContractStepReducesSize_Pay_aux2 by fastforce
 
 lemma reduceContractStepReducesSize_Pay_aux4 :
   "lookup (k, tok) x = Some w \<Longrightarrow>
-   giveMoney dst tok a (MList.insert (k, tok) v x) = (tef, y) \<Longrightarrow>
+   giveMoney accId dst tok a (MList.insert (k, tok) v x) = (tef, y) \<Longrightarrow>
    length y < Suc (Suc (length x))"
   by (metis One_nat_def add.right_neutral add_Suc_right giveMoneyIncOne insert_existing_length le_imp_less_Suc)
 
 lemma reduceContractStepReducesSize_Pay_aux5 :
 "sta\<lparr>accounts := ba\<rparr> = nsta \<Longrightarrow>
  lookup (src, tok) (accounts sta) = Some a \<Longrightarrow>
- giveMoney dst tok (evalValue env sta am) (MList.insert (src, tok) (a - evalValue env sta am) (accounts sta)) = (tef, ba) \<Longrightarrow>
+ giveMoney accId dst tok (evalValue env sta am) (MList.insert (src, tok) (a - evalValue env sta am) (accounts sta)) = (tef, ba) \<Longrightarrow>
  length (accounts nsta) < Suc (Suc (length (accounts sta)))"
   using reduceContractStepReducesSize_Pay_aux4 by fastforce
 
@@ -676,15 +392,15 @@ lemma reduceContractStepReducesSize_Pay_aux6 :
    evalBound nsta nc < evalBound sta c"
   apply (cases "a < evalValue env sta am")
   apply (simp add:min_absorb1)
-  apply (cases "giveMoney dst tok a (MList.delete (src, tok) (accounts sta))")
+  apply (cases "giveMoney src dst tok a (MList.delete (src, tok) (accounts sta))")
   using reduceContractStepReducesSize_Pay_aux3 apply fastforce
   apply (cases "a = evalValue env sta am")
-  apply (cases "giveMoney dst tok (evalValue env sta am) (MList.delete (src, tok) (accounts sta))")
+  apply (cases "giveMoney src dst tok (evalValue env sta am) (MList.delete (src, tok) (accounts sta))")
   apply (simp add:min_absorb2)
-  using reduceContractStepReducesSize_Pay_aux3 apply blast
-  apply (cases "giveMoney dst tok (evalValue env sta am) (MList.insert (src, tok) (a - evalValue env sta am) (accounts sta))")
+  using reduceContractStepReducesSize_Pay_aux3 apply fastforce
+  apply (cases "giveMoney src dst tok (evalValue env sta am) (MList.insert (src, tok) (a - evalValue env sta am) (accounts sta))")
   apply (simp add:min_absorb2)
-  using reduceContractStepReducesSize_Pay_aux5 by blast
+  using reduceContractStepReducesSize_Pay_aux5 by fastforce
 
 lemma reduceContractStepReducesSize_Pay :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
@@ -693,9 +409,9 @@ lemma reduceContractStepReducesSize_Pay :
   apply auto[1]
   apply (cases "lookup (src, tok) (accounts sta)")
   apply (cases "evalValue env sta am > 0")
-  apply (cases "giveMoney dst tok 0 (MList.delete (src, tok) (accounts sta))")
+  apply (cases "giveMoney src dst tok 0 (MList.delete (src, tok) (accounts sta))")
   apply (simp add:zeroMinIfGT)
-  using reduceContractStepReducesSize_Pay_aux3 apply blast
+  using reduceContractStepReducesSize_Pay_aux3 apply fastforce
   apply simp
   using reduceContractStepReducesSize_Pay_aux6 by auto
 
@@ -733,16 +449,16 @@ lemma reduceContractStepReducesSize :
   apply (cases "refundOne (accounts sta)")
   apply simp
   apply simp
-  apply (simp add:reduceContractStepReducesSize_Refund)
+  using reduceContractStepReducesSize_Refund apply fastforce
   using reduceContractStepReducesSize_Pay apply blast
   apply auto[1]
   apply (meson eq_fst_iff reduceContractStepReducesSize_When)
   using reduceContractStepReducesSize_Let apply blast
   by simp
 
-function (sequential) reductionLoop :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceWarning list \<Rightarrow>
+function (sequential) reductionLoop :: "bool \<Rightarrow> Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceWarning list \<Rightarrow>
                                         Payment list \<Rightarrow> ReduceResult" where
-"reductionLoop env state contract warnings payments =
+"reductionLoop reduced env state contract warnings payments =
   (case reduceContractStep env state contract of
      Reduced warning effect newState ncontract \<Rightarrow>
        let newWarnings = (if warning = ReduceNoWarning
@@ -751,17 +467,17 @@ function (sequential) reductionLoop :: "Environment \<Rightarrow> State \<Righta
        let newPayments = (case effect of
                             ReduceWithPayment payment \<Rightarrow> payment # payments
                           | ReduceNoPayment \<Rightarrow> payments) in
-       reductionLoop env newState ncontract newWarnings newPayments
+       reductionLoop True env newState ncontract newWarnings newPayments
    | AmbiguousSlotIntervalReductionError \<Rightarrow> RRAmbiguousSlotIntervalError
-   | NotReduced \<Rightarrow> ContractQuiescent (rev warnings) (rev payments) state contract)"
+   | NotReduced \<Rightarrow> ContractQuiescent reduced (rev warnings) (rev payments) state contract)"
   by pat_completeness auto
 termination reductionLoop
-  apply (relation "measure (\<lambda>(_, (state, (contract, _))) . evalBound state contract)")
+  apply (relation "measure (\<lambda>(_, (_, (state, (contract, _)))) . evalBound state contract)")
   apply blast
   using reduceContractStepReducesSize by auto
 
 fun reduceContractUntilQuiescent :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceResult" where
-"reduceContractUntilQuiescent env state contract = reductionLoop env state contract [] []"
+"reduceContractUntilQuiescent env state contract = reductionLoop False env state contract [] []"
 
 datatype ApplyWarning = ApplyNoWarning
                       | ApplyNonPositiveDeposit Party AccountId Token int
@@ -829,25 +545,25 @@ fun convertApplyWarning :: "ApplyWarning \<Rightarrow> TransactionWarning list" 
 "convertApplyWarning (ApplyNonPositiveDeposit party accId tok amount) =
    Cons (TransactionNonPositiveDeposit party accId tok amount) Nil"
 
-datatype ApplyAllResult = ApplyAllSuccess "TransactionWarning list" "Payment list"
+datatype ApplyAllResult = ApplyAllSuccess bool "TransactionWarning list" "Payment list"
                                      State Contract
                         | ApplyAllNoMatchError
                         | ApplyAllAmbiguousSlotIntervalError
 
-fun applyAllLoop :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
+fun applyAllLoop :: "bool \<Rightarrow> Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
                     TransactionWarning list \<Rightarrow> Payment list \<Rightarrow>
                     ApplyAllResult" where
-"applyAllLoop env state contract inputs warnings payments =
+"applyAllLoop contractChanged env state contract inputs warnings payments =
    (case reduceContractUntilQuiescent env state contract of
       RRAmbiguousSlotIntervalError \<Rightarrow> ApplyAllAmbiguousSlotIntervalError
-    | ContractQuiescent reduceWarns pays curState cont \<Rightarrow>
+    | ContractQuiescent reduced reduceWarns pays curState cont \<Rightarrow>
        (case inputs of
-          Nil \<Rightarrow> ApplyAllSuccess (warnings @ (convertReduceWarnings reduceWarns))
+          Nil \<Rightarrow> ApplyAllSuccess (contractChanged \<or> reduced) (warnings @ (convertReduceWarnings reduceWarns))
                                  (payments @ pays) curState cont
         | Cons input rest \<Rightarrow>
            (case applyInput env curState input cont of
               Applied applyWarn newState cont \<Rightarrow>
-                  applyAllLoop env newState cont rest
+                  applyAllLoop True env newState cont rest
                                (warnings @ (convertReduceWarnings reduceWarns)
                                          @ (convertApplyWarning applyWarn))
                                (payments @ pays)
@@ -855,7 +571,7 @@ fun applyAllLoop :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Ri
 
 fun applyAllInputs :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
                  ApplyAllResult" where
-"applyAllInputs env state contract inputs = applyAllLoop env state contract inputs Nil Nil"
+"applyAllInputs env state contract inputs = applyAllLoop False env state contract inputs Nil Nil"
 
 type_synonym TransactionSignatures = "Party list"
 
@@ -881,8 +597,8 @@ fun computeTransaction :: "Transaction \<Rightarrow> State \<Rightarrow> Contrac
    case fixInterval (interval tx) state of
      IntervalTrimmed env fixSta \<Rightarrow>
        (case applyAllInputs env fixSta contract inps of
-          ApplyAllSuccess warnings payments newState cont \<Rightarrow>
-            if ((contract = cont) \<and> ((contract \<noteq> Close) \<or> (accounts state = [])))
+          ApplyAllSuccess reduced warnings payments newState cont \<Rightarrow>
+            if ((\<not> reduced) \<and> ((contract \<noteq> Close) \<or> (accounts state = [])))
             then TransactionError TEUselessTransaction
             else TransactionOutput \<lparr> txOutWarnings = warnings
                                    , txOutPayments = payments
@@ -939,7 +655,7 @@ fun combineOutcomes :: "TransactionOutcomes \<Rightarrow> TransactionOutcomes \<
 "combineOutcomes x y = MList.unionWith plus x y"
 
 fun getPartiesFromReduceEffect :: "ReduceEffect list \<Rightarrow> (Party \<times> Token \<times> Money) list" where
-"getPartiesFromReduceEffect (Cons (ReduceWithPayment (Payment p tok m)) t) =
+"getPartiesFromReduceEffect (Cons (ReduceWithPayment (Payment src (Party p) tok m)) t) =
    Cons (p, tok, -m) (getPartiesFromReduceEffect t)" |
 "getPartiesFromReduceEffect (Cons x t) = getPartiesFromReduceEffect t" |
 "getPartiesFromReduceEffect Nil = Nil"

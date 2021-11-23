@@ -3,7 +3,8 @@ imports Semantics PositiveAccounts
 begin
 
 fun moneyInPayment :: "Payment \<Rightarrow> int" where
-"moneyInPayment (Payment _ _ x) = x"
+"moneyInPayment (Payment _ (Party _) _ x) = x" |
+"moneyInPayment (Payment _ (Account _) _ _) = 0"
 
 fun moneyInReduceEffect :: "ReduceEffect \<Rightarrow> int" where
 "moneyInReduceEffect (ReduceWithPayment p) = moneyInPayment p" |
@@ -41,7 +42,7 @@ lemma moneyInPayments_works_on_rev : "moneyInPayments payments = moneyInPayments
   using moneyInPayments_rev_cons by auto
 
 fun moneyInReduceResult :: "Payment list \<Rightarrow> State \<Rightarrow> ReduceResult \<Rightarrow> int" where
-"moneyInReduceResult pa sta (ContractQuiescent wa newPa newSta cont) = moneyInState newSta + moneyInPayments newPa" |
+"moneyInReduceResult pa sta (ContractQuiescent newReduced wa newPa newSta cont) = moneyInState newSta + moneyInPayments newPa" |
 "moneyInReduceResult pa sta RRAmbiguousSlotIntervalError = moneyInState sta + moneyInPayments pa"
 
 fun moneyInInput :: "Input \<Rightarrow> int" where
@@ -61,7 +62,7 @@ fun moneyInApplyResult :: "State \<Rightarrow> Input \<Rightarrow> ApplyResult \
 "moneyInApplyResult state inp ApplyNoMatchError = moneyInState state + moneyInInput inp"
 
 fun moneyInApplyAllResult :: "State \<Rightarrow> Input list \<Rightarrow> Payment list \<Rightarrow> ApplyAllResult \<Rightarrow> int" where
-"moneyInApplyAllResult state inps pa (ApplyAllSuccess newWa newPa newSta newCont) =
+"moneyInApplyAllResult state inps pa (ApplyAllSuccess newReduced newWa newPa newSta newCont) =
   moneyInState newSta + moneyInPayments newPa" |
 "moneyInApplyAllResult state inps pa ApplyAllNoMatchError =
   moneyInState state + moneyInInputs inps + moneyInPayments pa" |
@@ -190,7 +191,7 @@ lemma updateMoneyInAccount_money2 :
   done
 
 lemma giveMoneyToParty_does_not_modify_accs :
-  "(snd (giveMoney (Party p) tok paidMoney accs)) = accs"
+  "(snd (giveMoney src (Party p) tok paidMoney accs)) = accs"
   by simp
 
 lemma removeMoneyFromAccount_preservation :
@@ -199,7 +200,7 @@ lemma removeMoneyFromAccount_preservation :
    moneyToPay \<ge> 0 \<Longrightarrow>
    balance = moneyInAccount accId tok accs \<Longrightarrow>
    paidMoney = min balance moneyToPay \<Longrightarrow>
-   moneyInAccounts (snd (giveMoney (Party p) tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) accs))) =
+   moneyInAccounts (snd (giveMoney accId (Party p) tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) accs))) =
    moneyInAccounts accs - paidMoney"
   by (metis giveMoneyToParty_does_not_modify_accs updateMoneyInAccount_money)
 
@@ -215,14 +216,14 @@ lemma reduceContractStep_preserves_money_acc_to_party :
    paidMoney = min balance moneyToPay \<Longrightarrow>
    moneyInAccounts (accounts state) =
    moneyInReduceStepResult state
-    (case giveMoney (Party x2) tok paidMoney
+    (case giveMoney accId (Party x2) tok paidMoney
              (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state)) of
      (payment, finalAccs) \<Rightarrow>
        Reduced (if paidMoney < moneyToPay
                 then ReducePartialPay accId (Party x2) tok paidMoney moneyToPay
                 else ReduceNoWarning)
                payment (state\<lparr>accounts := finalAccs\<rparr>) cont)"
-  apply (cases "giveMoney (Party x2) tok paidMoney
+  apply (cases "giveMoney accId (Party x2) tok paidMoney
                           (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state))")
   subgoal for a b
     apply (cases a)
@@ -231,7 +232,7 @@ lemma reduceContractStep_preserves_money_acc_to_party :
       apply (cases x2a)
       apply (simp only:prod.case moneyInReduceStepResult.simps moneyInReduceEffect.simps)
       apply (simp only:moneyInState.simps "state_account_red")
-      by (metis add_diff_cancel_left' add_diff_eq giveMoney.simps(1) le_less moneyInPayment.simps moneyInReduceEffect.simps(1) prod.inject updateMoneyInAccount_money)
+      by (metis Payee.simps(6) add.commute eq_diff_eq giveMoney.simps le_less moneyInPayment.simps(1) moneyInReduceEffect.simps(1) prod.inject updateMoneyInAccount_money)
     done
   done
 
@@ -298,14 +299,14 @@ lemma transferMoneyBetweenAccounts_preserves :
    moneyToPay > 0 \<Longrightarrow>
    balance = moneyInAccount accId tok accs \<Longrightarrow>
    paidMoney = min balance moneyToPay \<Longrightarrow>
-   moneyInAccounts (snd (giveMoney (Account acc) tok2 paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) accs))) =
+   moneyInAccounts (snd (giveMoney accId (Account acc) tok2 paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) accs))) =
    moneyInAccounts accs"
   apply (simp only:giveMoney.simps addMoneyToAccount.simps Let_def)
   apply (cases "min (moneyInAccount accId tok accs) moneyToPay = 0")
   apply (simp only:bool.case if_True snd_def prod.case)
   apply (simp only:Orderings.preorder_class.order_refl if_True)
-  apply (metis diff_zero min.commute min.right_idem order_refl updateMoneyInAccount_money)
-  by (smt addMoneyToAccountIf_ge_zero snd_conv transferMoneyBetweenAccounts_preserves_aux3)
+  apply (metis Payee.simps(5) add.right_neutral diff_zero order_refl updateMoneyInAccount_money2)
+  using addMoneyToAccountIf_ge_zero transferMoneyBetweenAccounts_preserves_aux3 by fastforce
 
 lemma reduceContractStep_preserves_money_acc_to_acc_aux :
   "validAndPositive_state state \<Longrightarrow>
@@ -314,7 +315,7 @@ lemma reduceContractStep_preserves_money_acc_to_acc_aux :
    moneyToPay = evalValue env state val \<Longrightarrow>
   balance = moneyInAccount accId tok (accounts state) \<Longrightarrow>
    paidMoney = min balance moneyToPay \<Longrightarrow>
-  rgm = giveMoney (Account x1) tok paidMoney
+  rgm = giveMoney accId (Account x1) tok paidMoney
           (updateMoneyInAccount accId tok
             (moneyInAccount accId tok (accounts state) - paidMoney) (accounts state)) \<Longrightarrow>
   moneyInAccounts (snd rgm) = moneyInAccounts (accounts state)"
@@ -340,15 +341,15 @@ lemma reduceContractStep_preserves_money_acc_to_acc :
    paidMoney = min balance moneyToPay \<Longrightarrow>
    moneyInAccounts (accounts state)
     = moneyInReduceStepResult state
-          (case giveMoney payee tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state)) of
+          (case giveMoney accId payee tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state)) of
                 (payment, finalAccs) \<Rightarrow> Reduced wa payment (state\<lparr>accounts := finalAccs\<rparr>) cont)"
-  apply (cases "giveMoney payee tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state))")
+  apply (cases "giveMoney accId payee tok paidMoney (updateMoneyInAccount accId tok (balance - paidMoney) (accounts state))")
   apply (simp del:valid_map.simps allAccountsPositive.simps moneyInAccount.simps moneyInAccounts.simps giveMoney.simps updateMoneyInAccount.simps)
   subgoal for a b
     apply (cases a)
     apply (simp only:moneyInReduceEffect.simps)
     apply (metis add.left_neutral not_le snd_conv transferMoneyBetweenAccounts_preserves)
-    by simp
+    using reduceContractStep_preserves_money_acc_to_acc_aux by auto
   done
 
 lemma reduceContractStep_preserves_money :
@@ -426,19 +427,19 @@ lemma reductionLoop_preserves_money_NoPayment_not_ReduceNoWarning :
   "warning \<noteq> ReduceNoWarning \<Longrightarrow>
    x = warning # warnings \<Longrightarrow>
    (validAndPositive_state newState \<Longrightarrow>
-    moneyInState newState + moneyInPayments payments = moneyInReduceResult xa newState (reductionLoop env newState ncontract x xa)) \<Longrightarrow>
+    moneyInState newState + moneyInPayments payments = moneyInReduceResult xa newState (reductionLoop reduced env newState ncontract x xa)) \<Longrightarrow>
     validAndPositive_state state \<Longrightarrow>
     reduceContractStep env state contract = Reduced warning ReduceNoPayment newState ncontract \<Longrightarrow>
-    moneyInState state + moneyInPayments payments = moneyInReduceResult payments state (reductionLoop env newState ncontract x xa)"
+    moneyInState state + moneyInPayments payments = moneyInReduceResult payments state (reductionLoop reduced env newState ncontract x xa)"
   by (metis ReduceResult.exhaust add.left_neutral moneyInReduceEffect.simps(2) moneyInReduceResult.simps(1) moneyInReduceResult.simps(2) moneyInReduceStepResult.simps(1) reduceContractStep_preserves_money reduceContractStep_preserves_validAndPositive_state)
 
 lemma reductionLoop_preserves_money_NoPayment :
   "x = (if warning = ReduceNoWarning then warnings else warning # warnings) \<Longrightarrow>
    (validAndPositive_state newState \<Longrightarrow>
-    moneyInState newState + moneyInPayments payments = moneyInReduceResult xa newState (reductionLoop env newState ncontract x xa)) \<Longrightarrow>
+    moneyInState newState + moneyInPayments payments = moneyInReduceResult xa newState (reductionLoop reduced env newState ncontract x xa)) \<Longrightarrow>
     validAndPositive_state state \<Longrightarrow>
     reduceContractStep env state contract = Reduced warning ReduceNoPayment newState ncontract \<Longrightarrow>
-    moneyInState state + moneyInPayments payments = moneyInReduceResult payments state (reductionLoop env newState ncontract x xa)"
+    moneyInState state + moneyInPayments payments = moneyInReduceResult payments state (reductionLoop reduced env newState ncontract x xa)"
   by (metis ReduceResult.exhaust add.left_neutral moneyInReduceEffect.simps(2) moneyInReduceResult.simps(1) moneyInReduceResult.simps(2) moneyInReduceStepResult.simps(1) reduceContractStep_preserves_money reduceContractStep_preserves_validAndPositive_state)
 
 lemma reductionLoop_preserves_money_Payment_not_ReduceNoWarning :
@@ -450,14 +451,14 @@ lemma reductionLoop_preserves_money_Payment_not_ReduceNoWarning :
       moneyInState reSta +
       moneyInPayments (case ReduceWithPayment x2 of ReduceNoPayment \<Rightarrow> payments | ReduceWithPayment payment \<Rightarrow> payment # payments) =
       moneyInReduceResult (case ReduceWithPayment x2 of ReduceNoPayment \<Rightarrow> payments | ReduceWithPayment payment \<Rightarrow> payment # payments) reSta
-       (reductionLoop env reSta reCont (if reWa = ReduceNoWarning then warnings else reWa # warnings)
+       (reductionLoop reduced env reSta reCont (if reWa = ReduceNoWarning then warnings else reWa # warnings)
          (case ReduceWithPayment x2 of ReduceNoPayment \<Rightarrow> payments | ReduceWithPayment payment \<Rightarrow> payment # payments))) \<Longrightarrow>
    validAndPositive_state state \<Longrightarrow>
    reduceContractStep env state contract = Reduced reWa (ReduceWithPayment x2) reSta reCont \<Longrightarrow>
    reEf = ReduceWithPayment x2 \<Longrightarrow>
    reWa \<noteq> ReduceNoWarning \<Longrightarrow>
    moneyInState state + moneyInPayments payments =
-   moneyInReduceResult payments state (reductionLoop env reSta reCont (reWa # warnings) (x2 # payments))"
+   moneyInReduceResult payments state (reductionLoop reduced env reSta reCont (reWa # warnings) (x2 # payments))"
   by (smt ReduceEffect.simps(5) ReduceResult.exhaust moneyInPayments.simps(1) moneyInReduceEffect.simps(1) moneyInReduceResult.simps(1) moneyInReduceResult.simps(2) moneyInReduceStepResult.simps(1) reduceContractStep_preserves_money reduceContractStep_preserves_validAndPositive_state)
 
 lemma reductionLoop_preserves_money_Payment :
@@ -467,21 +468,21 @@ lemma reductionLoop_preserves_money_Payment :
               validAndPositive_state reSta \<Longrightarrow>
               moneyInState reSta +
               moneyInPayments xa =
-              moneyInReduceResult xa reSta (reductionLoop env reSta reCont warnings xa)) \<Longrightarrow>
+              moneyInReduceResult xa reSta (reductionLoop reduced env reSta reCont warnings xa)) \<Longrightarrow>
           validAndPositive_state state \<Longrightarrow>
           reduceContractStep env state contract = Reduced ReduceNoWarning (ReduceWithPayment x2) reSta reCont \<Longrightarrow>
           reEf = ReduceWithPayment x2 \<Longrightarrow>
           reWa = ReduceNoWarning \<Longrightarrow>
           moneyInState state + moneyInPayments payments =
-          moneyInReduceResult payments state (reductionLoop env reSta reCont warnings (x2 # payments))"
+          moneyInReduceResult payments state (reductionLoop reduced env reSta reCont warnings (x2 # payments))"
   by (smt ReduceEffect.simps(5) ReduceResult.exhaust moneyInPayments.simps(1) moneyInReduceEffect.simps(1) moneyInReduceResult.simps(1) moneyInReduceResult.simps(2) moneyInReduceStepResult.simps(1) reduceContractStep_preserves_money reduceContractStep_preserves_validAndPositive_state)
 
 lemma reductionLoop_preserves_money :
   "validAndPositive_state state \<Longrightarrow>
-   moneyInState state + moneyInPayments pa = moneyInReduceResult pa state (reductionLoop env state cont wa pa)"
-  apply (induction env state cont wa pa rule:reductionLoop.induct)
-  subgoal for env state contract warnings payments
-    apply (simp only:reductionLoop.simps[of env state contract warnings payments])
+   moneyInState state + moneyInPayments pa = moneyInReduceResult pa state (reductionLoop reduced env state cont wa pa)"
+  apply (induction reduced env state cont wa pa rule:reductionLoop.induct)
+  subgoal for reduced env state contract warnings payments
+    apply (simp only:reductionLoop.simps[of reduced env state contract warnings payments])
     apply (cases "reduceContractStep env state contract")
     subgoal for reWa reEf reSta reCont
       apply (cases reEf)
@@ -523,12 +524,12 @@ lemma moneyInPayments_distrib : "moneyInPayments (a @ b) = moneyInPayments a + m
 lemma applyAllLoop_preserves_money :
   "validAndPositive_state state \<Longrightarrow>
    moneyInState state + moneyInInputs inp + moneyInPayments pa
-    = moneyInApplyAllResult state inp pa (applyAllLoop env state cont inp wa pa)"
-  apply (induction env state cont inp wa pa rule:applyAllLoop.induct)
-  subgoal for env state contract inputs warnings payments
-    apply (simp only:applyAllLoop.simps[of env state contract inputs warnings payments])
+    = moneyInApplyAllResult state inp pa (applyAllLoop reduced env state cont inp wa pa)"
+  apply (induction reduced env state cont inp wa pa rule:applyAllLoop.induct)
+  subgoal for reduced env state contract inputs warnings payments
+    apply (simp only:applyAllLoop.simps[of reduced env state contract inputs warnings payments])
     apply (cases "reduceContractUntilQuiescent env state contract")
-    subgoal for redWa redPa redSta redCont
+    subgoal for redReduced redWa redPa redSta redCont
       apply (simp only:ReduceResult.simps)
       apply (cases "inputs")
       apply (simp only:list.simps)
@@ -539,7 +540,7 @@ lemma applyAllLoop_preserves_money :
         apply (cases "applyInput env redSta head redCont")
         apply (simp only:ApplyResult.simps moneyInApplyAllResult.simps)
         subgoal for appWarn appState appCont
-          apply (cases "(applyAllLoop env appState appCont tail (warnings @ convertReduceWarnings redWa @ convertApplyWarning appWarn) (payments @ redPa))")
+          apply (cases "(applyAllLoop True env appState appCont tail (warnings @ convertReduceWarnings redWa @ convertApplyWarning appWarn) (payments @ redPa))")
           apply (smt applyInput_preserves_money applyInput_preserves_preserves_validAndPositive_state moneyInApplyAllResult.simps(1) moneyInApplyResult.simps(1) moneyInInputs.simps(1) moneyInPayments_distrib moneyInReduceResult.simps(1) reduceContractUntilQuiescent_preserves_money reduceContractUntilQuiescent_preserves_validAndPositive_state)
           by simp_all
         by simp
@@ -568,9 +569,9 @@ lemma computeTransaction_preserves_money :
   subgoal for env fixSta
     apply (simp only:IntervalResult.simps Let_def)
     apply (cases "applyAllInputs env fixSta contract (inputs tra)")
-    subgoal for newWarn newPay newState newCont
+    subgoal for newReduced newWarn newPay newState newCont
       apply (simp only:ApplyAllResult.simps)
-      apply (cases "contract = newCont \<and> (contract \<noteq> Close \<or> accounts state = [])")
+      apply (cases "\<not> newReduced \<and> (contract \<noteq> Close \<or> accounts state = [])")
       apply (simp add:refl)
       apply (simp only:bool.case if_False)
       by (metis TransactionOutputRecord.select_convs(2) TransactionOutputRecord.select_convs(3) applyAllInputs_preserves_money fixInterval_preserves_money fixInterval_preserves_preserves_validAndPositive_state moneyInApplyAllResult.simps(1) moneyInTransactionOutput.simps(1))

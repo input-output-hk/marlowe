@@ -328,6 +328,7 @@ datatype Value = AvailableMoney AccountId Token
                | AddValue Value Value
                | SubValue Value Value
                | MulValue Value Value
+               | DivValue Value Value
                | Scale int int Value
                | ChoiceValue ChoiceId
                | SlotIntervalStart

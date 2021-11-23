@@ -41,6 +41,18 @@ fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarr
     evalValue env state lhs - evalValue env state rhs" |
 "evalValue env state (MulValue lhs rhs) =
     evalValue env state lhs * evalValue env state rhs" |
+"evalValue env state (DivValue lhs rhs) = 
+   (let n = evalValue env state lhs in 
+    if n = 0 then 0 
+    else let d = evalValue env state rhs in 
+      if d = 0 then 0 else 
+        let (q, r) = n quotRem d in 
+        let ar = abs r * 2 in
+        let ad = abs d in 
+        if ar < ad then q
+        else if ar > ad then q + signum n * signum d
+        else let qIsEven = q rem 2 = 0 in 
+          if qIsEven then q else q + signum n * signum d)" |
 "evalValue env state (Scale n d rhs) = 
     (let nn = evalValue env state rhs * n in
      let (q, r) = nn quotRem d in

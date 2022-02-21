@@ -36,6 +36,7 @@ executable marlowe
                         Language.Marlowe.SemanticsTypes
                         Language.Marlowe.SemanticsDeserialisation
                         Language.Marlowe.SemanticsSerialisation
+                        Language.Marlowe.FindInputs
                         Language.Marlowe.Util
                         Language.Marlowe.ACTUS
                         Language.Marlowe.ACTUS.ActusContracts

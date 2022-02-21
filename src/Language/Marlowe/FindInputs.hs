@@ -7,6 +7,21 @@ import Data.SBV (ThmResult)
 import Data.Bifunctor (Bifunctor(second), bimap)
 import Data.Maybe (catMaybes)
 
+
+removeAsserts :: Contract -> Contract
+removeAsserts = go
+  where go :: Contract -> Contract
+        go Close = Close
+        go (Pay pa pa' to va con) = Pay pa pa' to va (go con)
+        go (If ob con con') = If ob (go con) (go con')
+        go (When cas sl con) = When (map goCase cas) sl (go con)
+        go (Let vi va con) = Let vi va (go con)
+        go (Assert ob con) = con
+
+        goCase :: Case -> Case
+        goCase (Case ac con) = Case ac (go con)
+        goCase mc@(MerkleizedCase _ _) = mc
+
 expandCase :: Case -> [Case]
 expandCase (Case ac con) = [Case ac c | c <- expandContract con]
 expandCase (MerkleizedCase _ _) = []
@@ -67,4 +82,4 @@ getInputs c = bimap (\tr -> (tr, c)) (fmap (\(s, t, _) -> (s, t))) <$> warningsT
 --             ])
 --       ]
 getAllInputs :: Contract -> IO (Either (ThmResult, Contract) [(Slot, [TransactionInput])])
-getAllInputs c = second catMaybes . sequence <$> mapM getInputs (expandContract c)
+getAllInputs c = second catMaybes . sequence <$> mapM getInputs (expandContract (removeAsserts c))

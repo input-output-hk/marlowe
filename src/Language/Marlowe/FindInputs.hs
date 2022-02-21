@@ -32,7 +32,9 @@ getInputs :: Contract -> IO (Either (ThmResult, Contract) (Maybe (Slot, [Transac
 getInputs c = bimap (\tr -> (tr, c)) (fmap (\(s, t, _) -> (s, t))) <$> warningsTrace c
 
 -- | Uses static analysis to obtain a list of "unit tests" (lists of transactions) that
--- | cover the different branches of the given contract
+-- | cover the different branches of the given contract. If static analysis fails
+-- | it returns a tuple that includes the error by the solver and the offending
+-- | extension of the contract
 -- >>> import Language.Marlowe.Examples.EscrowSimple
 -- >>> getAllInputs contract
 -- Right [ (0, [ TransactionInput {txInterval = SlotInterval 10 10, txInputs = []}

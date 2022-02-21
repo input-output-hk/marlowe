@@ -16,7 +16,7 @@ removeAsserts = go
         go (If ob con con') = If ob (go con) (go con')
         go (When cas sl con) = When (map goCase cas) sl (go con)
         go (Let vi va con) = Let vi va (go con)
-        go (Assert ob con) = con
+        go (Assert _ con) = con
 
         goCase :: Case -> Case
         goCase (Case ac con) = Case ac (go con)

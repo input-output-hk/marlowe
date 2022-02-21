@@ -1,16 +1,15 @@
 module Language.Marlowe.FindInputs(getAllInputs) where
 
-import Language.Marlowe.SemanticsTypes ( Contract(..), Case(..), Observation(..), Slot )
+import Language.Marlowe.SemanticsTypes (Contract(..), Case(..), Observation(..), Slot)
 import Language.Marlowe.Analysis.FSSemanticsFastVerbose (warningsTrace)
-import Language.Marlowe.Semantics ( TransactionInput )
+import Language.Marlowe.Semantics (TransactionInput)
 import Data.SBV (ThmResult)
 import Data.Bifunctor (Bifunctor(second), bimap)
-import Control.Monad.Writer.Strict (foldM)
 import Data.Maybe (catMaybes)
 
 expandCase :: Case -> [Case]
 expandCase (Case ac con) = [Case ac c | c <- expandContract con]
-expandCase (MerkleizedCase ac bs) = []
+expandCase (MerkleizedCase _ _) = []
 
 expandCases :: [Case] -> [[Case]]
 expandCases [] = []
@@ -26,7 +25,7 @@ expandContract (If ob con con') = [If ob c con' | c <- expandContract con]
 expandContract (When cas sl con) = [When cas sl c | c <- expandContract con]
                                 ++ [When c sl con | c <- expandCases cas]
 expandContract (Let vi va con) = [Let vi va c | c <- expandContract con]
-expandContract (Assert obs con) = expandContract con
+expandContract (Assert _ con) = expandContract con
 
 getInputs :: Contract -> IO (Either (ThmResult, Contract) (Maybe (Slot, [TransactionInput])))
 getInputs c = bimap (\tr -> (tr, c)) (fmap (\(s, t, _) -> (s, t))) <$> warningsTrace c
@@ -34,7 +33,7 @@ getInputs c = bimap (\tr -> (tr, c)) (fmap (\(s, t, _) -> (s, t))) <$> warningsT
 -- | Uses static analysis to obtain a list of "unit tests" (lists of transactions) that
 -- | cover the different branches of the given contract. If static analysis fails
 -- | it returns a tuple that includes the error by the solver and the offending
--- | extension of the contract
+-- | extension of the excontract
 -- >>> import Language.Marlowe.Examples.EscrowSimple
 -- >>> getAllInputs contract
 -- Right [ (0, [ TransactionInput {txInterval = SlotInterval 10 10, txInputs = []}

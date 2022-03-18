@@ -1,5 +1,5 @@
 theory Serialisation
-  imports "HOL-Word.Word"
+  imports "HOL-Library.Word"
 begin
 
 type_synonym ByteString = "(8 word) list"
@@ -32,12 +32,17 @@ lemma smallerIntInduction : "(\<And> x :: int. x \<ge> 0 \<Longrightarrow> (\<An
     by (metis (mono_tags) nat_int nat_less_iff of_nat_0_le_iff smallerIntInductionRestrictedToNat zero_le_imp_eq_int)
   by linarith
 
-lemma positiveIntToByteStringToPositiveInt_inductionStep : "0 \<le> x \<Longrightarrow> (\<And>ya. 0 \<le> ya \<Longrightarrow> ya < x \<Longrightarrow> byteStringToPositiveInt (positiveIntToByteString ya @ y) = Some (ya, y))
+lemma fold_sig_bit_in_word_of_int : "word_of_int (x mod 128) + 128 = word_of_int (x mod 128 + 128)"
+  by auto
+
+lemma positiveIntToByteStringToPositiveInt_inductionStep : "0 \<le> (x :: int) \<Longrightarrow> (\<And>ya. 0 \<le> ya \<Longrightarrow> ya < x \<Longrightarrow> byteStringToPositiveInt (positiveIntToByteString ya @ y) = Some (ya, y))
                                                                   \<Longrightarrow> byteStringToPositiveInt (positiveIntToByteString x @ y) = Some (x, y)"
   apply (cases "x < 128")
-  apply (simp add:intToWordToUint)
+  apply (simp add:take_bit_eq_mod intToWordToUint Let_def)
   apply (simp only:positiveIntToByteString.simps[of x] if_False intToWordToUint)
-  by (simp del:positiveIntToByteString.simps add:Let_def intToWordToUint positiveIntToByteString.simps[of "-1"])
+  apply (simp del:positiveIntToByteString.simps add:Let_def intToWordToUint positiveIntToByteString.simps[of "-1"] )
+  apply (simp only:fold_sig_bit_in_word_of_int intToWordToUint)
+  by simp
 
 theorem positiveIntToByteStringToPositiveInt : "(x :: int) \<ge> 0 \<Longrightarrow> byteStringToPositiveInt ((positiveIntToByteString x) @ y) = Some (x, y)"
   apply (rule smallerIntInduction[of "\<lambda> x. byteStringToPositiveInt (positiveIntToByteString x @ y) = Some (x, y)"])
@@ -56,7 +61,7 @@ lemma byteStringToPositiveIntIsPositive : "byteStringToPositiveInt x = Some (a, 
 
 lemma unitRestoration : "a \<ge> 0 \<Longrightarrow> xh \<ge> 128 \<Longrightarrow> xh < 256 \<Longrightarrow> (xh + 128 * aaa) mod 128 + 128 = (xh :: int)"
   apply simp
-  by (smt eq_mod_iff mod_double_modulus)
+  by (smt (z3) Euclidean_Division.pos_mod_bound mod_double_modulus mod_pos_pos_trivial)
 
 lemma inductiveStepInjection_aux : "Some (xh - 128 + 128 * (aaa + 1), aab) = Some (a, b) \<Longrightarrow> xh < 256 \<Longrightarrow> xh \<ge> (128 :: int) \<Longrightarrow>
                                     byteStringToPositiveInt xt = Some (aaa, aab) \<Longrightarrow> a \<ge> 128 \<Longrightarrow> byteStringToPositiveInt xt = Some (a div 128 - 1, b)"
@@ -71,7 +76,7 @@ lemma inductiveStepInjection_aux2 : "(\<And>a b. byteStringToPositiveInt xt = So
   apply (cases "xh")
        apply auto
     subgoal for n2
-      by (simp add: intToWordToUint word_of_nat)
+      by (simp add: intToWordToUint take_bit_eq_mod)
       apply (simp add: fact(3))
      apply (simp add: fact(4) fact(5))
     by (simp add: fact(6))
@@ -83,16 +88,23 @@ lemma splitAnd1 : "b \<Longrightarrow> c \<Longrightarrow> b \<and> c"
 lemma splitAnd2 : "(a \<Longrightarrow> b) \<Longrightarrow> (a \<Longrightarrow> c) \<Longrightarrow> a \<longrightarrow> b \<and> c"
   by simp
 
+lemma nat_mod_id : "(n :: nat) < 256 \<Longrightarrow> n mod 2 ^ 8 = n"
+  by auto
+
 lemma inductiveStepInjection : "(\<And>a b. byteStringToPositiveInt xt = Some (a, b) \<Longrightarrow> positiveIntToByteString a @ b = xt) \<Longrightarrow>
     Some (uint xh - 128 + 128 * (aaa + 1), aab) = Some (a, b) \<Longrightarrow>
     \<not> uint (xh :: 8 word) < 128 \<Longrightarrow> byteStringToPositiveInt xt = Some aa \<Longrightarrow> aa = (aaa, aab) \<Longrightarrow> (a < 128 \<longrightarrow> word_of_int a = xh \<and> b = xt) \<and> (\<not> a < 128 \<longrightarrow> word_of_int (a mod 128 + 128) = xh \<and> positiveIntToByteString (a div 128 - 1) @ b = xt)"
   apply (rule splitAnd1)
   using byteStringToPositiveIntIsPositive apply fastforce
   apply (rule splitAnd2)
-  apply (cases "xh")
+   apply (cases "xh")
   subgoal for n
-  apply auto[1]
-    by (metis intToWordToUint mod_mult_self2 not_less of_nat_0_le_iff of_nat_less_iff of_nat_numeral unitRestoration word_of_nat)
+    apply auto[1]
+    apply (simp only:"take_bit_eq_mod")
+    apply (subst nat_mod_id)
+    apply fastforce
+    apply (subst fold_sig_bit_in_word_of_int)
+    by (metis nat_mod_id linorder_not_le mod_mult_self2 of_int_of_nat_eq of_nat_less_iff of_nat_numeral unitRestoration zero_le)
   apply (rule inductiveStepInjection_aux2)
   by auto
 
@@ -110,6 +122,7 @@ theorem byteStrintToPositiveInt_inverseRoundtrip : "byteStringToPositiveInt x = 
     subgoal for aa
       apply (cases aa)
       subgoal for aaa aab
+        apply (subst fold_sig_bit_in_word_of_int)
         apply (rule inductiveStepInjection)
         by auto
       done
@@ -177,8 +190,8 @@ lemma addAndGetByteString_inverseRoundtrip : "getByteString x = Some (y, z) \<Lo
    subgoal for x2 x1 x2a
     apply (cases "int (length x2a) < x1")
       apply (simp_all del:byteStringToPositiveInt.simps positiveIntToByteString.simps split:option.splits prod.splits)
-        apply (subst byteStrintToPositiveInt_inverseRoundtrip[of x])
-     apply (smt add.commute add_diff_cancel_left' atd_lem byteStringToPositiveIntIsPositive diff_diff_cancel int_eq_iff length_append length_drop nat_le_iff option.inject prod.inject)
+     apply (subst byteStrintToPositiveInt_inverseRoundtrip[of x])
+     using byteStringToPositiveIntIsPositive apply fastforce
      by blast
    done
 

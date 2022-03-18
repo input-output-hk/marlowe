@@ -2,7 +2,6 @@ session Test = HOL +
   options [document = pdf, document_output = "output"]
   sessions
     "HOL-Library"
-    "HOL-Word"
   theories
      Serialisation
      SemanticsTypes

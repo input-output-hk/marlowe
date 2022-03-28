@@ -495,12 +495,15 @@ lemma reductionLoop_preserves_money :
       using reductionLoop_preserves_money_NoPayment_not_ReduceNoWarning apply auto[1]
       apply (cases "reWa = ReduceNoWarning")
       apply (simp only:Let_def ReduceResult.case ReduceEffect.case ReduceWarning.case)
-      apply (simp del:validAndPositive_state.simps moneyInState.simps reductionLoop.simps)
-      apply (metis ReduceEffect.simps(5) reductionLoop_preserves_money_Payment)
+       apply (simp del:validAndPositive_state.simps moneyInState.simps reductionLoop.simps)
+      subgoal for x2
+        using reductionLoop_preserves_money_Payment by force
       apply (simp only:Let_def ReduceResult.case ReduceEffect.case ReduceWarning.case)
       apply (simp del:validAndPositive_state.simps ReduceEffect.simps moneyInState.simps reductionLoop.simps)
       apply (simp only:ReduceEffect.case)
-      by (metis reductionLoop_preserves_money_Payment_not_ReduceNoWarning)
+      subgoal for x2
+        using reductionLoop_preserves_money_Payment_not_ReduceNoWarning by force
+      done
     using moneyInPayments_works_on_rev apply force
     by simp
   done

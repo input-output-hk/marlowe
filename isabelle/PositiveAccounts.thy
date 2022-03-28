@@ -106,7 +106,7 @@ lemma MList_delete_preserves_gtZero : "valid_map accs \<Longrightarrow> \<forall
 lemma reduceContractStep_gtZero_Pay_aux :
   "valid_state state \<Longrightarrow>
    \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
-   positiveMoneyInAccountOrNoAccount y tok2 (updateMoneyInAccount accId tok3 amount (accounts state))"
+   positiveMoneyInAccountOrNoAccount y tok2 (updateMoneyInAccount accId tok3 amount (accounts state))"                                                                                                 
   by (metis MList_delete_preserves_gtZero insert_lookup_different not_le positiveMoneyInAccountOrNoAccount.elims(2) positiveMoneyInAccountOrNoAccount.elims(3) updateMoneyInAccount.simps updateMoneyInAccount_gtZero valid_state_valid_accounts)
 
 lemma reduceContractStep_gtZero_Pay :
@@ -125,7 +125,8 @@ lemma reduceContractStep_gtZero_Pay :
   apply (cases payee)
   apply (simp only:addMoneyToAccountPositive reduceContractStep_gtZero_Pay_aux)
   apply (metis (no_types, lifting) Payee.simps(5) ReduceStepResult.inject State.simps(1) State.surjective State.update_convs(1) addMoneyToAccountPositive reduceContractStep_gtZero_Pay_aux)
-  by (metis (no_types, lifting) Payee.simps(6) ReduceStepResult.inject State.iffs State.surjective State.update_convs(1) reduceContractStep_gtZero_Pay_aux)
+  apply (simp only:refl Payee.case Let_def updateMoneyInAccount_gtZero)
+  by (smt (z3) ReduceStepResult.inject State.select_convs(1) State.simps(6) State.surjective reduceContractStep_gtZero_Pay_aux)
 
 lemma reduceContractStep_gtZero_Let :
   "valid_state state \<Longrightarrow>

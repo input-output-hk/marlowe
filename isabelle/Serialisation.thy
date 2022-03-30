@@ -29,6 +29,7 @@ lemma smallerIntInductionRestrictedToNat : "(\<And> x :: nat. (\<And> y :: nat .
 lemma smallerIntInduction : "(\<And> x :: int. x \<ge> 0 \<Longrightarrow> (\<And> y :: int . 0 \<le> y \<Longrightarrow> y < x \<Longrightarrow> P y) \<Longrightarrow> P x) \<Longrightarrow> z \<ge> 0 \<Longrightarrow> P z"
   apply (cases z)
   subgoal for n
+    
     by (metis (mono_tags) nat_int nat_less_iff of_nat_0_le_iff smallerIntInductionRestrictedToNat zero_le_imp_eq_int)
   by linarith
 

@@ -1,7 +1,7 @@
 { # Fetch the latest haskell.nix and import its default.nix
   haskellNix ? import (builtins.fetchTarball "https://github.com/input-output-hk/haskell.nix/archive/master.tar.gz") {}
 
-, nixpkgsSrc ? haskellNix.sources.nixpkgs-2003
+, nixpkgsSrc ? haskellNix.sources.nixpkgs-2111
 , nixpkgsArgs ? haskellNix.nixpkgsArgs
 
 # import nixpkgs with overlays

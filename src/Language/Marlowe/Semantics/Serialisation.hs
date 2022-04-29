@@ -1,10 +1,10 @@
-module Language.Marlowe.SemanticsSerialisation (contractToByteString) where
+module Language.Marlowe.Semantics.Serialisation (contractToByteString) where
 
 import           Data.Ratio (denominator, numerator)
 import qualified Data.Text.Encoding as Text
 import           Language.Marlowe.ExtendedBuilder (ExtendedBuilder)
 import qualified Language.Marlowe.ExtendedBuilder as ExtendedBuilder
-import           Language.Marlowe.SemanticsTypes (Action (..), Bound (Bound), Case (..), ChoiceId (..), Contract (..), Observation (..), Party (..), Payee (..), Slot (Slot), Token (..), Value (..), ValueId (..))
+import           Language.Marlowe.Semantics.Types (Action (..), Bound (Bound), Case (..), ChoiceId (..), Contract (..), Observation (..), Party (..), Payee (..), Slot (Slot), Token (..), Value (..), ValueId (..))
 import           Language.Marlowe.Serialisation (intToByteString, listToByteString, packByteString, positiveIntToByteString)
 
 partyToByteString :: Party -> ExtendedBuilder

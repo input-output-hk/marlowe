@@ -12,10 +12,10 @@ import           Data.Text (Text)
 import           Data.Ratio (denominator, numerator)
 import           GHC.Generics (Generic)
 import           Text.PrettyPrint.Leijen (text)
-import           Language.Marlowe.SemanticsDeserialisation (byteStringToContract)
-import           Language.Marlowe.SemanticsTypes (IntervalResult(..), IntervalError(..), Input(..), InputContent(..), Environment(..), State(..),
-                                                  Contract(..), Case(..), Payee(..), Action(..), SlotInterval(..), Observation(..), Value(..), ValueId,
-                                                  Money, Party, Slot(..), ivFrom, ivTo, inBounds, getAction, emptyState, getInputContent, Accounts, Token (Token))
+import           Language.Marlowe.Semantics.Deserialisation (byteStringToContract)
+import           Language.Marlowe.Semantics.Types (IntervalResult(..), IntervalError(..), Input(..), InputContent(..), Environment(..), State(..),
+                                                   Contract(..), Case(..), Payee(..), Action(..), SlotInterval(..), Observation(..), Value(..), ValueId,
+                                                   Money, Party, Slot(..), ivFrom, ivTo, inBounds, getAction, emptyState, getInputContent, Accounts, Token (Token))
 
 -- EVALUATION
 

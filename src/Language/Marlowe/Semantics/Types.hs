@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Language.Marlowe.SemanticsTypes where
+module Language.Marlowe.Semantics.Types where
 
 import qualified Data.Text as T
 import           GHC.Generics (Generic)

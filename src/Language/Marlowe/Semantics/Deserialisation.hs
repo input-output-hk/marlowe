@@ -1,10 +1,10 @@
-module Language.Marlowe.SemanticsDeserialisation (byteStringToContract) where
+module Language.Marlowe.Semantics.Deserialisation (byteStringToContract) where
 
 import Data.ByteString (ByteString)
 import Data.Ratio ((%))
-import Language.Marlowe.SemanticsTypes (Action(..), Bound(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Party(..), Payee(..), Slot(Slot), Token(..),
-                                        Value(AddValue, AvailableMoney, ChoiceValue, Cond, Constant, DivValue, MulValue, NegValue, Scale, SlotIntervalEnd, SlotIntervalStart, SubValue, UseValue),
-                                        ValueId(..),)
+import Language.Marlowe.Semantics.Types (Action(..), Bound(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Party(..), Payee(..), Slot(Slot), Token(..),
+                                         Value(AddValue, AvailableMoney, ChoiceValue, Cond, Constant, DivValue, MulValue, NegValue, Scale, SlotIntervalEnd, SlotIntervalStart, SubValue, UseValue),
+                                         ValueId(..),)
 import Language.Marlowe.Deserialisation (byteStringToInt, byteStringToList, byteStringToPositiveInt, getByteString)
 import Data.Text.Encoding (decodeUtf8)
 

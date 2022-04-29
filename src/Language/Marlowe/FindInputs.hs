@@ -1,6 +1,6 @@
 module Language.Marlowe.FindInputs(getAllInputs) where
 
-import Language.Marlowe.SemanticsTypes (Contract(..), Case(..), Observation(..), Slot)
+import Language.Marlowe.Semantics.Types (Contract(..), Case(..), Observation(..), Slot)
 import Language.Marlowe.Analysis.FSSemanticsFastVerbose (warningsTrace)
 import Language.Marlowe.Semantics (TransactionInput)
 import Data.SBV (ThmResult)

@@ -4,8 +4,8 @@ let
   isabelleNix = import ./isabelle.nix;
   haskellNix = import ./haskell.nix {};
   jobs = {
-    testIsabelle = isabelleNix.isabelleTest;
-    testHaskell = haskellNix.marlowe.components.exes.marlowe ;
+    isabelle = isabelleNix.isabelleTest;
+    haskell = haskellNix.marlowe.components.exes.marlowe ;
   };
 in {
   x86_64-linux = jobs;

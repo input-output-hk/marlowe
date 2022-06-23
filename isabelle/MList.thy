@@ -43,7 +43,7 @@ lemma insert_valid_aux :
    valid_map ((x, y) # MList.insert a b c)"
   apply (induction c arbitrary: a b x y)
   apply auto[1]
-  by (metis (no_types, hide_lams) insert.simps(2)
+  by (metis (no_types, opaque_lifting) insert.simps(2)
             insert_in_middle prod.collapse remove_from_middle)
 
 lemma insert_valid_aux2 :

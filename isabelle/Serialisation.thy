@@ -224,7 +224,7 @@ lemma byteStringOrder : "less_eq_BS x y \<Longrightarrow> less_eq_BS y z \<Longr
   subgoal for t1 h2 t2 y
     by (metis (full_types) byteStringToPositiveInt.cases less_eq_BS.simps(2) less_eq_BS.simps(4) not_less_iff_gr_or_eq)
   subgoal for h1 t1 h2 t2 y
-    by (metis (mono_tags, hide_lams) \<open>\<And>ya tx hx. \<lbrakk>less_eq_BS (hx # tx) ya; less_eq_BS ya []\<rbrakk> \<Longrightarrow> False\<close> byteStringToPositiveInt.cases less_eq_BS.simps(4) not_le not_less_iff_gr_or_eq order_trans)
+    by (metis (mono_tags, opaque_lifting) \<open>\<And>ya tx hx. \<lbrakk>less_eq_BS (hx # tx) ya; less_eq_BS ya []\<rbrakk> \<Longrightarrow> False\<close> byteStringToPositiveInt.cases less_eq_BS.simps(4) not_le not_less_iff_gr_or_eq order_trans)
   done
 
 lemma byteStringLessEqTwiceEq : "less_eq_BS x y \<Longrightarrow> less_eq_BS y x \<Longrightarrow> x = y"

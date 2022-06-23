@@ -180,7 +180,7 @@ lemma remMultiplySmaller : "c \<noteq> 0 \<Longrightarrow> (\<bar>a rem b\<bar> 
   apply (simp only:if_True refl)
   using remMultiplySmalle_aux apply blast
   apply (simp only:if_False refl)
-  by (metis (no_types, hide_lams) diff_minus_eq_add mult_minus_left remMultiplySmalle_aux2)
+  by (metis (no_types, opaque_lifting) diff_minus_eq_add mult_minus_left remMultiplySmalle_aux2)
 
 lemma evalScaleMultiplyFractByConstant :
   "c \<noteq> 0 \<Longrightarrow> evalValue env sta (Scale (c * a) (c * b) x) = evalValue env sta (Scale a b x)"

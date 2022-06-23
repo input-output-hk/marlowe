@@ -142,7 +142,6 @@ lemma updateMoneyInAccount_money :
       subgoal for thisAccId thisTok
         apply (cases "(accId, tok) = (thisAccId, thisTok)")
         apply simp
-        apply force[1]
         apply (simp only:Let_def)
         apply (subst updateMoneyInAccount_no_match[of thisAccId thisTok money tail accId tok
                                                       "(moneyInAccount accId tok (((thisAccId, thisTok), money) # tail)

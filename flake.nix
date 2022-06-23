@@ -14,7 +14,7 @@
   outputs = { self, flake-utils, nixpkgs, haskellNix, isabelle-nixpkgs }: let
     inherit (flake-utils.lib) eachSystem system;
 
-    supportedSystems = [ system.x86_64-linux /*system.x86_64-darwin*/ ];
+    supportedSystems = [ system.x86_64-linux system.x86_64-darwin ];
 
     base = eachSystem supportedSystems (system: let
       overlays = [ haskellNix.overlay ];
@@ -34,7 +34,7 @@
     in flake // {
       packages = flake.packages // {
         isabelle-test = isabelle-pkgs.runCommand "isabelle-test" {
-          nativeBuildInputs = [ isabelle-pkgs.isabelle isabelle-pkgs.perl ] ++ isabelle-pkgs.lib.optional (!isabelle-pkgs.stdenv.isDarwin) isabelle-pkgs.nettools;
+          nativeBuildInputs = [ isabelle-pkgs.isabelle isabelle-pkgs.perl isabelle-pkgs.nettools ];
           src = ./isabelle;
         } ''
           export HOME=$TMP

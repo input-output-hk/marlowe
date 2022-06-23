@@ -10,3 +10,4 @@ stack.yaml.lock
 .stack-work/
 .vscode/
 .history/
+dist-newstyle

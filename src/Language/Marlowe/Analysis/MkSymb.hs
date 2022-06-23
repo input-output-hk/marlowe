@@ -20,22 +20,22 @@ nestClauses list = appT (appT [t| Either |]
   where ll = length list
         (fHalf, sHalf) = splitAt (ll - (length list `div` 2)) list
 
-mkNestedDec :: [TyVarBndr] -> TH.Name -> [Con] -> TH.Q TH.Dec
+mkNestedDec :: [TyVarBndrUnit] -> TH.Name -> [Con] -> TH.Q TH.Dec
 mkNestedDec tvs nName clauses =
   tySynD nName tvs $ nestClauses clauses
 
-getTVName :: TyVarBndr -> TH.Name
-getTVName (PlainTV name) = name
-getTVName (KindedTV name _) = name
+getTVName :: TyVarBndrUnit -> TH.Name
+getTVName (PlainTV name _) = name
+getTVName (KindedTV name _ _) = name
 
-addTVs :: [TyVarBndr] -> TypeQ -> TypeQ
+addTVs :: [TyVarBndrUnit] -> TypeQ -> TypeQ
 addTVs tvs con = foldl' appT con $ map (varT . getTVName) tvs
 
-mkSymDec :: [TyVarBndr] -> TH.Name -> TH.Name -> TH.Q TH.Dec
+mkSymDec :: [TyVarBndrUnit] -> TH.Name -> TH.Name -> TH.Q TH.Dec
 mkSymDec tvs sName nName =
   tySynD sName tvs [t| SBV $(foldl' appT (conT nName) $ map (varT . getTVName) tvs) |]
 
-mkSubSymDec :: [TyVarBndr] -> TH.Name -> [Con] -> TH.Q TH.Dec
+mkSubSymDec :: [TyVarBndrUnit] -> TH.Name -> [Con] -> TH.Q TH.Dec
 mkSubSymDec tvs ssName clauses =
   dataD (return [])
         ssName
@@ -58,14 +58,14 @@ nestFunClauses list f = (nestFunClauses fHalf (f . (\x -> [e| Left $(x) |]))) ++
   where ll = length list
         (fHalf, sHalf) = splitAt (ll - (length list `div` 2)) list
 
-addSymValToTVs :: [TyVarBndr] -> TypeQ -> TypeQ
+addSymValToTVs :: [TyVarBndrUnit] -> TypeQ -> TypeQ
 addSymValToTVs [] ty = ty
 addSymValToTVs tvs ty =
   do x <- [t| SymVal |]
      aty <- ty
      return $ ForallT [] [AppT x (VarT $ getTVName tv) | tv <- tvs] aty
 
-mkNestFunc :: [TyVarBndr] -> String -> TH.Name -> TH.Name -> [Con] -> TH.Q [TH.Dec]
+mkNestFunc :: [TyVarBndrUnit] -> String -> TH.Name -> TH.Name -> [Con] -> TH.Q [TH.Dec]
 mkNestFunc tvs typeBaseName typeName typeNName clauses =
   do let nestFunName = ("nest" ++ typeBaseName)
      let nfName = mkName nestFunName
@@ -86,7 +86,7 @@ unNestFunClauses list f = (unNestFunClauses fHalf (f . (\x -> [p| Left $(x) |]))
   where ll = length list
         (fHalf, sHalf) = splitAt (ll - (length list `div` 2)) list
 
-mkUnNestFunc :: [TyVarBndr] -> String -> TH.Name -> TH.Name -> [Con] -> TH.Q [TH.Dec]
+mkUnNestFunc :: [TyVarBndrUnit] -> String -> TH.Name -> TH.Name -> [Con] -> TH.Q [TH.Dec]
 mkUnNestFunc tvs typeBaseName typeName typeNName clauses =
   do let unNestFunName = ("unNest" ++ typeBaseName)
      let unfName = mkName unNestFunName
@@ -113,7 +113,7 @@ mkSymCaseRec func list = [e| SE.either $(mkSymCaseRec func fHalf)
   where ll = length list
         (fHalf, sHalf) = splitAt (ll - (length list `div` 2)) list
 
-mkSymCase :: [TyVarBndr] -> String -> TH.Name -> TH.Name -> [Con] -> TH.Q [TH.Dec]
+mkSymCase :: [TyVarBndrUnit] -> String -> TH.Name -> TH.Name -> [Con] -> TH.Q [TH.Dec]
 mkSymCase tvs typeBaseName sName ssName clauses =
   do let symCaseFunName = ("symCase" ++ typeBaseName)
      let scName = mkName symCaseFunName
@@ -130,7 +130,7 @@ mkSymCase tvs typeBaseName sName ssName clauses =
                             (normalB (mkSymCaseRec func clauses)) []]
      return [signature, declaration]
 
-mkSymConsts :: [TyVarBndr] -> TH.Name -> [Con] -> (ExpQ -> ExpQ) -> TH.Q [TH.Dec]
+mkSymConsts :: [TyVarBndrUnit] -> TH.Name -> [Con] -> (ExpQ -> ExpQ) -> TH.Q [TH.Dec]
 mkSymConsts tvs _ [] f = error "No constructors for type"
 mkSymConsts tvs sName [NormalC name params] f =
   do let nestFunName = ("s" ++ (nameBase name))

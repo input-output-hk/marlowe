@@ -1,0 +1,6 @@
+index-state: 2022-06-23T00:00:00Z
+packages: .
+
+write-ghc-environment-files: never
+tests: true
+test-show-details: streaming

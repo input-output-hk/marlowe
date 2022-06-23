@@ -23,7 +23,7 @@ executable marlowe
                         tasty-smallcheck,
                         tasty-quickcheck,
                         text,
-                        template-haskell,
+                        template-haskell >=2.17,
                         time,
                         wl-pprint -any
     other-modules:

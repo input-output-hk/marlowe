@@ -51,7 +51,7 @@ lemma insert_valid_aux2 :
     valid_map ((x, y) # c) \<Longrightarrow>
     x < a \<Longrightarrow>
     valid_map ((x, y) # MList.insert a b c)"
-  by (meson insert_valid_aux sublist_valid)
+  by (smt (verit, best) insert.elims insert_in_middle remove_from_middle sublist_valid)
 
 lemma insert_valid_aux3 :
   "(\<And>a b. valid_map c \<Longrightarrow> valid_map (MList.insert a b c)) \<Longrightarrow>

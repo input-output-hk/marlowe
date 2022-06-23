@@ -77,7 +77,7 @@ lemma inductiveStepInjection_aux2 : "(\<And>a b. byteStringToPositiveInt xt = So
   apply (cases "xh")
        apply auto
     subgoal for n2
-      by (simp add: intToWordToUint take_bit_eq_mod)
+      by (metis intToWordToUint less_imp_of_nat_less of_int_of_nat_eq of_nat_0_le_iff of_nat_numeral)
       apply (simp add: fact(3))
      apply (simp add: fact(4) fact(5))
     by (simp add: fact(6))
@@ -101,11 +101,7 @@ lemma inductiveStepInjection : "(\<And>a b. byteStringToPositiveInt xt = Some (a
    apply (cases "xh")
   subgoal for n
     apply auto[1]
-    apply (simp only:"take_bit_eq_mod")
-    apply (subst nat_mod_id)
-    apply fastforce
-    apply (subst fold_sig_bit_in_word_of_int)
-    by (metis nat_mod_id linorder_not_le mod_mult_self2 of_int_of_nat_eq of_nat_less_iff of_nat_numeral unitRestoration zero_le)
+    by (metis fold_sig_bit_in_word_of_int intToWordToUint less_imp_of_nat_less mod_mult_self2 of_int_of_nat_eq of_nat_0_le_iff of_nat_numeral unitRestoration verit_comp_simplify1(3))
   apply (rule inductiveStepInjection_aux2)
   by auto
 

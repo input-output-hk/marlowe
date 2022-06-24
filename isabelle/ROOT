@@ -1,4 +1,4 @@
-session Test = HOL +
+session Marlowe = HOL +
   options [document = pdf, document_output = "output"]
   sessions
     "HOL-Library"

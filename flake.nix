@@ -24,23 +24,19 @@
 
       isabelle-pkgs = isabelle-nixpkgs.legacyPackages.${system};
 
-        writeShellScriptBinInRepoRoot = name: script: pkgs.writeShellScriptBin name ''
-          cd `${pkgs.git}/bin/git rev-parse --show-toplevel`
-          ${script}
-        '';
-
-        build-marlowe-proofs = writeShellScriptBinInRepoRoot "build-marlowe-proofs" ''
-          #!/bin/bash
-
-          echo "Building Marlowe proofs"
-          isabelle build -d isabelle Marlowe
-        '';
-
-        edit-marlowe-proofs = writeShellScriptBinInRepoRoot "edit-marlowe-proofs" ''
-          #!/bin/bash
-
-          isabelle jedit -u isabelle/Semantics.thy isabelle/MoneyPreservation.thy isabelle/StaticAnalysis.thy isabelle/TransactionBound.thy isabelle/CloseSafe.thy
-        '';
+      writeShellScriptBinInRepoRoot = name: script: pkgs.writeShellScriptBin name ''
+        cd `${pkgs.git}/bin/git rev-parse --show-toplevel`
+        ${script}
+      '';
+      build-marlowe-proofs = writeShellScriptBinInRepoRoot "build-marlowe-proofs" ''
+        #!/bin/bash
+        echo "Building Marlowe proofs"
+        isabelle build -d isabelle Marlowe
+      '';
+      edit-marlowe-proofs = writeShellScriptBinInRepoRoot "edit-marlowe-proofs" ''
+        #!/bin/bash
+        isabelle jedit -u isabelle/Semantics.thy isabelle/MoneyPreservation.thy isabelle/StaticAnalysis.thy isabelle/TransactionBound.thy isabelle/CloseSafe.thy
+      '';
 
       project = pkgs.haskell-nix.cabalProject' {
         src = ./.;

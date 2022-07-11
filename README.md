@@ -44,3 +44,10 @@ To open the Isabelle IDE to modify or explore the proofs, use the following comm
 ```bash
 [nix-develop] $ edit-marlowe-proofs
 ```
+
+To generate the specification and cheatsheet pdfs you can use the following command:
+```bash
+[nix-develop] $ build-marlowe-docs
+```
+
+the results will be available in the `papers` folder.

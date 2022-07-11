@@ -4,8 +4,6 @@ theory Cheatsheet
 (* "HOL-Library.OptionalSugar" *)
 begin                                                     
 (*>*)
-(**)
-
 
 chapter \<open>Isabelle documentation cheatsheet \label{sec:cheatsheet}\<close>
 

@@ -155,10 +155,15 @@ subsection \<open>References\<close>
 
 text 
 \<open>
-Inside \<^emph>\<open>root.tex\<close> there is a command definition for \<^verbatim>\<open>\secref{}\<close>, which allow us to reference 
-sections labeled using \<^verbatim>\<open>\label{}\<close> (E.g: \secref{sec:cheatsheet}).
+Inside \<^emph>\<open>root.tex\<close> there is a command definition for \<^verbatim>\<open>\secref{sec:cheatsheet}\<close>, which allow us to reference 
+sections labeled using \<^verbatim>\<open>\label{sec:cheatsheet}\<close> (E.g: \secref{sec:cheatsheet}).
 \<close>
 
+text 
+\<open>
+To produce hyperlinks like in HTML we can use the \<^verbatim>\<open>\hyperref[sec:cheatsheet]{some link}\<close> command.
+(E.g: \hyperref[sec:cheatsheet]{link to cheatsheet})
+\<close>
 section \<open>Definitions \label{sec:definitions}\<close> 
 subsection \<open>Terms, types and values\<close>
 

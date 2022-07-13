@@ -71,13 +71,13 @@
     in flake // {
       packages = flake.packages // {
         isabelle-test = isabelle-pkgs.runCommand "isabelle-test" {
-          nativeBuildInputs = [ isabelle-pkgs.isabelle isabelle-pkgs.perl isabelle-pkgs.nettools latex ];
+          nativeBuildInputs = [ isabelle-pkgs.isabelle isabelle-pkgs.perl isabelle-pkgs.nettools latex build-marlowe-proofs build-marlowe-docs];
           src = ./isabelle;
         } ''
           export HOME=$TMP
           unpackPhase
-          cd isabelle
-          isabelle build -v -d. Marlowe
+          build-marlowe-proofs
+          build-marlowe-docs
           touch $out
         '';
       };

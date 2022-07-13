@@ -1,31 +1,27 @@
 (*<*)
 theory Specification
-  imports Main  "HOL-Library.LaTeXsugar" Core.SemanticsTypes
+  imports Main
 
 begin                                                     
 (*>*)
 
-chapter \<open>Marlowe Core\<close>
+chapter \<open>Marlowe\<close>
 
-text \<open>Contract type\<close>
-text \<open>@{datatype [display,names_short, margin=40]Contract}\<close>
+section \<open>Introduction\<close>
 
-text \<open>Value\<close>
-text \<open>@{datatype [display,names_short, margin=40]Value}\<close>
+text \<open>TODO: small introduction on Marlowe\<close>
+text \<open>TODO: description of each chapter\<close>
 
-text \<open>Input\<close>
-text \<open>@{datatype [display,names_short, margin=40]Input}\<close>
+section \<open>The Marlowe Model\<close>
+text \<open>TODO: Add parts of the section "The Marlowe Model" from the
+2019 paper that helps introduce Marlowe. 
+The paper starts describing some of the data types, in here I would 
+point to the Marlowe Core Data Types instead with more in depth description
 
-text \<open>State\<close>
+I would also add a Note of internal accounts here.
 
-(* Sadly there is no antiquote to print a record, and I wasn't able to 
-make the snipet import work (described in chapter 7 of the Sugar Latex PDF).
-So to show records we need to duplicate the definition
- *)
-record State = accounts :: Accounts
-               choices :: "(ChoiceId \<times> ChosenNum) list"
-               boundValues :: "(ValueId \<times> int) list"
-               minSlot :: Slot
+\<close>
+
 
 (*<*)
 end

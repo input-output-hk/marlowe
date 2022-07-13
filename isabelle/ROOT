@@ -61,6 +61,10 @@ session Specification in "Doc/Specification" = HOL +
     "Core"
   theories
     Specification
+    SpecificationLatexSugar
+    Core
+    Guarantees
+    Extended
   document_files
     "root.tex"
 

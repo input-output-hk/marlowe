@@ -31,17 +31,17 @@ fun quotRem :: "int \<Rightarrow> int \<Rightarrow> int \<times> int" (infixl "q
 "x quotRem y = (x quot y, x rem y)"
 
 fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarrow> int" and evalObservation :: "Environment \<Rightarrow> State \<Rightarrow> Observation \<Rightarrow> bool" where
-"evalValue env state (AvailableMoney accId token) =
+evalValue_AvailableMoney: "evalValue env state (AvailableMoney accId token) =
     findWithDefault 0 (accId, token) (accounts state)" |
-"evalValue env state (Constant integer) = integer" |
-"evalValue env state (NegValue val) = uminus (evalValue env state val)" |
-"evalValue env state (AddValue lhs rhs) =
+evalValue_Constant: "evalValue env state (Constant integer) = integer" |
+evalValue_NegValue: "evalValue env state (NegValue val) = uminus (evalValue env state val)" |
+evalValue_AddValue: "evalValue env state (AddValue lhs rhs) =
     evalValue env state lhs + evalValue env state rhs" |
-"evalValue env state (SubValue lhs rhs) =
+evalValue_SubValue: "evalValue env state (SubValue lhs rhs) =
     evalValue env state lhs - evalValue env state rhs" |
-"evalValue env state (MulValue lhs rhs) =
+evalValue_MulValue: "evalValue env state (MulValue lhs rhs) =
     evalValue env state lhs * evalValue env state rhs" |
-"evalValue env state (DivValue lhs rhs) = 
+evalValue_DivValue: "evalValue env state (DivValue lhs rhs) = 
    (let n = evalValue env state lhs in 
     if n = 0 then 0 
     else let d = evalValue env state rhs in 
@@ -53,38 +53,38 @@ fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarr
         else if ar > ad then q + signum n * signum d
         else let qIsEven = q rem 2 = 0 in 
           if qIsEven then q else q + signum n * signum d)" |
-"evalValue env state (Scale n d rhs) = 
+evalValue_Scale: "evalValue env state (Scale n d rhs) = 
     (let nn = evalValue env state rhs * n in
      let (q, r) = nn quotRem d in
      if abs r * 2 < abs d then q else q + signum nn * signum d)" |
-"evalValue env state (ChoiceValue choId) =
+evalValue_ChoiceValue: "evalValue env state (ChoiceValue choId) =
     findWithDefault 0 choId (choices state)" |
-"evalValue env state (SlotIntervalStart) = fst (slotInterval env)" |
-"evalValue env state (SlotIntervalEnd) = snd (slotInterval env)" |
-"evalValue env state (UseValue valId) =
+evalValue_SlotIntervalStart: "evalValue env state (SlotIntervalStart) = fst (slotInterval env)" |
+evalValue_SlotIntervalEnd: "evalValue env state (SlotIntervalEnd) = snd (slotInterval env)" |
+evalValue_UseValue: "evalValue env state (UseValue valId) =
     findWithDefault 0 valId (boundValues state)" |
-"evalValue env state (Cond cond thn els) =
+evalValue_Cond: "evalValue env state (Cond cond thn els) =
     (if evalObservation env state cond then evalValue env state thn else evalValue env state els)" |
-"evalObservation env state (AndObs lhs rhs) =
+evalObservation_AndObs: "evalObservation env state (AndObs lhs rhs) =
     (evalObservation env state lhs \<and> evalObservation env state rhs)" |
-"evalObservation env state (OrObs lhs rhs) =
+evalObservation_OrObs: "evalObservation env state (OrObs lhs rhs) =
     (evalObservation env state lhs \<or> evalObservation env state rhs)" |
-"evalObservation env state (NotObs subObs) =
+evalObservation_NotObs: "evalObservation env state (NotObs subObs) =
     (\<not> evalObservation env state subObs)" |
-"evalObservation env state (ChoseSomething choId) =
+evalObservation_ChoseSomething: "evalObservation env state (ChoseSomething choId) =
     (member choId (choices state))" |
-"evalObservation env state (ValueGE lhs rhs) =
+evalObservation_ValueGE: "evalObservation env state (ValueGE lhs rhs) =
     (evalValue env state lhs \<ge> evalValue env state rhs)" |
-"evalObservation env state (ValueGT lhs rhs) =
+evalObservation_ValueGT: "evalObservation env state (ValueGT lhs rhs) =
     (evalValue env state lhs > evalValue env state rhs)" |
-"evalObservation env state (ValueLT lhs rhs) =
+evalObservation_ValueLT: "evalObservation env state (ValueLT lhs rhs) =
     (evalValue env state lhs < evalValue env state rhs)" |
-"evalObservation env state (ValueLE lhs rhs) =
+evalObservation_ValueLE: "evalObservation env state (ValueLE lhs rhs) =
     (evalValue env state lhs \<le> evalValue env state rhs)" |
-"evalObservation env state (ValueEQ lhs rhs) =
+evalObservation_ValueEQ: "evalObservation env state (ValueEQ lhs rhs) =
     (evalValue env state lhs = evalValue env state rhs)" |
-"evalObservation env state TrueObs = True" |
-"evalObservation env state FalseObs = False"
+evalObservation_TrueObs: "evalObservation env state TrueObs = True" |
+evalObservation_FalseObs: "evalObservation env state FalseObs = False"
 
 lemma evalDoubleNegValue :
   "evalValue env sta (NegValue (NegValue x)) = evalValue env sta x"
@@ -92,6 +92,14 @@ lemma evalDoubleNegValue :
 
 lemma evalNegValue :
   "evalValue env sta (AddValue x (NegValue x)) = 0"
+  by auto
+
+lemma evalAddCommutative :
+  "evalValue env sta (AddValue x y) = evalValue env sta (AddValue y x)" 
+  by auto 
+
+lemma evalAddAssoc : 
+  "evalValue env sta (AddValue x (AddValue y z)) = evalValue env sta (AddValue (AddValue x y) z)"
   by auto
 
 lemma evalMulValue :

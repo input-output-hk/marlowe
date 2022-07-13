@@ -13,7 +13,7 @@ stack.yaml.lock
 dist-newstyle
 
 # Temp files from isabelle
-*.thy~
+isabelle/**/*~
 
 # Document partials
 isabelle/**/output

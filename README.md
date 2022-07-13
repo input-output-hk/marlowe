@@ -1,47 +1,46 @@
 <p align="center">
-  <img width="266" height="185" src="docs/tutorial-v1.3/pix/logo.png">
+  <img width="266" height="185" src="marlowe-logo.svg">
 </p>
 
 # Marlowe
 
-This repository contains Marlowe, a domain-specific language (DSL) for describing financial smart contracts that can be enforced by scripts deployed on a blockchain, as well as some tools for analysing and simulating the execution of contracts written in the DSL.
+This repository contains the specification of Marlowe, a domain-specific language (DSL) for describing financial smart contracts that can be enforced by scripts deployed on a blockchain, as well as some tools for analysing and simulating the execution of contracts written in the DSL. To use Marlowe on the cardano blockchain please refer to the [marlowe-cardano](https://github.com/input-output-hk/marlowe-cardano) repository
 
-## Learning about Marlowe and Marlowe Playground
+## Learning about Marlowe and its ecosystem
 
 The [Marlowe tutorials](https://play.marlowe-finance.io/doc/marlowe/tutorials/index.html) introduce Marlowe and the Marlowe Playground.
 
+The Cardano Docs has a [section on Marlowe](https://docs.cardano.org/marlowe/learn-about-marlowe) that explains what is marlowe and the different tools available.
+
 ## Versions of Marlowe
 
-The `master` branch contains the latest version of Marlowe, version `3.0`.
+The `master` branch contains the latest version of Marlowe, version `3`.
 
 An earlier version of Marlowe is described in a [paper](https://iohk.io/research/papers/#2WHKDRA8) that was presented at ISoLA 2018. This version is tagged `v1.3` and a minor update on this is tagged `v1.3.1`.
 Versions `1.x`, and `2.0` can also be found in the `master` branch under `semantics-1.0`, and `semantics-2.0`, respectively.
 
-## Build on MacOS
+## Developer environment
 
+This repository uses `nix` and `nix-flakes` to provide a reproducible developer environment to all users. Follow the instructions to [install](https://nixos.org/download.html) the nix package manager on your OS and then [use nix to install nix-flakes](https://nixos.wiki/wiki/Flakes#Installing_flakes).
 
-Requirements: Homebrew, Haskell Stack 1.6 or later.
+Once both tools are installed, download the repository and get in the development environment using
 
-Install Haskell Stack if you haven't already
+```bash
+$ git clone git@github.com:input-output-hk/marlowe.git
+$ cd marlowe
+$ nix develop .
+```
 
-    $ brew install haskell-stack
+### Isabelle proofs
 
-    $ brew install glpk
-    $ stack setup
-    $ stack build
+To Build the tests, you can run the following command inside the development environment.
 
-## Build on Ubuntu
+```bash
+[nix-develop] $ build-marlowe-proofs
+```
 
-    $ sudo apt-get install -y haskell-platform haskell-stack # Install haskell tooks and stack
-    $ sudo apt-get install -y glpk-utils libglpk-dev # Install glpk solver
-    $ sudo stack upgrade  # Upgrade to the latest version of stack. apt downloads v1.9.3 of stach which cannot fetch lts-15.6 version of ghci. https://github.com/nh2/static-haskell-nix/issues/95
-    
-    $ stack setup
-    $ stack build
+To open the Isabelle IDE to modify or explore the proofs, use the following command
 
-## Build Isabelle proofs
-
-Requirements: Isabelle CLI
-
-    $ cd isabelle
-    $ isabelle build -d. Test
+```bash
+[nix-develop] $ edit-marlowe-proofs
+```

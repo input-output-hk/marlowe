@@ -56,6 +56,7 @@
           export HOME=$TMP
           unpackPhase
           cd isabelle
+
           isabelle build -v -d. Marlowe
           touch $out
         '';

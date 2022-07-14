@@ -1,5 +1,6 @@
 session Marlowe = HOL +
-  options [document = pdf, document_output = "output"]
+  description "Marlowe Language specification"
+  options [document = pdf, document_output = "output", show_question_marks = false]
   sessions
     "HOL-Library"
   theories
@@ -16,4 +17,9 @@ session Marlowe = HOL +
      TransactionBound
      SingleInputTransactions
      StaticAnalysis
+     Specification
+     Cheatsheet
+  document_files
+    "root.tex"
+  export_files (in generated) [3] "*:code/**"
 

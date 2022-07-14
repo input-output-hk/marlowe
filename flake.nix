@@ -53,7 +53,7 @@
     in flake // {
       packages = flake.packages // {
         isabelle-test = isabelle-pkgs.runCommand "isabelle-test" {
-          nativeBuildInputs = [ isabelle-pkgs.isabelle isabelle-pkgs.perl isabelle-pkgs.nettools ];
+          nativeBuildInputs = [ isabelle-pkgs.isabelle isabelle-pkgs.perl isabelle-pkgs.nettools latex ];
           src = ./isabelle;
         } ''
           export HOME=$TMP

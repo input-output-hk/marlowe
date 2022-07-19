@@ -24,7 +24,6 @@ session Core in "Core" = HOL +
     PositiveAccounts
     QuiescentResult
     Semantics
-    SemanticsSerialisation
     SemanticsTypes
     SingleInputTransactions
     Timeout

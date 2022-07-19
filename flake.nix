@@ -37,7 +37,12 @@
         # the users HEAP directory for fast rebuilds. In a user
         # machine it only builds the first time, the next time it
         # will see that there are no changes.
-        isabelle build -v -b HOL-Library
+
+        if [ "$1" != "false" ]; then
+          echo "Building HOL-Library"
+          isabelle build -v -b HOL-Library
+        fi
+
 
         # We build the different sessions that conform the Marlowe specification
         isabelle build -v -b -d isabelle Util
@@ -76,7 +81,7 @@
         } ''
           export HOME=$TMP
           unpackPhase
-          build-marlowe-proofs
+          build-marlowe-proofs false
           build-marlowe-docs
           touch $out
         '';

@@ -1,5 +1,5 @@
 theory StaticAnalysis
-  imports Semantics MList "HOL-Library.Monad_Syntax" HOL.Wellfounded SingleInputTransactions PositiveAccounts Timeout
+  imports Core.Semantics Util.MList "HOL-Library.Monad_Syntax" HOL.Wellfounded Core.SingleInputTransactions Core.PositiveAccounts Core.Timeout
 begin
 
 (* Symbolic mock definition *)

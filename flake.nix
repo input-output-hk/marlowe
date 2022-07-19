@@ -32,11 +32,34 @@
       build-marlowe-proofs = writeShellScriptBinInRepoRoot "build-marlowe-proofs" ''
         #!/bin/bash
         echo "Building Marlowe proofs"
-        isabelle build -v -d isabelle Marlowe
+
+        # We build hold library (with -b) so that is available in
+        # the users HEAP directory for fast rebuilds. In a user
+        # machine it only builds the first time, the next time it
+        # will see that there are no changes.
+
+        if [ "$1" != "false" ]; then
+          echo "Building HOL-Library"
+          isabelle build -v -b HOL-Library
+        fi
+
+
+        # We build the different sessions that conform the Marlowe specification
+        isabelle build -v -b -d isabelle Util
+        isabelle build -v -b -d isabelle Core
+        isabelle build -v -b -d isabelle StaticAnalysis
       '';
+
+      build-marlowe-docs = writeShellScriptBinInRepoRoot "build-marlowe-docs" ''
+        #!/bin/bash
+        echo "Building Marlowe docs"
+        isabelle document -v -V -d isabelle -P papers Cheatsheet
+        isabelle document -v -V -d isabelle -P papers Specification
+      '';
+
       edit-marlowe-proofs = writeShellScriptBinInRepoRoot "edit-marlowe-proofs" ''
         #!/bin/bash
-        isabelle jedit -u isabelle/Semantics.thy isabelle/MoneyPreservation.thy isabelle/StaticAnalysis.thy isabelle/TransactionBound.thy isabelle/CloseSafe.thy
+        isabelle jedit -d isabelle -u isabelle/Doc/Specification/Specification.thy
       '';
       latex = (pkgs.texlive.combine {
           inherit (pkgs.texlive) scheme-basic ulem collection-fontsrecommended mathpartir;
@@ -46,20 +69,20 @@
         compiler-nix-name = "ghc923";
         shell.tools.cabal = {};
         shell.inputsFrom = [ self.packages.${system}.isabelle-test ];
-        shell.nativeBuildInputs = [build-marlowe-proofs edit-marlowe-proofs latex];
+        shell.nativeBuildInputs = [build-marlowe-proofs edit-marlowe-proofs build-marlowe-docs latex];
       };
 
       flake = project.flake {};
     in flake // {
       packages = flake.packages // {
         isabelle-test = isabelle-pkgs.runCommand "isabelle-test" {
-          nativeBuildInputs = [ isabelle-pkgs.isabelle isabelle-pkgs.perl isabelle-pkgs.nettools latex ];
+          nativeBuildInputs = [ isabelle-pkgs.isabelle isabelle-pkgs.perl isabelle-pkgs.nettools latex build-marlowe-proofs build-marlowe-docs];
           src = ./isabelle;
         } ''
           export HOME=$TMP
           unpackPhase
-          cd isabelle
-          isabelle build -v -d. Marlowe
+          build-marlowe-proofs false
+          build-marlowe-docs
           touch $out
         '';
       };

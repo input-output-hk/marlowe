@@ -1,25 +1,70 @@
-session Marlowe = HOL +
-  description "Marlowe Language specification"
-  options [document = pdf, document_output = "output", show_question_marks = false]
+chapter Marlowe
+
+session Util in "Util" = HOL +
+  description "Utilities for proving the Marlowe Language"
+  options [document = false, system_heaps = false]
   sessions
     "HOL-Library"
   theories
-     Serialisation
-     SemanticsTypes
-     SemanticsSerialisation
-     Semantics
-     MoneyPreservation
-     PositiveAccounts
-     QuiescentResult
-     Timeout
-     ValidState
-     CloseSafe
-     TransactionBound
-     SingleInputTransactions
-     StaticAnalysis
-     Specification
-     Cheatsheet
+    MList
+    Serialisation
+    SList
+    Utils
+
+session Core in "Core" = HOL +
+  description "Marlowe Language specification"
+  options [document = false, system_heaps = false]
+  sessions
+    "HOL-Library"
+    "Util"
+  theories
+    CloseSafe
+    ListTools
+    MoneyPreservation
+    PositiveAccounts
+    QuiescentResult
+    Semantics
+    SemanticsSerialisation
+    SemanticsTypes
+    SingleInputTransactions
+    Timeout
+    TransactionBound
+    ValidState
+  export_files (in generated) [3] "*:code/**"
+
+session StaticAnalysis in "StaticAnalysis" = HOL +
+  description "Proves around StaticAnalysis"
+  options [document = false, system_heaps = false]
+  sessions
+    "HOL-Library"
+    "Core"
+  theories
+    StaticAnalysis
+
+chapter Doc
+
+session Cheatsheet in "Doc/Cheatsheet" = HOL +
+  description "Isabelle cheatsheet"
+  options [document = pdf, document_output = "output", document_variants="isabelle-latex-cheatsheet", show_question_marks = false, system_heaps = false]
+  sessions
+    "HOL-Library"
+  theories
+    Cheatsheet
   document_files
     "root.tex"
-  export_files (in generated) [3] "*:code/**"
+
+session Specification in "Doc/Specification" = HOL +
+  description "Marlowe Language specification v3"
+  options [document = pdf, document_output = "output", document_variants="specification-v3", show_question_marks = false, system_heaps = false, quick_and_dirty]
+  sessions
+    "HOL-Library"
+    "Core"
+  theories
+    Specification
+    SpecificationLatexSugar
+    Core
+    Guarantees
+    Extended
+  document_files
+    "root.tex"
 

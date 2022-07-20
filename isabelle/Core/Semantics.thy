@@ -1,5 +1,5 @@
 theory Semantics
-imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" Util.Serialisation SemanticsTypes
+imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" SemanticsTypes
 begin
 
 (* EVALUATION *)

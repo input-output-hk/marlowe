@@ -88,9 +88,11 @@
       };
       hydraJobs = self.packages.${system};
     });
+    pkgsLinux = nixpkgs.legacyPackages.x86_64-linux;
   in base // {
     hydraJobs = base.hydraJobs // {
-      required = nixpkgs.legacyPackages.x86_64-linux.releaseTools.aggregate {
+      forceNewEval = pkgsLinux.writeText "forceNewEval" (self.rev or self.lastModified);
+      required = pkgsLinux.releaseTools.aggregate {
         name = "marlowe";
         constituents = builtins.concatMap (system: map (x: "${x}.${system}") (builtins.attrNames base.hydraJobs)) supportedSystems;
       };

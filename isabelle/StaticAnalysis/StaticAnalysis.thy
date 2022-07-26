@@ -197,23 +197,9 @@ fun symEvalVal :: "Value \<Rightarrow> SymState \<Rightarrow> int" and
 "symEvalVal (DivValue lhs rhs) symState =
   (let n = symEvalVal lhs symState in
    let d = symEvalVal rhs symState in
-   if (n = 0)
+   if (d = 0)
    then 0
-   else (if (d = 0)
-         then 0
-         else (let (q, r) = n quotRem d in
-               let ar = abs r * 2 in
-               let ad = abs d in
-               if (ar < ad)
-               then q
-               else (if (ar > ad)
-                     then (q + signum n * (signum d))
-                     else (let even = (q rem 2 = 0) in
-                           if even then q else (q + signum n * (signum d)))))))" |
-"symEvalVal (Scale n d rhs) symState =
-  (let nn = symEvalVal rhs symState * n in
-   let (q, r) = nn quotRem d in
-   if (abs r * 2 < abs d) then q else (q + signum nn * signum d))" |
+   else n quot d)" |
 "symEvalVal (ChoiceValue choId) (SymState symState) =
   findWithDefault 0 choId (symChoices symState)" |
 "symEvalVal SlotIntervalStart (SymState symState) = lowSlot symState" |
@@ -848,8 +834,7 @@ fun symStateToEnv :: "SymState \<Rightarrow> Environment" where
 lemma symEval_eval_equivalence : "symEvalVal val symState = evalValue (symStateToEnv symState) (symStateToState symState) val"
                                  "symEvalObs obs symState = evalObservation (symStateToEnv symState) (symStateToState symState) obs"
   apply (induction val symState and obs symState rule:symEvalVal_symEvalObs.induct)
-  apply simp_all
-  by metis
+  by simp_all
 
 lemma closeContractRemains_reduceContractUntilQuiescent : "reduceContractUntilQuiescent env fixSta Close = ContractQuiescent reduced reduceWarns pays curState cont \<Longrightarrow> cont = Close"
   by (simp add: reduceClose_is_Close)

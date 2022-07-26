@@ -3,7 +3,7 @@ module Language.Marlowe.Semantics.Deserialisation (byteStringToContract) where
 import Data.ByteString (ByteString)
 import Data.Ratio ((%))
 import Language.Marlowe.Semantics.Types (Action(..), Bound(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Party(..), Payee(..), Slot(Slot), Token(..),
-                                         Value(AddValue, AvailableMoney, ChoiceValue, Cond, Constant, DivValue, MulValue, NegValue, Scale, SlotIntervalEnd, SlotIntervalStart, SubValue, UseValue),
+                                         Value(AddValue, AvailableMoney, ChoiceValue, Cond, Constant, DivValue, MulValue, NegValue, SlotIntervalEnd, SlotIntervalStart, SubValue, UseValue),
                                          ValueId(..),)
 import Language.Marlowe.Deserialisation (byteStringToInt, byteStringToList, byteStringToPositiveInt, getByteString)
 import Data.Text.Encoding (decodeUtf8)
@@ -195,36 +195,20 @@ byteStringToValue x =
                   )
             )
           else
-            ( if y < 10
+            ( if y < 9
                 then
-                  ( if y < 9
+                  ( if y < 8
                       then
-                        ( if y < 8
-                            then
-                              ( case byteStringToInt t1 of
-                                  Nothing -> Nothing
-                                  Just (n, t2) ->
-                                    ( case byteStringToInt t2 of
-                                        Nothing -> Nothing
-                                        Just (d, t3) ->
-                                          ( case byteStringToValue t3 of
-                                              Nothing -> Nothing
-                                              Just (rhs, t4) -> Just (Scale (n % d) rhs, t4)
-                                          )
-                                    )
-                              )
-                            else
-                              ( case byteStringToChoiceId t1 of
-                                  Nothing -> Nothing
-                                  Just (choId, t2) -> Just (ChoiceValue choId, t2)
-                              )
+                        ( case byteStringToChoiceId t1 of
+                            Nothing -> Nothing
+                            Just (choId, t2) -> Just (ChoiceValue choId, t2)
                         )
                       else Just (SlotIntervalStart, t1)
                   )
                 else
-                  ( if y < 12
+                  ( if y < 11
                       then
-                        ( if y < 11
+                        ( if y < 10
                             then Just (SlotIntervalEnd, t1)
                             else
                               ( case byteStringToValueId t1 of
@@ -233,7 +217,7 @@ byteStringToValue x =
                               )
                         )
                       else
-                        ( if y == 12
+                        ( if y == 11
                             then
                               ( case byteStringToObservation t1 of
                                   Nothing -> Nothing

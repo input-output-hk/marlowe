@@ -42,12 +42,11 @@ valueToByteString (AddValue lhs rhs) = positiveIntToByteString 3 <> valueToByteS
 valueToByteString (SubValue lhs rhs) = positiveIntToByteString 4 <> valueToByteString lhs <> valueToByteString rhs
 valueToByteString (MulValue lhs rhs) = positiveIntToByteString 5 <> valueToByteString lhs <> valueToByteString rhs
 valueToByteString (DivValue lhs rhs) = positiveIntToByteString 6 <> valueToByteString lhs <> valueToByteString rhs
-valueToByteString (Scale r rhs) = positiveIntToByteString 7 <> intToByteString (numerator r) <> intToByteString (denominator r) <> valueToByteString rhs
-valueToByteString (ChoiceValue choId) = positiveIntToByteString 8 <> choiceIdToByteString choId
-valueToByteString SlotIntervalStart = positiveIntToByteString 9
-valueToByteString SlotIntervalEnd = positiveIntToByteString 10
-valueToByteString (UseValue valId) = positiveIntToByteString 11 <> valueIdToByteString valId
-valueToByteString (Cond cond thn els) = positiveIntToByteString 12 <> observationToByteString cond <> valueToByteString thn <> valueToByteString els
+valueToByteString (ChoiceValue choId) = positiveIntToByteString 7 <> choiceIdToByteString choId
+valueToByteString SlotIntervalStart = positiveIntToByteString 8
+valueToByteString SlotIntervalEnd = positiveIntToByteString 9
+valueToByteString (UseValue valId) = positiveIntToByteString 10 <> valueIdToByteString valId
+valueToByteString (Cond cond thn els) = positiveIntToByteString 11 <> observationToByteString cond <> valueToByteString thn <> valueToByteString els
 
 payeeToByteString :: Payee -> ExtendedBuilder
 payeeToByteString (Account accId) = positiveIntToByteString 0 <> partyToByteString accId

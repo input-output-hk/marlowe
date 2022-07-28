@@ -66,7 +66,6 @@ data Value = AvailableMoney Party Token
            | SubValue Value Value
            | MulValue Value Value
            | DivValue Value Value
-           | Scale Rational Value
            | ChoiceValue ChoiceId
            | SlotIntervalStart
            | SlotIntervalEnd

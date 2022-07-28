@@ -41,22 +41,11 @@ evalValue_SubValue: "evalValue env state (SubValue lhs rhs) =
     evalValue env state lhs - evalValue env state rhs" |
 evalValue_MulValue: "evalValue env state (MulValue lhs rhs) =
     evalValue env state lhs * evalValue env state rhs" |
-evalValue_DivValue: "evalValue env state (DivValue lhs rhs) = 
-   (let n = evalValue env state lhs in 
-    if n = 0 then 0 
-    else let d = evalValue env state rhs in 
-      if d = 0 then 0 else 
-        let (q, r) = n quotRem d in 
-        let ar = abs r * 2 in
-        let ad = abs d in 
-        if ar < ad then q
-        else if ar > ad then q + signum n * signum d
-        else let qIsEven = q rem 2 = 0 in 
-          if qIsEven then q else q + signum n * signum d)" |
-evalValue_Scale: "evalValue env state (Scale n d rhs) = 
-    (let nn = evalValue env state rhs * n in
-     let (q, r) = nn quotRem d in
-     if abs r * 2 < abs d then q else q + signum nn * signum d)" |
+evalValue_DivValue: "evalValue env state (DivValue lhs rhs) =
+   (let n = evalValue env state lhs;
+        d = evalValue env state rhs
+    in if d = 0 then 0
+       else n quot d)" |
 evalValue_ChoiceValue: "evalValue env state (ChoiceValue choId) =
     findWithDefault 0 choId (choices state)" |
 evalValue_SlotIntervalStart: "evalValue env state (SlotIntervalStart) = fst (slotInterval env)" |
@@ -110,18 +99,15 @@ lemma evalSubValue :
   "evalValue env sta (SubValue (AddValue x y) y) = evalValue env sta x"
   by auto
 
-lemma evalScaleByZeroIsZero :
-  "evalValue env sta (Scale 0 1 x) = 0"
-  by auto
+lemma evalDivByZeroIsZero :
+  "evalValue env sta y = 0 \<Longrightarrow> evalValue env sta (DivValue x y) = 0"
+  by simp
 
-lemma evalScaleByOneIsX : "evalValue env sta (Scale 1 1 x) = evalValue env sta x"
-  apply simp
-  by (smt div_by_1)
+lemma evalDivByItSelf : "a \<noteq> 0 \<Longrightarrow> evalValue env sta x = a \<Longrightarrow> evalValue env sta y = a \<Longrightarrow> evalValue env sta (DivValue x y) = 1"
+  by simp
 
-lemma evalScaleMultiplies :
-  "evalValue env sta (Scale a b (Constant (x * c))) = evalValue env sta (Scale (x * a) b (Constant c))"
-  apply (simp only:evalValue.simps)
-  by (simp add: mult.commute mult.left_commute)
+lemma evalDivByOneIsX : "evalValue env sta y = 1 \<Longrightarrow> evalValue env sta (DivValue x y) = evalValue env sta x"
+  by (simp add:Let_def)
 
 lemma quotMultiplyEquivalence : "c \<noteq> 0 \<Longrightarrow> (c * a) quot (c * b) = a quot b"
   apply auto
@@ -190,27 +176,9 @@ lemma remMultiplySmaller : "c \<noteq> 0 \<Longrightarrow> (\<bar>a rem b\<bar> 
   apply (simp only:if_False refl)
   by (metis (no_types, opaque_lifting) diff_minus_eq_add mult_minus_left remMultiplySmalle_aux2)
 
-lemma evalScaleMultiplyFractByConstant :
-  "c \<noteq> 0 \<Longrightarrow> evalValue env sta (Scale (c * a) (c * b) x) = evalValue env sta (Scale a b x)"
-  apply (simp only:evalValue.simps Let_def)
-  apply (cases "evalValue env sta x * (c * a) quotRem (c * b)")
-  apply (cases "evalValue env sta x * a quotRem b")
-  subgoal for cq cr q r
-    apply (auto split:prod.splits simp only:Let_def)
-    apply (cases "\<bar>cr\<bar> * 2 < \<bar>c * b\<bar>")
-    apply (simp only:if_True)
-    apply (cases "\<bar>r\<bar> * 2 < \<bar>b\<bar>")
-    apply (simp only:if_True)
-    apply (metis mult.left_commute prod.sel(1) quotMultiplyEquivalence quotRem.simps)
-    apply (simp only:if_False)
-    apply (metis mult.left_commute quotRem.simps remMultiplySmaller snd_conv)
-    apply (cases "\<bar>r\<bar> * 2 < \<bar>b\<bar>")
-    apply (simp only:if_False if_True)
-    apply (metis mult.left_commute quotRem.simps remMultiplySmaller snd_conv)
-    apply (simp only:if_True if_False)
-    apply (simp only:quotRem.simps)
-    by (smt Pair_inject mult.left_commute mult_cancel_left1 mult_eq_0_iff mult_neg_neg mult_pos_pos quotMultiplyEquivalence signum.simps zero_less_mult_pos zero_less_mult_pos2 zmult_eq_1_iff)
-  done
+lemma evalDivMultiplyFractByConstant :
+  "evalValue env sta c \<noteq> 0 \<Longrightarrow> evalValue env sta (DivValue (MulValue c a) (MulValue c b)) = evalValue env sta (DivValue a b)"
+  using quotMultiplyEquivalence by force
 
 fun refundOne :: "Accounts \<Rightarrow>
                   ((Party \<times> Token \<times> Money) \<times> Accounts) option" where

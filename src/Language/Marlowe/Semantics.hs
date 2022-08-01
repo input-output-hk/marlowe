@@ -14,23 +14,23 @@ import           GHC.Generics (Generic)
 import           Text.PrettyPrint.Leijen (text)
 import           Language.Marlowe.Semantics.Deserialisation (byteStringToContract)
 import           Language.Marlowe.Semantics.Types (IntervalResult(..), IntervalError(..), Input(..), InputContent(..), Environment(..), State(..),
-                                                   Contract(..), Case(..), Payee(..), Action(..), SlotInterval(..), Observation(..), Value(..), ValueId,
-                                                   Money, Party, Slot(..), ivFrom, ivTo, inBounds, getAction, emptyState, getInputContent, Accounts, Token (Token))
+                                                   Contract(..), Case(..), Payee(..), Action(..), TimeInterval(..), Observation(..), Value(..), ValueId,
+                                                   Money, Party, POSIXTime(..), ivFrom, ivTo, inBounds, getAction, emptyState, getInputContent, Accounts, Token (Token))
 
 -- EVALUATION
 
-fixInterval :: SlotInterval -> State -> IntervalResult
+fixInterval :: TimeInterval -> State -> IntervalResult
 fixInterval interval state = let
-    SlotInterval low high  = interval
-    curMinSlot = minSlot state
-    -- newLow is both new "low" and new "minSlot" (the lower bound for slotNum)
-    newLow = max low curMinSlot
+    TimeInterval low high  = interval
+    curMinTime = minTime state
+    -- newLow is both new "low" and new "minTime" (the lower bound for timeNum)
+    newLow = max low curMinTime
     -- We know high is greater or equal than newLow (prove)
-    curInterval = SlotInterval newLow high
-    env = Environment { slotInterval = curInterval }
-    newState = state { minSlot = newLow }
+    curInterval = TimeInterval newLow high
+    env = Environment { timeInterval = curInterval }
+    newState = state { minTime = newLow }
     in if high < low then IntervalError (InvalidInterval interval)
-    else if high < curMinSlot then IntervalError (IntervalInPastError curMinSlot interval)
+    else if high < curMinTime then IntervalError (IntervalInPastError curMinTime interval)
     else IntervalTrimmed env newState
 
 
@@ -52,8 +52,8 @@ evalValue env state value = let
                                    else n `quot` d
         ChoiceValue choiceId ->
             Map.findWithDefault 0 choiceId (choices state)
-        SlotIntervalStart    -> (getSlot . ivFrom . slotInterval) env
-        SlotIntervalEnd      -> (getSlot . ivTo . slotInterval) env
+        TimeIntervalStart    -> (getPOSIXTime . ivFrom . timeInterval) env
+        TimeIntervalEnd      -> (getPOSIXTime . ivTo . timeInterval) env
         UseValue valId       -> Map.findWithDefault 0 valId (boundValues state)
         Cond cond thn els    -> if evalObservation env state cond then eval thn else eval els
 
@@ -139,7 +139,7 @@ data ReduceWarning = ReduceNoWarning
 
 data ReduceStepResult = Reduced ReduceWarning ReduceEffect State Contract
                       | NotReduced
-                      | AmbiguousSlotIntervalReductionError
+                      | AmbiguousTimeIntervalReductionError
   deriving (Eq,Ord,Show,Read)
 
 
@@ -173,14 +173,14 @@ reduceContractStep env state contract = case contract of
         in Reduced ReduceNoWarning ReduceNoPayment state cont
 
     When _ timeout cont -> let
-        startSlot = ivFrom (slotInterval env)
-        endSlot   = ivTo (slotInterval env)
+        startTime = ivFrom (timeInterval env)
+        endTime   = ivTo (timeInterval env)
         -- if timeout in future – do not reduce
-        in if endSlot < timeout then NotReduced
+        in if endTime < timeout then NotReduced
         -- if timeout in the past – reduce to timeout continuation
-        else if timeout <= startSlot then Reduced ReduceNoWarning ReduceNoPayment state cont
-        -- if timeout in the slot range – issue an ambiguity error
-        else AmbiguousSlotIntervalReductionError
+        else if timeout <= startTime then Reduced ReduceNoWarning ReduceNoPayment state cont
+        -- if timeout in the time range – issue an ambiguity error
+        else AmbiguousTimeIntervalReductionError
 
     Let valId val cont -> let
         evaluatedValue = evalValue env state val
@@ -198,7 +198,7 @@ reduceContractStep env state contract = case contract of
         in Reduced warning ReduceNoPayment state cont
 
 data ReduceResult = ContractQuiescent Bool [ReduceWarning] [Payment] State Contract
-                  | RRAmbiguousSlotIntervalError
+                  | RRAmbiguousTimeIntervalError
   deriving (Eq,Ord,Show,Read)
 
 -- | Reduce a contract until it cannot be reduced more
@@ -215,7 +215,7 @@ reduceContractUntilQuiescent env state contract = let
                     ReduceWithPayment payment -> payment : payments
                     ReduceNoPayment           -> payments
                 in reductionLoop True env newState cont newWarnings newPayments
-            AmbiguousSlotIntervalReductionError -> RRAmbiguousSlotIntervalError
+            AmbiguousTimeIntervalReductionError -> RRAmbiguousTimeIntervalError
             -- this is the last invocation of reductionLoop, so we can reverse lists
             NotReduced -> ContractQuiescent reduced (reverse warnings) (reverse payments) state contract
 
@@ -325,7 +325,7 @@ convertApplyWarning warn =
 data ApplyAllResult = ApplyAllSuccess Bool [TransactionWarning] [Payment] State Contract
                     | ApplyAllHashMismatch
                     | ApplyAllNoMatchError
-                    | ApplyAllAmbiguousSlotIntervalError
+                    | ApplyAllAmbiguousTimeIntervalError
   deriving (Eq,Ord,Show)
 
 
@@ -343,7 +343,7 @@ applyAllInputs env state contract inputs = let
         -> ApplyAllResult
     applyAllLoop contractChanged env state contract inputs warnings payments =
         case reduceContractUntilQuiescent env state contract of
-            RRAmbiguousSlotIntervalError -> ApplyAllAmbiguousSlotIntervalError
+            RRAmbiguousTimeIntervalError -> ApplyAllAmbiguousTimeIntervalError
             ContractQuiescent reduced reduceWarns pays curState cont -> case inputs of
                 [] -> ApplyAllSuccess (contractChanged || reduced)
                                       (warnings ++ convertReduceWarnings reduceWarns)
@@ -358,7 +358,7 @@ applyAllInputs env state contract inputs = let
                     ApplyNoMatchError -> ApplyAllNoMatchError
     in applyAllLoop False env state contract inputs [] []
 
-data TransactionError = TEAmbiguousSlotIntervalError
+data TransactionError = TEAmbiguousTimeIntervalError
                       | TEApplyHashMismatch
                       | TEApplyNoMatchError
                       | TEIntervalError IntervalError
@@ -377,7 +377,7 @@ data TransactionOutput =
   deriving (Eq,Ord,Show,Read)
 
 data TransactionInput = TransactionInput
-    { txInterval :: SlotInterval
+    { txInterval :: TimeInterval
     , txInputs   :: [Input] }
   deriving (Eq,Ord,Show,Read)
 
@@ -400,7 +400,7 @@ computeTransaction tx state contract = let
                                                 , txOutContract = cont })
             ApplyAllHashMismatch -> Error TEApplyHashMismatch
             ApplyAllNoMatchError -> Error TEApplyNoMatchError
-            ApplyAllAmbiguousSlotIntervalError -> Error TEAmbiguousSlotIntervalError
+            ApplyAllAmbiguousTimeIntervalError -> Error TEAmbiguousTimeIntervalError
         IntervalError error -> Error (TEIntervalError error)
 
 playTraceAux :: TOR -> [TransactionInput] -> TransactionOutput
@@ -417,7 +417,7 @@ playTraceAux TOR { txOutWarnings = warnings
                    t
     Error _ -> transRes
 
-playTrace :: Slot -> Contract -> [TransactionInput] -> TransactionOutput
+playTrace :: POSIXTime -> Contract -> [TransactionInput] -> TransactionOutput
 playTrace sl c = playTraceAux (TOR { txOutWarnings = []
                                    , txOutPayments = []
                                    , txOutState = emptyState sl
@@ -432,7 +432,7 @@ contractLifespanUpperBound contract = case contract of
         max (contractLifespanUpperBound contract1) (contractLifespanUpperBound contract2)
     When cases timeout subContract -> let
         contractsLifespans = fmap (\(Case _ cont) -> contractLifespanUpperBound cont) cases
-        in maximum (getSlot timeout : contractLifespanUpperBound subContract : contractsLifespans)
+        in maximum (getPOSIXTime timeout : contractLifespanUpperBound subContract : contractsLifespans)
     Let _ _ cont -> contractLifespanUpperBound cont
     Assert _ cont -> contractLifespanUpperBound cont
 

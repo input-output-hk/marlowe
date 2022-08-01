@@ -23,11 +23,11 @@ processTransaction :: Transaction -> State -> Contract -> ProcessResult
 Where `Transaction` is defined as:
 
 ```haskell
-data Transaction = Transaction { interval :: SlotInterval
+data Transaction = Transaction { interval :: TimeInterval
                                , inputs :: [Input] }
 ```
 
-Where `interval` represents the slot interval in which the transaction is added to the blockchain. And `inputs` is a list
+Where `interval` represents the time interval in which the transaction is added to the blockchain. And `inputs` is a list
 of the actions issued by participants as part of the transaction.
 
 `ProcessResult` is defined as:
@@ -86,7 +86,7 @@ users, and the highest known lower bound for the most recent slot number.
 ```haskell
 data State = State { account :: Map AccountId Money
                    , choice :: Map ChoiceId ChosenNum
-                   , minSlot :: SlotNumber }
+                   , minTime :: POSIXTime }
 ```
 
 ## Inputs
@@ -133,7 +133,7 @@ at each stage, the contract continuation, i.e. what remains to be executed, and 
 > Explore some other ways of engaging with the contract
 > - What happens when the guarantor does not make the deposit on time?
 > - What happens when the issuer does not return the money?
-> - What happens when we pass an interval that includes slots both before and after a timeout?
+> - What happens when we pass an interval that includes times both before and after a timeout?
 
 ## There must be an easier way!
 

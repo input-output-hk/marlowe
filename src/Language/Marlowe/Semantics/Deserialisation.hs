@@ -2,8 +2,8 @@ module Language.Marlowe.Semantics.Deserialisation (byteStringToContract) where
 
 import Data.ByteString (ByteString)
 import Data.Ratio ((%))
-import Language.Marlowe.Semantics.Types (Action(..), Bound(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Party(..), Payee(..), Slot(Slot), Token(..),
-                                         Value(AddValue, AvailableMoney, ChoiceValue, Cond, Constant, DivValue, MulValue, NegValue, SlotIntervalEnd, SlotIntervalStart, SubValue, UseValue),
+import Language.Marlowe.Semantics.Types (Action(..), Bound(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Party(..), Payee(..), POSIXTime(POSIXTime), Token(..),
+                                         Value(AddValue, AvailableMoney, ChoiceValue, Cond, Constant, DivValue, MulValue, NegValue, TimeIntervalEnd, TimeIntervalStart, SubValue, UseValue),
                                          ValueId(..),)
 import Language.Marlowe.Deserialisation (byteStringToInt, byteStringToList, byteStringToPositiveInt, getByteString)
 import Data.Text.Encoding (decodeUtf8)
@@ -203,13 +203,13 @@ byteStringToValue x =
                             Nothing -> Nothing
                             Just (choId, t2) -> Just (ChoiceValue choId, t2)
                         )
-                      else Just (SlotIntervalStart, t1)
+                      else Just (TimeIntervalStart, t1)
                   )
                 else
                   ( if y < 11
                       then
                         ( if y < 10
-                            then Just (SlotIntervalEnd, t1)
+                            then Just (TimeIntervalEnd, t1)
                             else
                               ( case byteStringToValueId t1 of
                                   Nothing -> Nothing
@@ -423,7 +423,7 @@ byteStringToContract x =
                                     ( case byteStringToContract t3 of
                                         Nothing -> Nothing
                                         Just (cont, t4) ->
-                                          Just (When caseList (Slot timeout) cont, t4)
+                                          Just (When caseList (POSIXTime timeout) cont, t4)
                                     )
                               )
                         )

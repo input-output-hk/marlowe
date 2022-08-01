@@ -21,7 +21,7 @@ fun moneyInReduceStepResult :: "State \<Rightarrow> ReduceStepResult \<Rightarro
 "moneyInReduceStepResult _ (Reduced _ reduceEffect state _) =
    moneyInReduceEffect reduceEffect + moneyInState state" |
 "moneyInReduceStepResult state NotReduced = moneyInState state" |
-"moneyInReduceStepResult state AmbiguousSlotIntervalReductionError = moneyInState state"
+"moneyInReduceStepResult state AmbiguousTimeIntervalReductionError = moneyInState state"
 
 fun moneyInRefundOneResult :: "Accounts \<Rightarrow>
                                ((Party \<times> Token \<times> Money) \<times> Accounts) option \<Rightarrow> int" where
@@ -43,7 +43,7 @@ lemma moneyInPayments_works_on_rev : "moneyInPayments payments = moneyInPayments
 
 fun moneyInReduceResult :: "Payment list \<Rightarrow> State \<Rightarrow> ReduceResult \<Rightarrow> int" where
 "moneyInReduceResult pa sta (ContractQuiescent newReduced wa newPa newSta cont) = moneyInState newSta + moneyInPayments newPa" |
-"moneyInReduceResult pa sta RRAmbiguousSlotIntervalError = moneyInState sta + moneyInPayments pa"
+"moneyInReduceResult pa sta RRAmbiguousTimeIntervalError = moneyInState sta + moneyInPayments pa"
 
 fun moneyInInput :: "Input \<Rightarrow> int" where
 "moneyInInput (IDeposit accId tok party money) = max 0 money" |
@@ -66,7 +66,7 @@ fun moneyInApplyAllResult :: "State \<Rightarrow> Input list \<Rightarrow> Payme
   moneyInState newSta + moneyInPayments newPa" |
 "moneyInApplyAllResult state inps pa ApplyAllNoMatchError =
   moneyInState state + moneyInInputs inps + moneyInPayments pa" |
-"moneyInApplyAllResult state inps pa ApplyAllAmbiguousSlotIntervalError =
+"moneyInApplyAllResult state inps pa ApplyAllAmbiguousTimeIntervalError =
   moneyInState state + moneyInInputs inps + moneyInPayments pa"
 
 fun moneyInTransactionOutput :: "State \<Rightarrow> Input list \<Rightarrow> TransactionOutput \<Rightarrow> int" where
@@ -381,9 +381,9 @@ lemma reduceContractStep_preserves_money :
     apply simp
   subgoal for cases timeout contr
     apply (simp only:reduceContractStep.simps)
-    apply (cases "snd (slotInterval env) < timeout")
+    apply (cases "snd (timeInterval env) < timeout")
     apply (simp add: case_prod_beta')
-    apply (cases "timeout \<le> fst (slotInterval env)")
+    apply (cases "timeout \<le> fst (timeInterval env)")
     apply (simp add: case_prod_beta')
     by (simp add: case_prod_beta')
   subgoal for valId val cont

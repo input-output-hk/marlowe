@@ -21,7 +21,7 @@ import           Language.Marlowe.ACTUS.ActusContracts
 main :: IO ()
 main = do
     print $ contractLifespanUpperBound $
-        zeroCouponBondGuaranteed "investor" "issuer" "guarantor" 1000 200 (Slot 10) (Slot 20)
+        zeroCouponBondGuaranteed "investor" "issuer" "guarantor" 1000 200 (POSIXTime 10) (POSIXTime 20)
     now <- getCurrentTime
     let td = utctDay now
     let couponBondFor3Month12PercentConfig = cb td (addGregorianMonthsClip 3 td) 1000 0.12
@@ -50,13 +50,13 @@ couponBondFor3Month12Percent =
                             -- expects to receive notional + interest payment
                             (When [ Case (Deposit "investor" "issuer" ada (Constant 1010))
                                 (Pay "investor" (Party "investor") ada (Constant 1010) Close)]
-                            (Slot 1571788789)
+                            (POSIXTime 1571788789)
                             Close))]
-                    (Slot 1569196789)
+                    (POSIXTime 1569196789)
                     Close))]
-            (Slot 1566518389)
+            (POSIXTime 1566518389)
             Close))]
-    (Slot 1563839989)
+    (POSIXTime 1563839989)
     Close
 
 
@@ -67,12 +67,12 @@ zeroCouponBond = When [ Case
                 [ Case (Deposit "investor" "issuer" ada (Constant 1000))
                         (Pay "investor" (Party "investor") ada (Constant 1000) Close)
                 ]
-                (Slot 1579305589)
+                (POSIXTime 1579305589)
                 Close
             )
         )
     ]
-    (Slot 1563407989)
+    (POSIXTime 1563407989)
     Close
 
 couponBondGuaranteed = When [Case (Deposit "investor" "guarantor" ada (Constant 1030))
@@ -87,11 +87,11 @@ couponBondGuaranteed = When [Case (Deposit "investor" "guarantor" ada (Constant 
                             (When [Case (Deposit "investor" "issuer" ada (Constant 1010))
                                 (Pay "investor" (Party "investor") ada (Constant 1010)
                                 (Pay "investor" (Party "guarantor") ada (Constant 1010) Close))]
-                            (Slot 1571788789) Close)))]
-                    (Slot 1569196789) Close)))]
-            (Slot 1566518389) Close))]
-    (Slot 1563839989) Close)]
-    (Slot 1563839989) Close
+                            (POSIXTime 1571788789) Close)))]
+                    (POSIXTime 1569196789) Close)))]
+            (POSIXTime 1566518389) Close))]
+    (POSIXTime 1563839989) Close)]
+    (POSIXTime 1563839989) Close
 
 
 couponBondGuaranteedWithAccounts =
@@ -106,20 +106,20 @@ couponBondGuaranteedWithAccounts =
                             (Pay "party1" (Party "party1") ada (Constant 10)
                                 (When [Case (Deposit "party1" "party2" ada (Constant 1010))
                                     (Pay "party1" (Party "party1") ada (Constant 1010) Close)]
-                                (Slot 1571788789)
+                                (POSIXTime 1571788789)
                                 -- if the issues fails to return notional
                                 -- guarantor pays from his account and refunds
                                 (Pay "party2" (Party "party1") ada (Constant 1010) Close))
                             )]
-                        (Slot 1569196789)
+                        (POSIXTime 1569196789)
                         -- guarantor pays from his account and refunds
                         (Pay "party2" (Party "party1") ada (Constant 1020) Close)))]
-                (Slot 1566518389)
+                (POSIXTime 1566518389)
                 -- guarantor pays from his account and refunds
                 (Pay "party2" (Party "party1") ada (Constant 1030) Close)))]
         -- if partees do not proceed guarantor automatically gets his money back
-        (Slot 1563839989) Close)]
-    (Slot 1563839989) Close
+        (POSIXTime 1563839989) Close)]
+    (POSIXTime 1563839989) Close
 
 
 couponBondGuaranteedWithoutAccounts =
@@ -134,22 +134,22 @@ couponBondGuaranteedWithoutAccounts =
                             (Pay "party1" (Party "party1") ada (Constant 10)
                                 (When [Case (Deposit "party1" "party2" ada (Constant 1010))
                                     (Pay "party1" (Party "party1") ada (Constant 1010) Close)]
-                                (Slot 1571788789)
+                                (POSIXTime 1571788789)
                                 (Pay "party1" (Party "party1") ada (Constant 1010)
                                 -- with single account we have to
                                 -- manually redistibute money to guarantor
                                 (Pay "party1" (Party "guarantor") ada (Constant 20) Close))))]
-                        (Slot 1569196789)
+                        (POSIXTime 1569196789)
                         (Pay "party1" (Party "party1") ada (Constant 1020)
                         -- in all the cases
                         (Pay "party1" (Party "guarantor") ada (Constant 10) Close))))]
-                (Slot 1566518389)
+                (POSIXTime 1566518389)
                 -- here as well
                 (Pay "party1" (Party "party1") ada (Constant 1030) Close)))]
-        (Slot 1563839989)
+        (POSIXTime 1563839989)
         -- and thes are only 3 payments
         (Pay "party1" (Party "guarantor") ada (Constant 1030) Close))]
-    (Slot 1563839989) Close
+    (POSIXTime 1563839989) Close
 
 
 {- Simply swap two payments between parties -}
@@ -172,8 +172,8 @@ swapExample =
             Close)
         ] (date1 - gracePeriod) Close
   where
-    gracePeriod = Slot 3*60*24 -- 24 hours
-    date1 = Slot 1563839989
+    gracePeriod = POSIXTime 3*60*24 -- 24 hours
+    date1 = POSIXTime 1563839989
     acc1 = "party1"
     acc2 = "party2"
 
@@ -183,17 +183,17 @@ swapSingleAccount =
             (When [ Case (Deposit acc1 "party2" ada (Constant 300))
                 (Pay acc1 (Party "party2") ada (Constant 500)
                 (Pay acc1 (Party "party1") ada (Constant 300) Close))
-                ] (Slot date1)
+                ] (POSIXTime date1)
             -- refund to the 1st party
             (Pay acc1 (Party "party1") ada (Constant 500) Close))
          , Case (Deposit acc1 "party2" ada (Constant 300))
             (When [ Case (Deposit acc1 "party1" ada (Constant 500))
                 (Pay acc1 (Party "party2") ada (Constant 500)
                 (Pay acc1 (Party "party1") ada (Constant 300) Close))
-            ] (Slot date1)
+            ] (POSIXTime date1)
             -- refund to the 2nd party
             (Pay acc1 (Party "party2") ada (Constant 300) Close))
-        ] (Slot (date1 - gracePeriod)) Close
+        ] (POSIXTime (date1 - gracePeriod)) Close
   where
     gracePeriod = 3*60*24 -- 24 hours
     date1 = 1563839989
@@ -223,8 +223,8 @@ swapGuaranteedExample =
             Close)
         ] (date1 - 2 * gracePeriod) Close
   where
-    gracePeriod = Slot 3*60*24 -- 24 hours
-    date1 = Slot 1563839989
+    gracePeriod = POSIXTime 3*60*24 -- 24 hours
+    date1 = POSIXTime 1563839989
     acc1 = "party1"
     acc2 = "party2"
     acc3 = "guarantor"
@@ -262,8 +262,8 @@ swapSingleAccountGuaranteedExample =
             (Pay acc1 (Party "guarantor") ada (Constant 800) Close))
         ] (date1 - 2 * gracePeriod) Close
     where
-    gracePeriod = Slot 3*60*24 -- 24 hours
-    date1 = Slot 1563839989
+    gracePeriod = POSIXTime 3*60*24 -- 24 hours
+    date1 = POSIXTime 1563839989
     acc1 = "party1"
     acc2 = "party2"
     acc3 = "guarantor"

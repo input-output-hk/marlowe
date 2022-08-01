@@ -1,6 +1,6 @@
 module Language.Marlowe.FindInputs(getAllInputs) where
 
-import Language.Marlowe.Semantics.Types (Contract(..), Case(..), Observation(..), Slot)
+import Language.Marlowe.Semantics.Types (Contract(..), Case(..), Observation(..), POSIXTime)
 import Language.Marlowe.Analysis.FSSemanticsFastVerbose (warningsTrace)
 import Language.Marlowe.Semantics (TransactionInput)
 import Data.SBV (ThmResult)
@@ -42,7 +42,7 @@ expandContract (When cas sl con) = [When cas sl c | c <- expandContract con]
 expandContract (Let vi va con) = [Let vi va c | c <- expandContract con]
 expandContract (Assert _ con) = expandContract con
 
-getInputs :: Contract -> IO (Either (ThmResult, Contract) (Maybe (Slot, [TransactionInput])))
+getInputs :: Contract -> IO (Either (ThmResult, Contract) (Maybe (POSIXTime, [TransactionInput])))
 getInputs c = bimap (\tr -> (tr, c)) (fmap (\(s, t, _) -> (s, t))) <$> warningsTrace c
 
 -- | Uses static analysis to obtain a list of "unit tests" (lists of transactions) that
@@ -51,35 +51,35 @@ getInputs c = bimap (\tr -> (tr, c)) (fmap (\(s, t, _) -> (s, t))) <$> warningsT
 -- | extension of the contract
 -- >>> import Language.Marlowe.Examples.EscrowSimple
 -- >>> getAllInputs contract
--- Right [ (0, [ TransactionInput {txInterval = SlotInterval 10 10, txInputs = []}
+-- Right [ (0, [ TransactionInput {txInterval = TimeInterval 10 10, txInputs = []}
 --             ])
---       , (0, [ TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
---             , TransactionInput {txInterval = SlotInterval 90 90, txInputs = []}
+--       , (0, [ TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
+--             , TransactionInput {txInterval = TimeInterval 90 90, txInputs = []}
 --             ])
---       , (0, [ TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
---             , TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "bob")) 0)]}
---             , TransactionInput {txInterval = SlotInterval 100 100, txInputs = []}
+--       , (0, [ TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
+--             , TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "bob")) 0)]}
+--             , TransactionInput {txInterval = TimeInterval 100 100, txInputs = []}
 --             ])
---       , (0, [ TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
---             , TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "bob")) 0)]}
---             , TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "agree" (Role "carol")) 0)]}
+--       , (0, [ TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
+--             , TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "bob")) 0)]}
+--             , TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "agree" (Role "carol")) 0)]}
 --             ])
---       , (0, [ TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
---             , TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "bob")) 0)]}
---             , TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "agree" (Role "carol")) 1)]}
+--       , (0, [ TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
+--             , TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "bob")) 0)]}
+--             , TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "agree" (Role "carol")) 1)]}
 --             ])
---       , (0, [ TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
---             , TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "alice")) 0)]}
---             , TransactionInput {txInterval = SlotInterval 100 100, txInputs = []}
+--       , (0, [ TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
+--             , TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "alice")) 0)]}
+--             , TransactionInput {txInterval = TimeInterval 100 100, txInputs = []}
 --             ])
---       , (0, [ TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
---             , TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "alice")) 0)]}
---             , TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "agree" (Role "carol")) 0)]}
+--       , (0, [ TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
+--             , TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "alice")) 0)]}
+--             , TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "agree" (Role "carol")) 0)]}
 --             ])
---       , (0, [ TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
---             , TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "alice")) 0)]}
---             , TransactionInput {txInterval = SlotInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "agree" (Role "carol")) 1)]}
+--       , (0, [ TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IDeposit (Role "alice") (Role "alice") (Token "" "") 450)]}
+--             , TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "claim" (Role "alice")) 0)]}
+--             , TransactionInput {txInterval = TimeInterval 0 0, txInputs = [NormalInput (IChoice (ChoiceId "agree" (Role "carol")) 1)]}
 --             ])
 --       ]
-getAllInputs :: Contract -> IO (Either (ThmResult, Contract) [(Slot, [TransactionInput])])
+getAllInputs :: Contract -> IO (Either (ThmResult, Contract) [(POSIXTime,[TransactionInput])])
 getAllInputs c = second catMaybes . sequence <$> mapM getInputs (expandContract (removeAsserts c))

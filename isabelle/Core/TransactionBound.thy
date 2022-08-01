@@ -218,8 +218,8 @@ lemma applyAllLoop_decreases_maxTransactions :
     by simp
   done
 
-lemma minSlot_doesnt_affect_maxTransactions :
-  "maxTransactions cont (sta\<lparr>minSlot := y\<rparr>) = maxTransactions cont sta"
+lemma minTime_doesnt_affect_maxTransactions :
+  "maxTransactions cont (sta\<lparr>minTime := y\<rparr>) = maxTransactions cont sta"
   apply (cases cont)
   by simp_all
 
@@ -231,10 +231,10 @@ lemma fixInterval_preserves_maxTransactions :
   subgoal for left right
     apply (cases "right < left")
     apply simp
-    apply (cases "right < minSlot sta")
+    apply (cases "right < minTime sta")
     apply simp
     apply (simp del:maxTransactions.simps add:Let_def)
-    using minSlot_doesnt_affect_maxTransactions by blast
+    using minTime_doesnt_affect_maxTransactions by blast
   done
 
 lemma computeTransaction_decreases_maxTransactions_aux :

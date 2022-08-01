@@ -4,17 +4,17 @@ begin
 
 (* EVALUATION *)
 
-fun fixInterval :: "SlotInterval \<Rightarrow> State \<Rightarrow> IntervalResult" where
+fun fixInterval :: "TimeInterval \<Rightarrow> State \<Rightarrow> IntervalResult" where
 "fixInterval (low, high) state =
-   (let curMinSlot = minSlot state in
-    let newLow = max low curMinSlot in
+   (let curMinTime = minTime state in
+    let newLow = max low curMinTime in
     let curInterval = (newLow, high) in
-    let env = \<lparr> slotInterval = curInterval \<rparr> in
-    let newState = state \<lparr> minSlot := newLow \<rparr> in
+    let env = \<lparr> timeInterval = curInterval \<rparr> in
+    let newState = state \<lparr> minTime := newLow \<rparr> in
     (if (high < low)
      then IntervalError (InvalidInterval (low, high))
-     else (if (high < curMinSlot)
-           then IntervalError (IntervalInPastError curMinSlot (low, high))
+     else (if (high < curMinTime)
+           then IntervalError (IntervalInPastError curMinTime (low, high))
            else IntervalTrimmed env newState)))"
 
 
@@ -48,8 +48,8 @@ evalValue_DivValue: "evalValue env state (DivValue lhs rhs) =
        else n quot d)" |
 evalValue_ChoiceValue: "evalValue env state (ChoiceValue choId) =
     findWithDefault 0 choId (choices state)" |
-evalValue_SlotIntervalStart: "evalValue env state (SlotIntervalStart) = fst (slotInterval env)" |
-evalValue_SlotIntervalEnd: "evalValue env state (SlotIntervalEnd) = snd (slotInterval env)" |
+evalValue_TimeIntervalStart: "evalValue env state (TimeIntervalStart) = fst (timeInterval env)" |
+evalValue_TimeIntervalEnd: "evalValue env state (TimeIntervalEnd) = snd (timeInterval env)" |
 evalValue_UseValue: "evalValue env state (UseValue valId) =
     findWithDefault 0 valId (boundValues state)" |
 evalValue_Cond: "evalValue env state (Cond cond thn els) =
@@ -243,7 +243,7 @@ datatype ReduceWarning = ReduceNoWarning
 
 datatype ReduceStepResult = Reduced ReduceWarning ReduceEffect State Contract
                           | NotReduced
-                          | AmbiguousSlotIntervalReductionError
+                          | AmbiguousTimeIntervalReductionError
 
 fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceStepResult" where
 "reduceContractStep _ state Close =
@@ -272,12 +272,12 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
                else cont2) in
    Reduced ReduceNoWarning ReduceNoPayment state cont)" |
 "reduceContractStep env state (When _ timeout cont) =
-  (let (startSlot, endSlot) = slotInterval env in
-   if endSlot < timeout
+  (let (startTime, endTime) = timeInterval env in
+   if endTime < timeout
    then NotReduced
-   else (if timeout \<le> startSlot
+   else (if timeout \<le> startTime
          then Reduced ReduceNoWarning ReduceNoPayment state cont
-         else AmbiguousSlotIntervalReductionError))" |
+         else AmbiguousTimeIntervalReductionError))" |
 "reduceContractStep env state (Let valId val cont) =
   (let evaluatedValue = evalValue env state val in
    let boundVals = boundValues state in
@@ -294,7 +294,7 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
 
 datatype ReduceResult = ContractQuiescent bool "ReduceWarning list" "Payment list"
                                           State Contract
-                      | RRAmbiguousSlotIntervalError
+                      | RRAmbiguousTimeIntervalError
 
 fun evalBound :: "State \<Rightarrow> Contract \<Rightarrow> nat" where
 "evalBound sta cont = length (accounts sta) + 2 * (size cont)"
@@ -394,12 +394,12 @@ lemma reduceContractStepReducesSize_Pay :
 lemma reduceContractStepReducesSize_When :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
    c = When cases timeout cont \<Longrightarrow>
-   slotInterval env = (startSlot, endSlot) \<Longrightarrow>
+   timeInterval env = (startTime, endTime) \<Longrightarrow>
    evalBound nsta nc < evalBound sta c"
   apply simp
-  apply (cases "endSlot < timeout")
+  apply (cases "endTime < timeout")
   apply simp
-  apply (cases "timeout \<le> startSlot")
+  apply (cases "timeout \<le> startTime")
   by simp_all
 
 lemma reduceContractStepReducesSize_Let_aux :
@@ -444,7 +444,7 @@ function (sequential) reductionLoop :: "bool \<Rightarrow> Environment \<Rightar
                             ReduceWithPayment payment \<Rightarrow> payment # payments
                           | ReduceNoPayment \<Rightarrow> payments) in
        reductionLoop True env newState ncontract newWarnings newPayments
-   | AmbiguousSlotIntervalReductionError \<Rightarrow> RRAmbiguousSlotIntervalError
+   | AmbiguousTimeIntervalReductionError \<Rightarrow> RRAmbiguousTimeIntervalError
    | NotReduced \<Rightarrow> ContractQuiescent reduced (rev warnings) (rev payments) state contract)"
   by pat_completeness auto
 termination reductionLoop
@@ -524,14 +524,14 @@ fun convertApplyWarning :: "ApplyWarning \<Rightarrow> TransactionWarning list" 
 datatype ApplyAllResult = ApplyAllSuccess bool "TransactionWarning list" "Payment list"
                                      State Contract
                         | ApplyAllNoMatchError
-                        | ApplyAllAmbiguousSlotIntervalError
+                        | ApplyAllAmbiguousTimeIntervalError
 
 fun applyAllLoop :: "bool \<Rightarrow> Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
                     TransactionWarning list \<Rightarrow> Payment list \<Rightarrow>
                     ApplyAllResult" where
 "applyAllLoop contractChanged env state contract inputs warnings payments =
    (case reduceContractUntilQuiescent env state contract of
-      RRAmbiguousSlotIntervalError \<Rightarrow> ApplyAllAmbiguousSlotIntervalError
+      RRAmbiguousTimeIntervalError \<Rightarrow> ApplyAllAmbiguousTimeIntervalError
     | ContractQuiescent reduced reduceWarns pays curState cont \<Rightarrow>
        (case inputs of
           Nil \<Rightarrow> ApplyAllSuccess (contractChanged \<or> reduced) (warnings @ (convertReduceWarnings reduceWarns))
@@ -551,7 +551,7 @@ fun applyAllInputs :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<
 
 type_synonym TransactionSignatures = "Party list"
 
-datatype TransactionError = TEAmbiguousSlotIntervalError
+datatype TransactionError = TEAmbiguousTimeIntervalError
                           | TEApplyNoMatchError
                           | TEIntervalError IntervalError
                           | TEUselessTransaction
@@ -564,7 +564,7 @@ record TransactionOutputRecord = txOutWarnings :: "TransactionWarning list"
 datatype TransactionOutput = TransactionOutput TransactionOutputRecord
                            | TransactionError TransactionError
 
-record Transaction = interval :: SlotInterval
+record Transaction = interval :: TimeInterval
                      inputs :: "Input list"
 
 fun computeTransaction :: "Transaction \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> TransactionOutput" where
@@ -581,7 +581,7 @@ fun computeTransaction :: "Transaction \<Rightarrow> State \<Rightarrow> Contrac
                                    , txOutState = newState
                                    , txOutContract = cont \<rparr>
         | ApplyAllNoMatchError \<Rightarrow> TransactionError TEApplyNoMatchError
-        | ApplyAllAmbiguousSlotIntervalError \<Rightarrow> TransactionError TEAmbiguousSlotIntervalError)
+        | ApplyAllAmbiguousTimeIntervalError \<Rightarrow> TransactionError TEAmbiguousTimeIntervalError)
      | IntervalError error \<Rightarrow> TransactionError (TEIntervalError error))"
 
 fun playTraceAux :: "TransactionOutputRecord \<Rightarrow> Transaction list \<Rightarrow> TransactionOutput" where
@@ -596,13 +596,13 @@ fun playTraceAux :: "TransactionOutputRecord \<Rightarrow> Transaction list \<Ri
                                                                  , txOutWarnings := warnings @ (txOutWarnings transResRec) \<rparr>) t
     | TransactionError _ \<Rightarrow> transRes)"
 
-fun emptyState :: "Slot \<Rightarrow> State" where
+fun emptyState :: "POSIXTime \<Rightarrow> State" where
 "emptyState sl = \<lparr> accounts = MList.empty
                  , choices = MList.empty
                  , boundValues = MList.empty
-                 , minSlot = sl \<rparr>"
+                 , minTime = sl \<rparr>"
 
-fun playTrace :: "Slot \<Rightarrow> Contract \<Rightarrow> Transaction list \<Rightarrow> TransactionOutput" where
+fun playTrace :: "POSIXTime \<Rightarrow> Contract \<Rightarrow> Transaction list \<Rightarrow> TransactionOutput" where
 "playTrace sl c t = playTraceAux \<lparr> txOutWarnings = Nil
                                  , txOutPayments = Nil
                                  , txOutState = emptyState sl

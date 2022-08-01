@@ -3,7 +3,7 @@ imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" Util
 begin
 
 
-type_synonym Slot = int
+type_synonym POSIXTime = int
 
 type_synonym PubKey = ByteString
 
@@ -13,7 +13,7 @@ type_synonym TokenName = ByteString
 
 type_synonym ChoiceName = ByteString
 type_synonym NumAccount = int
-type_synonym Timeout = Slot
+type_synonym Timeout = POSIXTime
 type_synonym Money = Ada
 type_synonym ChosenNum = int
 
@@ -330,8 +330,8 @@ datatype Value = AvailableMoney AccountId Token
                | MulValue Value Value
                | DivValue Value Value
                | ChoiceValue ChoiceId
-               | SlotIntervalStart
-               | SlotIntervalEnd
+               | TimeIntervalStart
+               | TimeIntervalEnd
                | UseValue ValueId
                | Cond Observation Value Value
 and Observation = AndObs Observation Observation
@@ -346,7 +346,7 @@ and Observation = AndObs Observation Observation
                      | TrueObs
                      | FalseObs
 
-type_synonym SlotInterval = "Slot \<times> Slot"
+type_synonym TimeInterval = "POSIXTime \<times> POSIXTime"
 type_synonym Bound = "int \<times> int"
 
 fun inBounds :: "ChosenNum \<Rightarrow> Bound list \<Rightarrow> bool" where
@@ -372,22 +372,22 @@ type_synonym Accounts = "((AccountId \<times> Token) \<times> Money) list"
 record State = accounts :: Accounts
                choices :: "(ChoiceId \<times> ChosenNum) list"
                boundValues :: "(ValueId \<times> int) list"
-               minSlot :: Slot
+               minTime :: POSIXTime
 
 fun valid_state :: "State \<Rightarrow> bool" where
 "valid_state state = (valid_map (accounts state)
                      \<and> valid_map (choices state)
                      \<and> valid_map (boundValues state))"
 
-record Environment = slotInterval :: SlotInterval
+record Environment = timeInterval :: TimeInterval
 
 datatype Input = IDeposit AccountId Party Token Money
                | IChoice ChoiceId ChosenNum
                | INotify
 
-(* Processing of slot interval *)
-datatype IntervalError = InvalidInterval SlotInterval
-                       | IntervalInPastError Slot SlotInterval
+(* Processing of time interval *)
+datatype IntervalError = InvalidInterval TimeInterval
+                       | IntervalInPastError POSIXTime TimeInterval
 
 datatype IntervalResult = IntervalTrimmed Environment State
                         | IntervalError IntervalError

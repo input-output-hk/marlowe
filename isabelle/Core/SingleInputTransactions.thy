@@ -6,7 +6,7 @@ begin
 
 declare [[ smt_timeout = 300 ]]
 
-fun inputsToTransactions :: "SlotInterval \<Rightarrow> Input list \<Rightarrow> Transaction list" where
+fun inputsToTransactions :: "TimeInterval \<Rightarrow> Input list \<Rightarrow> Transaction list" where
 "inputsToTransactions si Nil = Cons \<lparr> interval = si
                                     , inputs = Nil \<rparr> Nil" |
 "inputsToTransactions si (Cons inp1 Nil) = Cons \<lparr> interval = si
@@ -394,43 +394,43 @@ lemma computeAllPrefix2:
   by simp
 
 lemma fixIntervalOnlySummary :
-  "minSlot state = low \<Longrightarrow> low \<le> high \<Longrightarrow>
-   IntervalTrimmed \<lparr> slotInterval = (low, high) \<rparr> state = fixInterval (low, high) state"
+  "minTime state = low \<Longrightarrow> low \<le> high \<Longrightarrow>
+   IntervalTrimmed \<lparr> timeInterval = (low, high) \<rparr> state = fixInterval (low, high) state"
   by simp
 
 lemma fixIntervalOnlySummary2 :
-  "fixInterval (low, high) state = IntervalTrimmed \<lparr> slotInterval = (nlow, nhigh) \<rparr> nstate \<Longrightarrow>
-   nlow = minSlot nstate \<and> low \<le> high"
+  "fixInterval (low, high) state = IntervalTrimmed \<lparr> timeInterval = (nlow, nhigh) \<rparr> nstate \<Longrightarrow>
+   nlow = minTime nstate \<and> low \<le> high"
   apply (cases "high < low")
   apply simp
-  apply (cases "high < minSlot state")
+  apply (cases "high < minTime state")
   by (auto simp add:Let_def)
 
 lemma fixIntervalChecksInterval :
-  "fixInterval inte sta1 = IntervalTrimmed \<lparr>slotInterval = (low, high)\<rparr> sta2 \<Longrightarrow>
+  "fixInterval inte sta1 = IntervalTrimmed \<lparr>timeInterval = (low, high)\<rparr> sta2 \<Longrightarrow>
    low \<le> high"
   apply (cases inte)
   apply (simp add:Let_def)
   subgoal for low1 high1
     apply (cases "high1 < low1")
     apply simp_all
-    apply (cases "high1 < minSlot sta1")
+    apply (cases "high1 < minTime sta1")
     apply simp_all
     by linarith
   done
 
 lemma fixIntervalIdempotentOnInterval :
-  "minSlot sta4 = minSlot sta2 \<Longrightarrow>
-   fixInterval (low1, high1) sta1 = IntervalTrimmed \<lparr>slotInterval = (low, high)\<rparr> sta2 \<Longrightarrow>
+  "minTime sta4 = minTime sta2 \<Longrightarrow>
+   fixInterval (low1, high1) sta1 = IntervalTrimmed \<lparr>timeInterval = (low, high)\<rparr> sta2 \<Longrightarrow>
    fixInterval (low1, high1) sta4 = fixInterval (low, high) sta4"
   apply (cases "high1 < low1")
   apply simp
-  apply (cases "high1 < minSlot sta1")
+  apply (cases "high1 < minTime sta1")
   by (auto simp add:Let_def)
 
-lemma reductionContractStep_preserves_minSlot :
+lemma reductionContractStep_preserves_minTime :
   "reduceContractStep env state contract = Reduced wa ef sta2 cont2 \<Longrightarrow>
-   minSlot state = minSlot sta2"
+   minTime state = minTime sta2"
   apply (cases contract)
   apply (auto split:option.splits simp add:Let_def)
   subgoal for x21 x22 x23 x24 x25
@@ -441,23 +441,23 @@ lemma reductionContractStep_preserves_minSlot :
   apply (auto split:prod.splits simp add:Let_def)
   by (metis ReduceStepResult.distinct(1) ReduceStepResult.distinct(3) ReduceStepResult.inject)
 
-lemma reductionLoop_preserves_minSlot :
-  "reductionLoop reducedBefore env sta con wa pa = ContractQuiescent reducedAfter reduceWarns pays sta2 con2 \<Longrightarrow> minSlot sta = minSlot sta2"
+lemma reductionLoop_preserves_minTime :
+  "reductionLoop reducedBefore env sta con wa pa = ContractQuiescent reducedAfter reduceWarns pays sta2 con2 \<Longrightarrow> minTime sta = minTime sta2"
   apply (induction reducedBefore env sta con wa pa arbitrary:reducedAfter reduceWarns pays sta2 con2 rule:reductionLoop.induct)
   subgoal for env state contract warnings payments reduceWarns pays sta2 con2
     apply (simp only:reductionLoop.simps[of env state contract warnings payments])
     apply (auto split:ReduceStepResult.splits simp del:reductionLoop.simps)
-    using reductionContractStep_preserves_minSlot by auto
+    using reductionContractStep_preserves_minTime by auto
   done
 
-lemma reduceContractUntilQuiescent_preserves_minSlot :
-  "reduceContractUntilQuiescent env sta con = ContractQuiescent reducedAfter reduceWarns pays sta2 con2 \<Longrightarrow> minSlot sta = minSlot sta2"
+lemma reduceContractUntilQuiescent_preserves_minTime :
+  "reduceContractUntilQuiescent env sta con = ContractQuiescent reducedAfter reduceWarns pays sta2 con2 \<Longrightarrow> minTime sta = minTime sta2"
   apply (simp only:reduceContractUntilQuiescent.simps)
-  by (simp add: reductionLoop_preserves_minSlot)
+  by (simp add: reductionLoop_preserves_minTime)
 
-lemma applyCases_preserves_minSlot :
+lemma applyCases_preserves_minTime :
   "applyCases env curState head x41 = Applied applyWarn newState newCont \<Longrightarrow>
-   minSlot curState = minSlot newState"
+   minTime curState = minTime newState"
   apply (induction env curState head x41 arbitrary:applyWarn newCont newState rule:applyCases.induct)
   subgoal for env state accId1 party1 tok1 amount accId2 party2 tok2 val cont rest applyWarn newCont newState
     apply (cases "accId1 = accId2 \<and> party1 = party2 \<and> tok1 = tok2 \<and> amount = evalValue env state val")
@@ -470,20 +470,20 @@ lemma applyCases_preserves_minSlot :
     by auto
   by auto
 
-lemma applyInput_preserves_minSlot :
-  "applyInput env curState head cont = Applied applyWarn newState newCont \<Longrightarrow> minSlot curState = minSlot newState"
+lemma applyInput_preserves_minTime :
+  "applyInput env curState head cont = Applied applyWarn newState newCont \<Longrightarrow> minTime curState = minTime newState"
   apply (cases cont)
-  by (auto simp add:applyCases_preserves_minSlot)
+  by (auto simp add:applyCases_preserves_minTime)
 
-lemma applyAllLoop_preserves_minSlot :
-  "applyAllLoop reducedBefore env sta con inp wa pa = ApplyAllSuccess reducedAfter wa2 pa2 sta2 con2 \<Longrightarrow> minSlot sta = minSlot sta2"
+lemma applyAllLoop_preserves_minTime :
+  "applyAllLoop reducedBefore env sta con inp wa pa = ApplyAllSuccess reducedAfter wa2 pa2 sta2 con2 \<Longrightarrow> minTime sta = minTime sta2"
   apply (induction inp arbitrary:reducedBefore env sta con wa pa reducedAfter wa2 pa2 sta2 con2)
   subgoal for reducedBefore env sta con wa pa reducedAfter wa2 pa2 sta2 con2
     apply (simp only:applyAllLoop.simps[of reducedBefore env sta con "[]" wa pa])
     apply (cases "reduceContractUntilQuiescent env sta con")
     subgoal for reduceWarns pays curState cont
       apply (simp del:reduceContractUntilQuiescent.simps)
-      using reduceContractUntilQuiescent_preserves_minSlot by blast
+      using reduceContractUntilQuiescent_preserves_minTime by blast
       apply (simp del:reduceContractUntilQuiescent.simps)
     done
   subgoal for head tail reducedBefore env sta con wa pa reducedAfter wa2 pa2 sta2 con2
@@ -492,37 +492,37 @@ lemma applyAllLoop_preserves_minSlot :
       subgoal for reducedAfter reduceWarns pays curState cont
         apply (cases "applyInput env curState head cont")
         subgoal for applyWarn newState newCont
-          by (simp add: applyInput_preserves_minSlot reduceContractUntilQuiescent_preserves_minSlot)
+          by (simp add: applyInput_preserves_minTime reduceContractUntilQuiescent_preserves_minTime)
         by simp
       by simp
     done
 
-lemma applyAllInputs_preserves_minSlot :
+lemma applyAllInputs_preserves_minTime :
   "applyAllInputs env sta con inp = ApplyAllSuccess reducedAfter wa2 pa2 sta2 con2 \<Longrightarrow>
-   minSlot sta = minSlot sta2"
+   minTime sta = minTime sta2"
   apply (simp only:applyAllInputs.simps)
-  using applyAllLoop_preserves_minSlot by blast
+  using applyAllLoop_preserves_minTime by blast
 
-lemma applyAllInputs_preserves_minSlot_rev :
+lemma applyAllInputs_preserves_minTime_rev :
    "applyAllInputs env sta con inp = ApplyAllSuccess reducedAfter wa2 pa2 sta2 con2 \<Longrightarrow>
-    minSlot sta2 = minSlot sta"
-  by (simp add: applyAllInputs_preserves_minSlot)
+    minTime sta2 = minTime sta"
+  by (simp add: applyAllInputs_preserves_minTime)
 
 lemma fixIntervalIdempotentThroughApplyAllInputs :
   "fixInterval inte sta1 = IntervalTrimmed env2 sta2 \<Longrightarrow>
    applyAllInputs env2 sta2 con3 inp1 = ApplyAllSuccess reducedAfter wa4 pa4 sta4 con4 \<Longrightarrow>
    fixInterval inte sta4 = IntervalTrimmed env2 sta4"
   apply (cases env2)
-  subgoal for slotInterval
-    apply (cases slotInterval)
+  subgoal for timeInterval
+    apply (cases timeInterval)
     subgoal for low high
       apply (simp del:fixInterval.simps applyAllInputs.simps)
       apply (subst fixIntervalOnlySummary)
-      apply (metis applyAllInputs_preserves_minSlot eq_fst_iff fixIntervalOnlySummary2)
+      apply (metis applyAllInputs_preserves_minTime eq_fst_iff fixIntervalOnlySummary2)
       using fixIntervalChecksInterval apply blast
       apply (cases inte)
       subgoal for low1 high1
-        using applyAllInputs_preserves_minSlot_rev fixIntervalIdempotentOnInterval by blast
+        using applyAllInputs_preserves_minTime_rev fixIntervalIdempotentOnInterval by blast
       done
     done
   done
@@ -561,7 +561,7 @@ lemma reductionStep_only_makes_smaller :
     apply auto[1]
   subgoal for cases timeout contract
     apply simp
-    apply (cases "slotInterval env")
+    apply (cases "timeInterval env")
     subgoal for low high
       apply simp
       apply (cases "high < timeout")
@@ -770,11 +770,11 @@ lemma fixIntervalPreservesAccounts :
   "fixInterval interv sta = IntervalTrimmed interv2 sta2 \<Longrightarrow> accounts sta = accounts sta2"
   apply (cases "sta")
   apply (cases "interv")
-  subgoal for accounts choices boundValues minSlot low high
+  subgoal for accounts choices boundValues minTime low high
     apply simp
     apply (cases "high < low")
     apply simp
-    apply (cases "high < minSlot")
+    apply (cases "high < minTime")
     by (auto simp add:Let_def)
   done
 
@@ -883,7 +883,7 @@ lemma computeTransactionStepEquivalence :
      by simp
 
 lemma applyAllInputs_prefix_error :
-  "a = ApplyAllAmbiguousSlotIntervalError \<or> a = ApplyAllNoMatchError \<Longrightarrow>
+  "a = ApplyAllAmbiguousTimeIntervalError \<or> a = ApplyAllNoMatchError \<Longrightarrow>
    applyAllInputs env fixSta txOutCont [head] = a \<Longrightarrow>
    applyAllInputs env fixSta txOutCont (head # tail) = a"
   apply (simp only:applyAllInputs.simps applyAllLoop.simps[of False env fixSta txOutCont])
@@ -956,9 +956,9 @@ lemma fixInterval_doesnt_care_about_inputs :
    fixInterval (interval \<lparr>interval = interv, inputs = inp2\<rparr>) sta = IntervalTrimmed env fixSta"
   by simp
 
-lemma fixInterval_idemp_on_same_minSlot :
+lemma fixInterval_idemp_on_same_minTime :
   "fixInterval interv sta = IntervalTrimmed env fixSta \<Longrightarrow>
-   minSlot fixSta = minSlot ista \<Longrightarrow>
+   minTime fixSta = minTime ista \<Longrightarrow>
    fixInterval interv ista = IntervalTrimmed env ista"
   apply (cases sta)
   apply (cases ista)
@@ -972,7 +972,7 @@ lemma fixInterval_idemp_after_computeTransaction :
    applyInput env curState head cont = Applied applyWarn newState cont2 \<Longrightarrow>
    reduceContractUntilQuiescent env newState cont2 = ContractQuiescent reduceReduced2 reduceWarns2 pays2 ista icont \<Longrightarrow>
    fixInterval interv ista = IntervalTrimmed env ista"
-  by (simp add: applyInput_preserves_minSlot fixInterval_idemp_on_same_minSlot reductionLoop_preserves_minSlot)
+  by (simp add: applyInput_preserves_minTime fixInterval_idemp_on_same_minTime reductionLoop_preserves_minTime)
 
 lemma applyAllLoop_independet_of_acc_error1 :
   "applyAllLoop reducedBefore env sta cont htail wa pa = ApplyAllNoMatchError \<Longrightarrow>
@@ -985,8 +985,8 @@ lemma applyAllLoop_independet_of_acc_error1 :
   done
 
 lemma applyAllLoop_independet_of_acc_error2 :
-  "applyAllLoop reducedBefore env sta cont htail wa pa = ApplyAllAmbiguousSlotIntervalError \<Longrightarrow>
-   applyAllLoop reducedBefore env sta cont htail wa2 pa2 = ApplyAllAmbiguousSlotIntervalError"
+  "applyAllLoop reducedBefore env sta cont htail wa pa = ApplyAllAmbiguousTimeIntervalError \<Longrightarrow>
+   applyAllLoop reducedBefore env sta cont htail wa2 pa2 = ApplyAllAmbiguousTimeIntervalError"
   apply (induction htail arbitrary: reducedBefore env sta cont wa pa wa2 pa2)
   apply (force split:ReduceResult.split)
   subgoal for head tail reducedBefore env sta cont wa pa wa2 pa2

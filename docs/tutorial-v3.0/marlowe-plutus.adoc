@@ -105,10 +105,10 @@ We then evaluate the continuation contract and its state, using the
 
 [source,haskell]
 ----
-eval :: Input → Slot → Ada → Ada → State → Contract → (State,Contract,Bool)
+eval :: Input → POSIXTime → Ada → Ada → State → Contract → (State,Contract,Bool)
 ----
 
-using the current slot number and at the same time checking that the
+using the current time and at the same time checking that the
 input makes sense and that payments are within committed bounds; if the
 input is valid then it returns the new `+State+` and `+Contract+` and
 the Boolean `+True+`; otherwise it returns the current `+State+` and

@@ -29,7 +29,7 @@ where the types are defined like this:
 [source,haskell]
 ----
 data TransactionInput = TransactionInput
-    { txInterval :: SlotInterval
+    { txInterval :: TimeInterval
     , txInputs   :: [Input] }
 
 data TransactionOutput =
@@ -47,13 +47,13 @@ and `States` are defined like this, with a helper function to define an initiall
 data State = State { accounts :: Map AccountId Money
                    , choices  :: Map ChoiceId ChosenNum
                    , boundValues :: Map ValueId Integer
-                   , minSlot :: Slot }
+                   , minTime :: POSIXTime }
 
-emptyState :: Slot -> State
-emptyState sn = State { accounts = Map.empty
+emptyState :: POSIXTime -> State
+emptyState st = State { accounts = Map.empty
                       , choices = Map.empty
                       , boundValues = Map.empty
-                      , minSlot = sn }
+                      , minTime = st }
 ----
 
 
@@ -72,10 +72,10 @@ to make local bindings:
 Prelude> :set -XOverloadedStrings
 Prelude> :l Language/Marlowe/Examples/EscrowSimpleV2.hs 
  ...
-*Lang...V2> let (TransactionOutput txWarn1 txPay1 state1 con1) = computeTransaction (TransactionInput (SlotInterval 0 0) [IDeposit "alice" "alice" 450]) (emptyState 0) contract
+*Lang...V2> let (TransactionOutput txWarn1 txPay1 state1 con1) = computeTransaction (TransactionInput (TimeInterval 0 0) [IDeposit "alice" "alice" 450]) (emptyState 0) contract
 ----
 
-In doing this we have pattern matched the output of an application of `computeTransaction`, which takes three inputs: the second is an initial state (at slot number 0) and the third is the initial escrow contract. The first is a `TransactionInput` which contains a `SlotInterval` – here `SlotInterval 0 0` – and a deposit of 450 Lovelace from `"alice"` into her account `"alice"` namely `IDeposit "alice" "alice" 450`.
+In doing this, we have pattern matched the output of an application of `computeTransaction`, which takes three inputs: the second is an initial state (at millisecond 0, the epoch) and the third is the initial escrow contract. The first is a `TransactionInput` which contains a `TimeInterval` – here `TimeInterval 0 0` – and a deposit of 450 Lovelace from `"alice"` into her account `"alice"` namely `IDeposit "alice" "alice" 450`.
 
 NOTE: If you want to try this for yourself in ghci, you can copy and paste from the code examples: they are in horizontally scrolling windows.
 
@@ -88,7 +88,7 @@ The output is matched with `TransactionOutput txWarn1 txPay1 state1 con1` so tha
 *Lang...V2> txPay1
 []
 *Lang...V2> state1
-State {accounts = fromList [(AccountId 0 "alice",450)], choices = fromList [], boundValues = fromList [], minSlot = 0}
+State {accounts = fromList [(AccountId 0 "alice",450)], choices = fromList [], boundValues = fromList [], minTime = 0}
 *Lang...V2> con1
 When [Case (Choice (ChoiceId "choice" "alice") [Bound 0 1]) 
  ...
@@ -99,13 +99,13 @@ In the next state the contract is waiting for input, and if both Alice and Bob a
 
 [source%wrap,haskell]
 ----
-*Lang...V2> let (TransactionOutput txWarn2 txPay2 state2 con2) = computeTransaction (TransactionInput (SlotInterval 0 0) [IChoice (ChoiceId "choice" "alice") 0, IChoice (ChoiceId "choice" "bob") 0]) state1 con1
+*Lang...V2> let (TransactionOutput txWarn2 txPay2 state2 con2) = computeTransaction (TransactionInput (TimeInterval 0 0) [IChoice (ChoiceId "choice" "alice") 0, IChoice (ChoiceId "choice" "bob") 0]) state1 con1
 *Lang...V2> txPay2
 [Payment "bob" 450]
 *Lang...V2> con2
 Refund
 *Lang...V2> state2
-State {accounts = fromList [], choices = fromList [(ChoiceId "choice" "alice",0),(ChoiceId "choice" "bob",0)], boundValues = fromList [], minSlot = 0}
+State {accounts = fromList [], choices = fromList [(ChoiceId "choice" "alice",0),(ChoiceId "choice" "bob",0)], boundValues = fromList [], minTime = 0}
 ----
 
 An alternative way of doing this is to add these definitions to a
@@ -125,11 +125,11 @@ An alternative execution of the contract is given by
 
 [source,haskell]
 ----
-*Lang...V2> let (TransactionOutput txWarn2 txPay2 state2 con2) = computeTransaction (TransactionInput (SlotInterval 0 0) [IChoice (ChoiceId "choice" "alice") 0, IChoice (ChoiceId "choice" "bob") 1]) state1 con1
+*Lang...V2> let (TransactionOutput txWarn2 txPay2 state2 con2) = computeTransaction (TransactionInput (TimeInterval 0 0) [IChoice (ChoiceId "choice" "alice") 0, IChoice (ChoiceId "choice" "bob") 1]) state1 con1
 *Lang...V2> con2
 When [Case (Choice (ChoiceId "choice" "carol") [Bound 1 1]) Refund,Case (Choice (ChoiceId "choice" "carol") [Bound 0 0]) (Pay (AccountId 0 "alice") (Party "bob") (Constant 450) Refund)] 100 Refund
 *Lang...V2> state2
-State {accounts = fromList [(AccountId 0 "alice",450)], choices = fromList [(ChoiceId "choice" "alice",0),(ChoiceId "choice" "bob",1)], boundValues = fromList [] , minSlot = 0}
+State {accounts = fromList [(AccountId 0 "alice",450)], choices = fromList [(ChoiceId "choice" "alice",0),(ChoiceId "choice" "bob",1)], boundValues = fromList [] , minTime = 0}
 ----
 
 This shows that we're now in a contract where the choice is up to Carol, and that there is still the 450 Lovelace in the `"alice"` account.
@@ -138,13 +138,13 @@ This shows that we're now in a contract where the choice is up to Carol, and tha
 
 [source,haskell]
 ----
-*Lang...V2> let (TransactionOutput txWarn3 txPay3 state3 con3) = computeTransaction  (TransactionInput (SlotInterval 0 0) [IChoice (ChoiceId "choice" "carol") 1]) state2 con2
+*Lang...V2> let (TransactionOutput txWarn3 txPay3 state3 con3) = computeTransaction  (TransactionInput (TimeInterval 0 0) [IChoice (ChoiceId "choice" "carol") 1]) state2 con2
 *Lang...V2> txPay3
 [Payment "alice" 450]
 *Lang...V2> con3
 Refund
 *Lang...V2> state3
-State {accounts = fromList [], choices = fromList [(ChoiceId "choice" "alice",0), (ChoiceId "choice" "bob",1),(ChoiceId "choice" "carol",1)], boundValues = fromList [], minSlot = 0}
+State {accounts = fromList [], choices = fromList [(ChoiceId "choice" "alice",0), (ChoiceId "choice" "bob",1),(ChoiceId "choice" "carol",1)], boundValues = fromList [], minTime = 0}
 ----
 
 So now the contract is ready to `Refund`, but it is clear from `state3` that there are no accounts containing non-zero balances, and so the contract is terminated.

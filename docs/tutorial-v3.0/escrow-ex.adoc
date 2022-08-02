@@ -84,25 +84,25 @@ the case that the condition of the `+When+` never becomes true. So, we  add time
                           (If (aliceChosen `ValueEQ` bobChosen)
                              agreement
                              arbitrate) ]
-                    60            -- ADDED
+                    21600000      -- ADDED
                     arbitrate),   -- ADDED
         Case bobChoice
               (When [ Case aliceChoice 
                           (If (aliceChosen `ValueEQ` bobChosen)
                               agreement
                               arbitrate) ]
-                    60            -- ADDED
+                    21600000      -- ADDED
                     arbitrate)    -- ADDED
         ]
-        40            -- ADDED
+        14400000      -- ADDED
         Refund        -- ADDED
 ----
 
-The outermost `When` calls for the first choice to be made by Alice or Bob: if neither of them has made a choice by time `40`, all the funds in the contract are refunded. 
+The outermost `When` calls for the first choice to be made by Alice or Bob: if neither of them has made a choice by time `14400000` milliseconds (4h), all the funds in the contract are refunded. 
 
-`Refund` is typically the last step in every “path” through a Marlowe contract, and its effect is to refund the money in the contract to the participants; we will describe this in more detail in a later tutorial. In this particular case, refund will happen after `40` slots.
+`Refund` is typically the last step in every “path” through a Marlowe contract, and its effect is to refund the money in the contract to the participants; we will describe this in more detail in a later tutorial. In this particular case, refund will happen after `14400000` miliseconds (4h).
 
-Looking at the inner constructs, if a choice has been made, then we wait for a second one. If that is not forthcoming by slot `60`, then Carol is called upon to arbitrate.footnote:[Again, we will describe how `arbitrate` and `agreement` work in a later tutorial.]
+Looking at the inner constructs, if a choice has been made, then we wait for a second one. If that is not forthcoming by timeout `21600000` (6h), then Carol is called upon to arbitrate.footnote:[Again, we will describe how `arbitrate` and `agreement` work in a later tutorial.]
 
 === Adding commitments
 
@@ -117,26 +117,26 @@ contract.
                           (If (aliceChosen `ValueEQ` bobChosen)
                              agreement
                              arbitrate) ]
-                    60 
+                    21600000 
                     arbitrate),
         Case bobChoice
               (When [ Case aliceChoice 
                           (If (aliceChosen `ValueEQ` bobChosen)
                               agreement
                               arbitrate) ]
-                    60            
+                    21600000            
                     arbitrate)   
         ]
-        40 
+        14400000 
         Refund)
     ]                                        
-    10                                       -- ADDED
+    3600000                                  -- ADDED
     Refund                                   -- ADDED
 ----
 
 A deposit of `price` is requested from `"alice"`: if it is given, then it is held in an account, also called `"alice"`. Accounts like this exist for the life of the contract only; each account belongs to a single contract. 
 
-There is a timeout of `10` slots on making the deposit; if that is reached without a deposit being made, then all the money already in the contract is refunded. In this case, that is simply the end of the contract.
+There is a timeout of `3600000` miliseconds (1h) on making the deposit; if that is reached without a deposit being made, then all the money already in the contract is refunded. In this case, that is simply the end of the contract.
 
 
 === Definitions
@@ -156,9 +156,9 @@ ____
 Comment on the choice of timeout values, and look at alternatives. 
 
 For
-example, what would happen if the timeout of `+40+` on the `+When+` were 
-to be replaced by `+60+`, and vice versa? Would it be sensible to have the same timeout, of 
-`+100+` say, on each `When`? If not, why not?
+example, what would happen if the timeout of `+14400000+` (4h) on the `+When+` were 
+to be replaced by `+21600000+` (6h), and vice versa? Would it be sensible to have the same timeout, of 
+`+36000000+` (10h) say, on each `When`? If not, why not?
 ____
 
 This example has shown many of the ingredients of the Marlowe contract

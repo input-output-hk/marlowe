@@ -31,12 +31,12 @@ type Party  = PubKey
 ----
 However, Haskell allows us to present and read in these values more concisely (by declaring a custom instance of `Show` and using _overloaded strings_) so that these can be input and read as `"alice"`, `"bob"` etc. Because `Party` is a synonym for `PubKey`, the same applies to parties to contracts. 
 
-Slot numbers and amounts of money are treated in a similar way; with the same show/overload approach they will appear in contracts as numbers:
+POSIXTimes are numbers and amounts of money are treated in a similar way; with the same show/overload approach they will appear in contracts as numbers:
 
 [source,haskell]
 ----
-data Slot    = Slot Integer
-type Timeout = Slot
+data POSIXTime = POSIXTime Integer
+type Timeout   = POSIXTime
 
 data Ada     = Lovelace Integer 
 type Money   = Ada
@@ -84,15 +84,15 @@ data Value = AvailableMoney AccountId
            | AddValue Value Value
            | SubValue Value Value
            | ChoiceValue ChoiceId Value
-           | SlotIntervalStart
-           | SlotIntervalEnd
+           | TimeIntervalStart
+           | TimeIntervalEnd
            | UseValue ValueId
 ----
 The different kinds of values – all of which are `Integer` – are pretty much self explanatory, but for completeness we have
 
 * Lookup of the value in an account `AvailableMoney`, made in a choice `ChoiceValue` and in an identifier that has already been defined  `UseValue`.
 * Arithmetic constants and operators.
-* The start and end of the current _slot interval_; see below for further discussion of this.
+* The start and end of the current _time interval_; see below for further discussion of this.
 
 Next we have observations 
 
@@ -148,7 +148,7 @@ where the types are defined like this:
 [source,haskell]
 ----
 data TransactionInput = TransactionInput
-    { txInterval :: SlotInterval
+    { txInterval :: TimeInterval
     , txInputs   :: [Input] }
 
 data TransactionOutput =
@@ -161,25 +161,25 @@ data TransactionOutput =
 ----
 The notation used here adds field names to the arguments of the constructors, giving selectors for the data as well as making in clearer the purpose of each field.
 
-The `TransactionInput` type has two components: the `SlotInterval` in which it can validly be added to the blockchain, and an ordered sequence of `Input` values to be processed in that transaction.
+The `TransactionInput` type has two components: the `TimeInterval` in which it can validly be added to the blockchain, and an ordered sequence of `Input` values to be processed in that transaction.
 
 A `TransactionOutput` value has four components: the last two are the updated `State` and `Contract`, while the second gives a ordered sequence of `Payments` produced by the transaction. The first component contains a list of any warnings produced by processing the transaction.
 
-=== Slot ranges
+=== Time ranges
 
-This is part of the architecture of Cardano/Plutus, which acknowledges that it is not possible to predict precisely in which slot a particular transaction will be processed. Transactions are therefore given a _slot interval_ in which they are expected to be processed, and this carries over to Marlowe: each step of a Marlowe contract is processed in the context of a range of slots.
+This is part of the architecture of Cardano/Plutus, which acknowledges that it is not possible to predict precisely in which time a particular transaction will be processed. Transactions are therefore given a _time interval_ in which they are expected to be processed, and this carries over to Marlowe: each step of a Marlowe contract is processed in the context of an interval of time.
 [source,haskell]
 ----
-data Slot         = Slot Integer 
-data SlotInterval = SlotInterval Slot Slot
+data POSIXTime    = POSIXTime Integer 
+data TimeInterval = TimeInterval POSIXTime POSIXTime
 
-ivFrom, ivTo :: SlotInterval -> Slot
-ivFrom (SlotInterval from _) = from
-ivTo   (SlotInterval _ to)   = to
+ivFrom, ivTo :: TimeInterval -> POSIXTime
+ivFrom (TimeInterval from _) = from
+ivTo   (TimeInterval _ to)   = to
 ----
-How does this affect the processing of a Marlowe contract? Each step is processed relative to a slot interval, and the current slot value needs to lie within that interval. 
+How does this affect the processing of a Marlowe contract? Each step is processed relative to a time interval, and the current time needs to lie within that interval. 
 
-The endpoints of the interval are accessible as the values `SlotIntervalStart` and `SlotIntervalEnd`, and these can be used in observations. Timeouts need to be processed _unambiguously_, so that _all values in the slot interval_ have to either have exceeded the timeout for it to take effect, or fall before the timeout, for normal execution to take effect. In other words, the timeout value needs to either be less or equal than `SlotIntervalStart` (in order for the timeout to take effect) or be strictly greater than `SlotIntervalEnd` (for normal execution to take place).
+The endpoints of the interval are accessible as the values `TimeIntervalStart` and `TimeIntervalEnd`, and these can be used in observations. Timeouts need to be processed _unambiguously_, so that _instants in the time interval_ have to either have exceeded the timeout for it to take effect, or fall before the timeout, for normal execution to take effect. In other words, the timeout value needs to either be less or equal than `TimeIntervalStart` (in order for the timeout to take effect) or be strictly greater than `TimeIntervalEnd` (for normal execution to take place).
 
 ==== Notes
 
@@ -189,9 +189,6 @@ infrastructure in which it is run.
 * It is assumed that cryptographic functions and operations are provided
 by a layer external to Marlowe, and so they need not be modelled
 explicitly.
-* We assume that time is ``coarse grained'' and measured by block or
-slot number, so that, in particular, timeouts are delimited using
-block/slot numbers.
 * Making a deposit is not something that a contract can perform;
 rather, it can request that a deposit is made, but that then has to
 be established externally: hence the input of (a collection of) deposits for

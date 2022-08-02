@@ -66,7 +66,7 @@ To single step, you can work in `ghci` like this, using the facility to make loc
 ```
 
 Where `inps`s are lists of inputs that may include any number of inputs depending on the context, the numbers `li`s and
-`hi`s denote the interval in which the slot number in which each transaction is accepted in the blockchain.
+`hi`s denote the time interval in which each transaction is accepted in the blockchain.
 
 We can then explore the values produced. Note, however, that the local bindings are lost each time a `:load` or `:l` command
 is performed.
@@ -81,7 +81,7 @@ steps taken, and did not cover the constituent types in much detail. These are a
 ## State
 
 The `State` of a Marlowe contract keeps track of the amount of money in each `account`, the values of `choice`s made by
-users, and the highest known lower bound for the most recent slot number.
+users, and the highest known lower bound for time (the maximum of the lower bounds of the intervals and start time).
 
 ```haskell
 data State = State { account :: Map AccountId Money

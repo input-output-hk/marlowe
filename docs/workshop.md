@@ -17,7 +17,7 @@ Modify the Haskell escrow contract to a “Bulgarian” variant in which Bob has
 
 The challenge is to write a Marlowe contract that models payments for a utility, such as a mobile phone.
 
-The contract models the fact that you make regular payments to the company, every 3 hours. These payments are specified by the company, and you have 3 hours in which to pay. To start with, model the situation where the payment is 40 Ada each month.
+The contract models the fact that you make regular payments to the company, every 3 hours. These payments are specified by the company, and you have 1 hour in which to pay. To start with, model the situation where the payment is 40 Ada each month.
 
 At the start of the contract you make a deposit, say 150 Lovelace, and during the year, if you do not pay on time the company keeps the full deposit. If you have paid regularly, at the end of the contract  the deposit is paid back to you.
 

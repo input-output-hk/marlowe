@@ -28,12 +28,12 @@ So to show records we need to duplicate the definition
 record State = accounts :: Accounts
                choices :: "(ChoiceId \<times> ChosenNum) list"
                boundValues :: "(ValueId \<times> int) list"
-               minSlot :: Slot
+               minTime :: POSIXTime
 
 subsection \<open>Environment\label{sec:environment}\<close>
 
 
-record Environment = slotInterval :: SlotInterval
+record Environment = timeInterval :: TimeInterval
 
 section \<open>Semantics\<close>
 
@@ -110,13 +110,13 @@ text \<open>@{thm evalValue_ChoiceValue}\<close>
 subsubsection \<open>Time Interval Start\<close>
 text \<open>All transactions are executed in the context of a valid time interval. For the \<^emph>\<open>TimeIntervalStart\<close> case,
 @{const evalValue} will return the beginning of that interval.\<close>
-text \<open>@{thm evalValue_SlotIntervalStart}\<close>
+text \<open>@{thm evalValue_TimeIntervalStart}\<close>
 
 
 subsubsection \<open>Time Interval End\<close>
 text \<open>All transactions are executed in the context of a valid time interval. For the \<^emph>\<open>TimeIntervalEnd\<close> case,
 @{const evalValue} will return the end of that interval.\<close>
-text \<open>@{thm evalValue_SlotIntervalEnd}\<close>
+text \<open>@{thm evalValue_TimeIntervalEnd}\<close>
 
 
 subsubsection \<open>Use Value\<close>

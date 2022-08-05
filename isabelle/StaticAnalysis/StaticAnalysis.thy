@@ -62,8 +62,8 @@ lemma newVar_failsForNil : "isCounterExample (execute (newVar \<bind> (\<lambda>
 lemma inline_monad : "((m1 \<bind> return \<circ> f) \<bind> m2) = (m1 \<bind> m2 \<circ> f)"
   by (auto split:option.splits simp add:bind_def return_def)
 
-lemma inline_monads_ex1 : "((newVar \<bind> (\<lambda>hs. newVar \<bind> (\<lambda>ls. constrain (ls \<le> hs) \<bind> (\<lambda>_. return (ls, hs))))) \<bind> (\<lambda>(ls, hs). constrain (lSlot \<le> ls) \<bind> (\<lambda>_. return (ls, hs)))) \<bind> f =
-                            (newVar \<bind> (\<lambda>hs. newVar \<bind> (\<lambda>ls. constrain (ls \<le> hs) \<bind> (\<lambda>_. constrain (lSlot \<le> ls) \<bind> (\<lambda>_. f (ls, hs))))))"
+lemma inline_monads_ex1 : "((newVar \<bind> (\<lambda>hs. newVar \<bind> (\<lambda>ls. constrain (ls \<le> hs) \<bind> (\<lambda>_. return (ls, hs))))) \<bind> (\<lambda>(ls, hs). constrain (lPOSIXTime \<le> ls) \<bind> (\<lambda>_. return (ls, hs)))) \<bind> f =
+                            (newVar \<bind> (\<lambda>hs. newVar \<bind> (\<lambda>ls. constrain (ls \<le> hs) \<bind> (\<lambda>_. constrain (lPOSIXTime \<le> ls) \<bind> (\<lambda>_. f (ls, hs))))))"
   by (auto split:option.splits simp add:bind_def return_def execute_def)
 
 lemma bind_left_unit : "do { x \<leftarrow> return a :: int Symbolic; k x } = k a"
@@ -92,8 +92,8 @@ datatype SymInput = SymDeposit AccountId Party Token "int"
                   | SymChoice ChoiceId "int"
                   | SymNotify
 
-record SymStateRecord = lowSlot :: "int"
-                        highSlot :: "int"
+record SymStateRecord = lowTime :: "int"
+                        highTime :: "int"
                         traces :: "(int  \<times> int \<times> SymInput option \<times> int) list"
                         paramTrace :: "(int \<times> int \<times> int \<times> int) list"
                         symInput :: "SymInput option"
@@ -121,8 +121,8 @@ termination generateSymbolicInterval
 
 fun mkInitialSymState :: "(int \<times> int \<times> int \<times> int) list \<Rightarrow> State option \<Rightarrow> SymState Symbolic" where
 "mkInitialSymState pt None = do { (ls, hs) \<leftarrow> generateSymbolicInterval None;
-                                  return (SymState \<lparr> lowSlot = ls
-                                                   , highSlot = hs
+                                  return (SymState \<lparr> lowTime = ls
+                                                   , highTime = hs
                                                    , traces = Nil
                                                    , paramTrace = pt
                                                    , symInput = None
@@ -134,10 +134,10 @@ fun mkInitialSymState :: "(int \<times> int \<times> int \<times> int) list \<Ri
 "mkInitialSymState pt (Some \<lparr> accounts = accs
                             , choices = cho
                             , boundValues = bVal
-                            , minSlot = ms \<rparr>) =
+                            , minTime = ms \<rparr>) =
   do { (ls, hs) \<leftarrow> generateSymbolicInterval (Some ms);
-       return (SymState \<lparr> lowSlot = ls
-                        , highSlot = hs
+       return (SymState \<lparr> lowTime = ls
+                        , highTime = hs
                         , traces = Nil
                         , paramTrace = pt
                         , symInput = None
@@ -202,8 +202,8 @@ fun symEvalVal :: "Value \<Rightarrow> SymState \<Rightarrow> int" and
    else n quot d)" |
 "symEvalVal (ChoiceValue choId) (SymState symState) =
   findWithDefault 0 choId (symChoices symState)" |
-"symEvalVal SlotIntervalStart (SymState symState) = lowSlot symState" |
-"symEvalVal SlotIntervalEnd (SymState symState) = highSlot symState" |
+"symEvalVal TimeIntervalStart (SymState symState) = lowTime symState" |
+"symEvalVal TimeIntervalEnd (SymState symState) = highTime symState" |
 "symEvalVal (UseValue valId) (SymState symState) =
   findWithDefault 0 valId (symBoundValues symState)" |
 "symEvalVal (Cond cond v1 v2) symState = (if symEvalObs cond symState
@@ -244,44 +244,44 @@ fun updateSymInput :: "SymInput option \<Rightarrow> SymState \<Rightarrow> SymS
 
 fun addTransaction :: "int \<Rightarrow> int \<Rightarrow> SymInput option \<Rightarrow> int \<Rightarrow> SymState \<Rightarrow> int \<Rightarrow>
                        (bool \<times> SymState) Symbolic" where
-"addTransaction newLowSlot newHighSlot None slotTim
+"addTransaction newLowTime newHighTime None timeTim
                 (SymState symState) pos =
- (let oldLowSlot = lowSlot symState in
-  let oldHighSlot = highSlot symState in
+ (let oldLowTime = lowTime symState in
+  let oldHighTime = highTime symState in
   let oldTraces = traces symState in
   let prevSymInp = symInput symState in
   let oldPos = whenPos symState in
-  do { let tim = slotTim;
-       constrain (newLowSlot \<le> newHighSlot);
-       let conditions = (((oldHighSlot < tim) \<or>
-                          ((oldLowSlot = newLowSlot) \<and> (oldHighSlot = newHighSlot))) \<and>
-                         (newLowSlot \<ge> tim));
+  do { let tim = timeTim;
+       constrain (newLowTime \<le> newHighTime);
+       let conditions = (((oldHighTime < tim) \<or>
+                          ((oldLowTime = newLowTime) \<and> (oldHighTime = newHighTime))) \<and>
+                         (newLowTime \<ge> tim));
        uSymInput \<leftarrow> updateSymInput None
                       (SymState
-                         (symState \<lparr> lowSlot := newLowSlot
-                                   , highSlot := newHighSlot
-                                   , traces := (Cons (oldLowSlot, oldHighSlot, prevSymInp, oldPos)
+                         (symState \<lparr> lowTime := newLowTime
+                                   , highTime := newHighTime
+                                   , traces := (Cons (oldLowTime, oldHighTime, prevSymInp, oldPos)
                                                      oldTraces)
                                    , symInput := None
                                    , whenPos := pos
                                    \<rparr>));
        return (conditions, uSymInput) })" |
-"addTransaction newLowSlot newHighSlot newSymInput slotTim (SymState symState) pos =
-  (let oldLowSlot = lowSlot symState in
-   let oldHighSlot = highSlot symState in
+"addTransaction newLowTime newHighTime newSymInput timeTim (SymState symState) pos =
+  (let oldLowTime = lowTime symState in
+   let oldHighTime = highTime symState in
    let oldTraces = traces symState in
    let prevSymInp = symInput symState in
    let oldPos = whenPos symState in
-   do { let tim = slotTim;
-        constrain (newLowSlot \<le> newHighSlot);
-        let conditions = ((oldHighSlot < tim) \<and>
-                          (newHighSlot < tim) \<and>
-                          (newLowSlot \<ge> oldLowSlot));
+   do { let tim = timeTim;
+        constrain (newLowTime \<le> newHighTime);
+        let conditions = ((oldHighTime < tim) \<and>
+                          (newHighTime < tim) \<and>
+                          (newLowTime \<ge> oldLowTime));
         uSymInput \<leftarrow> updateSymInput newSymInput
                       (SymState
-                         (symState \<lparr> lowSlot := newLowSlot
-                                   , highSlot := newHighSlot
-                                   , traces := (Cons (oldLowSlot, oldHighSlot, prevSymInp, oldPos)
+                         (symState \<lparr> lowTime := newLowTime
+                                   , highTime := newHighTime
+                                   , traces := (Cons (oldLowTime, oldHighTime, prevSymInp, oldPos)
                                                      oldTraces)
                                    , symInput := newSymInput
                                    , whenPos := pos
@@ -296,12 +296,12 @@ fun ensureBounds :: "int \<Rightarrow> Bound list \<Rightarrow> bool" where
 "ensureBounds cho (Cons (lowBnd, hiBnd) t) =
   (((cho \<ge> lowBnd) \<and> (cho \<le> hiBnd)) \<or> ensureBounds cho t)"
 
-fun addFreshSlotsToState :: "SymState \<Rightarrow> (int \<times> int \<times> SymState) Symbolic" where
-"addFreshSlotsToState (SymState sState) =
-  do { newLowSlot \<leftarrow> newVar;
-       newHighSlot \<leftarrow> newVar;
-       return (newLowSlot, newHighSlot, SymState (sState \<lparr> lowSlot := newLowSlot,
-                                                           highSlot := newHighSlot \<rparr>))
+fun addFreshTimesToState :: "SymState \<Rightarrow> (int \<times> int \<times> SymState) Symbolic" where
+"addFreshTimesToState (SymState sState) =
+  do { newLowTime \<leftarrow> newVar;
+       newHighTime \<leftarrow> newVar;
+       return (newLowTime, newHighTime, SymState (sState \<lparr> lowTime := newLowTime,
+                                                           highTime := newHighTime \<rparr>))
      }"
 
 fun newPreviousMatchDeposit :: "Value \<Rightarrow> AccountId \<Rightarrow> Party \<Rightarrow> Token \<Rightarrow>
@@ -344,7 +344,7 @@ function (sequential) isValidAndFailsAux :: "bool \<Rightarrow> Contract \<Right
                             (SymInput \<Rightarrow> SymState \<Rightarrow> bool) \<Rightarrow> SymState \<Rightarrow>
                             int \<Rightarrow> bool Symbolic" where
 "isValidAndFailsAux hasErr Close (SymState sState) =
-  return (hasErr \<and> convertToSymbolicTrace (Cons (lowSlot sState, highSlot sState,
+  return (hasErr \<and> convertToSymbolicTrace (Cons (lowTime sState, highTime sState,
                                                  symInput sState, whenPos sState)
                                                 (traces sState)) (paramTrace sState))" |
 "isValidAndFailsAux hasErr (Pay accId payee tok val cont) (SymState sState) =
@@ -386,19 +386,19 @@ function (sequential) isValidAndFailsAux :: "bool \<Rightarrow> Contract \<Right
        newTrace \<leftarrow> isValidAndFailsAux hasErr cont newSState;
        return (newCond, newTrace) }" |
 "isValidAndFailsWhen hasErr Nil timeout cont previousMatch sState pos =
-  do { newLowSlot \<leftarrow> newVar;
-       newHighSlot \<leftarrow> newVar;
-       (cond, newTrace) \<leftarrow> applyInputConditions newLowSlot newHighSlot
+  do { newLowTime \<leftarrow> newVar;
+       newHighTime \<leftarrow> newVar;
+       (cond, newTrace) \<leftarrow> applyInputConditions newLowTime newHighTime
                                                 hasErr None timeout sState 0 cont;
        return (if cond then newTrace else False) }" |
 "isValidAndFailsWhen hasErr (Cons (Case (Deposit accId party token val) cont) rest)
                      timeout timCont previousMatch sState pos =
-  do { (newLowSlot, newHighSlot, sStateWithInput) \<leftarrow> addFreshSlotsToState sState;
+  do { (newLowTime, newHighTime, sStateWithInput) \<leftarrow> addFreshTimesToState sState;
        let concVal = symEvalVal val sStateWithInput;
        let symInput = SymDeposit accId party token concVal;
        let clashResult = previousMatch symInput sStateWithInput;
        let newPreviousMatch = newPreviousMatchDeposit val accId party token previousMatch;
-       (newCond, newTrace) \<leftarrow> applyInputConditions newLowSlot newHighSlot
+       (newCond, newTrace) \<leftarrow> applyInputConditions newLowTime newHighTime
                                 (hasErr \<or> (concVal \<le> 0))
                                 (Some symInput) timeout sState pos cont;
        contTrace \<leftarrow> isValidAndFailsWhen hasErr rest timeout timCont
@@ -406,13 +406,13 @@ function (sequential) isValidAndFailsAux :: "bool \<Rightarrow> Contract \<Right
        return (if (newCond \<and> (\<not> clashResult)) then newTrace else contTrace) }" |
 "isValidAndFailsWhen hasErr (Cons (Case (Choice choId bnds) cont) rest)
                      timeout timCont previousMatch sState pos =
-  do { (newLowSlot, newHighSlot, sStateWithInput) \<leftarrow> addFreshSlotsToState sState;
+  do { (newLowTime, newHighTime, sStateWithInput) \<leftarrow> addFreshTimesToState sState;
        concVal \<leftarrow> newVar;
        let symInput = SymChoice choId concVal;
        let clashResult = previousMatch symInput sStateWithInput;
        let newPreviousMatch = newPreviousMatchChoice choId bnds previousMatch;
        (newCond, newTrace)
-                 \<leftarrow> applyInputConditions newLowSlot newHighSlot
+                 \<leftarrow> applyInputConditions newLowTime newHighTime
                                          hasErr (Some symInput) timeout sState pos cont;
        contTrace \<leftarrow> isValidAndFailsWhen hasErr rest timeout timCont
                                         newPreviousMatch sState (pos + 1);
@@ -420,12 +420,12 @@ function (sequential) isValidAndFailsAux :: "bool \<Rightarrow> Contract \<Right
                else contTrace) }" |
 "isValidAndFailsWhen hasErr (Cons (Case (Notify obs) cont) rest)
                      timeout timCont previousMatch sState pos =
-  do { (newLowSlot, newHighSlot, sStateWithInput) \<leftarrow> addFreshSlotsToState sState;
+  do { (newLowTime, newHighTime, sStateWithInput) \<leftarrow> addFreshTimesToState sState;
        let obsRes = symEvalObs obs sStateWithInput;
        let symInput = SymNotify;
        let clashResult = previousMatch symInput sStateWithInput;
        let newPreviousMatch = newPreviousMatchNotify obs previousMatch;
-       (newCond, newTrace) \<leftarrow> applyInputConditions newLowSlot newHighSlot
+       (newCond, newTrace) \<leftarrow> applyInputConditions newLowTime newHighTime
                                                    hasErr (Some symInput) timeout sState pos cont;
        contTrace \<leftarrow> isValidAndFailsWhen hasErr rest timeout timCont
                                         newPreviousMatch sState (pos + 1);
@@ -468,8 +468,8 @@ fun combineSymVarsOutput :: "nat \<Rightarrow> SymVarsOutput list \<Rightarrow> 
 
 fun calculateSymVars_mkInitialSymState :: "int \<Rightarrow> int \<Rightarrow> State option \<Rightarrow> SymState \<times> SymVarsOutput" where
 "calculateSymVars_mkInitialSymState ls hs None =
-  (SymState \<lparr> lowSlot = ls
-            , highSlot = hs
+  (SymState \<lparr> lowTime = ls
+            , highTime = hs
             , traces = Nil
             , paramTrace = Nil
             , symInput = None
@@ -481,9 +481,9 @@ fun calculateSymVars_mkInitialSymState :: "int \<Rightarrow> int \<Rightarrow> S
 "calculateSymVars_mkInitialSymState ls hs (Some \<lparr> accounts = accs
                                                 , choices = cho
                                                 , boundValues = bVal
-                                                , minSlot = ms \<rparr>) =
-  (SymState \<lparr> lowSlot = max ms ls
-            , highSlot = hs
+                                                , minTime = ms \<rparr>) =
+  (SymState \<lparr> lowTime = max ms ls
+            , highTime = hs
             , traces = Nil
             , paramTrace = Nil
             , symInput = None
@@ -507,21 +507,21 @@ fun calculateSymVars_updateSymInput :: "SymInput option \<Rightarrow> SymState \
 
 fun calculateSymVars_addTransaction :: "int \<Rightarrow> int \<Rightarrow> SymInput option \<Rightarrow> SymState \<Rightarrow> int \<Rightarrow>
                                         SymState" where
-"calculateSymVars_addTransaction newLowSlot newHighSlot None
+"calculateSymVars_addTransaction newLowTime newHighTime None
                 (SymState symState) pos =
   (let uSymInput = calculateSymVars_updateSymInput None
                       (SymState
-                         (symState \<lparr> lowSlot := newLowSlot
-                                   , highSlot := newHighSlot
+                         (symState \<lparr> lowTime := newLowTime
+                                   , highTime := newHighTime
                                    , symInput := None
                                    , whenPos := pos
                                    \<rparr>)) in
    uSymInput)" |
-"calculateSymVars_addTransaction newLowSlot newHighSlot newSymInput (SymState symState) pos =
+"calculateSymVars_addTransaction newLowTime newHighTime newSymInput (SymState symState) pos =
   (let uSymInput = calculateSymVars_updateSymInput newSymInput
                       (SymState
-                         (symState \<lparr> lowSlot := newLowSlot
-                                   , highSlot := newHighSlot
+                         (symState \<lparr> lowTime := newLowTime
+                                   , highTime := newHighTime
                                    , symInput := newSymInput
                                    , whenPos := pos
                                    \<rparr>)) in
@@ -559,7 +559,7 @@ function (sequential)
     calculateSymVars_isValidAndFailsWhen :: "Transaction \<Rightarrow> Transaction list \<Rightarrow> Case list \<Rightarrow> int \<Rightarrow> Contract \<Rightarrow>
                                              SymState \<Rightarrow> int \<Rightarrow> SymVarsOutput" where
 "calculateSymVars_isValidAndFailsAux tra traList Close (SymState symState) =
-   ([], [(lowSlot symState, highSlot symState,
+   ([], [(lowTime symState, highTime symState,
           getSymValFrom (symInput symState), whenPos symState)])" |
 "calculateSymVars_isValidAndFailsAux tra traList (Pay accId payee tok val cont) (SymState symState) =
    (let concVal = symEvalVal val (SymState symState);
@@ -592,12 +592,12 @@ function (sequential)
    calculateSymVars_isValidAndFailsAux tra traList cont symState" |
 "calculateSymVars_applyInputConditions tra traList ls hs maybeSymInput (SymState symState) pos cont =
   (let newSState = calculateSymVars_addTransaction ls hs maybeSymInput (SymState symState) pos;
-       oldLowSlot = lowSlot symState;
-       oldHighSlot = highSlot symState;
+       oldLowTime = lowTime symState;
+       oldHighTime = highTime symState;
        oldSymInp = symInput symState;
        oldPos = whenPos symState;
        (symVars, symOutput) = calculateSymVars_isValidAndFailsAux tra traList cont newSState
-   in (symVars, symOutput @ [(oldLowSlot, oldHighSlot, getSymValFrom oldSymInp, oldPos)]))" |
+   in (symVars, symOutput @ [(oldLowTime, oldHighTime, getSymValFrom oldSymInp, oldPos)]))" |
 
 "calculateSymVars_isValidAndFailsWhen tra traList Nil timeout cont symState pos =
    (let (low, high) = interval tra in
@@ -617,17 +617,17 @@ function (sequential)
                                    else (case traList of
                                            Nil \<Rightarrow> (tra, traList)
                                          | (Cons h t) \<Rightarrow> (h, t));
-            (newLowSlot, newHighSlot) = interval newTra;
-            symStateWithInput = SymState (symState \<lparr> lowSlot := newLowSlot,
-                                                     highSlot := newHighSlot \<rparr>);
+            (newLowTime, newHighTime) = interval newTra;
+            symStateWithInput = SymState (symState \<lparr> lowTime := newLowTime,
+                                                     highTime := newHighTime \<rparr>);
             newConcVal = symEvalVal val symStateWithInput;
             newSInput = SymDeposit accId party token newConcVal;
-            newCond = newHighSlot < timeout \<and> firstMatchesSymInput newSInput newTra;
-            newTrace = calculateSymVars_applyInputConditions newTra newTraList newLowSlot newHighSlot
+            newCond = newHighTime < timeout \<and> firstMatchesSymInput newSInput newTra;
+            newTrace = calculateSymVars_applyInputConditions newTra newTraList newLowTime newHighTime
                                          (Some newSInput) (SymState symState) pos cont;
             contTrace = calculateSymVars_isValidAndFailsWhen tra traList rest timeout timCont
                                                              (SymState symState) (pos + 1) in
-       addSymVars [newLowSlot, newHighSlot] (combineSymVarsOutput (if newCond then 0 else 1) [newTrace, contTrace]))" |
+       addSymVars [newLowTime, newHighTime] (combineSymVarsOutput (if newCond then 0 else 1) [newTrace, contTrace]))" |
 "calculateSymVars_isValidAndFailsWhen tra traList (Cons (Case (Choice choId bnds) cont) rest)
                      timeout timCont (SymState symState) pos =
        (let (low, high) = interval tra;
@@ -636,17 +636,17 @@ function (sequential)
                                    else (case traList of
                                            Nil \<Rightarrow> (tra, traList)
                                          | (Cons h t) \<Rightarrow> (h, t));
-            (newLowSlot, newHighSlot) = interval newTra;
+            (newLowTime, newHighTime) = interval newTra;
             newConcVal = case getFirstChoice newTra of
                            None \<Rightarrow> 0
                          | Some x \<Rightarrow> x;
             newSInput = SymChoice choId newConcVal;
-            newCond = newHighSlot < timeout \<and> isValidChoice choId bnds newTra;
-            newTrace = calculateSymVars_applyInputConditions newTra newTraList newLowSlot newHighSlot
+            newCond = newHighTime < timeout \<and> isValidChoice choId bnds newTra;
+            newTrace = calculateSymVars_applyInputConditions newTra newTraList newLowTime newHighTime
                                          (Some newSInput) (SymState symState) pos cont;
             contTrace = calculateSymVars_isValidAndFailsWhen tra traList rest timeout timCont
                                                              (SymState symState) (pos + 1) in
-       addSymVars [newLowSlot, newHighSlot, newConcVal] (combineSymVarsOutput (if newCond then 0 else 1) [newTrace, contTrace]))" |
+       addSymVars [newLowTime, newHighTime, newConcVal] (combineSymVarsOutput (if newCond then 0 else 1) [newTrace, contTrace]))" |
 "calculateSymVars_isValidAndFailsWhen tra traList (Cons (Case (Notify obs) cont) rest)
                      timeout timCont (SymState symState) pos =
        (let (low, high) = interval tra;
@@ -657,17 +657,17 @@ function (sequential)
                                    else (case traList of
                                            Nil \<Rightarrow> (tra, traList)
                                          | (Cons h t) \<Rightarrow> (h, t));
-            (newLowSlot, newHighSlot) = interval newTra;
-            symStateWithInput = SymState (symState \<lparr> lowSlot := newLowSlot,
-                                                     highSlot := newHighSlot \<rparr>);
+            (newLowTime, newHighTime) = interval newTra;
+            symStateWithInput = SymState (symState \<lparr> lowTime := newLowTime,
+                                                     highTime := newHighTime \<rparr>);
             newSInput = SymNotify;
             newObsRes = symEvalObs obs symStateWithInput;
-            newCond = newHighSlot < timeout \<and> firstMatchesSymInput newSInput newTra;
-            newTrace = calculateSymVars_applyInputConditions newTra newTraList newLowSlot newHighSlot
+            newCond = newHighTime < timeout \<and> firstMatchesSymInput newSInput newTra;
+            newTrace = calculateSymVars_applyInputConditions newTra newTraList newLowTime newHighTime
                                          (Some newSInput) (SymState symState) pos cont;
             contTrace = calculateSymVars_isValidAndFailsWhen tra traList rest timeout timCont
                                                              (SymState symState) (pos + 1) in
-       addSymVars [newLowSlot, newHighSlot] (combineSymVarsOutput (if newCond then 0 else 1) [newTrace, contTrace]))"
+       addSymVars [newLowTime, newHighTime] (combineSymVarsOutput (if newCond then 0 else 1) [newTrace, contTrace]))"
   by pat_completeness auto
 termination calculateSymVars_isValidAndFailsAux
   apply (relation "measure
@@ -826,10 +826,10 @@ fun symStateToState :: "SymState \<Rightarrow> State" where
    \<lparr> accounts = symAccounts symState
    , choices = symChoices symState
    , boundValues = symBoundValues symState
-   , minSlot = lowSlot symState \<rparr>"
+   , minTime = lowTime symState \<rparr>"
 
 fun symStateToEnv :: "SymState \<Rightarrow> Environment" where
-"symStateToEnv (SymState symState) = \<lparr> slotInterval = (lowSlot symState, highSlot symState) \<rparr>"
+"symStateToEnv (SymState symState) = \<lparr> timeInterval = (lowTime symState, highTime symState) \<rparr>"
 
 lemma symEval_eval_equivalence : "symEvalVal val symState = evalValue (symStateToEnv symState) (symStateToState symState) val"
                                  "symEvalObs obs symState = evalObservation (symStateToEnv symState) (symStateToState symState) obs"
@@ -950,10 +950,10 @@ lemma onceAWarningAlwaysAWarning_applyAllLoop_reduceContractStep : "reduceContra
 
 lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_NonPositivePay : "validAndPositive_state st \<Longrightarrow>
     computeTransaction \<lparr>interval = (lo, hi), inputs = []\<rparr> st (Pay accountId payee token val subCont) = TransactionOutput \<lparr>txOutWarnings = [], txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
-    env = \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> \<Longrightarrow> fixedSt = (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) \<Longrightarrow> hi \<ge> lo \<Longrightarrow> hi \<ge> minSlot st \<Longrightarrow> isNonPositivePay env fixedSt val \<Longrightarrow> False"
+    env = \<lparr>timeInterval = (max lo (minTime st), hi)\<rparr> \<Longrightarrow> fixedSt = (st\<lparr>minTime := max lo (minTime st)\<rparr>) \<Longrightarrow> hi \<ge> lo \<Longrightarrow> hi \<ge> minTime st \<Longrightarrow> isNonPositivePay env fixedSt val \<Longrightarrow> False"
   apply (simp only:computeTransaction.simps Let_def)
   apply (simp del:validAndPositive_state.simps applyAllLoop.simps isPartialPay.simps isNonPositivePay.simps add:Let_def)
-  apply (cases "applyAllLoop False \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) (Pay accountId payee token val subCont) [] [] []")
+  apply (cases "applyAllLoop False \<lparr>timeInterval = (max lo (minTime st), hi)\<rparr> (st\<lparr>minTime := max lo (minTime st)\<rparr>) (Pay accountId payee token val subCont) [] [] []")
   subgoal for newReduced applyWarnings applyEffects applyNewState applyNewContract
     apply (simp only:ApplyAllResult.case refl)
     apply (cases newReduced)
@@ -962,7 +962,7 @@ lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_NonPositivePay : "va
      apply (simp only:refl if_True)
     apply (metis State.ext_inject State.surjective State.update_convs(4) allAccountsPositiveState.simps applyAllInputsLoopIsQuiescent isQuiescent.simps(3) validAndPositive_state.simps valid_state.simps)
     apply (simp only:refl if_False)
-    apply (cases "reduceContractStep \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) (Pay accountId payee token val subCont)")
+    apply (cases "reduceContractStep \<lparr>timeInterval = (max lo (minTime st), hi)\<rparr> (st\<lparr>minTime := max lo (minTime st)\<rparr>) (Pay accountId payee token val subCont)")
     subgoal for reduceWarning reduceEffect reduceState reduceContract
       apply (subgoal_tac "reduceWarning \<noteq> ReduceNoWarning")
       using onceAWarningAlwaysAWarning_applyAllLoop_reduceContractStep apply blast
@@ -974,10 +974,10 @@ lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_NonPositivePay : "va
 
 lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_PartialPay : "validAndPositive_state st \<Longrightarrow>
     computeTransaction \<lparr>interval = (lo, hi), inputs = []\<rparr> st (Pay accountId payee token val subCont) = TransactionOutput \<lparr>txOutWarnings = [], txOutPayments = newPays, txOutState = newSta, txOutContract = newCont\<rparr> \<Longrightarrow>
-    env = \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> \<Longrightarrow> fixedSt = (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) \<Longrightarrow> hi \<ge> lo \<Longrightarrow> hi \<ge> minSlot st \<Longrightarrow> isPartialPay env fixedSt accountId token val \<Longrightarrow> \<not> isNonPositivePay env fixedSt val \<Longrightarrow> False"
+    env = \<lparr>timeInterval = (max lo (minTime st), hi)\<rparr> \<Longrightarrow> fixedSt = (st\<lparr>minTime := max lo (minTime st)\<rparr>) \<Longrightarrow> hi \<ge> lo \<Longrightarrow> hi \<ge> minTime st \<Longrightarrow> isPartialPay env fixedSt accountId token val \<Longrightarrow> \<not> isNonPositivePay env fixedSt val \<Longrightarrow> False"
   apply (simp only:computeTransaction.simps Let_def)
   apply (simp del:validAndPositive_state.simps applyAllLoop.simps isPartialPay.simps isNonPositivePay.simps add:Let_def)
-  apply (cases "applyAllLoop False \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) (Pay accountId payee token val subCont) [] [] []")
+  apply (cases "applyAllLoop False \<lparr>timeInterval = (max lo (minTime st), hi)\<rparr> (st\<lparr>minTime := max lo (minTime st)\<rparr>) (Pay accountId payee token val subCont) [] [] []")
   subgoal for newReduced applyWarnings applyEffects applyNewState applyNewContract
     apply (simp only:ApplyAllResult.case refl)
     apply (cases newReduced)
@@ -986,13 +986,13 @@ lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_PartialPay : "validA
      apply (simp only:refl if_True)
     apply (metis State.ext_inject State.surjective State.update_convs(4) allAccountsPositiveState.simps applyAllInputsLoopIsQuiescent isQuiescent.simps(3) validAndPositive_state.simps valid_state.simps)
     apply (simp only:refl if_False)
-    apply (cases "reduceContractStep \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) (Pay accountId payee token val subCont)")
+    apply (cases "reduceContractStep \<lparr>timeInterval = (max lo (minTime st), hi)\<rparr> (st\<lparr>minTime := max lo (minTime st)\<rparr>) (Pay accountId payee token val subCont)")
     subgoal for reduceWarning reduceEffect reduceState reduceContract
       apply (subgoal_tac "reduceWarning \<noteq> ReduceNoWarning")
       using onceAWarningAlwaysAWarning_applyAllLoop_reduceContractStep apply blast
       apply (simp only:reduceContractStep.simps)
-      apply (subgoal_tac "let moneyToPay = evalValue \<lparr>slotInterval = (max lo (minSlot st), hi)\<rparr> (st\<lparr>minSlot := max lo (minSlot st)\<rparr>) val;
-                              balance = moneyInAccount accountId token (accounts (st\<lparr>minSlot := max lo (minSlot st)\<rparr>));
+      apply (subgoal_tac "let moneyToPay = evalValue \<lparr>timeInterval = (max lo (minTime st), hi)\<rparr> (st\<lparr>minTime := max lo (minTime st)\<rparr>) val;
+                              balance = moneyInAccount accountId token (accounts (st\<lparr>minTime := max lo (minTime st)\<rparr>));
                               paidMoney = min balance moneyToPay;
                               moneyToPay2 = evalValue env fixedSt val;
                               balance2 = moneyInAccount accountId token (accounts fixedSt);
@@ -1002,7 +1002,7 @@ lemma noCounterExamplePropagatesComputeEmptyTransaction_Pay_PartialPay : "validA
                                       else ReduceNoWarning)
                                      (fst (giveMoney accountId payee token paidMoney2
                                                      (updateMoneyInAccount accountId token (balance2 - paidMoney2) (accounts fixedSt))))
-                                     (st\<lparr> minSlot := max lo (minSlot st),
+                                     (st\<lparr> minTime := max lo (minTime st),
                                           accounts := snd (giveMoney accountId payee token paidMoney2
                                                                      (updateMoneyInAccount accountId token (balance2 - paidMoney2) (accounts fixedSt))) \<rparr>)
                                      subCont

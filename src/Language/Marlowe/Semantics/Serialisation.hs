@@ -4,7 +4,7 @@ import           Data.Ratio (denominator, numerator)
 import qualified Data.Text.Encoding as Text
 import           Language.Marlowe.ExtendedBuilder (ExtendedBuilder)
 import qualified Language.Marlowe.ExtendedBuilder as ExtendedBuilder
-import           Language.Marlowe.Semantics.Types (Action (..), Bound (Bound), Case (..), ChoiceId (..), Contract (..), Observation (..), Party (..), Payee (..), Slot (Slot), Token (..), Value (..), ValueId (..))
+import           Language.Marlowe.Semantics.Types (Action (..), Bound (Bound), Case (..), ChoiceId (..), Contract (..), Observation (..), Party (..), Payee (..), POSIXTime (POSIXTime), Token (..), Value (..), ValueId (..))
 import           Language.Marlowe.Serialisation (intToByteString, listToByteString, packByteString, positiveIntToByteString)
 
 partyToByteString :: Party -> ExtendedBuilder
@@ -43,8 +43,8 @@ valueToByteString (SubValue lhs rhs) = positiveIntToByteString 4 <> valueToByteS
 valueToByteString (MulValue lhs rhs) = positiveIntToByteString 5 <> valueToByteString lhs <> valueToByteString rhs
 valueToByteString (DivValue lhs rhs) = positiveIntToByteString 6 <> valueToByteString lhs <> valueToByteString rhs
 valueToByteString (ChoiceValue choId) = positiveIntToByteString 7 <> choiceIdToByteString choId
-valueToByteString SlotIntervalStart = positiveIntToByteString 8
-valueToByteString SlotIntervalEnd = positiveIntToByteString 9
+valueToByteString TimeIntervalStart = positiveIntToByteString 8
+valueToByteString TimeIntervalEnd = positiveIntToByteString 9
 valueToByteString (UseValue valId) = positiveIntToByteString 10 <> valueIdToByteString valId
 valueToByteString (Cond cond thn els) = positiveIntToByteString 11 <> observationToByteString cond <> valueToByteString thn <> valueToByteString els
 
@@ -68,6 +68,6 @@ contractToByteString :: Contract -> ExtendedBuilder
 contractToByteString Close = positiveIntToByteString 0
 contractToByteString (Pay accId payee token val cont) = positiveIntToByteString 1 <> partyToByteString accId <> payeeToByteString payee <> tokenToByteString token <> valueToByteString val <> contractToByteString cont
 contractToByteString (If obs cont1 cont2) = positiveIntToByteString 2 <> observationToByteString obs <> contractToByteString cont1 <> contractToByteString cont2
-contractToByteString (When caseList (Slot timeout) cont) = positiveIntToByteString 3 <> listToByteString caseToByteString caseList <> intToByteString timeout <> contractToByteString cont
+contractToByteString (When caseList (POSIXTime timeout) cont) = positiveIntToByteString 3 <> listToByteString caseToByteString caseList <> intToByteString timeout <> contractToByteString cont
 contractToByteString (Let valId val cont) = positiveIntToByteString 4 <> valueIdToByteString valId <> valueToByteString val <> contractToByteString cont
 contractToByteString (Assert obs cont) = positiveIntToByteString 5 <> observationToByteString obs <> contractToByteString cont

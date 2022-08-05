@@ -13,22 +13,22 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Text.PrettyPrint.Leijen (text)
 
-newtype Slot = Slot { getSlot :: Integer }
+newtype POSIXTime = POSIXTime { getPOSIXTime :: Integer }
   deriving stock (Eq,Ord,Generic)
   deriving newtype (Pretty)
 
-instance Show Slot where
-  showsPrec p (Slot n) r = showsPrec p n r
-instance Read Slot where
-  readsPrec p x = [(Slot v, s) | (v, s) <- readsPrec p x]
+instance Show POSIXTime where
+  showsPrec p (POSIXTime n) r = showsPrec p n r
+instance Read POSIXTime where
+  readsPrec p x = [(POSIXTime v, s) | (v, s) <- readsPrec p x]
 
-instance Num Slot where
-    Slot l + Slot r = Slot (l + r)
-    Slot l * Slot r = Slot (l * r)
-    abs (Slot l) = Slot (abs l)
-    signum (Slot l) = Slot (signum l)
-    fromInteger = Slot
-    negate (Slot l) = Slot (negate l)
+instance Num POSIXTime where
+    POSIXTime l + POSIXTime r = POSIXTime (l + r)
+    POSIXTime l * POSIXTime r = POSIXTime (l * r)
+    abs (POSIXTime l) = POSIXTime (abs l)
+    signum (POSIXTime l) = POSIXTime (signum l)
+    fromInteger = POSIXTime
+    negate (POSIXTime l) = POSIXTime (negate l)
 
 data Party = PubKey ByteString
            | Role ByteString
@@ -37,7 +37,7 @@ data Party = PubKey ByteString
 type AccountId = Party
 type ChoiceName = ByteString     -- Needs to be updated in playground.
 type NumAccount = Integer
-type Timeout = Slot
+type Timeout = POSIXTime
 type Money = Integer
 type ChosenNum = Integer
 type Accounts = Map (AccountId, Token) Integer
@@ -67,8 +67,8 @@ data Value = AvailableMoney Party Token
            | MulValue Value Value
            | DivValue Value Value
            | ChoiceValue ChoiceId
-           | SlotIntervalStart
-           | SlotIntervalEnd
+           | TimeIntervalStart
+           | TimeIntervalEnd
            | UseValue ValueId
            | Cond Observation Value Value
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
@@ -86,13 +86,13 @@ data Observation = AndObs Observation Observation
                   | FalseObs
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
-data SlotInterval = SlotInterval Slot Slot
+data TimeInterval = TimeInterval POSIXTime POSIXTime
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
-ivFrom, ivTo :: SlotInterval -> Slot
+ivFrom, ivTo :: TimeInterval -> POSIXTime
 
-ivFrom (SlotInterval from _) = from
-ivTo   (SlotInterval _ to)   = to
+ivFrom (TimeInterval from _) = from
+ivTo   (TimeInterval _ to)   = to
 
 data Bound = Bound Integer Integer
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
@@ -128,16 +128,16 @@ data Contract = Close
 data State = State { accounts    :: Map (Party, Token) Money
                    , choices     :: Map ChoiceId ChosenNum
                    , boundValues :: Map ValueId Integer
-                   , minSlot     :: Slot }
+                   , minTime     :: POSIXTime }
   deriving (Eq,Ord,Show,Read)
 
-emptyState :: Slot -> State
+emptyState :: POSIXTime -> State
 emptyState sn = State { accounts = Map.empty
                       , choices = Map.empty
                       , boundValues = Map.empty
-                      , minSlot = sn }
+                      , minTime = sn }
 
-newtype Environment = Environment { slotInterval :: SlotInterval }
+newtype Environment = Environment { timeInterval :: TimeInterval }
   deriving (Eq,Ord,Show,Read)
 
 data InputContent = IDeposit Party Party Token Money
@@ -153,9 +153,9 @@ getInputContent :: Input -> InputContent
 getInputContent (NormalInput inputContent) = inputContent
 getInputContent (MerkleizedInput inputContent _) = inputContent
 
--- Processing of slot interval
-data IntervalError = InvalidInterval SlotInterval
-                    | IntervalInPastError Slot SlotInterval
+-- Processing of time interval
+data IntervalError = InvalidInterval TimeInterval
+                    | IntervalInPastError POSIXTime TimeInterval
   deriving (Eq,Ord,Show,Read)
 
 data IntervalResult = IntervalTrimmed Environment State

@@ -7,7 +7,7 @@ import           Data.String      (IsString (..) )
 import           Language.Marlowe
 main :: IO ()
 main = print . pretty $ contract "Alice" 100 1000 ["Bob", "Charlie", "Dora"] 10
-contract :: Party -> Integer -> Integer -> [String] -> Slot -> Contract
+contract :: Party -> Integer -> Integer -> [String] -> POSIXTime -> Contract
 contract owner minBid maxBid bidders deadline = go Nothing [] $ map fromString bidders
   where
     go :: Maybe (Value, Party) -> [Party] -> [Party] -> Contract

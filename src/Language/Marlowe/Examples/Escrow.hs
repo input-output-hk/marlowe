@@ -32,14 +32,14 @@ contract = When [Case (Deposit aliceAcc aliceRole ada price)
 -- Continues as specified when N out of M have agreed on a choice,
 -- continue as defCont if N can no longer agree, or on timeout
 
-whenNOutOfMChoose :: [(ChosenNum, Contract)] -> Integer -> [Party] -> Slot -> Contract
+whenNOutOfMChoose :: [(ChosenNum, Contract)] -> Integer -> [Party] -> POSIXTime -> Contract
                   -> Contract
 whenNOutOfMChoose ops n m timeout defCont =
   whenNOutOfMChooseAux eops n m timeout defCont
   where eops = [(0, ch, co) | (ch, co) <- ops]
 
 whenNOutOfMChooseAux :: [(Integer, ChosenNum, Contract)] -> Integer ->
-                        [Party] -> Slot -> Contract
+                        [Party] -> POSIXTime -> Contract
                      -> Contract
 whenNOutOfMChooseAux [] _ _ _ defCont = defCont
 whenNOutOfMChooseAux ops n partiesLeft timeout defCont

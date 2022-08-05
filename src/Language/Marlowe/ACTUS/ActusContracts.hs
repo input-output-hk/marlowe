@@ -16,12 +16,12 @@ import Data.Time.Clock.System
 import Debug.Trace
 
 import Language.Marlowe.ACTUS
-import Language.Marlowe
+import Language.Marlowe as M
 
-dayToSlot :: Day -> Slot
-dayToSlot d = let
+dayToTime :: Day -> M.POSIXTime
+dayToTime d = let
     (MkSystemTime secs _) = utcToSystemTime (UTCTime d 0)
-    in Slot (fromIntegral secs - cardanoEpochStart `mod` 20)
+    in POSIXTime (fromIntegral secs - cardanoEpochStart `mod` 20)
 
 zcb ied md notional discount = (emptyContractConfig ied)
     { maturityDate = Just md
@@ -43,11 +43,11 @@ genPrincialAtMaturnityContract investor issuer config@ContractConfig{..} = let
   where
     acc = investor
     maturityDay = fromJust maturityDate
-    maturitySlot = dayToSlot maturityDay
+    maturityTime = dayToTime maturityDay
     state = pamStateInit initialExchangeDate maturityDay
     cs = pamContractSchedule config state
     scheduledEvents = eventScheduleByDay cs
-    startDate = dayToSlot initialExchangeDate
+    startDate = dayToTime initialExchangeDate
     schedule = traceShow scheduledEvents $ Map.toList scheduledEvents
 
     generator (f, state) (day, events) =
@@ -61,7 +61,7 @@ genPrincialAtMaturnityContract investor issuer config@ContractConfig{..} = let
             amount = abs daysum
             cont = if amount == 0 then id
                    else \contract -> f $ When [Case (Deposit acc from ada $ Constant amount)
-                        (Pay acc (Party to) ada (Constant amount) contract)] (dayToSlot day) Close
+                        (Pay acc (Party to) ada (Constant amount) contract)] (dayToTime day) Close
             in (cont, newState)
 
 genPrincialAtMaturnityGuaranteedContract :: Party -> Party -> Party ->  ContractConfig -> Contract
@@ -71,11 +71,11 @@ genPrincialAtMaturnityGuaranteedContract investor issuer guarantor config@Contra
     acc = investor
     gacc = guarantor
     maturityDay = fromJust maturityDate
-    maturitySlot = dayToSlot maturityDay
+    maturityTime = dayToTime maturityDay
     state = pamStateInit initialExchangeDate maturityDay
     cs = pamContractSchedule config state
     scheduledEvents = eventScheduleByDay cs
-    startDate = dayToSlot initialExchangeDate
+    startDate = dayToTime initialExchangeDate
     schedule = traceShow totalPayoff $ Map.toList scheduledEvents
     totalPayoff = let
         (amount, _) = foldl (\(amount, st) (day, event) -> let
@@ -101,5 +101,5 @@ genPrincialAtMaturnityGuaranteedContract investor issuer guarantor config@Contra
                         (Pay acc (Party to) ada (Constant amount)
                             (if from == investor then contract
                             else Pay acc (Party guarantor) ada (Constant amount) contract))]
-                        (dayToSlot day) Close
+                        (dayToTime day) Close
             in (cont, newState)

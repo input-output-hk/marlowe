@@ -23,11 +23,11 @@ processTransaction :: Transaction -> State -> Contract -> ProcessResult
 Where `Transaction` is defined as:
 
 ```haskell
-data Transaction = Transaction { interval :: SlotInterval
+data Transaction = Transaction { interval :: TimeInterval
                                , inputs :: [Input] }
 ```
 
-Where `interval` represents the slot interval in which the transaction is added to the blockchain. And `inputs` is a list
+Where `interval` represents the time interval in which the transaction is added to the blockchain. And `inputs` is a list
 of the actions issued by participants as part of the transaction.
 
 `ProcessResult` is defined as:
@@ -66,7 +66,7 @@ To single step, you can work in `ghci` like this, using the facility to make loc
 ```
 
 Where `inps`s are lists of inputs that may include any number of inputs depending on the context, the numbers `li`s and
-`hi`s denote the interval in which the slot number in which each transaction is accepted in the blockchain.
+`hi`s denote the time interval in which each transaction is accepted in the blockchain.
 
 We can then explore the values produced. Note, however, that the local bindings are lost each time a `:load` or `:l` command
 is performed.
@@ -81,12 +81,12 @@ steps taken, and did not cover the constituent types in much detail. These are a
 ## State
 
 The `State` of a Marlowe contract keeps track of the amount of money in each `account`, the values of `choice`s made by
-users, and the highest known lower bound for the most recent slot number.
+users, and the highest known lower bound for time (the maximum of the lower bounds of the intervals and start time).
 
 ```haskell
 data State = State { account :: Map AccountId Money
                    , choice :: Map ChoiceId ChosenNum
-                   , minSlot :: SlotNumber }
+                   , minTime :: POSIXTime }
 ```
 
 ## Inputs
@@ -133,7 +133,7 @@ at each stage, the contract continuation, i.e. what remains to be executed, and 
 > Explore some other ways of engaging with the contract
 > - What happens when the guarantor does not make the deposit on time?
 > - What happens when the issuer does not return the money?
-> - What happens when we pass an interval that includes slots both before and after a timeout?
+> - What happens when we pass an interval that includes times both before and after a timeout?
 
 ## There must be an easier way!
 

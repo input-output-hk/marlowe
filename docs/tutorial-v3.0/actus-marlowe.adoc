@@ -97,7 +97,7 @@ ____
 
 === Guaranteed Coupon Bond Example
 
-This more complex bond involves an `investor` who deposits 1000 Ada, which is immediately paid to the `issuer`. The `issuer` then has to pay as interest 10 Ada every 10 slots. On maturity the investor should  receive back the interest plus the full value of the bond.
+This more complex bond involves an `investor` who deposits 1000 Ada, which is immediately paid to the `issuer`. The `issuer` then has to pay as interest 10 Ada every 3,600,000 milliseconds (1 hour). On maturity the investor should  receive back the interest plus the full value of the bond.
 
 [source,haskell]
 ----
@@ -106,24 +106,24 @@ couponBondFor3Month12Percent =
     When [ Case (Deposit "investor" "investor" (Constant 1000))
         -- and pays it to the issuer
         (Pay "investor" (Party "issuer") (Constant 1000)
-            -- after 10 slots expect to receive 10 Ada interest
+            -- after 1 hour expect to receive 10 Ada interest
             (When [ Case (Deposit "investor" "issuer" (Constant 10))
                 -- and pay it to the investor
                 (Pay "investor" (Party "investor" ) (Constant 10)
-                    -- same for 2nd 10 slots 
+                    -- same for 2nd hour 
                     (When [ Case (Deposit "investor" "issuer" (Constant 10))
                         (Pay "investor" (Party "investor" ) (Constant 10)
                             -- after maturity date investor
                             -- expects to receive notional + interest payment
                             (When [ Case (Deposit "investor" "issuer" (Constant 1010))
                                 (Pay "investor" (Party "investor" ) (Constant 1010) Refund)]
-                            (Slot 40)
+                            (POSIXTime 14400000)
                             Refund))]
-                    (Slot 30)
+                    (POSIXTime 10800000)
                     Refund))]
-            (Slot 20)
+            (POSIXTime 7200000)
             Refund))]
-    (Slot 10)
+    (POSIXTime 3600000)
     Refund
 ----
 

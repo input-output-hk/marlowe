@@ -38,7 +38,7 @@ text \<open>
 One of the dangers of using smart contracts is that a badly written one can potentially lock its
 funds forever. By the end of the contract, all the money paid to the contract must be distributed
 back, in some way, to a subset of the participants of the contract. To ensure this is the case we
-proved two properties: "Money Preservation" and "Contracts Always Close".
+proved two properties: ``Money Preservation'' and ``Contracts Always Close''.
 
 Regarding money preservation, money is not created or destroyed by the semantics. More specifically,
 the money that comes in plus the money in the contract before the transaction must be equal to the
@@ -80,6 +80,7 @@ We call a value for State valid if the first two properties are true. And we say
 accounts if the third property is true.
 
 \<close>
+text \<open>FIXME: Address the review comment "Is this a note for us or the explanation to the user of what @{term playTraceAux_preserves_validAndPositive_state} proves?".\<close>
 
 text \<open>@{thm playTraceAux_preserves_validAndPositive_state}\<close>
 
@@ -108,7 +109,8 @@ text \<open>@{thm playTraceIsQuiescent}\<close>
 
 section \<open>Reducing a Contract until Quiescence Is Idempotent\<close>
 
-text \<open>Once a contract is quiescent, further reduction will not change the contract or state.\<close>
+text \<open>Once a contract is quiescent, further reduction will not change the contract or state,
+and it will not produce any payments or warnings.\<close>
 
 text \<open>@{thm reduceContractUntilQuiescentIdempotent}\<close>
 
@@ -125,7 +127,8 @@ text \<open>
 
 Isabelle automatically proves termination for most function. However, this is not the case for
 @{const reductionLoop}, but it is manually proved that the reduction loop monotonically reduces the
-size of the contract, which is sufficient to prove termination.
+size of the contract (except for @{term Close}, which reduces the number of accounts), this is
+sufficient to prove termination.
 
 @{thm reduceContractStepReducesSize}
 

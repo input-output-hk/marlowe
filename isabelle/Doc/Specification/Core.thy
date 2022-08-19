@@ -22,6 +22,20 @@ text \<open>FIXME: Figure out how to emit Isabelle instead of Haskell in "code s
 
 subsection \<open>Contract\<close>
 
+text \<open>FIXME, review comment:
+
+After we show the datatype we already say what each construct does, maybe as a prelude we could say something like:
+
+A Marlowe Contract can be one of these constructs, Close being the simplest, and the only one that doesn't carry a continuation. All Contracts eventually will end up with a Close construct.
+
+the datatype
+
+Close: details
+Pay: details
+etc
+
+\<close>
+
 text \<open>The simplest contract, @{term Close}, has completed its execution; other contracts include
 one or more continuations for subsequent contract(s). The @{term When} and
 @{term If} contracts branch on conditions. The @{term Pay} contract makes a payment to a
@@ -40,7 +54,7 @@ transaction.\<close>
 text \<open>A payment contract @{term "Pay a p t v c"} will make a payment of
 value @{term v} of token @{term t} from the account @{term a} to a payee
 @{term p}, which will be one of the contract participants or another account in the contract.
-Warnings will be generated if the value v is negative, or if there is not enough in the account to
+Warnings will be generated if the value @{term v} is negative, or if there is not enough in the account to
 make the payment in full (even if there are positive balances of other tokens in the account). In
 the latter case, a partial payment (of all the money available) is made. The continuation contract
 is the one given in the contract: @{term c}.\<close>
@@ -71,7 +85,7 @@ text \<open>An assertion contract @{term "Assert b c"} does not have any effect 
 the state of the contract, it immediately continues as @{term c}, but it issues a warning
 when the observation @{term b} is false. It can be used to ensure that a property holds
 in any given point of the contract, since static analysis will fail if any execution causes a
-warning.\<close>
+warning. the @{term Assert} term might be removed from future on-chain versions of Marlowe.\<close>
 
 subsection \<open>Case and Action\label{sec:case}\<close>
 
@@ -106,6 +120,7 @@ text \<open>The contract is notified that a particular observation @{term b} is 
 notification would be done by one of the parties, or one of their wallets acting automatically.
 Notifications also have the effect of pausing contract execution until the @{term Notify} is
 received.\<close>
+text \<open>FIXME: Address review comment "Hm, I am not sure this is accurate, the contract is notified that some Notify clause is true, the notification doesn't say which one (so not a particular one)"\<close>
 
 subsection \<open>Input\<close>
 
@@ -242,9 +257,10 @@ text \<open>@{code_stmts computeTransaction constant: computeTransaction (Haskel
 subsection \<open>Fix Interval\<close>
 
 text \<open>The @{const fixInterval} functions combines the minimum-time constraint of @{term State}
-with the time interval of @{term Environment} to yield a "trimmed" validity interval and a minimum
+with the time interval of @{term Environment} to yield a ``trimmed'' validity interval and a minimum
 time for the new state that will result from applying the transaction. It throws an error if the
 interval is nonsensical or in the past.\<close>
+text \<open>FIXME: print type synonym: @{term [names_short, margin=40]IntervalResult}\<close>
 text \<open>@{code_stmts fixInterval constant: fixInterval (Haskell)}\<close>
 
 subsection \<open>Apply All Inputs\label{sec:applyAllInputs}\<close>
@@ -257,7 +273,7 @@ text \<open>@{code_stmts applyAllLoop constant: applyAllLoop (Haskell)}\<close>
 subsection \<open>Reduce Contract Until Quiescent\label{sec:reduceContractUntilQuiescent}\<close>
 
 text \<open>The @{const reduceContractUntilQuiescent} executes as many non-input steps of the contract as
-is possible.\<close>
+is possible. Marlowe semantics do not allow partial execution of a series of non-input steps.\<close>
 text \<open>@{code_stmts reduceContractUntilQuiescent constant: reduceContractUntilQuiescent (Haskell)}\<close>
 
 subsection \<open>Reduction Loop\label{sec:reductionloop}\<close>
@@ -286,7 +302,7 @@ compute the new contract state, emit warnings, throw errors if needed, and deter
 continuation of the contract.\<close>
 text \<open>@{code_stmts applyCases constant: applyCases (Haskell)}\<close>
 
-subsection \<open>Account Utilitiesn\label{sec:accountutilities}\<close>
+subsection \<open>Utilitiesn\label{sec:accountutilities}\<close>
 
 text \<open>The @{const moneyInAccount}, @{const updateMoneyInAccount}, and @{const addMoneyToAccount}
 functions read, write, and increment the funds in a particular account of the @{term State},
@@ -353,7 +369,6 @@ text \<open>@{thm evalValue_MulValue}\<close>
 subsubsection \<open>Division\<close>
 
 text \<open>Division is a special case because we only evaluate to natural numbers: 
-\<^item> If the numerator is 0, the denominator is not evaluated and the result is 0
 \<^item> If the denominator is 0, the result is also 0. Other languages uses NaN or Infinity to represent this case
 \<^item> The result will be rounded towards zero.\<close>
 

@@ -2,7 +2,7 @@
 theory Specification
   imports Main
 
-begin                                                     
+begin
 (*>*)
 
 chapter \<open>Marlowe\<close>

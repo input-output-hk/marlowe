@@ -1,11 +1,11 @@
 (*<*)
 theory Core
-  imports 
+  imports
       SpecificationLatexSugar
       Core.Semantics
       Core.SemanticsTypes
 
-begin 
+begin
 (*>*)
 chapter \<open>Marlowe Core\<close>
 
@@ -115,12 +115,12 @@ list of inclusive bounds @{term bs} on the values that are acceptable. For examp
 \<close> text \<open>Choices of integers, @{term "ChoiceId c p"} are identified by the name @{term n} for the choice
 and the party @{term p} who had made the choice.\<close>
 
-text \<open>The contract is notified that a particular observation @{term b} is made via
-@{term "Notify b"}; the contract only proceeds if the observation evaluates to true. Typically
+text \<open>When a notification input is received by the contract, it evaluates each
+@{term "Notify b"} in turn until an observation @{term b} evaluates to true. Typically
 notification would be done by one of the parties, or one of their wallets acting automatically.
 Notifications also have the effect of pausing contract execution until the @{term Notify} is
 received.\<close>
-text \<open>FIXME: Address review comment "Hm, I am not sure this is accurate, the contract is notified that some Notify clause is true, the notification doesn't say which one (so not a particular one)"\<close>
+text \<open>FIXME: Carefully review and make sure we have addressed the review comments "Hm, I am not sure this is accurate, the contract is notified that some Notify clause is true, the notification doesn't say which one (so not a particular one)" and "Same here, so we should say it triggers/matches the first notify whose condition b evaluates to true (there could be several and the notify can trigger any of them)".\<close>
 
 subsection \<open>Input\<close>
 
@@ -145,7 +145,7 @@ contract. A party may be identified by a public-key hash or by a role.
 \<close>
 
 text \<open>@{term "Account p"} identifies the internal account for party @{term p}, whereas
-@{term "Party p"} identifies the internal account for that party.\<close>
+@{term "Party p"} identifies the party itself.\<close>
 
 text \<open>@{term "PubKey h"} identifies a party by the hash @{term h} of a public key, whereas
 @{term "Role n"} identifies the party by the name @{term n} of their role.
@@ -179,7 +179,7 @@ start or end of the validity interval for the Marlowe transaction.\<close>
 
 subsection \<open>Observation\label{sec:observation}\<close>
 
-text \<open>A @{type Observation} evaluates to a logical value (true or false), given the current statet
+text \<open>An @{type Observation} evaluates to a logical value (true or false), given the current statet
 of the Marlowe contract.
 @{datatype [display,names_short, margin=40]Observation}
 \<close>
@@ -189,10 +189,10 @@ the contract.\<close>
 
 text \<open>The terms @{term TrueObs} and @{term FalseObs} provide the logical constants @{value true} and
 @{value false}. The logical operators @{term "\<not> x"}, @{term "x \<and> y"},
-and @{term "x \<or> y"}are represented by the terms @{term "NotObs x"}, @{term "AndObs x y"}, and
+and @{term "x \<or> y"} are represented by the terms @{term "NotObs x"}, @{term "AndObs x y"}, and
 @{term "OrObs x y"}, respectively.\<close>
 
-text \<open>Value comparisons @{term "x < y"}, @{term "x \<le> y"}, @{term "x > y"}, @{term "x \<ge> y"},
+text \<open>Value comparisons @{term "x < y"}, @{term "x \<le> y"}, @{text "x > y"}, @{text "x \<ge> y"},
 and @{term "x = y"} are represented by @{term "ValueLT x y"}, @{term "ValueLE x y"},
 @{term "ValueGT x y"}, @{term "ValueGE x y"}, and @{term "ValueEQ x y"}.\<close>
 
@@ -211,7 +211,7 @@ text \<open>The internal state of a Marlowe contract consists of the current bal
 account, a record of the most recent value of each type of choice, a record of the most recent
 value of each variable, and the minimum time for which input can be applied to the contract. The
 data for accounts, choices, and bound values are stored as association lists.\<close>
-(* Sadly there is no antiquote to print a record, and I wasn't able to 
+(* Sadly there is no antiquote to print a record, and I wasn't able to
 make the snipet import work (described in chapter 7 of the Sugar Latex PDF).
 So to show records we need to duplicate the definition
  *)
@@ -265,8 +265,9 @@ text \<open>@{code_stmts fixInterval constant: fixInterval (Haskell)}\<close>
 
 subsection \<open>Apply All Inputs\label{sec:applyAllInputs}\<close>
 
-text \<open>The @{const applyAllInputs} function iteratively applies the transaction inputs to the state,
-checking for errors along the way and continuing until the contract reaches a quiescent state.\<close>
+text \<open>The @{const applyAllInputs} function iteratively progresses the contract and applies the
+transaction inputs to the state, checking for errors along the way and continuing until all the inputs
+are consumed and the contract reaches a quiescent state.\<close>
 text \<open>@{code_stmts applyAllInputs constant: applyAllInputs (Haskell)}\<close>
 text \<open>@{code_stmts applyAllLoop constant: applyAllLoop (Haskell)}\<close>
 
@@ -285,13 +286,15 @@ text \<open>@{code_stmts reductionLoop constant: reductionLoop (Haskell)}\<close
 
 subsection \<open>Reduce Contract Step\label{sec:reducecontractstep}\<close>
 
-text \<open>The @{const reduceContractStep} function handles is @{type Contract} case, performing the
-relevant action (payments, state-change, etc.), reporting warning and throwing errors if needed.\<close>
+text \<open>The @{const reduceContractStep} function handles the progression of the @{type Contract} in
+the absence of inputs: it performs the relevant action (payments, state-change, etc.), reports warnings,
+ and throws errors if needed. It stops reducing the contract at the point when the contract requires
+external input.\<close>
 text \<open>@{code_stmts reduceContractStep constant: reduceContractStep (Haskell)}\<close>
 
 subsection \<open>Apply Input\label{sec:applyinput}\<close>
 
-text \<open>The @{const applyInput} function attempts to apply the next input each @{term Case} in the
+text \<open>The @{const applyInput} function attempts to apply the next input to each @{term Case} in the
 @{term When}, in sequence.\<close>
 text \<open>@{code_stmts applyInput constant: applyInput (Haskell)}\<close>
 
@@ -317,7 +320,7 @@ text \<open>@{code_stmts refundOne constant: refundOne (Haskell)}\<close>
 subsection \<open>Evaluate Value\label{sec:evalvalue}\<close>
 
 text \<open>Given the \hyperref[sec:environment]{@{typ Environment}} and the current
- \hyperref[sec:state]{@{typ State}}, the @{const evalValue} function 
+ \hyperref[sec:state]{@{typ State}}, the @{const evalValue} function
 evaluates a \hyperref[sec:value]{@{typ Value}} into a number\<close>
 
 text \<open>@{const evalValue} :: @{typeof evalValue}\<close>
@@ -350,13 +353,13 @@ text \<open>@{thm evalAddCommutative}\<close>
 subsubsection \<open>Subtraction\<close>
 
 text \<open>For the \<^emph>\<open>SubValue\<close> case, @{const evalValue} will evaluate both sides and subtract
-the second value to the first.\<close>
+the second value from the first.\<close>
 
 text \<open>@{thm evalValue_SubValue}\<close>
 
 subsubsection \<open>Negation\<close>
 
-text \<open>For every value \<^emph>\<open>val\<close> there is the complement \<^emph>\<open>NegValue val\<close> so that\<close>
+text \<open>For every value \<^emph>\<open>x\<close> there is the complement \<^emph>\<open>NegValue x\<close> so that\<close>
 
 text \<open>@{thm evalNegValue}\<close>
 
@@ -368,7 +371,7 @@ text \<open>@{thm evalValue_MulValue}\<close>
 
 subsubsection \<open>Division\<close>
 
-text \<open>Division is a special case because we only evaluate to natural numbers: 
+text \<open>Division is a special case because we only evaluate to natural numbers:
 \<^item> If the denominator is 0, the result is also 0. Other languages uses NaN or Infinity to represent this case
 \<^item> The result will be rounded towards zero.\<close>
 
@@ -416,7 +419,7 @@ text \<open>@{thm evalValue_Cond}\<close>
 subsection \<open>Evaluate Observation\label{sec:evalobservation}\<close>
 
 text \<open>Given the \hyperref[sec:environment]{@{typ Environment}} and the current
- \hyperref[sec:state]{@{typ State}}, the @{const evalObservation} function 
+ \hyperref[sec:state]{@{typ State}}, the @{const evalObservation} function
 evaluates an \hyperref[sec:observation]{@{typ Observation}} into a number\<close>
 
 text \<open>@{const evalObservation} :: @{typeof evalObservation}\<close>

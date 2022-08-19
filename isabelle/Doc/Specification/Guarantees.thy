@@ -1,14 +1,14 @@
 (*<*)
 theory Guarantees
-  imports       
-      Core.SemanticsTypes 
-      Core.MoneyPreservation 
+  imports
+      Core.SemanticsTypes
+      Core.MoneyPreservation
       Core.Timeout
       Core.QuiescentResult
       Core.SingleInputTransactions
       Core.CloseSafe
       Core.TransactionBound
- 
+
 begin
 (*>*)
 
@@ -101,7 +101,7 @@ The following always produce quiescent contracts:
 \item reduceContractUntilQuiescent \secref{sec:reduceContractUntilQuiescent}
 \item applyAllInputs  \secref{sec:applyAllInputs}
 \item computeTransaction  \secref{sec:computeTransaction}
-\item playTrace  \secref{sec:playTrace} 
+\item playTrace  \secref{sec:playTrace}
 \end{itemize}
 \<close>
 

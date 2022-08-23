@@ -180,6 +180,37 @@ lemma evalDivMultiplyFractByConstant :
   "evalValue env sta c \<noteq> 0 \<Longrightarrow> evalValue env sta (DivValue (MulValue c a) (MulValue c b)) = evalValue env sta (DivValue a b)"
   using quotMultiplyEquivalence by force
 
+fun absValue :: "Value \<Rightarrow> Value" where
+  "absValue x = Cond (ValueGT (Constant 0) x) (NegValue x) x"
+
+lemma absValueMatchesAbs : "evalValue env sta x = y \<Longrightarrow> evalValue env sta (absValue x) = \<bar>y\<bar>"
+  apply (cases "0 > y")
+  by simp_all
+
+lemma evalDivAbsMultiplyFractByConstant :
+  "evalValue env sta c \<noteq> 0 \<Longrightarrow> evalValue env sta (DivValue (absValue (MulValue c a)) (absValue (MulValue c b))) = evalValue env sta (DivValue (absValue a) (absValue b))"
+  apply simp
+  by (smt (verit, best) div_minus_right div_mult_mult1_if minus_mult_right mult_neg_neg mult_pos_neg)
+
+lemma evalDivCancelsMul :
+  "evalValue env sta c \<noteq> 0 \<Longrightarrow> evalValue env sta (DivValue (MulValue a c) c) = evalValue env sta a"
+  apply simp
+  by (smt (verit, best) minus_mult_minus mult_minus_left nonzero_mult_div_cancel_right)
+
+lemma evalDivCancelsMulPlusRem :
+  "evalValue env sta b \<noteq> 0 \<Longrightarrow> evalValue env sta (MulValue (DivValue a b) b) = evalValue env sta a - (evalValue env sta a rem evalValue env sta b)"
+  by simp
+
+lemma evalDivCommutesWithNeg1 :
+  "evalValue env sta (NegValue (DivValue a b)) = evalValue env sta (DivValue (NegValue a) b)"
+  apply (simp add:Let_def)
+  using div_minus_right by fastforce
+
+lemma evalDivCommutesWithNeg2 :
+  "evalValue env sta (NegValue (DivValue a b)) = evalValue env sta (DivValue a (NegValue b))"
+  apply (simp add:Let_def)
+  by (smt (verit) div_minus_right)
+
 fun refundOne :: "Accounts \<Rightarrow>
                   ((Party \<times> Token \<times> Money) \<times> Accounts) option" where
 "refundOne (((accId, tok), money)#rest) =

@@ -1,5 +1,5 @@
 theory Timeout
-imports Semantics PositiveAccounts QuiescentResult
+imports Semantics PositiveAccounts QuiescentResult MoneyPreservation
 begin
 
 fun isClosedAndEmpty :: "TransactionOutput \<Rightarrow> bool" where
@@ -244,5 +244,28 @@ theorem timeOutTransaction_closes_contract2 :
    \<Longrightarrow> accounts sta \<noteq> [] \<or> cont \<noteq> Close
    \<Longrightarrow> \<exists> inp . isClosedAndEmpty (computeTransaction inp sta cont)"
   by (meson not_less not_less_iff_gr_or_eq timedOutTransaction_closes_contract)
+
+fun moneyInComputeTransactionOutput :: "TransactionOutput \<Rightarrow> int" where
+"moneyInComputeTransactionOutput (TransactionOutput txOut) = moneyInPayments (txOutPayments txOut)" |
+"moneyInComputeTransactionOutput _ = 0"
+
+theorem timedOutTransaction_closes_contract3 :
+  "validAndPositive_state sta
+   \<Longrightarrow> iniTime \<ge> minTime sta
+   \<Longrightarrow> iniTime \<ge> maxTimeContract cont
+   \<Longrightarrow> endTime \<ge> iniTime
+   \<Longrightarrow> accounts sta \<noteq> [] \<or> cont \<noteq> Close
+   \<Longrightarrow> moneyInComputeTransactionOutput (computeTransaction \<lparr> interval = (iniTime, endTime)
+                                                           , inputs = [] \<rparr> sta cont) = moneyInAccounts (accounts sta)"
+  apply (cases "computeTransaction \<lparr> interval = (iniTime, endTime), inputs = [] \<rparr> sta cont")
+  subgoal for txOut
+    apply (cases "txOut")
+    apply (simp only:refl moneyInTransactionOutput.simps)
+    apply (insert computeTransaction_preserves_money[of "sta" "\<lparr> interval = (iniTime, endTime)
+                                                      , inputs = [] \<rparr>" cont])
+    subgoal for txOutWarnings txOutPayments txOutState txOutContract
+      using timedOutTransaction_closes_contract by fastforce
+    done
+  by (metis isClosedAndEmpty.simps(2) timedOutTransaction_closes_contract)
 
 end

@@ -8,7 +8,7 @@ import           Language.Marlowe.Semantics.Types (Action (..), Bound (Bound), C
 import           Language.Marlowe.Serialisation (intToByteString, listToByteString, packByteString, positiveIntToByteString)
 
 partyToByteString :: Party -> ExtendedBuilder
-partyToByteString (PubKey x) = positiveIntToByteString 0 <> packByteString (ExtendedBuilder.byteString x)
+partyToByteString (Address x) = positiveIntToByteString 0 <> packByteString (ExtendedBuilder.byteString x)
 partyToByteString (Role x) = positiveIntToByteString 1 <> packByteString (ExtendedBuilder.byteString x)
 
 choiceIdToByteString :: ChoiceId -> ExtendedBuilder

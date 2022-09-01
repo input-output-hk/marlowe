@@ -87,22 +87,19 @@ Running a contract may also produce external effects, by making payments to part
 
 \<close>
 
-subsection \<open>Participants, roles, and public key\<close>
+subsection \<open>Participants, roles, and addresses\<close>
 
 text \<open>
 
-We should separate the notions of participant, role, and public keys in a Marlowe contract. A
-participant (or party) in the contract can be represented by either a role or a public key (public
-keys will eventually be replaced by addresses).
+We should separate the notions of participant, role, and addresses in a Marlowe contract. A
+participant (or party) in the contract can be represented by either a role or an address.
 
 Roles are represented by tokens and they are distributed to addresses at the time a contract is
 deployed to the blockchain. After that, whoever has the token representing a role is able to carry
 out the actions assigned to that role, and receive the payments that are issued to that role.
 
-Public key parties, are represented by the hash of a public key (or eventually an addresses). Using
-public keys to represent parties is simpler because it does not require handling tokens, but they
-cannot be traded, because once you know the private key for a given public key you cannot prove you
-have forgotten it.
+Address parties, are represented by a fixed address (the format is blockchain specific) and they are simpler,
+because it does not require handling tokens, but they cannot be traded.
 
 \<close>
 

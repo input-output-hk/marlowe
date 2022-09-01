@@ -5,8 +5,6 @@ begin
 
 type_synonym POSIXTime = int
 
-type_synonym PubKey = ByteString
-
 type_synonym Ada = int
 type_synonym CurrencySymbol = ByteString
 type_synonym TokenName = ByteString
@@ -17,16 +15,16 @@ type_synonym Timeout = POSIXTime
 type_synonym Money = Ada
 type_synonym ChosenNum = int
 
-datatype Party = PubKey ByteString
+datatype Party = Address ByteString
                | Role TokenName
 
 type_synonym AccountId = Party
 
 (* BEGIN Proof of linorder for Party *)
 fun less_eq_Party :: "Party \<Rightarrow> Party \<Rightarrow> bool" where
-"less_eq_Party (PubKey _) (Role _) = True" |
-"less_eq_Party (Role _) (PubKey _) = False" |
-"less_eq_Party (PubKey x) (PubKey y) = less_eq_BS x y" |
+"less_eq_Party (Address _) (Role _) = True" |
+"less_eq_Party (Role _) (Address _) = False" |
+"less_eq_Party (Address x) (Address y) = less_eq_BS x y" |
 "less_eq_Party (Role x) (Role y) = less_eq_BS x y"
 
 fun less_Party :: "Party \<Rightarrow> Party \<Rightarrow> bool" where

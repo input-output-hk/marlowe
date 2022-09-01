@@ -17,7 +17,7 @@ byteStringToParty x =
           Nothing -> Nothing
           Just (z, t2) ->
             ( if y == 0
-                then Just (PubKey z, t2)
+                then Just (Address z, t2)
                 else
                   ( if y == 1
                       then Just (Role z, t2)

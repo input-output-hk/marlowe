@@ -138,7 +138,7 @@ text \<open>A deposit input @{term "IDeposit a p t v"} exactly matches the actio
 subsection \<open>Party and Payee\label{sec:party}\<close>
 
 text \<open>A payment can be made to one of the parties to the contract, or to one of the accounts of the
-contract. A party may be identified by a public-key hash or by a role.
+contract. A party may be identified by an address or by a role.
 @{datatype [display,names_short, margin=40]Payee}
 @{datatype [display,names_short, margin=40]Party}
 \<close> text \<open>FIXME: print type synonym: @{term [names_short, margin=40]AccountId}
@@ -147,10 +147,9 @@ contract. A party may be identified by a public-key hash or by a role.
 text \<open>@{term "Account p"} identifies the internal account for party @{term p}, whereas
 @{term "Party p"} identifies the party itself.\<close>
 
-text \<open>@{term "PubKey h"} identifies a party by the hash @{term h} of a public key, whereas
+text \<open>@{term "Address addr"} identifies a party by a particular @{term addr} (which is Blockchain specific), whereas
 @{term "Role n"} identifies the party by the name @{term n} of their role.
-\<close> text \<open>FIXME: print type synonym: @{term [names_short, margin=40]PubKey}
-  \<close>
+\<close> 
 
 subsection \<open>Value\label{sec:value}\<close>
 

@@ -38,10 +38,7 @@ executable marlowe
                         Language.Marlowe.Deserialisation
                         Language.Marlowe.FindInputs
                         Language.Marlowe.Util
-                        Language.Marlowe.ACTUS
-                        Language.Marlowe.ACTUS.ActusContracts
                         Language.Marlowe.Examples.Auction
-                        Language.Marlowe.Examples.CouponBond
                         Language.Marlowe.Examples.CrowdFunding
                         Language.Marlowe.Examples.DepositIncentive
                         Language.Marlowe.Examples.Escrow

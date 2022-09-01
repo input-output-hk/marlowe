@@ -16,49 +16,11 @@ import Data.Time
 
 import           Language.Marlowe
 import           Language.Marlowe.Examples.ZCBG2
-import           Language.Marlowe.ACTUS.ActusContracts
 
 main :: IO ()
 main = do
     print $ contractLifespanUpperBound $
         zeroCouponBondGuaranteed "investor" "issuer" "guarantor" 1000 200 (POSIXTime 10) (POSIXTime 20)
-    now <- getCurrentTime
-    let td = utctDay now
-    let couponBondFor3Month12PercentConfig = cb td (addGregorianMonthsClip 3 td) 1000 0.12
-    let zcbConfig = zcb td (addGregorianMonthsClip 6 td) 1000 (-150)
-    print $ genPrincialAtMaturnityContract
-                "investor" "issuer" couponBondFor3Month12PercentConfig
-    print $ genPrincialAtMaturnityGuaranteedContract
-                "investor" "issuer" "guarantor" couponBondFor3Month12PercentConfig
-    print $ genPrincialAtMaturnityContract
-                "investor" "issuer" zcbConfig
-
-
-couponBondFor3Month12Percent =
-    -- investor deposits 1000 Ada
-    When [ Case (Deposit "investor" "investor" ada (Constant 1000))
-        -- and pays it to the issuer
-        (Pay "investor" (Party "issuer") ada (Constant 1000)
-            -- after a month expect to receive 10 Ada interest
-            (When [ Case (Deposit "investor" "issuer" ada (Constant 10))
-                -- and pay it to the investor
-                (Pay "investor" (Party "investor") ada (Constant 10)
-                    -- same for 2nd month
-                    (When [ Case (Deposit "investor" "issuer" ada (Constant 10))
-                        (Pay "investor" (Party "investor") ada (Constant 10)
-                            -- after maturity date investor
-                            -- expects to receive notional + interest payment
-                            (When [ Case (Deposit "investor" "issuer" ada (Constant 1010))
-                                (Pay "investor" (Party "investor") ada (Constant 1010) Close)]
-                            (POSIXTime 1571788789)
-                            Close))]
-                    (POSIXTime 1569196789)
-                    Close))]
-            (POSIXTime 1566518389)
-            Close))]
-    (POSIXTime 1563839989)
-    Close
-
 
 zeroCouponBond = When [ Case
         (Deposit "investor" "investor" ada (Constant 850))

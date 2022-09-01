@@ -10,9 +10,9 @@ utility :: Contract
 utility = mkDeposit $ payMonth 1 $ payMonth 2 $ payMonth 3 $ Close
 
 tenant, landlord, tenantDeposit :: Party
-tenant = "tenant"
-tenantDeposit = "tenantDeposit"
-landlord = "landlord"
+tenant = Role "tenant"
+tenantDeposit = Role  "tenantDeposit"
+landlord = Role "landlord"
 
 depositAcc :: Party
 depositAcc = tenantDeposit

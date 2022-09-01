@@ -289,7 +289,11 @@ subsection \<open>Reduce Contract Step\label{sec:reducecontractstep}\<close>
 text \<open>The @{const reduceContractStep} function handles the progression of the @{type Contract} in
 the absence of inputs: it performs the relevant action (payments, state-change, etc.), reports warnings,
  and throws errors if needed. It stops reducing the contract at the point when the contract requires
-external input.\<close>
+external input.
+
+Note that this function should report an implicit payment of zero (due to lack of funds) as a partial
+payment of zero, not as a non-positive payment. An explicit payment of zero (due to the contract actually
+specifying a zero payment) should be reported as a non-positive payment.\<close>
 text \<open>@{code_stmts reduceContractStep constant: reduceContractStep (Haskell)}\<close>
 
 subsection \<open>Apply Input\label{sec:applyinput}\<close>

@@ -15,8 +15,19 @@ splitEverywhere xs =
             [] -> error "splitEverywhere: empty list")
       (init (zip (inits xs) (tails xs)))
 
--- Escrow example using embedding
+aliceRole :: Party
+aliceRole = Role "Alice"
 
+aliceAcc :: Party
+aliceAcc = aliceRole
+
+bobRole :: Party
+bobRole = Role "Bob"
+
+carolRole :: Party
+carolRole = Role "Carol"
+
+-- Escrow example using embedding
 contract :: Contract
 contract = When [Case (Deposit aliceAcc aliceRole ada price)
                       (whenNOutOfMChoose

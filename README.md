@@ -17,7 +17,6 @@ The Cardano Docs has a [section on Marlowe](https://docs.cardano.org/marlowe/lea
 The `master` branch contains the latest version of Marlowe, version `3`.
 
 An earlier version of Marlowe is described in a [paper](https://iohk.io/research/papers/#2WHKDRA8) that was presented at ISoLA 2018. This version is tagged `v1.3` and a minor update on this is tagged `v1.3.1`.
-Versions `1.x`, and `2.0` can also be found in the `master` branch under `semantics-1.0`, and `semantics-2.0`, respectively.
 
 ## Developer environment
 

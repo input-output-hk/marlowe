@@ -5,137 +5,124 @@ theory Specification
 begin
 (*>*)
 
-chapter \<open>Marlowe\<close>
+chapter \<open>Marlowe \label{sec:marlowe-chaper}\<close>
 
 section \<open>Introduction\<close>
 
-text \<open>
-
+text
+\<open>
 Marlowe is a special purpose or domain-specific language (DSL) that is designed to be usable by
 someone who is expert in the field of financial contracts, somewhat lessening the need for
 programming skills.
+\<close>
 
+text
+\<open>
 Marlowe is modelled on special-purpose financial contract languages popularised in the last decade
-or so by academics and enterprises such as LexiFi, which provides contract software in the financial
-sector. In developing Marlowe, we have adapted these languages to work on blockchain. Marlowe was
-implemented on the Cardano blockchain, but is designed to be blockchain agnostic. The same way that
-modern languages like C++ and Java has compilers that target intel/ARM, Marlowe could be implemented
-in Ethereum and other blockchain platforms.
+or so by academics and enterprises such as LexiFi \<^footnote>\<open>\<^url>\<open>https://www.lexifi.com/\<close>\<close>, which provides contract
+software in the financial sector. In developing Marlowe, we have adapted these languages to work on any blockchain \secref{sec:blockchain-agnostic}.
+\<close>
 
+text
+\<open>
 Where we differ from non-blockchain approaches is in how we make sure that the contract is followed.
-This means not only that the instructions of the contract are not disobeyed---``nothing bad
----happens'' but also that the participants don't walk away early, leaving money locked up in the
-contract forever: ``good things actually happen''. We do this using timeouts.
+In the smart contracts world there is a saying "Code is law", which implies that the assets deposited
+in a contract will follow its logic, without the ability of a human to change the rules. This applies
+for both the intended and not intended behaviour (in the form of bugs or exploits).\<close>
 
-A contract can ask a participant to make a deposit of some funds, but obviously the contract cannot
-actually force a participant to make a deposit. Instead, the contract can wait for a period of time
-for the participant to commit to the contract: when that period of time expires, the contract moves
-on to follow some alternative instructions. This prevents a participant stopping a contract by not
-taking part, thus making sure that ``things happen''.
-
-All the constructs of Marlowe that require user participation---including user deposits and user
-choices---are protected by timeouts. Because of this, it is easy to see that the commitment made by
-a participant to a contract is finite: we can predict when the contract will have nothing left to
-do---when it can be closed. At this point any unspent funds left in the contract are refunded to
-participants, and the contract stops, or terminates. So, any funds put into the contract by a
-participant can't be locked up forever: at this point the commitment effectively ends.
-
-What is more, it is easy for us to read off from the contract when it will terminate, we call this
-the lifetime of the contract: all participants will therefore be able to find out this lifetime
-before taking part in any contract,
-
-In our model, a running contract cannot force a deposit or a choice to happen: all it can do is to
-request a deposit or choice from a participant. In other words, for these actions it cannot ``push'',
-but it can ``pull''. On the other hand, it can make payments automatically, so some aspects of a
-Marlowe contract can ``push'' to make some things happen, e.g. ensuring that a payment is made to a
-participant by constructing an appropriate transaction output. FIXME: Does this paragraph make clear
-that the contracts aren't continuously running on the blockchain, but instead need to be advanced
-forward by participants submitting transactions?
-
+text \<open>To reduce the probability of not intended behaviour, the Marlowe DSL is designed with simplicity
+in mind. Without loops, recursion, or other features that general purposes smart-contract languages
+(E.g: Plutus, Solidity) have, it is easier to make certain claims. Each Marlowe contract can be
+reasoned with a static analizer to avoid common pitfalls such as trying to Pay more money than the
+available. And the \<^emph>\<open>executable semantics\<close> that dictates the logic of \<^bold>\<open>all\<close> Marlowe contracts is
+formalized with the proof-assistant Isabelle.
 \<close>
 
 text \<open>
 
-The first chapter of the document provides an overview of the Marlowe DSL and semantics. The
-following chapter defines the language and semantics in detail. The third, final chapter presents
+Chapter \secref{sec:marlowe-chaper} provides an overview of the Marlowe language. Chapter
+\secref{sec:marlowe-core} defines the Core language and semantics in detail. Chapter \secref{sec:marlowe-guarantees} presents
 proofs that guarantee that Marlowe contracts possess properties desirable for financial agreements.
-
 \<close>
+
 
 section \<open>The Marlowe Model\<close>
 
 text \<open>
-
-Marlowe is designed to support the execution of financial agreements on blockchain (initially
-Cardano), and specifically to work on Cardano. Contracts are built by putting together a small
-number of constructs that can be combined to describe many different kinds of financial contract.
-
-\<close>
-
-subsection \<open>Contracts\<close>
-
-text \<open>
-
-Contracts in Marlowe run on a blockchain, but need to interact with the off-chain world. The parties
-to the contract, whom we also call the participants, can engage in various actions: they can be
-asked to deposit money, or to make a choice between various alternatives. Notification is another
-form of input that is used to tell the contract that a certain condition has been met, anybody can
-do this, and it is only necessary because once a contract becomes dormant (quiescent), it cannot
-``wake up'' on its own, it can only respond to inputs.
-
-Running a contract may also produce external effects, by making payments to parties in the contract.
-
-\<close>
-
-subsection \<open>Participants, roles, and addresses\<close>
-
-text \<open>
-
-We should separate the notions of participant, role, and addresses in a Marlowe contract. A
-participant (or party) in the contract can be represented by either a role or an address.
-
-Roles are represented by tokens and they are distributed to addresses at the time a contract is
-deployed to the blockchain. After that, whoever has the token representing a role is able to carry
-out the actions assigned to that role, and receive the payments that are issued to that role.
-
-Address parties, are represented by a fixed address (the format is blockchain specific) and they are simpler,
-because it does not require handling tokens, but they cannot be traded.
-
-\<close>
-
-subsection \<open>Accounts\<close>
-
-text \<open>
-
-The Marlowe model allows for a contract to store assets. All parties that participate in the
-contract implicitly own an account with their name. All assets stored in the contract must be in
-an internal account for one of the parties; this way, when the contract is closed, all assets that
-remain in the contract belong to someone, and so can be refunded to their respective owners. These
-accounts are local: they only exist within the contract and for the duration of the execution of the
-contract, and during that time they are only accessible from within the contract. During the course
-of the contract payments may be made into accounts (as deposits), between accounts (as internal
- transfers), or out from accounts (as external payments).
-
-\<close>
-
-subsection \<open>Steps and states\<close>
-
-text \<open>
-
-Marlowe contracts describe a series of steps, typically by describing the first step, together with
+Marlowe \<^term>\<open>Contract\<close>s describe a series of steps, typically by describing the first step, together with
 another (sub-) contract that describes what to do next. For example, the contract
-@{term "Pay a p t v c"} says ``make a payment of value @{term v} of token @{term t} to the party
+@{term "Pay a p t v c"} says ``make a payment of @{term v} number of tokens @{term t} to the party
 @{term p} from the account @{term a}, and then follow the contract @{term c}''. We call @{term c} the
-continuation of the contract.
-
-In executing a contract, we need to keep track of the current contract (that is, the remaining part
-of the contract): after making a step in the example above, the current contract is the
-continuation, @{term c}. We also have to keep track of some other information, such as how much is
-held in each account: we call this information the state, and this potentially changes at each step,
-too. A step can also see an action taking place, such as money being deposited, or an effect being
-produced, e.g. a payment.
-
+continuation of the contract.  All paths of the contract are made
+explicit this way, and each \<^term>\<open>Contract\<close> term is executed at most once.
 \<close>
+
+subsection \<open>Data types\<close>
+text \<open>The \<^term>\<open>Value\<close>s and \<^term>\<open>Observation\<close>s \secref{sec:values-and-observations} only works with
+integers and booleans respectively. There is no custom data types, records, tuples, nor string 
+manipulation. There is also no floating point numbers, so in order to represent currencies it is 
+recommended to work with cents. Dates are only used in the context of Timeouts and they are absolute,
+ but it is likely we'll add relative times in a future version.
+\<close>
+
+
+subsection \<open>Quiescent\<close>
+text \<open>
+The blockchain can't force a participant to make a transaction. To avoid having a participant blocking
+the execution of a contract, whenever an \<^term>\<open>Input\<close> is expected, there is a Timeout with a contingency 
+continuation. For each step, we can know in advance how long it can last, and we can extend this to
+know the maximum duration and the amount of transactions of a contract.
+\<close>
+
+subsection \<open>Participants, accounts and state\<close>
+
+text \<open>
+Once we define a contract, we can see how many participants it will have. The number of participants
+is fixed for the duration of the contract, but there are mechanisms to trade participation
+ \secref{sec:participants-roles-and-addresses}.\<close>
+
+text \<open>Each participant has an internal account that allows the contract to define default owner for
+ assets \secref{sec:internal-accounts}. Whenever a \<^term>\<open>Party\<close> deposits an asset in the contract,
+they need to decide the default owner of that asset. Payments can be made to transfer the default owner
+or to take the asset out of the contract. If the contract is closed, the default owner can redeem
+the assets available in their internal accounts.
+\<close>
+
+text \<open>
+The accounts, choices, and  variables stored in the \<^term>\<open>State\<close> \secref{sec:state-and-env} are global
+ to that contract.  
+\<close>
+
+
+subsection \<open>Core and Extended\<close>
+
+text \<open>
+The set of types and functions that conform the semantics executed in the blockchain is called 
+ \<^emph>\<open>Marlowe Core\<close>, and it's formalized in chapter \secref{sec:marlowe-core}. To improve usability, there
+is another set of types and functions that compile to core, and it is called \<^emph>\<open>Marlowe Extended\<close>.
+\<close>
+text \<open>In the first version of the extended language, the only modification to the DSL is the addition
+ of template parameters. These allows an initial form of contract reutilization, allowing to instantiate 
+the same contract with different \<^term>\<open>Value\<close>s and \<^term>\<open>Timeout\<close>s. For the moment, the extended
+ language is not formalized in this specification but it will be added in the future
+\<close>
+
+section \<open>Specification generation and nomenclature \label{sec:generation-nomenclature}\<close>
+
+text \<open>
+The Marlowe specification is formalized using the proof assistant Isabelle\<^footnote>\<open>\<^url>\<open>https://isabelle.in.tum.de/\<close>\<close>.
+The code is written in a literate programming style and this document is generated from the proofs.
+This improves code documentation and lowers the probability of stale information.\<close>
+
+text \<open>
+As a drawback, the code/doc organization is more rigid. Isabelle require us to define code in a
+bottom-up approach, having to define first the dependencies and later the most complex structures.
+\<close>
+
+text \<open>The notation is closer to a Mathematical formula than a functional programming language. There are
+some configurations in the \<^emph>\<open>SpecificationLatexSugar\<close> theory file that makes the output be closer to code.
+\<close>
+
 
 (*<*)
 end

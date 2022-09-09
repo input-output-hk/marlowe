@@ -1,6 +1,7 @@
+{-# OPTIONS_GHC -Wall #-}
+
 module Language.Marlowe.Semantics.Serialisation (contractToByteString) where
 
-import           Data.Ratio (denominator, numerator)
 import qualified Data.Text.Encoding as Text
 import           Language.Marlowe.ExtendedBuilder (ExtendedBuilder)
 import qualified Language.Marlowe.ExtendedBuilder as ExtendedBuilder

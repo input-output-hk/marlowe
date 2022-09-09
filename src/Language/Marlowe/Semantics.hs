@@ -1,21 +1,25 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
-module Language.Marlowe.Semantics where
+{-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-orphans #-}
+module Language.Marlowe.Semantics (
+    TransactionInput(..)
+  , TransactionOutput(..)
+  , TransactionWarning(..)
+  , TransactionError(..)
+  , TOR(..)
+  , ReduceResult(..)
+  , Payment(..)
+  , computeTransaction
+  , reduceContractUntilQuiescent
+  , contractLifespanUpperBound
+  ) where
 
 import           Crypto.Hash.SHA256 (hash)
-import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import           Data.ByteString.Lazy (fromStrict)
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Text (Text)
-import           Data.Ratio (denominator, numerator)
-import           GHC.Generics (Generic)
-import           Text.PrettyPrint.Leijen (text)
 import           Language.Marlowe.Semantics.Deserialisation (byteStringToContract)
 import           Language.Marlowe.Semantics.Types (IntervalResult(..), IntervalError(..), Input(..), InputContent(..), Environment(..), State(..),
                                                    Contract(..), Case(..), Payee(..), Action(..), TimeInterval(..), Observation(..), Value(..), ValueId,
-                                                   Money, Party, POSIXTime(..), ivFrom, ivTo, inBounds, getAction, emptyState, getInputContent, Accounts, Token (Token))
+                                                   Money, Party, POSIXTime(..), ivFrom, ivTo, inBounds, getAction, emptyState, getInputContent, Accounts, Token (..))
 
 -- EVALUATION
 
@@ -240,7 +244,7 @@ applyAction env state (IDeposit accId1 party1 token1 money) (Deposit accId2 part
                 newState = state { accounts = addMoneyToAccount accId1 token1 money (accounts state) }
             in AppliedAction warning newState
        else NotAppliedAction
-applyAction env state (IChoice choId1 choice) (Choice choId2 bounds) =
+applyAction _env state (IChoice choId1 choice) (Choice choId2 bounds) =
     if choId1 == choId2 && inBounds choice bounds
     then let newState = state { choices = Map.insert choId1 choice (choices state) }
          in AppliedAction ApplyNoWarning newState
@@ -282,7 +286,7 @@ applyCases env state input (headCase : tailCase) =
         Nothing -> ApplyHashMismatch
     NotAppliedAction -> applyCases env state input tailCase
 
-applyCases env state input [] = ApplyNoMatchError
+applyCases _env _state _input [] = ApplyNoMatchError
 
 
 applyInput :: Environment -> State -> Input -> Contract -> ApplyResult
@@ -417,8 +421,8 @@ playTraceAux TOR { txOutWarnings = warnings
                    t
     Error _ -> transRes
 
-playTrace :: POSIXTime -> Contract -> [TransactionInput] -> TransactionOutput
-playTrace sl c = playTraceAux (TOR { txOutWarnings = []
+_playTrace :: POSIXTime -> Contract -> [TransactionInput] -> TransactionOutput
+_playTrace sl c = playTraceAux (TOR { txOutWarnings = []
                                    , txOutPayments = []
                                    , txOutState = emptyState sl
                                    , txOutContract = c })

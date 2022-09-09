@@ -1,17 +1,15 @@
-module Language.Marlowe.Analysis.FSSemanticsFastVerbose where
+{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
-import           Data.List                       (foldl', genericIndex)
+module Language.Marlowe.Analysis.FSSemanticsFastVerbose (
+    warningsTrace
+  ) where
+
+import           Data.List                       (foldl')
 import           Data.Map.Strict                 (Map)
 import qualified Data.Map.Strict                 as M
-import           Data.Maybe                      (isNothing)
 import           Data.SBV
-import qualified Data.SBV.Either                 as SE
 import           Data.SBV.Internals              (SMTModel (..))
-import qualified Data.SBV.List                   as SL
-import qualified Data.SBV.Maybe                  as SM
-import qualified Data.SBV.Tuple                  as ST
-import           Data.Set                        (Set)
-import qualified Data.Set                        as S
 import           Language.Marlowe.Semantics
 import           Language.Marlowe.Semantics.Types
 
@@ -158,7 +156,7 @@ convertToSymbolicTrace _ _ = error "Provided symbolic trace is not long enough"
 symEvalVal :: Value -> SymState -> SInteger
 symEvalVal (AvailableMoney accId tok) symState =
   M.findWithDefault (literal 0) (accId, tok) (symAccounts symState)
-symEvalVal (Constant inte) symState = literal inte
+symEvalVal (Constant inte) _symState = literal inte
 symEvalVal (NegValue val) symState = - symEvalVal val symState
 symEvalVal (AddValue lhs rhs) symState = symEvalVal lhs symState +
                                          symEvalVal rhs symState
@@ -321,8 +319,8 @@ isValidAndFailsAux hasErr (Assert obs cont) sState =
 
 -- Returns sTrue iif the given sinteger is in the list of bounds
 ensureBounds :: SInteger -> [Bound] -> SBool
-ensureBounds cho [] = sFalse
-ensureBounds cho (Bound lowBnd hiBnd:t) =
+ensureBounds _cho [] = sFalse
+ensureBounds  cho (Bound lowBnd hiBnd:t) =
     ((cho .>= literal lowBnd) .&& (cho .<= literal hiBnd)) .|| ensureBounds cho t
 
 -- Just combines addTransaction and isValidAndFailsAux
@@ -350,7 +348,7 @@ addFreshTimesToState sState =
 -- - pos - Is the position of the current Case clause [1..], 0 means timeout branch.
 isValidAndFailsWhen :: SBool -> [Case] -> Timeout -> Contract -> (SymInput -> SymState -> SBool)
                     -> SymState -> Integer -> Symbolic SBool
-isValidAndFailsWhen hasErr [] timeout cont previousMatch sState pos =
+isValidAndFailsWhen hasErr [] timeout cont _previousMatch sState _pos =
   do newLowTime <- sInteger_
      newHighTime <- sInteger_
      (cond, newTrace)
@@ -456,18 +454,18 @@ isValidAndFailsWhen hasErr (MerkleizedCase (Notify obs) _:rest)
 -- necessary number of transactions for exploring the whole contract. This bound
 -- has been proven in TransactionBound.thy
 countWhens :: Contract -> Integer
-countWhens Close            = 0
-countWhens (Pay uv uw ux uy c) = countWhens c
-countWhens (If uz c c2)     = max (countWhens c) (countWhens c2)
-countWhens (When cl t c)    = 1 + max (countWhensCaseList cl) (countWhens c)
-countWhens (Let va vb c)    = countWhens c
-countWhens (Assert o c)    = countWhens c
+countWhens Close                   = 0
+countWhens (Pay _uv _uw _ux _uy c) = countWhens c
+countWhens (If _uz c c2)           = max (countWhens c) (countWhens c2)
+countWhens (When cl _t c)          = 1 + max (countWhensCaseList cl) (countWhens c)
+countWhens (Let _va _vb c)         = countWhens c
+countWhens (Assert _o c)           = countWhens c
 
 -- Same as countWhens but it starts with a Case list
 countWhensCaseList :: [Case] -> Integer
-countWhensCaseList (Case uu c : tail)           = max (countWhens c) (countWhensCaseList tail)
-countWhensCaseList (MerkleizedCase uu c : tail) = countWhensCaseList tail
-countWhensCaseList []                           = 0
+countWhensCaseList (Case _uu c : tail)            = max (countWhens c) (countWhensCaseList tail)
+countWhensCaseList (MerkleizedCase _uu _c : tail) = countWhensCaseList tail
+countWhensCaseList []                             = 0
 
 -- Main wrapper of the static analysis takes a Contract, a paramTrace, and an optional
 -- State. paramTrace is actually an output parameter. We do not put it in the result of
@@ -549,6 +547,7 @@ computeAndContinue :: ([Input] -> TransactionInput) -> [Input] -> State -> Contr
 computeAndContinue transaction inps sta cont t =
   case computeTransaction (transaction inps) sta cont of
     Error TEUselessTransaction -> executeAndInterpret sta t cont
+    Error _ -> error "computeAndContinue: unexpected error"
     TransactionOutput (TOR { txOutWarnings = war
                            , txOutState = newSta
                            , txOutContract = newCont})
@@ -559,8 +558,8 @@ computeAndContinue transaction inps sta cont t =
 -- transactions and also computes the resulting list of warnings.
 executeAndInterpret :: State -> [(Integer, Integer, Integer, Integer)] -> Contract
                     -> [([TransactionInput], [TransactionWarning])]
-executeAndInterpret sta [] cont = []
-executeAndInterpret sta ((l, h, v, b):t) cont
+executeAndInterpret _sta [] _cont = []
+executeAndInterpret  sta ((l, h, v, b):t) cont
   | b == 0 = computeAndContinue transaction [] sta cont t
   | otherwise =
        case reduceContractUntilQuiescent env sta cont of
@@ -581,7 +580,7 @@ executeAndInterpret sta ((l, h, v, b):t) cont
 interpretResult :: [(Integer, Integer, Integer, Integer)] -> Contract -> Maybe State
                 -> (POSIXTime, [TransactionInput], [TransactionWarning])
 interpretResult [] _ _ = error "Empty result"
-interpretResult t@((l, h, v, b):_) c maybeState = (POSIXTime l, tin, twa)
+interpretResult t@((l, _h, _v, _b):_) c maybeState = (POSIXTime l, tin, twa)
    where (tin, twa) = foldl' (\(accInp, accWarn) (elemInp, elemWarn) ->
                                  (accInp ++ elemInp, accWarn ++ elemWarn)) ([], []) $
                              executeAndInterpret initialState t c

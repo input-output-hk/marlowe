@@ -1,7 +1,8 @@
+{-# OPTIONS_GHC -Wall #-}
+
 module Language.Marlowe.Semantics.Deserialisation (byteStringToContract) where
 
 import Data.ByteString (ByteString)
-import Data.Ratio ((%))
 import Language.Marlowe.Semantics.Types (Action(..), Bound(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Party(..), Payee(..), POSIXTime(POSIXTime), Token(..),
                                          Value(AddValue, AvailableMoney, ChoiceValue, Cond, Constant, DivValue, MulValue, NegValue, TimeIntervalEnd, TimeIntervalStart, SubValue, UseValue),
                                          ValueId(..),)

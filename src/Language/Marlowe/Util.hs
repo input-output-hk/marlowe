@@ -14,7 +14,7 @@ import           Data.Text.Encoding (encodeUtf8)
 ada :: Token
 ada = Token "" ""
 
-instance IsString Party where
+instance IsString (Party i) where
     fromString s = Role (encodeUtf8 $ T.pack s)
 
 instance IsString ValueId where

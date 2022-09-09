@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-orphans #-}
 module Language.Marlowe.Semantics (
     TransactionInput(..)
@@ -8,12 +9,14 @@ module Language.Marlowe.Semantics (
   , TOR(..)
   , ReduceResult(..)
   , Payment(..)
+  , computeTransaction'
   , computeTransaction
   , reduceContractUntilQuiescent
   , contractLifespanUpperBound
   ) where
 
 import           Crypto.Hash.SHA256 (hash)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import           Language.Marlowe.Semantics.Deserialisation (byteStringToContract)
@@ -23,7 +26,7 @@ import           Language.Marlowe.Semantics.Types (IntervalResult(..), IntervalE
 
 -- EVALUATION
 
-fixInterval :: TimeInterval -> State -> IntervalResult
+fixInterval :: TimeInterval -> State i t -> IntervalResult i t
 fixInterval interval state = let
     TimeInterval low high  = interval
     curMinTime = minTime state
@@ -39,7 +42,7 @@ fixInterval interval state = let
 
 
 -- | Evaluate a @Value@ to Integer
-evalValue :: Environment -> State -> Value -> Integer
+evalValue :: (Ord i, Ord t) => Environment -> State i t -> Value i t -> Integer
 evalValue env state value = let
     eval = evalValue env state
     in case value of
@@ -62,7 +65,7 @@ evalValue env state value = let
         Cond cond thn els    -> if evalObservation env state cond then eval thn else eval els
 
 -- | Evaluate an @Observation@ to Bool
-evalObservation :: Environment -> State -> Observation -> Bool
+evalObservation :: (Ord i, Ord t) => Environment -> State i t -> Observation i t -> Bool
 evalObservation env state obs = let
     evalObs = evalObservation env state
     evalVal = evalValue env state
@@ -81,28 +84,28 @@ evalObservation env state obs = let
 
 
 -- | Pick the first account with money in it
-refundOne :: Accounts  -> Maybe ((Party, Token, Money), Accounts)
+refundOne :: Accounts i t -> Maybe ((Party i, t, Money), Accounts i t)
 refundOne accounts = do
     (((accId, tok), balance), rest) <- Map.minViewWithKey accounts
     if balance > 0
     then Just ((accId, tok, balance), rest)
     else refundOne rest
 
-data Payment = Payment Party Payee Token Money
+data Payment i t = Payment (Party i) (Payee i) t Money
   deriving (Eq,Ord,Show,Read)
 
-data ReduceEffect = ReduceWithPayment Payment
-                  | ReduceNoPayment
+data ReduceEffect i t = ReduceWithPayment (Payment i t)
+                      | ReduceNoPayment
   deriving (Eq,Ord,Show,Read)
 
 
 -- | Obtains the amount of money available an account
-moneyInAccount :: Party -> Token -> Accounts -> Money
+moneyInAccount :: (Ord i, Ord t) => Party i -> t -> Accounts i t -> Money
 moneyInAccount accId token = Map.findWithDefault 0 (accId, token)
 
 
 -- | Sets the amount of money available in an account
-updateMoneyInAccount :: Party -> Token -> Money -> Accounts -> Accounts
+updateMoneyInAccount :: (Ord i, Ord t) => Party i -> t -> Money -> Accounts i t -> Accounts i t
 updateMoneyInAccount accId token money =
     if money <= 0 then Map.delete (accId, token) else Map.insert (accId, token) money
 
@@ -110,7 +113,7 @@ updateMoneyInAccount accId token money =
 {-| Add the given amount of money to an account (only if it is positive).
     Return the updated Map
 -}
-addMoneyToAccount :: Party -> Token -> Money -> Accounts -> Accounts
+addMoneyToAccount :: (Ord i, Ord t) => Party i -> t -> Money -> Accounts i t -> Accounts i t
 addMoneyToAccount accId token money accounts = let
     balance = moneyInAccount accId token accounts
     newBalance = balance + money
@@ -121,7 +124,7 @@ addMoneyToAccount accId token money accounts = let
 {-| Gives the given amount of money to the given payee.
     Returns the appropriate effect and updated accounts
 -}
-giveMoney :: Party -> Payee -> Token -> Money -> Accounts -> (ReduceEffect, Accounts)
+giveMoney :: (Ord i, Ord t) => Party i -> Payee i -> t -> Money -> Accounts i t -> (ReduceEffect i t, Accounts i t)
 giveMoney accountId payee token amount accounts =
   let newAccounts = case payee of
                       Party _ -> accounts
@@ -130,25 +133,25 @@ giveMoney accountId payee token amount accounts =
 
 -- REDUCE
 
-data ReduceWarning = ReduceNoWarning
-                   | ReduceNonPositivePay Party Payee Integer
-                   | ReducePartialPay Party Payee Money Money
-                                     -- ^ src    ^ dest ^ paid ^ expected
-                   | ReduceShadowing ValueId Integer Integer
-                                     -- oldVal ^  newVal ^
+data ReduceWarning i = ReduceNoWarning
+                     | ReduceNonPositivePay (Party i) (Payee i) Integer
+                     | ReducePartialPay (Party i) (Payee i) Money Money
+                                       -- ^ src    ^ dest ^ paid ^ expected
+                     | ReduceShadowing ValueId Integer Integer
+                                       -- oldVal ^  newVal ^
 
-                   | ReduceAssertionFailed
+                     | ReduceAssertionFailed
   deriving (Eq,Ord,Show,Read)
 
 
-data ReduceStepResult = Reduced ReduceWarning ReduceEffect State Contract
-                      | NotReduced
-                      | AmbiguousTimeIntervalReductionError
+data ReduceStepResult i t = Reduced (ReduceWarning i) (ReduceEffect i t) (State i t) (Contract i t)
+                          | NotReduced
+                          | AmbiguousTimeIntervalReductionError
   deriving (Eq,Ord,Show,Read)
 
 
 -- | Carry a step of the contract with no inputs
-reduceContractStep :: Environment -> State -> Contract -> ReduceStepResult
+reduceContractStep :: (Ord i, Ord t) => Environment -> State i t -> Contract i t -> ReduceStepResult i t
 reduceContractStep env state contract = case contract of
 
     Close -> case refundOne (accounts state) of
@@ -201,15 +204,15 @@ reduceContractStep env state contract = case contract of
                   else ReduceAssertionFailed
         in Reduced warning ReduceNoPayment state cont
 
-data ReduceResult = ContractQuiescent Bool [ReduceWarning] [Payment] State Contract
-                  | RRAmbiguousTimeIntervalError
+data ReduceResult i t = ContractQuiescent Bool [ReduceWarning i] [Payment i t] (State i t) (Contract i t)
+                      | RRAmbiguousTimeIntervalError
   deriving (Eq,Ord,Show,Read)
 
 -- | Reduce a contract until it cannot be reduced more
-reduceContractUntilQuiescent :: Environment -> State -> Contract -> ReduceResult
+reduceContractUntilQuiescent :: forall i t. (Ord i, Ord t) => Environment -> State i t -> Contract i t -> ReduceResult i t
 reduceContractUntilQuiescent env state contract = let
     reductionLoop
-      :: Bool -> Environment -> State -> Contract -> [ReduceWarning] -> [Payment] -> ReduceResult
+      :: Bool -> Environment -> State i t -> Contract i t -> [ReduceWarning i] -> [Payment i t] -> ReduceResult i t
     reductionLoop reduced env state contract warnings payments =
         case reduceContractStep env state contract of
             Reduced warning effect newState cont -> let
@@ -225,16 +228,16 @@ reduceContractUntilQuiescent env state contract = let
 
     in reductionLoop False env state contract [] []
 
-data ApplyWarning = ApplyNoWarning
-                  | ApplyNonPositiveDeposit Party Party Integer
+data ApplyWarning i = ApplyNoWarning
+                    | ApplyNonPositiveDeposit (Party i) (Party i) Integer
   deriving (Eq,Ord,Show,Read)
 
-data ApplyAction = AppliedAction ApplyWarning State
-                 | NotAppliedAction
+data ApplyAction i t = AppliedAction (ApplyWarning i) (State i t)
+                     | NotAppliedAction
   deriving (Eq,Ord,Show,Read)
 
 -- | Try to apply a single input contentent to a single action
-applyAction :: Environment -> State -> InputContent -> Action -> ApplyAction
+applyAction :: (Ord i, Ord t) => Environment -> State i t -> InputContent i t -> Action i t -> ApplyAction i t
 applyAction env state (IDeposit accId1 party1 token1 money) (Deposit accId2 party2 token2 val) =
     let amount = evalValue env state val
     in if accId1 == accId2 && party1 == party2 && token1 == token2 && money == amount
@@ -256,55 +259,55 @@ applyAction env state INotify (Notify obs) =
 applyAction _ _ _ _ = NotAppliedAction
 
 -- | Try to get a continuation from a pair of Input and Case
-getContinuation :: Input -> Case -> Maybe Contract
-getContinuation (NormalInput _) (Case _ continuation) = Just continuation
-getContinuation (MerkleizedInput _ serialisedContinuation) (MerkleizedCase _ continuationHash) =
+getContinuation :: (ByteString -> Maybe (Contract i t, ByteString)) -> Input i t -> Case i t -> Maybe (Contract i t)
+getContinuation _ (NormalInput _) (Case _ continuation) = Just continuation
+getContinuation decContract (MerkleizedInput _ serialisedContinuation) (MerkleizedCase _ continuationHash) =
   if hash serialisedContinuation == continuationHash
-  then case byteStringToContract serialisedContinuation of
+  then case decContract serialisedContinuation of
         Nothing -> Nothing
         Just (c, bs) -> if BS.null bs then Just c else Nothing
   else Nothing
-getContinuation _ _ = Nothing
+getContinuation _ _ _ = Nothing
 
 
-data ApplyResult = Applied ApplyWarning State Contract
-                 | ApplyNoMatchError
-                 | ApplyHashMismatch
+data ApplyResult i t = Applied (ApplyWarning i) (State i t) (Contract i t)
+                     | ApplyNoMatchError
+                     | ApplyHashMismatch
   deriving (Eq,Ord,Show,Read)
 
 -- | Apply a single, potentially merkleized Input to the contract (assumes the contract is reduced)
-applyCases :: Environment -> State -> Input -> [Case] -> ApplyResult
-applyCases env state input (headCase : tailCase) =
-  let inputContent = getInputContent input :: InputContent
-      action = getAction headCase :: Action
-      maybeContinuation = getContinuation input headCase :: Maybe Contract
+applyCases :: forall i t. (Ord i, Ord t) => (ByteString -> Maybe (Contract i t, ByteString)) -> Environment -> State i t -> Input i t -> [Case i t] -> ApplyResult i t
+applyCases decContract env state input (headCase : tailCase) =
+  let inputContent = getInputContent input :: InputContent i t
+      action = getAction headCase :: Action i t
+      maybeContinuation = getContinuation decContract input headCase :: Maybe (Contract i t)
   in
   case applyAction env state inputContent action of
     AppliedAction warning newState ->
       case maybeContinuation of
         Just continuation -> Applied warning newState continuation
         Nothing -> ApplyHashMismatch
-    NotAppliedAction -> applyCases env state input tailCase
+    NotAppliedAction -> applyCases decContract env state input tailCase
 
-applyCases _env _state _input [] = ApplyNoMatchError
+applyCases _decContract _env _state _input [] = ApplyNoMatchError
 
 
-applyInput :: Environment -> State -> Input -> Contract -> ApplyResult
-applyInput env state input (When cases _ _) = applyCases env state input cases
-applyInput _ _ _ _                          = ApplyNoMatchError
+applyInput :: (Ord i, Ord t) => (ByteString -> Maybe (Contract i t, ByteString)) -> Environment -> State i t -> Input i t -> Contract i t -> ApplyResult i t
+applyInput decContract env state input (When cases _ _) = applyCases decContract env state input cases
+applyInput _ _ _ _ _                                    = ApplyNoMatchError
 
 -- APPLY ALL
 
-data TransactionWarning = TransactionNonPositiveDeposit Party Party Integer
-                        | TransactionNonPositivePay Party Payee Integer
-                        | TransactionPartialPay Party Payee Money Money
-                                                -- ^ src    ^ dest ^ paid ^ expected
-                        | TransactionShadowing ValueId Integer Integer
-                                                -- oldVal ^  newVal ^
-                        | TransactionAssertionFailed
+data TransactionWarning i = TransactionNonPositiveDeposit (Party i) (Party i) Integer
+                          | TransactionNonPositivePay (Party i) (Payee i) Integer
+                          | TransactionPartialPay (Party i) (Payee i) Money Money
+                                                  -- ^ src    ^ dest ^ paid ^ expected
+                          | TransactionShadowing ValueId Integer Integer
+                                                  -- oldVal ^  newVal ^
+                          | TransactionAssertionFailed
   deriving (Eq,Ord,Show,Read)
 
-convertReduceWarnings :: [ReduceWarning] -> [TransactionWarning]
+convertReduceWarnings :: [ReduceWarning i] -> [TransactionWarning i]
 convertReduceWarnings [] = []
 convertReduceWarnings (first:rest) =
   (case first of
@@ -319,32 +322,32 @@ convertReduceWarnings (first:rest) =
             [TransactionAssertionFailed])
   ++ convertReduceWarnings rest
 
-convertApplyWarning :: ApplyWarning -> [TransactionWarning]
+convertApplyWarning :: ApplyWarning i -> [TransactionWarning i]
 convertApplyWarning warn =
   case warn of
     ApplyNoWarning -> []
     ApplyNonPositiveDeposit party accId amount ->
             [TransactionNonPositiveDeposit party accId amount]
 
-data ApplyAllResult = ApplyAllSuccess Bool [TransactionWarning] [Payment] State Contract
-                    | ApplyAllHashMismatch
-                    | ApplyAllNoMatchError
-                    | ApplyAllAmbiguousTimeIntervalError
+data ApplyAllResult i t = ApplyAllSuccess Bool [TransactionWarning i] [Payment i t] (State i t) (Contract i t)
+                        | ApplyAllHashMismatch
+                        | ApplyAllNoMatchError
+                        | ApplyAllAmbiguousTimeIntervalError
   deriving (Eq,Ord,Show)
 
 
 -- | Apply a list of Inputs to the contract
-applyAllInputs :: Environment -> State -> Contract -> [Input] -> ApplyAllResult
-applyAllInputs env state contract inputs = let
+applyAllInputs :: forall i t. (Ord i, Ord t) => (ByteString -> Maybe (Contract i t, ByteString)) -> Environment -> State i t -> Contract i t -> [Input i t] -> ApplyAllResult i t
+applyAllInputs decContract env state contract inputs = let
     applyAllLoop
         :: Bool
         -> Environment
-        -> State
-        -> Contract
-        -> [Input]
-        -> [TransactionWarning]
-        -> [Payment]
-        -> ApplyAllResult
+        -> State i t
+        -> Contract i t
+        -> [Input i t]
+        -> [TransactionWarning i]
+        -> [Payment i t]
+        -> ApplyAllResult i t
     applyAllLoop contractChanged env state contract inputs warnings payments =
         case reduceContractUntilQuiescent env state contract of
             RRAmbiguousTimeIntervalError -> ApplyAllAmbiguousTimeIntervalError
@@ -352,7 +355,7 @@ applyAllInputs env state contract inputs = let
                 [] -> ApplyAllSuccess (contractChanged || reduced)
                                       (warnings ++ convertReduceWarnings reduceWarns)
                                       (payments ++ pays) curState cont
-                (input : rest) -> case applyInput env curState input cont of
+                (input : rest) -> case applyInput decContract env curState input cont of
                     Applied applyWarn newState cont ->
                         applyAllLoop True env newState cont rest
                                      (warnings ++ convertReduceWarnings reduceWarns
@@ -369,32 +372,32 @@ data TransactionError = TEAmbiguousTimeIntervalError
                       | TEUselessTransaction
   deriving (Eq,Ord,Show,Read)
 
-data TOR = TOR { txOutWarnings :: [TransactionWarning]
-               , txOutPayments :: [Payment]
-               , txOutState    :: State
-               , txOutContract :: Contract }
+data TOR i t = TOR { txOutWarnings :: [TransactionWarning i]
+                   , txOutPayments :: [Payment i t]
+                   , txOutState    :: State i t
+                   , txOutContract :: Contract i t }
   deriving (Eq,Ord,Show,Read)
 
-data TransactionOutput =
-    TransactionOutput TOR
+data TransactionOutput i t =
+    TransactionOutput (TOR i t)
   | Error TransactionError
   deriving (Eq,Ord,Show,Read)
 
-data TransactionInput = TransactionInput
+data TransactionInput i t = TransactionInput
     { txInterval :: TimeInterval
-    , txInputs   :: [Input] }
+    , txInputs   :: [Input i t] }
   deriving (Eq,Ord,Show,Read)
 
-isClose :: Contract -> Bool
+isClose :: Contract i t -> Bool
 isClose Close = True
 isClose _ = False
 
 -- | Try to compute outputs of a transaction give its input
-computeTransaction :: TransactionInput -> State -> Contract -> TransactionOutput
-computeTransaction tx state contract = let
+computeTransaction' :: (Ord i, Ord t) => (ByteString -> Maybe (Contract i t, ByteString)) -> TransactionInput i t -> State i t -> Contract i t -> TransactionOutput i t
+computeTransaction' decContract tx state contract = let
     inputs = txInputs tx
     in case fixInterval (txInterval tx) state of
-        IntervalTrimmed env fixState -> case applyAllInputs env fixState contract inputs of
+        IntervalTrimmed env fixState -> case applyAllInputs decContract env fixState contract inputs of
             ApplyAllSuccess reduced warnings payments newState cont -> let
                 in  if not reduced && (not (isClose contract) || Map.null (accounts state))
                     then Error TEUselessTransaction
@@ -407,28 +410,31 @@ computeTransaction tx state contract = let
             ApplyAllAmbiguousTimeIntervalError -> Error TEAmbiguousTimeIntervalError
         IntervalError error -> Error (TEIntervalError error)
 
-playTraceAux :: TOR -> [TransactionInput] -> TransactionOutput
-playTraceAux res [] = TransactionOutput res
-playTraceAux TOR { txOutWarnings = warnings
-                 , txOutPayments = payments
-                 , txOutState = state
-                 , txOutContract = cont } (h:t) =
-  let transRes = computeTransaction h state cont in
+computeTransaction :: TransactionInput ByteString Token -> State ByteString Token -> Contract ByteString Token -> TransactionOutput ByteString Token
+computeTransaction = computeTransaction' byteStringToContract
+
+playTraceAux :: (Ord i, Ord t) => (ByteString -> Maybe (Contract i t, ByteString)) -> TOR i t -> [TransactionInput i t] -> TransactionOutput i t
+playTraceAux _decContract res [] = TransactionOutput res
+playTraceAux  decContract TOR { txOutWarnings = warnings
+                              , txOutPayments = payments
+                              , txOutState = state
+                              , txOutContract = cont } (h:t) =
+  let transRes = computeTransaction' decContract h state cont in
   case transRes of
     TransactionOutput transResRec ->
-      playTraceAux (transResRec { txOutPayments = payments ++ txOutPayments transResRec
-                                , txOutWarnings = warnings ++ txOutWarnings transResRec})
+      playTraceAux decContract (transResRec { txOutPayments = payments ++ txOutPayments transResRec
+                                            , txOutWarnings = warnings ++ txOutWarnings transResRec})
                    t
     Error _ -> transRes
 
-_playTrace :: POSIXTime -> Contract -> [TransactionInput] -> TransactionOutput
-_playTrace sl c = playTraceAux (TOR { txOutWarnings = []
-                                   , txOutPayments = []
-                                   , txOutState = emptyState sl
-                                   , txOutContract = c })
+_playTrace :: (Ord i, Ord t) => (ByteString -> Maybe (Contract i t, ByteString)) -> POSIXTime -> Contract i t -> [TransactionInput i t] -> TransactionOutput i t
+_playTrace decContract sl c = playTraceAux decContract (TOR { txOutWarnings = []
+                                                            , txOutPayments = []
+                                                            , txOutState = emptyState sl
+                                                            , txOutContract = c })
 
 -- | Calculates an upper bound for the maximum lifespan of a contract
-contractLifespanUpperBound :: Contract -> Integer
+contractLifespanUpperBound :: Contract i t -> Integer
 contractLifespanUpperBound contract = case contract of
     Close -> 0
     Pay _ _ _ _ cont -> contractLifespanUpperBound cont

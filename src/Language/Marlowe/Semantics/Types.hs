@@ -30,8 +30,8 @@ instance Num POSIXTime where
     fromInteger = POSIXTime
     negate (POSIXTime l) = POSIXTime (negate l)
 
-data Party = PubKey ByteString
-           | Role ByteString
+data Party i = PubKey i
+             | Role ByteString
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 type AccountId = Party
@@ -40,9 +40,9 @@ type NumAccount = Integer
 type Timeout = POSIXTime
 type Money = Integer
 type ChosenNum = Integer
-type Accounts = Map (AccountId, Token) Integer
+type Accounts i t = Map (AccountId i, t) Integer
 
-data ChoiceId = ChoiceId ChoiceName Party
+data ChoiceId i = ChoiceId ChoiceName (Party i)
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 newtype ValueId = ValueId Text
@@ -59,31 +59,31 @@ instance Show ValueId where
 instance Read ValueId where
   readsPrec p x = [(ValueId (T.pack v), s) | (v, s) <- readsPrec p x]
 
-data Value = AvailableMoney Party Token
-           | Constant Integer
-           | NegValue Value
-           | AddValue Value Value
-           | SubValue Value Value
-           | MulValue Value Value
-           | DivValue Value Value
-           | ChoiceValue ChoiceId
-           | TimeIntervalStart
-           | TimeIntervalEnd
-           | UseValue ValueId
-           | Cond Observation Value Value
+data Value i t = AvailableMoney (Party i) t
+               | Constant Integer
+               | NegValue (Value i t)
+               | AddValue (Value i t) (Value i t)
+               | SubValue (Value i t) (Value i t)
+               | MulValue (Value i t) (Value i t)
+               | DivValue (Value i t) (Value i t)
+               | ChoiceValue (ChoiceId i)
+               | TimeIntervalStart
+               | TimeIntervalEnd
+               | UseValue ValueId
+               | Cond (Observation i t) (Value i t) (Value i t)
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
-data Observation = AndObs Observation Observation
-                  | OrObs Observation Observation
-                  | NotObs Observation
-                  | ChoseSomething ChoiceId
-                  | ValueGE Value Value
-                  | ValueGT Value Value
-                  | ValueLT Value Value
-                  | ValueLE Value Value
-                  | ValueEQ Value Value
-                  | TrueObs
-                  | FalseObs
+data Observation i t = AndObs (Observation i t) (Observation i t)
+                     | OrObs (Observation i t) (Observation i t)
+                     | NotObs (Observation i t)
+                     | ChoseSomething (ChoiceId i)
+                     | ValueGE (Value i t) (Value i t)
+                     | ValueGT (Value i t) (Value i t)
+                     | ValueLT (Value i t) (Value i t)
+                     | ValueLE (Value i t) (Value i t)
+                     | ValueEQ (Value i t) (Value i t)
+                     | TrueObs
+                     | FalseObs
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 data TimeInterval = TimeInterval POSIXTime POSIXTime
@@ -100,38 +100,38 @@ data Bound = Bound Integer Integer
 inBounds :: ChosenNum -> [Bound] -> Bool
 inBounds num = any (\(Bound l u) -> num >= l && num <= u)
 
-data Action = Deposit Party Party Token Value
-            | Choice ChoiceId [Bound]
-            | Notify Observation
+data Action i t = Deposit (Party i) (Party i) t (Value i t)
+                | Choice (ChoiceId i) [Bound]
+                | Notify (Observation i t)
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
-data Payee = Account Party
-           | Party Party
+data Payee i = Account (Party i)
+             | Party (Party i)
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
-data Case = Case Action Contract
-          | MerkleizedCase Action ByteString
+data Case i t = Case (Action i t) (Contract i t)
+              | MerkleizedCase (Action i t) ByteString
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
-getAction :: Case -> Action
+getAction :: Case i t -> Action i t
 getAction (Case action _) = action
 getAction (MerkleizedCase action _) = action
 
-data Contract = Close
-              | Pay Party Payee Token Value Contract
-              | If Observation Contract Contract
-              | When [Case] Timeout Contract
-              | Let ValueId Value Contract
-              | Assert Observation Contract
+data Contract i t = Close
+                  | Pay (Party i) (Payee i) t (Value i t) (Contract i t)
+                  | If (Observation i t) (Contract i t) (Contract i t)
+                  | When [Case i t] Timeout (Contract i t)
+                  | Let ValueId (Value i t) (Contract i t)
+                  | Assert (Observation i t) (Contract i t)
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
-data State = State { accounts    :: Map (Party, Token) Money
-                   , choices     :: Map ChoiceId ChosenNum
-                   , boundValues :: Map ValueId Integer
-                   , minTime     :: POSIXTime }
+data State i t = State { accounts    :: Map (Party i, t) Money
+                       , choices     :: Map (ChoiceId i) ChosenNum
+                       , boundValues :: Map ValueId Integer
+                       , minTime     :: POSIXTime }
   deriving (Eq,Ord,Show,Read)
 
-emptyState :: POSIXTime -> State
+emptyState :: POSIXTime -> State i t
 emptyState sn = State { accounts = Map.empty
                       , choices = Map.empty
                       , boundValues = Map.empty
@@ -140,16 +140,16 @@ emptyState sn = State { accounts = Map.empty
 newtype Environment = Environment { timeInterval :: TimeInterval }
   deriving (Eq,Ord,Show,Read)
 
-data InputContent = IDeposit Party Party Token Money
-                  | IChoice ChoiceId ChosenNum
-                  | INotify
+data InputContent i t = IDeposit (Party i) (Party i) t Money
+                      | IChoice (ChoiceId i) ChosenNum
+                      | INotify
   deriving (Eq,Ord,Show,Read)
 
-data Input = NormalInput InputContent
-           | MerkleizedInput InputContent ByteString
+data Input i t = NormalInput (InputContent i t)
+               | MerkleizedInput (InputContent i t) ByteString
   deriving (Eq,Ord,Show,Read)
 
-getInputContent :: Input -> InputContent
+getInputContent :: Input i t -> InputContent i t
 getInputContent (NormalInput inputContent) = inputContent
 getInputContent (MerkleizedInput inputContent _) = inputContent
 
@@ -158,7 +158,7 @@ data IntervalError = InvalidInterval TimeInterval
                     | IntervalInPastError POSIXTime TimeInterval
   deriving (Eq,Ord,Show,Read)
 
-data IntervalResult = IntervalTrimmed Environment State
-                    | IntervalError IntervalError
+data IntervalResult i t = IntervalTrimmed Environment (State i t)
+                        | IntervalError IntervalError
   deriving (Eq,Ord,Show,Read)
 

@@ -3,21 +3,21 @@ module Language.Marlowe.Examples.Rent where
 
 import Language.Marlowe
 
-utilityMonths :: Integer -> Contract
-utilityMonths n = foldl (.) mkDeposit [payMonth (POSIXTime x) | x <- [1..n]] Close
+utilityMonths :: t -> Integer -> Contract i t
+utilityMonths tok n = foldl (.) (mkDeposit tok) [payMonth tok (POSIXTime x) | x <- [1..n]] Close
 
-utility :: Contract
-utility = mkDeposit $ payMonth 1 $ payMonth 2 $ payMonth 3 $ Close
+utility :: t -> Contract i t
+utility tok = mkDeposit tok $ payMonth tok 1 $ payMonth tok 2 $ payMonth tok 3 $ Close
 
-tenant, landlord, tenantDeposit :: Party
+tenant, landlord, tenantDeposit :: Party i
 tenant = Role "tenant"
 tenantDeposit = Role  "tenantDeposit"
 landlord = Role "landlord"
 
-depositAcc :: Party
+depositAcc :: Party i
 depositAcc = tenantDeposit
 
-monthlyAcc :: Party
+monthlyAcc :: Party i
 monthlyAcc = tenant
 
 depositAmt, monthlyFee :: Integer
@@ -28,17 +28,19 @@ depositTimeout, daysInAMonth :: Timeout
 depositTimeout = 10
 daysInAMonth = 30
 
-mkDeposit c = When [Case (Deposit tenantDeposit tenant ada (Constant depositAmt))
-                         c]
-                   depositTimeout
-                   Close
+mkDeposit :: t -> Contract i t -> Contract i t
+mkDeposit tok c = When [Case (Deposit tenantDeposit tenant tok (Constant depositAmt))
+                             c]
+                       depositTimeout
+                       Close
 
-payMonth m c = When [Case (Deposit monthlyAcc tenant ada (Constant monthlyFee))
-                          (payAll monthlyAcc (Party landlord) c)]
-                    (depositTimeout + m * daysInAMonth)
-                    (payAll depositAcc (Party landlord) Close)
+payMonth :: t -> Timeout -> Contract i t -> Contract i t
+payMonth tok m c = When [Case (Deposit monthlyAcc tenant tok (Constant monthlyFee))
+                              (payAll tok monthlyAcc (Party landlord) c)]
+                        (depositTimeout + m * daysInAMonth)
+                        (payAll tok depositAcc (Party landlord) Close)
 
 -- Pay all money into an account to a payee
-payAll :: Party -> Payee -> Contract -> Contract
-payAll acId payee = Pay acId payee ada (AvailableMoney acId ada)
+payAll :: t -> Party i -> Payee i -> Contract i t -> Contract i t
+payAll tok acId payee = Pay acId payee tok (AvailableMoney acId tok)
 

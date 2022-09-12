@@ -9,8 +9,8 @@ section \<open>Blockchain agnostic \label{sec:blockchain-agnostic}\<close>
 
 text \<open>
 Marlowe is currently implemented on the Cardano Blockchain, but is designed to be Blockchain agnostic. The same way that
-modern languages like C++ and Java have compilers that target intel/ARM, Marlowe could be implemented
-in Ethereum and other blockchain platforms.
+modern languages like C++ and Java have compilers that target Intel/ARM, Marlowe could be implemented
+on Ethereum and other blockchain platforms.
 \<close>
 
 text \<open>

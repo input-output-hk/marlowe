@@ -45,7 +45,7 @@ The address party is defined by a Blockhain specific \<^term>\<open>Address\<clo
 \<close>
 
 text \<open>
-A \<^term>\<open>Role\<close> in the other hand allows the participation of the contract to be dynamic. Any user that can prove to have permissions to act
+A \<^term>\<open>Role\<close>, on the other hand, allows the participation of the contract to be dynamic. Any user that can prove to have permissions to act
 as \<^term>\<open>RoleName\<close> is able to carry
 out the actions assigned \secref{sec:actions-and-inputs}, and redeem the payments issued to that role. The roles could be implemented
 as tokens\<^footnote>\<open>In the Cardano implementation roles are represented by native tokens and they are distributed to addresses at the time a contract is
@@ -60,12 +60,12 @@ text
 \<open>Inspired by Cardano's Multi-Asset tokens \<^footnote>\<open>\<^url>\<open>https://docs.cardano.org/native-tokens/learn\<close>\<close>, Marlowe also
 supports to transact with different assets. A \<^term>\<open>Token\<close> is constructed by a \<^term>\<open>CurrencySimbol\<close> that
 represents the monetary policy of the \<^term>\<open>Token\<close> and a \<^term>\<open>TokenName\<close> which allows to have multiple
-tokens with the same policy.
+tokens with the same monetary policy.
 \<close>
 
 datatype Token = Token CurrencySymbol TokenName
 
-text \<open>The marlowe semantics treats both types as opaque \<^term>\<open>ByteString\<close>.\<close>
+text \<open>The Marlowe semantics treats both types as opaque \<^term>\<open>ByteString\<close>.\<close>
 
 subsection \<open>Accounts \label{sec:internal-accounts}\<close>
 
@@ -80,7 +80,7 @@ type_synonym AccountId = Party
 text \<open>
 All assets stored in the contract must be in an internal account for one of the parties; this way,
 when the contract is closed, all remaining assets can be redeemed by their respective owners. These
-accounts are local: they only exist (and are accesible) within the contract.
+accounts are local: they only exist (and are accessible) within the contract.
 \<close>
 
 
@@ -89,8 +89,8 @@ type_synonym Accounts = "((AccountId \<times> Token) \<times> int) list"
 
 text \<open>
 During the course of the contract, assets can be deposited into an internal account using the term
- "\<^term>\<open>When [Deposit accountId party token value ] timeout continuation\<close>" . We can transfer assets internally or externally by using
- the term "\<^term>\<open>Pay accountId payee token value continuation\<close>", where \<^term>\<open>Payee\<close> is:
+ ``\<^term>\<open>When [Deposit accountId party token value ] timeout continuation\<close>" . We can transfer assets internally or externally by using
+ the term "\<^term>\<open>Pay accountId payee token value continuation\<close>'', where \<^term>\<open>Payee\<close> is:
 \<close>
 
 datatype Payee = Account AccountId
@@ -243,7 +243,7 @@ text \<open>The differences between them are:
 subsection \<open>Contracts \label{sec:contracts}\<close>
 
 text \<open>
-Marlowe is a continuation based language, this means that a \<^term>\<open>Contract\<close> can either be a \<^term>\<open>Close\<close>
+Marlowe is a continuation-based language, this means that a \<^term>\<open>Contract\<close> can either be a \<^term>\<open>Close\<close>
 or another construct that recursively has a \<^term>\<open>Contract\<close>. Eventually, \<^bold>\<open>all\<close> contracts end up
 with a \<^term>\<open>Close\<close> construct.
 \<close>

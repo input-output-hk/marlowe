@@ -26,7 +26,7 @@ software in the financial sector. In developing Marlowe, we have adapted these l
 text
 \<open>
 Where we differ from non-blockchain approaches is in how we make sure that the contract is followed.
-In the smart contracts world there is a saying "Code is law", which implies that the assets deposited
+In the smart contracts world there is a saying ``Code is law'', which implies that the assets deposited
 in a contract will follow its logic, without the ability of a human to change the rules. This applies
 for both the intended and not intended behaviour (in the form of bugs or exploits).\<close>
 
@@ -50,7 +50,7 @@ section \<open>The Marlowe Model\<close>
 
 text \<open>
 Marlowe \<^term>\<open>Contract\<close>s describe a series of steps, typically by describing the first step, together with
-another (sub-) contract that describes what to do next. For example, the contract
+another (sub-)contract that describes what to do next. For example, the contract
 @{term "Pay a p t v c"} says ``make a payment of @{term v} number of tokens @{term t} to the party
 @{term p} from the account @{term a}, and then follow the contract @{term c}''. We call @{term c} the
 continuation of the contract.  All paths of the contract are made
@@ -59,9 +59,9 @@ explicit this way, and each \<^term>\<open>Contract\<close> term is executed at 
 
 subsection \<open>Data types\<close>
 text \<open>The \<^term>\<open>Value\<close>s and \<^term>\<open>Observation\<close>s \secref{sec:values-and-observations} only works with
-integers and booleans respectively. There is no custom data types, records, tuples, nor string 
-manipulation. There is also no floating point numbers, so in order to represent currencies it is 
-recommended to work with cents. Dates are only used in the context of Timeouts and they are absolute,
+integers and booleans respectively. There are no custom data types, records, tuples, nor string 
+manipulation. There are also no floating point numbers, so in order to represent currencies it is 
+recommended to work with cents. Dates are only used in the context of \<^term>\<open>Timeout\<close>s and they are absolute,
  but it is likely we'll add relative times in a future version.
 \<close>
 
@@ -69,7 +69,7 @@ recommended to work with cents. Dates are only used in the context of Timeouts a
 subsection \<open>Quiescent\<close>
 text \<open>
 The blockchain can't force a participant to make a transaction. To avoid having a participant blocking
-the execution of a contract, whenever an \<^term>\<open>Input\<close> is expected, there is a Timeout with a contingency 
+the execution of a contract, whenever an \<^term>\<open>Input\<close> is expected, there is a \<^term>\<open>Timeout\<close> with a contingency 
 continuation. For each step, we can know in advance how long it can last, and we can extend this to
 know the maximum duration and the amount of transactions of a contract.
 \<close>

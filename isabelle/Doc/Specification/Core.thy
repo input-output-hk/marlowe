@@ -86,7 +86,7 @@ compute the new contract state, emit warnings, throw errors if needed, and deter
 continuation of the contract.\<close>
 text \<open>@{code_stmts applyCases constant: applyCases (Haskell)}\<close>
 
-subsection \<open>Utilitiesn\label{sec:accountutilities}\<close>
+subsection \<open>Utilities\label{sec:accountutilities}\<close>
 
 text \<open>The @{const moneyInAccount}, @{const updateMoneyInAccount}, and @{const addMoneyToAccount}
 functions read, write, and increment the funds in a particular account of the @{term State},

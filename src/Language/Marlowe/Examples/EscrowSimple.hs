@@ -10,7 +10,7 @@ When
   bobClaims
     when
       carolAgrees
-        Pay "alice" "bob" ada price
+        Pay "alice" "bob" tok price
       carolDisagrees
         Close "alice"
   aliceClaims
@@ -18,40 +18,40 @@ When
       carolAgrees
         Close "alice"
       carolDisagrees
-        Pay "alice" "bob" ada price
+        Pay "alice" "bob" tok price
 
 -}
 
-contract :: Contract
-contract = When [Case (Deposit "alice" "alice" ada price)
-                      (When [ processBobClaim
-                            , processAliceClaim
-                            ]
-                            90
-                            Close)
-                ]
-                10
-                Close
+contract :: t -> Contract i t
+contract tok = When [Case (Deposit "alice" "alice" tok price)
+                          (When [ processBobClaim tok
+                                , processAliceClaim tok
+                                ]
+                                90
+                                Close)
+                    ]
+                    10
+                    Close
 
-processBobClaim, processAliceClaim :: Case
+processBobClaim, processAliceClaim :: t -> Case i t
 
-processBobClaim =
+processBobClaim tok =
   Case bobClaims
-    (When [ Case carolAgrees (Pay "alice" (Party "bob") ada price Close)
+    (When [ Case carolAgrees (Pay "alice" (Party "bob") tok price Close)
           , Case carolDisagrees Close
           ]
          100
          Close)
 
-processAliceClaim =
+processAliceClaim tok =
   Case aliceClaims
     (When [ Case carolAgrees Close,
-            Case carolDisagrees (Pay "alice" (Party "bob") ada price Close)
+            Case carolDisagrees (Pay "alice" (Party "bob") tok price Close)
           ]
        100
        Close)
 
-aliceClaims, bobClaims, carolAgrees, carolDisagrees :: Action
+aliceClaims, bobClaims, carolAgrees, carolDisagrees :: Action i t
 
 aliceClaims    = Choice (ChoiceId "claim" "alice") [Bound 0 0]
 bobClaims      = Choice (ChoiceId "claim" "bob")   [Bound 0 0]
@@ -60,5 +60,5 @@ carolDisagrees = Choice (ChoiceId "agree" "carol") [Bound 1 1]
 
 
 -- Value under escrow
-price :: Value
+price :: Value i t
 price = Constant 450

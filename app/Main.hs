@@ -20,8 +20,9 @@ import           Language.Marlowe.Examples.ZCBG2
 main :: IO ()
 main = do
     print $ contractLifespanUpperBound $
-        zeroCouponBondGuaranteed "investor" "issuer" "guarantor" 1000 200 (POSIXTime 10) (POSIXTime 20)
+        zeroCouponBondGuaranteed ada "investor" "issuer" "guarantor" 1000 200 (POSIXTime 10) (POSIXTime 20)
 
+zeroCouponBond :: Contract i Token
 zeroCouponBond = When [ Case
         (Deposit "investor" "investor" ada (Constant 850))
         (Pay "investor" (Party "issuer") ada (Constant 850)
@@ -37,6 +38,7 @@ zeroCouponBond = When [ Case
     (POSIXTime 1563407989)
     Close
 
+couponBondGuaranteed :: Contract i Token
 couponBondGuaranteed = When [Case (Deposit "investor" "guarantor" ada (Constant 1030))
     (When [Case (Deposit "investor" "investor" ada (Constant 1000))
         (Pay "investor" (Party "issuer") ada (Constant 1000)
@@ -56,6 +58,7 @@ couponBondGuaranteed = When [Case (Deposit "investor" "guarantor" ada (Constant 
     (POSIXTime 1563839989) Close
 
 
+couponBondGuaranteedWithAccounts :: Contract i Token
 couponBondGuaranteedWithAccounts =
     -- guarantor deposits a whole payoff amount including interest payments
     When [Case (Deposit "party2" "guarantor" ada (Constant 1030))
@@ -84,6 +87,7 @@ couponBondGuaranteedWithAccounts =
     (POSIXTime 1563839989) Close
 
 
+couponBondGuaranteedWithoutAccounts :: Contract i Token
 couponBondGuaranteedWithoutAccounts =
     -- guarantor deposits a whole payoff amount including interest payments
     When [Case (Deposit "party1" "guarantor" ada (Constant 1030))
@@ -115,6 +119,7 @@ couponBondGuaranteedWithoutAccounts =
 
 
 {- Simply swap two payments between parties -}
+swapExample :: Contract i Token
 swapExample =
     When [ Case (Deposit acc1 "party1" ada (Constant 500))
             -- when 1st party committed, wait for 2nd
@@ -140,6 +145,7 @@ swapExample =
     acc2 = "party2"
 
 {- Simply swap two payments between parties using single account, fully fungible -}
+swapSingleAccount :: Contract i Token
 swapSingleAccount =
     When [ Case (Deposit acc1 "party1" ada (Constant 500))
             (When [ Case (Deposit acc1 "party2" ada (Constant 300))
@@ -163,6 +169,7 @@ swapSingleAccount =
     acc2 = "party2"
 
 {- Swap two payments between parties, all payments are guaranteed by a 3rd party -}
+swapGuaranteedExample :: Contract i Token
 swapGuaranteedExample =
     When [ Case (Deposit acc3 "guarantor" ada (Constant 800))
         (When [
@@ -194,6 +201,7 @@ swapGuaranteedExample =
 {-  Swap two payments between parties using single account.
     All payments are guaranteed by a 3rd party.
 -}
+swapSingleAccountGuaranteedExample :: Contract i Token
 swapSingleAccountGuaranteedExample =
     When [ Case (Deposit acc1 "guarantor" ada (Constant 800))
         (When [
@@ -230,5 +238,5 @@ swapSingleAccountGuaranteedExample =
     acc2 = "party2"
     acc3 = "guarantor"
 
-choiceIdExample :: ChoiceId
+choiceIdExample :: ChoiceId i
 choiceIdExample = ChoiceId "RockPaperScissors" "Alice"

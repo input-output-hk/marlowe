@@ -1,37 +1,36 @@
-module Language.Marlowe.Semantics.Deserialisation (byteStringToContract) where
+{-# OPTIONS_GHC -Wall #-}
+
+module Language.Marlowe.Semantics.Deserialisation (byteStringToContract, byteStringToContract') where
 
 import Data.ByteString (ByteString)
-import Data.Ratio ((%))
 import Language.Marlowe.Semantics.Types (Action(..), Bound(..), Case(..), ChoiceId(..), Contract(..), Observation(..), Party(..), Payee(..), POSIXTime(POSIXTime), Token(..),
                                          Value(AddValue, AvailableMoney, ChoiceValue, Cond, Constant, DivValue, MulValue, NegValue, TimeIntervalEnd, TimeIntervalStart, SubValue, UseValue),
                                          ValueId(..),)
 import Language.Marlowe.Deserialisation (byteStringToInt, byteStringToList, byteStringToPositiveInt, getByteString)
 import Data.Text.Encoding (decodeUtf8)
 
-byteStringToParty :: ByteString -> Maybe (Party, ByteString)
-byteStringToParty x =
+byteStringToParty :: (ByteString -> Maybe (i, ByteString)) -> ByteString -> Maybe (Party i, ByteString)
+byteStringToParty decI x =
   case byteStringToPositiveInt x of
     Nothing -> Nothing
     Just (y, t1) ->
-      ( case getByteString t1 of
-          Nothing -> Nothing
-          Just (z, t2) ->
-            ( if y == 0
-                then Just (PubKey z, t2)
-                else
-                  ( if y == 1
-                      then Just (Role z, t2)
-                      else Nothing
-                  )
-            )
+      ( if y == 0
+          then case decI t1 of
+                 Nothing -> Nothing
+                 Just (z, t2) -> Just (PubKey z, t2)
+          else if y == 1
+                 then case getByteString t1 of
+                   Nothing -> Nothing
+                   Just (z, t2) -> Just (Role z, t2)
+                 else Nothing
       )
 
-byteStringToChoiceId :: ByteString -> Maybe (ChoiceId, ByteString)
-byteStringToChoiceId x =
+byteStringToChoiceId :: (ByteString -> Maybe (i, ByteString)) -> ByteString -> Maybe (ChoiceId i, ByteString)
+byteStringToChoiceId decI x =
   case getByteString x of
     Nothing -> Nothing
     Just (cn, t1) ->
-      ( case byteStringToParty t1 of
+      ( case byteStringToParty decI t1 of
           Nothing -> Nothing
           Just (co, t2) -> Just (ChoiceId cn co, t2)
       )
@@ -51,8 +50,8 @@ byteStringToToken x =
           Just (tn, t2) -> Just (Token cs tn, t2)
       )
 
-byteStringToObservation :: ByteString -> Maybe (Observation, ByteString)
-byteStringToObservation x =
+byteStringToObservation :: (ByteString -> Maybe (i, ByteString)) -> (ByteString -> Maybe (t, ByteString)) -> ByteString -> Maybe (Observation i t, ByteString)
+byteStringToObservation decI decT x =
   case byteStringToPositiveInt x of
     Nothing -> Nothing
     Just (y, t1) ->
@@ -60,13 +59,13 @@ byteStringToObservation x =
           then
             ( if y < 3
                 then
-                  ( case byteStringToObservation t1 of
+                  ( case byteStringToObservation decI decT t1 of
                       Nothing -> Nothing
                       Just (lhs, t2) ->
                         ( if y < 1
                             then Just (NotObs lhs, t2)
                             else
-                              ( case byteStringToObservation t2 of
+                              ( case byteStringToObservation decI decT t2 of
                                   Nothing -> Nothing
                                   Just (rhs, t3) ->
                                     ( if y < 2
@@ -83,7 +82,7 @@ byteStringToObservation x =
                 else
                   ( if y < 4
                       then
-                        ( case byteStringToChoiceId t1 of
+                        ( case byteStringToChoiceId decI t1 of
                             Nothing -> Nothing
                             Just (choId, t2) ->
                               Just (ChoseSomething choId, t2)
@@ -96,10 +95,10 @@ byteStringToObservation x =
                   )
             )
           else
-            ( case byteStringToValue t1 of
+            ( case byteStringToValue decI decT t1 of
                 Nothing -> Nothing
                 Just (lhs, t2) ->
-                  ( case byteStringToValue t2 of
+                  ( case byteStringToValue decI decT t2 of
                       Nothing -> Nothing
                       Just (rhs, t3) ->
                         ( if y < 9
@@ -132,8 +131,8 @@ byteStringToObservation x =
             )
       )
 
-byteStringToValue :: ByteString -> Maybe (Value, ByteString)
-byteStringToValue x =
+byteStringToValue :: (ByteString -> Maybe (i, ByteString)) -> (ByteString -> Maybe (t, ByteString)) -> ByteString -> Maybe (Value i t, ByteString)
+byteStringToValue decI decT x =
   case byteStringToPositiveInt x of
     Nothing -> Nothing
     Just (y, t1) ->
@@ -143,10 +142,10 @@ byteStringToValue x =
                 then
                   ( if y < 1
                       then
-                        ( case byteStringToParty t1 of
+                        ( case byteStringToParty decI t1 of
                             Nothing -> Nothing
                             Just (accId, t2) ->
-                              ( case byteStringToToken t2 of
+                              ( case decT t2 of
                                   Nothing -> Nothing
                                   Just (token, t3) ->
                                     Just (AvailableMoney accId token, t3)
@@ -161,7 +160,7 @@ byteStringToValue x =
                                     Just (Constant amount, t2)
                               )
                             else
-                              ( case byteStringToValue t1 of
+                              ( case byteStringToValue decI decT t1 of
                                   Nothing -> Nothing
                                   Just (subVal, t2) ->
                                     Just (NegValue subVal, t2)
@@ -169,10 +168,10 @@ byteStringToValue x =
                         )
                   )
                 else
-                  ( case byteStringToValue t1 of
+                  ( case byteStringToValue decI decT t1 of
                       Nothing -> Nothing
                       Just (lhs, t2) ->
-                        ( case byteStringToValue t2 of
+                        ( case byteStringToValue decI decT t2 of
                             Nothing -> Nothing
                             Just (rhs, t3) ->
                               ( if y < 5
@@ -199,7 +198,7 @@ byteStringToValue x =
                 then
                   ( if y < 8
                       then
-                        ( case byteStringToChoiceId t1 of
+                        ( case byteStringToChoiceId decI t1 of
                             Nothing -> Nothing
                             Just (choId, t2) -> Just (ChoiceValue choId, t2)
                         )
@@ -219,13 +218,13 @@ byteStringToValue x =
                       else
                         ( if y == 11
                             then
-                              ( case byteStringToObservation t1 of
+                              ( case byteStringToObservation decI decT t1 of
                                   Nothing -> Nothing
                                   Just (obs, t2) ->
-                                    ( case byteStringToValue t2 of
+                                    ( case byteStringToValue decI decT t2 of
                                         Nothing -> Nothing
                                         Just (thn, t3) ->
-                                          ( case byteStringToValue t3 of
+                                          ( case byteStringToValue decI decT t3 of
                                               Nothing -> Nothing
                                               Just (els, t4) -> Just (Cond obs thn els, t4)
                                           )
@@ -237,12 +236,12 @@ byteStringToValue x =
             )
       )
 
-byteStringToPayee :: ByteString -> Maybe (Payee, ByteString)
-byteStringToPayee x =
+byteStringToPayee :: (ByteString -> Maybe (i, ByteString)) -> ByteString -> Maybe (Payee i, ByteString)
+byteStringToPayee decI x =
   case byteStringToPositiveInt x of
     Nothing -> Nothing
     Just (y, t1) ->
-      ( case byteStringToParty t1 of
+      ( case byteStringToParty decI t1 of
           Nothing -> Nothing
           Just (party, t2) ->
             ( if y == 0
@@ -265,8 +264,8 @@ byteStringToBound x =
           Just (u, bs2) -> Just (Bound l u, bs2)
       )
 
-byteStringToAction :: ByteString -> Maybe (Action, ByteString)
-byteStringToAction x =
+byteStringToAction :: (ByteString -> Maybe (i, ByteString)) -> (ByteString -> Maybe (t, ByteString)) -> ByteString -> Maybe (Action i t, ByteString)
+byteStringToAction decI decT x =
   case byteStringToPositiveInt x of
     Nothing -> Nothing
     Just (y, t1) ->
@@ -276,16 +275,16 @@ byteStringToAction x =
                 then
                   ( if y == 0
                       then
-                        ( case byteStringToParty t1 of
+                        ( case byteStringToParty decI t1 of
                             Nothing -> Nothing
                             Just (accId, t2) ->
-                              ( case byteStringToParty t2 of
+                              ( case byteStringToParty decI t2 of
                                   Nothing -> Nothing
                                   Just (party, t3) ->
-                                    ( case byteStringToToken t3 of
+                                    ( case decT t3 of
                                         Nothing -> Nothing
                                         Just (token, t4) ->
-                                          ( case byteStringToValue t4 of
+                                          ( case byteStringToValue decI decT t4 of
                                               Nothing -> Nothing
                                               Just (val, t5) -> Just (Deposit accId party token val, t5)
                                           )
@@ -295,7 +294,7 @@ byteStringToAction x =
                       else Nothing
                   )
                 else
-                  ( case byteStringToChoiceId t1 of
+                  ( case byteStringToChoiceId decI t1 of
                       Nothing -> Nothing
                       Just (choId, t2) ->
                         ( case byteStringToList
@@ -310,7 +309,7 @@ byteStringToAction x =
           else
             ( if y == 2
                 then
-                  ( case byteStringToObservation t1 of
+                  ( case byteStringToObservation decI decT t1 of
                       Nothing -> Nothing
                       Just (obs, t2) -> Just (Notify obs, t2)
                   )
@@ -318,8 +317,8 @@ byteStringToAction x =
             )
       )
 
-byteStringToCase :: ByteString -> Maybe (Case, ByteString)
-byteStringToCase x =
+byteStringToCase :: (ByteString -> Maybe (i, ByteString)) -> (ByteString -> Maybe (t, ByteString)) -> ByteString -> Maybe (Case i t, ByteString)
+byteStringToCase decI decT x =
   case byteStringToPositiveInt x of
     Nothing -> Nothing
     Just (y, t1) ->
@@ -327,10 +326,10 @@ byteStringToCase x =
           then
             ( if y == 0
                 then
-                  ( case byteStringToAction t1 of
+                  ( case byteStringToAction decI decT t1 of
                       Nothing -> Nothing
                       Just (action, t2) ->
-                        ( case byteStringToContract t2 of
+                        ( case byteStringToContract' decI decT t2 of
                             Nothing -> Nothing
                             Just (cont, t3) ->
                               Just (Case action cont, t3)
@@ -341,7 +340,7 @@ byteStringToCase x =
           else
             ( if y == 1
                 then
-                  ( case byteStringToAction t1 of
+                  ( case byteStringToAction decI decT t1 of
                       Nothing -> Nothing
                       Just (action, t2) ->
                         ( case getByteString t2 of
@@ -354,8 +353,8 @@ byteStringToCase x =
             )
       )
 
-byteStringToContract :: ByteString -> Maybe (Contract, ByteString)
-byteStringToContract x =
+byteStringToContract' :: (ByteString -> Maybe (i, ByteString)) -> (ByteString -> Maybe (t, ByteString)) -> ByteString -> Maybe (Contract i t, ByteString)
+byteStringToContract' decI decT x =
   case byteStringToPositiveInt x of
     Nothing -> Nothing
     Just (y, t1) ->
@@ -370,19 +369,19 @@ byteStringToContract x =
                 else
                   ( if y < 2
                       then
-                        ( case byteStringToParty t1 of
+                        ( case byteStringToParty decI t1 of
                             Nothing -> Nothing
                             Just (accId, t2) ->
-                              ( case byteStringToPayee t2 of
+                              ( case byteStringToPayee decI t2 of
                                   Nothing -> Nothing
                                   Just (payee, t3) ->
-                                    ( case byteStringToToken t3 of
+                                    ( case decT t3 of
                                         Nothing -> Nothing
                                         Just (token, t4) ->
-                                          ( case byteStringToValue t4 of
+                                          ( case byteStringToValue decI decT t4 of
                                               Nothing -> Nothing
                                               Just (val, t5) ->
-                                                ( case byteStringToContract t5 of
+                                                ( case byteStringToContract' decI decT t5 of
                                                     Nothing -> Nothing
                                                     Just (cont, t6) ->
                                                       Just (Pay accId payee token val cont, t6)
@@ -392,13 +391,13 @@ byteStringToContract x =
                               )
                         )
                       else
-                        ( case byteStringToObservation t1 of
+                        ( case byteStringToObservation decI decT t1 of
                             Nothing -> Nothing
                             Just (obs, t2) ->
-                              ( case byteStringToContract t2 of
+                              ( case byteStringToContract' decI decT t2 of
                                   Nothing -> Nothing
                                   Just (cont1, t3) ->
-                                    ( case byteStringToContract t3 of
+                                    ( case byteStringToContract' decI decT t3 of
                                         Nothing -> Nothing
                                         Just (cont2, t4) ->
                                           Just (If obs cont1 cont2, t4)
@@ -413,14 +412,14 @@ byteStringToContract x =
                   ( if y < 4
                       then
                         ( case byteStringToList
-                            byteStringToCase
+                            (byteStringToCase decI decT)
                             t1 of
                             Nothing -> Nothing
                             Just (caseList, t2) ->
                               ( case byteStringToInt t2 of
                                   Nothing -> Nothing
                                   Just (timeout, t3) ->
-                                    ( case byteStringToContract t3 of
+                                    ( case byteStringToContract' decI decT t3 of
                                         Nothing -> Nothing
                                         Just (cont, t4) ->
                                           Just (When caseList (POSIXTime timeout) cont, t4)
@@ -431,10 +430,10 @@ byteStringToContract x =
                         ( case byteStringToValueId t1 of
                             Nothing -> Nothing
                             Just (valId, t2) ->
-                              ( case byteStringToValue t2 of
+                              ( case byteStringToValue decI decT t2 of
                                   Nothing -> Nothing
                                   Just (val, t3) ->
-                                    ( case byteStringToContract t3 of
+                                    ( case byteStringToContract' decI decT t3 of
                                         Nothing -> Nothing
                                         Just (cont, t4) ->
                                           Just (Let valId val cont, t4)
@@ -445,10 +444,10 @@ byteStringToContract x =
                 else
                   ( if y == 5
                       then
-                        ( case byteStringToObservation t1 of
+                        ( case byteStringToObservation decI decT t1 of
                             Nothing -> Nothing
                             Just (obs, t2) ->
-                              ( case byteStringToContract t2 of
+                              ( case byteStringToContract' decI decT t2 of
                                   Nothing -> Nothing
                                   Just (cont, t3) ->
                                     Just (Assert obs cont, t3)
@@ -458,3 +457,6 @@ byteStringToContract x =
                   )
             )
       )
+
+byteStringToContract :: ByteString -> Maybe (Contract ByteString Token, ByteString)
+byteStringToContract = byteStringToContract' getByteString byteStringToToken

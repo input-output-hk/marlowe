@@ -8,25 +8,9 @@ build-type:             Simple
 extra-source-files:     README.md
 cabal-version:          >= 1.10
 
-executable marlowe
+library
     default-language:   Haskell2010
-    build-depends:      base >=4.9,
-                        base16-bytestring,
-                        bytestring,
-                        containers,
-                        cryptohash,
-                        QuickCheck,
-                        mtl,
-                        sbv,
-                        tasty,
-                        tasty-hunit,
-                        tasty-smallcheck,
-                        tasty-quickcheck,
-                        text,
-                        template-haskell >=2.17,
-                        time,
-                        wl-pprint -any
-    other-modules:
+    exposed-modules:
                         Language.Marlowe
                         Language.Marlowe.Pretty
                         Language.Marlowe.Semantics
@@ -55,6 +39,27 @@ executable marlowe
                         Language.Marlowe.Analysis.IntegerArray
                         Language.Marlowe.Analysis.Numbering
                         Language.Marlowe.Analysis.MkSymb
+    build-depends:      base >=4.9,
+                        base16-bytestring,
+                        bytestring,
+                        containers,
+                        cryptohash,
+                        sbv,
+                        text,
+                        template-haskell >=2.17,
+                        wl-pprint -any
     hs-source-dirs:     src
+
+executable marlowe
+    default-language:   Haskell2010
+    build-depends:      base >=4.9,
+                        containers,
+                        mtl,
+                        tasty,
+                        tasty-hunit,
+                        tasty-quickcheck,
+                        time,
+                        marlowe
+    hs-source-dirs:     app
     main-is:            Main.hs
 

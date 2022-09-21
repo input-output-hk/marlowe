@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wall -Wno-name-shadowing -Wno-orphans #-}
 module Language.Marlowe.Semantics (
@@ -305,7 +306,7 @@ data TransactionWarning i = TransactionNonPositiveDeposit (Party i) (Party i) In
                           | TransactionShadowing ValueId Integer Integer
                                                   -- oldVal ^  newVal ^
                           | TransactionAssertionFailed
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show,Read,Functor,Foldable,Traversable)
 
 convertReduceWarnings :: [ReduceWarning i] -> [TransactionWarning i]
 convertReduceWarnings [] = []

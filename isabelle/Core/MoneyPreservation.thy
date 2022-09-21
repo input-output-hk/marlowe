@@ -24,7 +24,7 @@ fun moneyInReduceStepResult :: "State \<Rightarrow> ReduceStepResult \<Rightarro
 "moneyInReduceStepResult state AmbiguousTimeIntervalReductionError = moneyInState state"
 
 fun moneyInRefundOneResult :: "Accounts \<Rightarrow>
-                               ((Party \<times> Token \<times> Money) \<times> Accounts) option \<Rightarrow> int" where
+                               ((Party \<times> Token \<times> int) \<times> Accounts) option \<Rightarrow> int" where
 "moneyInRefundOneResult accs None = moneyInAccounts accs" |
 "moneyInRefundOneResult _ (Some ((_, _, m), newAccs)) = m + moneyInAccounts newAccs"
 
@@ -419,7 +419,7 @@ lemma applyCases_preserves_money :
 lemma applyInput_preserves_money :
   "validAndPositive_state state \<Longrightarrow>
    moneyInState state + moneyInInput inp = moneyInApplyResult state inp (applyInput env state inp cont)"
-  apply (cases cont)                                                        
+  apply (cases cont)
   by (simp_all add:applyCases_preserves_money del:validAndPositive_state.simps moneyInState.simps)
 
 lemma reductionLoop_preserves_money_NoPayment_not_ReduceNoWarning :
@@ -566,7 +566,7 @@ lemma fixInterval_preserves_money :
 lemma computeTransaction_preserves_money :
   "validAndPositive_state state \<Longrightarrow>
    moneyInState state + moneyInInputs (inputs tra) = moneyInTransactionOutput state (inputs tra) (computeTransaction tra state contract)"
-  apply (simp only:computeTransaction.simps)    
+  apply (simp only:computeTransaction.simps)
   apply (cases "fixInterval (interval tra) state")
   subgoal for env fixSta
     apply (simp only:IntervalResult.simps Let_def)

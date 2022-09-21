@@ -12,7 +12,7 @@ theory Guarantees
 begin
 (*>*)
 
-chapter \<open>Marlowe Guarantees\<close>
+chapter \<open>Marlowe Guarantees \label{sec:marlowe-guarantees} \<close>
 
 text \<open>We can also use proof assistants to demonstrate that the Marlowe semantics presents certain
 desirable properties, such as that money is preserved and anything unspent is returned to users by

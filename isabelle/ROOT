@@ -10,6 +10,7 @@ session Util in "Util" = HOL +
     Serialisation
     SList
     Utils
+    SpecificationLatexSugar
 
 session Core in "Core" = HOL +
   description "Marlowe Language specification"
@@ -58,12 +59,15 @@ session Specification in "Doc/Specification" = HOL +
   sessions
     "HOL-Library"
     "Core"
+    "Util"
   theories
     Specification
-    SpecificationLatexSugar
     Core
     Guarantees
     Extended
+  document_theories 
+    "Core.SemanticsTypes"
+    "Core.BlockchainTypes"
   document_files
     "root.tex"
 

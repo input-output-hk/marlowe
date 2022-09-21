@@ -1,5 +1,5 @@
 theory Semantics
-imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" SemanticsTypes
+imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" SemanticsTypes SemanticsGuarantees
 begin
 
 (* EVALUATION *)
@@ -84,10 +84,10 @@ lemma evalNegValue :
   by auto
 
 lemma evalAddCommutative :
-  "evalValue env sta (AddValue x y) = evalValue env sta (AddValue y x)" 
-  by auto 
+  "evalValue env sta (AddValue x y) = evalValue env sta (AddValue y x)"
+  by auto
 
-lemma evalAddAssoc : 
+lemma evalAddAssoc :
   "evalValue env sta (AddValue x (AddValue y z)) = evalValue env sta (AddValue (AddValue x y) z)"
   by auto
 
@@ -212,7 +212,7 @@ lemma evalDivCommutesWithNeg2 :
   by (smt (verit) div_minus_right)
 
 fun refundOne :: "Accounts \<Rightarrow>
-                  ((Party \<times> Token \<times> Money) \<times> Accounts) option" where
+                  ((Party \<times> Token \<times> int) \<times> Accounts) option" where
 "refundOne (((accId, tok), money)#rest) =
    (if money > 0 then Some ((accId, tok, money), rest) else refundOne rest)" |
 "refundOne [] = None"
@@ -224,15 +224,15 @@ lemma refundOneShortens : "refundOne acc = Some (c, nacc) \<Longrightarrow>
   by (metis Pair_inject length_Cons less_Suc_eq list.distinct(1)
             list.inject option.inject refundOne.elims)
 
-datatype Payment = Payment AccountId Payee Token Money
+datatype Payment = Payment AccountId Payee Token int
 
 datatype ReduceEffect = ReduceNoPayment
                       | ReduceWithPayment Payment
 
-fun moneyInAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Accounts \<Rightarrow> Money" where
+fun moneyInAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Accounts \<Rightarrow> int" where
 "moneyInAccount accId token accountsV = findWithDefault 0 (accId, token) accountsV"
 
-fun updateMoneyInAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Money \<Rightarrow>
+fun updateMoneyInAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> int \<Rightarrow>
                              Accounts \<Rightarrow>
                              Accounts" where
 "updateMoneyInAccount accId token money accountsV =
@@ -240,7 +240,7 @@ fun updateMoneyInAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Money \
    then MList.delete (accId, token) accountsV
    else MList.insert (accId, token) money accountsV)"
 
-fun addMoneyToAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Money \<Rightarrow>
+fun addMoneyToAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> int \<Rightarrow>
                           Accounts \<Rightarrow>
                           Accounts" where
 "addMoneyToAccount accId token money accountsV =
@@ -250,7 +250,7 @@ fun addMoneyToAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Money \<Ri
    then accountsV
    else updateMoneyInAccount accId token newBalance accountsV)"
 
-fun giveMoney :: "AccountId \<Rightarrow> Payee \<Rightarrow> Token \<Rightarrow> Money \<Rightarrow> Accounts \<Rightarrow>
+fun giveMoney :: "AccountId \<Rightarrow> Payee \<Rightarrow> Token \<Rightarrow> int \<Rightarrow> Accounts \<Rightarrow>
                   (ReduceEffect \<times> Accounts)" where
 "giveMoney accountId payee token money accountsV =
   (let newAccounts = case payee of
@@ -267,8 +267,8 @@ lemma giveMoneyIncOne : "giveMoney sa p t m a = (e, na) \<Longrightarrow> length
 (* REDUCE *)
 
 datatype ReduceWarning = ReduceNoWarning
-                       | ReduceNonPositivePay AccountId Payee Token Money
-                       | ReducePartialPay AccountId Payee Token Money Money
+                       | ReduceNonPositivePay AccountId Payee Token int
+                       | ReducePartialPay AccountId Payee Token int int
                        | ReduceShadowing ValueId int int
                        | ReduceAssertionFailed
 
@@ -492,6 +492,9 @@ datatype ApplyWarning = ApplyNoWarning
 datatype ApplyResult = Applied ApplyWarning State Contract
                      | ApplyNoMatchError
 
+fun inBounds :: "ChosenNum \<Rightarrow> Bound list \<Rightarrow> bool" where
+"inBounds num = any (\<lambda> (l, u) \<Rightarrow> num \<ge> l \<and> num \<le> u)"
+
 fun applyCases :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightarrow> Case list \<Rightarrow> ApplyResult" where
 "applyCases env state (IDeposit accId1 party1 tok1 amount)
             (Cons (Case (Deposit accId2 party2 tok2 val) cont) rest) =
@@ -527,7 +530,7 @@ fun applyInput :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightar
 
 datatype TransactionWarning = TransactionNonPositiveDeposit Party AccountId Token int
                             | TransactionNonPositivePay AccountId Payee Token int
-                            | TransactionPartialPay AccountId Payee Token Money Money
+                            | TransactionPartialPay AccountId Payee Token int int
                             | TransactionShadowing ValueId int int
                             | TransactionAssertionFailed
 
@@ -641,7 +644,7 @@ fun playTrace :: "POSIXTime \<Rightarrow> Contract \<Rightarrow> Transaction lis
 
 (* Extra functions *)
 
-type_synonym TransactionOutcomes = "(Party \<times> Money) list"
+type_synonym TransactionOutcomes = "(Party \<times> int) list"
 
 definition "emptyOutcome = (MList.empty :: TransactionOutcomes)"
 
@@ -651,7 +654,7 @@ lemma emptyOutcomeValid : "valid_map emptyOutcome"
 fun isEmptyOutcome :: "TransactionOutcomes \<Rightarrow> bool" where
 "isEmptyOutcome trOut = all (\<lambda> (x, y) \<Rightarrow> y = 0) trOut"
 
-fun addOutcome :: "Party \<Rightarrow> Money \<Rightarrow> TransactionOutcomes \<Rightarrow> TransactionOutcomes" where
+fun addOutcome :: "Party \<Rightarrow> int \<Rightarrow> TransactionOutcomes \<Rightarrow> TransactionOutcomes" where
 "addOutcome party diffValue trOut =
    (let newValue = case MList.lookup party trOut of
                      Some value \<Rightarrow> value + diffValue
@@ -661,13 +664,13 @@ fun addOutcome :: "Party \<Rightarrow> Money \<Rightarrow> TransactionOutcomes \
 fun combineOutcomes :: "TransactionOutcomes \<Rightarrow> TransactionOutcomes \<Rightarrow> TransactionOutcomes" where
 "combineOutcomes x y = MList.unionWith plus x y"
 
-fun getPartiesFromReduceEffect :: "ReduceEffect list \<Rightarrow> (Party \<times> Token \<times> Money) list" where
+fun getPartiesFromReduceEffect :: "ReduceEffect list \<Rightarrow> (Party \<times> Token \<times> int) list" where
 "getPartiesFromReduceEffect (Cons (ReduceWithPayment (Payment src (Party p) tok m)) t) =
    Cons (p, tok, -m) (getPartiesFromReduceEffect t)" |
 "getPartiesFromReduceEffect (Cons x t) = getPartiesFromReduceEffect t" |
 "getPartiesFromReduceEffect Nil = Nil"
 
-fun getPartiesFromInput :: "Input list \<Rightarrow> (Party \<times> Token \<times> Money) list" where
+fun getPartiesFromInput :: "Input list \<Rightarrow> (Party \<times> Token \<times> int) list" where
 "getPartiesFromInput (Cons (IDeposit _ p tok m) t) =
    Cons (p, tok, m) (getPartiesFromInput t)" |
 "getPartiesFromInput (Cons x t) = getPartiesFromInput t" |

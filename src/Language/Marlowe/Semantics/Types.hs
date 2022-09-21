@@ -30,7 +30,7 @@ instance Num POSIXTime where
     fromInteger = POSIXTime
     negate (POSIXTime l) = POSIXTime (negate l)
 
-data Party = PubKey ByteString
+data Party = Address ByteString
            | Role ByteString
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 

@@ -11,9 +11,8 @@ begin
 
 section \<open>Types\<close>
 
-text \<open>This section introduces the data types of \<^emph>\<open>Marlowe Core\<close>, which are composed by the Abstract
-Syntax Tree (AST) that define the Marlowe DSL and also the types required
-to compute a \<^term>\<open>Transaction\<close>.\<close>
+text \<open>This section introduces the data types of \<^emph>\<open>Marlowe Core\<close>, which are composed by the Marlowe DSL
+and also the types required to compute a \<^term>\<open>Transaction\<close>.\<close>
 
 \<comment> \<open>TODO: See if we want to separate this theory in DSL and Execution types. As a benefit, the
 actual language DSL would be clearer, as a drawback, certain definitions like Input-Action would
@@ -26,7 +25,7 @@ definition \secref{sec:contracts}.\<close>
 subsection \<open>Participants, roles and addresses \label{sec:participants-roles-and-addresses}\<close>
 
 text \<open>
-We should separate the notions of participant, role, and addresses in a Marlowe contract. A
+We should separate the notions of participant, role, and address in a Marlowe contract. A
 participant (or \<^term>\<open>Party\<close>) in the contract can be represented by either a fixed \<^term>\<open>Address\<close> or
 a \<^term>\<open>Role\<close>.
 \<close>
@@ -40,17 +39,17 @@ datatype Party =
 
 
 text \<open>
-The address party is defined by a Blockhain specific \<^term>\<open>Address\<close> \secref{sec:blockchain-agnostic} and it cannot be traded
-(it's fixed in the lifetime of a contract).
+An address party is defined by a Blockhain specific \<^term>\<open>Address\<close> \secref{sec:blockchain-agnostic} and it cannot be traded
+(it is fixed for the lifetime of a contract).
 \<close>
 
 text \<open>
-A \<^term>\<open>Role\<close>, on the other hand, allows the participation of the contract to be dynamic. Any user that can prove to have permissions to act
+A \<^term>\<open>Role\<close>, on the other hand, allows the participation of the contract to be dynamic. Any user that can prove to have permission to act
 as \<^term>\<open>RoleName\<close> is able to carry
 out the actions assigned \secref{sec:actions-and-inputs}, and redeem the payments issued to that role. The roles could be implemented
 as tokens\<^footnote>\<open>In the Cardano implementation roles are represented by native tokens and they are distributed to addresses at the time a contract is
-deployed to the blockchain\<close> that can be traded. By minting multiple tokens, more people could prove
-to have permission to that role, allowing for more complex scenarios.
+deployed to the blockchain\<close> that can be traded. By minting multiple tokens for a particular role,
+several people can be given permission to act on behalf of that role simultaneously, this allows for more complex use cases.
 \<close>
 
 
@@ -58,7 +57,7 @@ subsection \<open>Multi-Asset token\<close>
 
 text
 \<open>Inspired by Cardano's Multi-Asset tokens \<^footnote>\<open>\<^url>\<open>https://docs.cardano.org/native-tokens/learn\<close>\<close>, Marlowe also
-supports to transact with different assets. A \<^term>\<open>Token\<close> is constructed by a \<^term>\<open>CurrencySimbol\<close> that
+supports to transact with different assets. A \<^term>\<open>Token\<close> consists of a \<^term>\<open>CurrencySymbol\<close> that
 represents the monetary policy of the \<^term>\<open>Token\<close> and a \<^term>\<open>TokenName\<close> which allows to have multiple
 tokens with the same monetary policy.
 \<close>
@@ -88,8 +87,9 @@ accounts are local: they only exist (and are accessible) within the contract.
 type_synonym Accounts = "((AccountId \<times> Token) \<times> int) list"
 
 text \<open>
-During the course of the contract, assets can be deposited into an internal account using the term
- ``\<^term>\<open>When [Deposit accountId party token value ] timeout continuation\<close>" . We can transfer assets internally or externally by using
+During its execution, the contract can invite parties to deposit assets into an internal account through the construct
+ ``\<^term>\<open>When [Deposit accountId party token value ] timeout continuation\<close>" . The contract can transfer
+  assets internally (between accounts) or externally (from an account to a party) by using
  the term "\<^term>\<open>Pay accountId payee token value continuation\<close>'', where \<^term>\<open>Payee\<close> is:
 \<close>
 
@@ -168,7 +168,7 @@ text \<open>Three of the @{type Value} terms look up information in the Marlowe 
 zero if no such choice has been made; and @{term "UseValue i"} reports the most recent value of the
 variable @{term i}, or zero if that variable has not yet been set to a value.\<close>
 
-text \<open>@{term "Constant v"} evaluates to the integer @{term x}, while @{term "NegValue x"},
+text \<open>@{term "Constant v"} evaluates to the integer @{term v}, while @{term "NegValue x"},
 @{term "AddValue x y"}, @{term "SubValue x y"}, @{term "MulValue x y"}, and @{term "DivValue x y"}
 provide the common arithmetic operations @{term "- x"}, @{term "x + y"}, @{term "x - y"},
 @{term "x * y"}, and @{term "x / y"}, where division always rounds (truncates) its result towards
@@ -177,7 +177,7 @@ zero.\<close>
 text \<open>@{term "Cond b x y"} represents a condition expression that evaluates to @{term x} if
 @{term b} is true and to @{term y} otherwise.\<close>
 
-text \<open>The last @{term Value}s  @{term TimeIntervalStart} and @{term TimeIntervalEnd} evaluate respectively to the
+text \<open>The last @{term Value}s, @{term TimeIntervalStart} and @{term TimeIntervalEnd}, evaluate respectively to the
 start or end of the validity interval for the Marlowe transaction.\<close>
 
 text \<open>For the observations, the @{term "ChoseSomething i"} term reports whether a choice @{term i} has been made thus far in
@@ -219,8 +219,8 @@ text \<open>A choice @{term "Choice i bs"} is made for a particular choice ident
 @{text "[Bound 0 0, Bound 3 5]"} offers the choice of one of 0, 3, 4 and 5.
 \<close>
 
-text \<open>A notification can be triggered by any participant as long as the \<^term>\<open>Observation\<close> evaluates
-to \<^term>\<open>true\<close>. If multiple notify are present in the \<^term>\<open>Case\<close> list, the first one with a \<^term>\<open>true\<close>
+text \<open>A notification can be triggered by anyone as long as the \<^term>\<open>Observation\<close> evaluates
+to \<^term>\<open>true\<close>. If multiple @{term "Notify"} are present in the \<^term>\<open>Case\<close> list, the first one with a \<^term>\<open>true\<close>
 observation is matched.\<close>
 
 text \<open>For each @{term "Action"}, there is a corresponding @{term "Input"} that can be included inside
@@ -235,7 +235,7 @@ datatype Input = IDeposit AccountId Party Token int
 text \<open>The differences between them are:
 \<^item> \<^term>\<open>Deposit\<close> uses a \<^term>\<open>Value\<close> while \<^term>\<open>IDeposit\<close> has the \<^term>\<open>int\<close> it was evaluated to with \<^term>\<open>evalValue\<close> \secref{sec:evalvalue}.
 \<^item> \<^term>\<open>Choice\<close> defines a list of valid \<^term>\<open>Bound\<close>s while \<^term>\<open>IChoice\<close> has the actual \<^term>\<open>ChosenNum\<close>.
-\<^item> \<^term>\<open>Notify\<close> has an \<^term>\<open>Observation\<close> while \<^term>\<open>INotify\<close> doesn't have arguments, the
+\<^item> \<^term>\<open>Notify\<close> has an \<^term>\<open>Observation\<close> while \<^term>\<open>INotify\<close> does not have arguments, the
  \<^term>\<open>Observation\<close> must evaluate to true inside the \<^term>\<open>Transaction\<close>
 \<close>
 
@@ -267,12 +267,12 @@ generates a single transaction\<close>.
 text \<open>
 The contract \<^term>\<open>Pay a p t v c\<close>, generates a \<^term>\<open>Payment\<close> from the internal account \<^term>\<open>a\<close> to
 a payee \secref{sec:internal-accounts} \<^term>\<open>p\<close> of \#\<^term>\<open>v\<close> \<^term>\<open>Token\<close>s and then continues to contract \<^term>\<open>c\<close>.
-Warnings will be generated if the value @{term v} is negative, or if there is not enough in the account to
+Warnings will be generated if the value @{term v} is not positive, or if there is not enough in the account to
 make the payment in full. In the latter case, a partial payment (of the available amount) is made
 \<close>
 
 text \<open>The contract \<^term>\<open>If obs x y\<close> allows branching. We continue to branch \<^term>\<open>x\<close> if the \<^term>\<open>Observation obs\<close>
-evaluates to \<^term>\<open>true\<close>, or branch\<^term>\<open>y\<close> otherwise.
+evaluates to \<^term>\<open>true\<close>, or to branch \<^term>\<open>y\<close> otherwise.
 \<close>
 
 text \<open>@{term When} is the most complex constructor for contracts, with the form
@@ -281,30 +281,31 @@ text \<open>@{term When} is the most complex constructor for contracts, with the
  we follow the continuation associated to the first \<^term>\<open>Action\<close> that matches the \<^term>\<open>Input\<close>. If no
  action is matched it returns a \<^term>\<open>ApplyAllNoMatchError\<close>. If a valid \<^term>\<open>Transaction\<close> is computed
  with a \<^term>\<open>TimeInterval\<close> with a start time bigger than the \<^term>\<open>Timeout t\<close>, the contingency
- continuation \<^term>\<open>c\<close> is evaluated. The explicit timeout mechanism is what allow Marlowe to avoid
+ continuation \<^term>\<open>c\<close> is evaluated. The explicit timeout mechanism is what allows Marlowe to avoid
 waiting forever for external inputs.\<close>
 
-text \<open>A @{term Let} contract @{term "Let i v c"} allows a contract to name a
+text \<open>A @{term Let} contract @{term "Let i v c"} allows a contract to record a
 value using an identifier @{term i}. In this case, the expression @{term v} is
-evaluated, and stored with the name @{term i}. The contract then continues as
+evaluated, and the result is stored with the name @{term i}. The contract then continues as
 @{term c}. As well as allowing us to use abbreviations, this mechanism also means that we
-can capture and save volatile values that might be changing with time, e.g. the current price of
+can capture and save volatile values that might be changing with time, e.g.~the current price of
 oil, or the current time, at a particular point in the execution of the contract, to be used later
 on in contract execution.
 \<close>
 
 text \<open>An assertion contract @{term "Assert b c"} does not have any effect on
 the state of the contract, it immediately continues as @{term c}, but it issues a warning
-when the observation @{term b} is false. It can be used to ensure that a property holds
-in any given point of the contract, since static analysis will fail if any execution causes a
-warning. the @{term Assert} term might be removed from future on-chain versions of Marlowe.\<close>
+if the observation @{term b} evaluates to false. It can be used to ensure that a property holds
+in a given point of the contract, since static analysis will fail if any execution causes a
+warning. The @{term Assert} term might be removed from future on-chain versions of Marlowe.\<close>
 
 
 subsection \<open>State and Environment \label{sec:state-and-env}\<close>
 
 text \<open>The internal state of a Marlowe contract consists of the current balances in each party's
 account, a record of the most recent value of each type of choice, a record of the most recent
-value of each variable, and the minimum time for which input can be applied to the contract. The
+value of each variable, and the lower bound for the current time that is used to refine time intervals
+and ensure @{term TimeIntervalStart} never decreases. The
 data for accounts, choices, and bound values are stored as association lists.\<close>
 
 record State = accounts :: Accounts

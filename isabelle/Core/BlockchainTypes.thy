@@ -1,5 +1,5 @@
 (*<*)
-\<comment> \<open>This module defines the types we abstract from BlockChain specific implementation\<close>
+\<comment> \<open>This module defines the types we abstract from Blockchain specific implementation\<close>
 theory BlockchainTypes
 imports Main Util.Serialisation
 begin
@@ -8,19 +8,23 @@ begin
 section \<open>Blockchain agnostic \label{sec:blockchain-agnostic}\<close>
 
 text \<open>
-Marlowe is currently implemented on the Cardano Blockchain, but is designed to be Blockchain agnostic. The same way that
-modern languages like C++ and Java have compilers that target Intel/ARM, Marlowe could be implemented
-on Ethereum and other blockchain platforms.
+Marlowe is currently implemented on the Cardano Blockchain, but it is designed to be Blockchain agnostic.
 \<close>
 
 text \<open>
-There are some assumptions we make on the underlying Blockchain that allows Marlowe Semantics to serve
+Programs written in languages like Java and Python can be run on different architectures, like amd64 or arm64, because they have
+ interpreters and runtimes for them. In the same way, the Marlowe interpreter could be implemented to run on other blockchains,
+ like Ethereum, Solana for example.
+\<close>
+
+text \<open>
+We make the following assumptions on the underlying Blockchain that allow Marlowe Semantics to serve
 as a common abstraction:
 \<close>
 
 text \<open>
 In order to define the different \<^term>\<open>Token\<close>s that are used as currency in the participants accounts
-\secref{sec:internal-accounts},
+\secref{sec:internal-accounts}, deposits, and payments,
  we need to be able to express a \<^term>\<open>TokenName\<close> and \<^term>\<open>CurrencySymbol\<close>.
 \<close>
 type_synonym TokenName = ByteString
@@ -31,7 +35,7 @@ text \<open>To define a fixed participant in the contract \secref{sec:participan
 and to make payouts to them, we need to express an \<^term>\<open>Address\<close>.\<close>
 type_synonym Address = ByteString
 
-text \<open>In the context of this specification these string types are opaque, and we don't enforce
+text \<open>In the context of this specification, these string types are opaque, and we don't enforce
 a particular encoding or format.\<close>
 
 text \<open>The \<^term>\<open>Timeout\<close>s that prevent us from waiting forever for external \<^term>\<open>Input\<close>s are represented
@@ -40,7 +44,7 @@ type_synonym POSIXTime = int
 
 type_synonym Timeout = POSIXTime
 
-text \<open>The \<^term>\<open>TimeInterval\<close> that define the validity of a transaction is a tuple of exclusive start 
+text \<open>The \<^term>\<open>TimeInterval\<close> that defines the validity of a transaction is a tuple of exclusive start
 and end time. \<close>
 \<comment> \<open>TODO: Check if exclusive or inclusive\<close>
 type_synonym TimeInterval = "POSIXTime \<times> POSIXTime"

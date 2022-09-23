@@ -4,7 +4,7 @@
 *)
 theory CodeExports
 
-imports Semantics
+imports Semantics "HOL-Library.Code_Target_Numeral" 
 
 begin
 

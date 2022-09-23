@@ -19,7 +19,7 @@ class Len0 a where {
 len_of_bit0 ::
   forall a. (Len0 a) => HOL.Itself (Numeral_Type.Bit0 a) -> Arith.Nat;
 len_of_bit0 uu =
-  Arith.times_nat (Arith.nat_of_num (Arith.Bit0 Arith.One))
+  Arith.times_nat (Arith.nat_of_integer (2 :: Integer))
     ((len_of :: HOL.Itself a -> Arith.Nat) HOL.Type);
 
 class (Len0 a) => Len a where {

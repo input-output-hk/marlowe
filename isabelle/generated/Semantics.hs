@@ -89,7 +89,7 @@ data Transaction_ext a =
 
 quot :: Arith.Int -> Arith.Int -> Arith.Int;
 quot x y =
-  (if Arith.less_int x Arith.Zero_int == Arith.less_int y Arith.Zero_int
+  (if Arith.less_int x Arith.zero_int == Arith.less_int y Arith.zero_int
     then Arith.divide_int x y
     else Arith.uminus_int
            (Arith.divide_int (Arith.abs_int x) (Arith.abs_int y)));
@@ -103,7 +103,7 @@ evalValue ::
   SemanticsTypes.Environment_ext () ->
     SemanticsTypes.State_ext () -> SemanticsTypes.Value -> Arith.Int;
 evalValue env state (SemanticsTypes.AvailableMoney accId token) =
-  MList.findWithDefault Arith.Zero_int (accId, token)
+  MList.findWithDefault Arith.zero_int (accId, token)
     (SemanticsTypes.accounts state);
 evalValue env state (SemanticsTypes.Constant integer) = integer;
 evalValue env state (SemanticsTypes.NegValue val) =
@@ -118,15 +118,15 @@ evalValue env state (SemanticsTypes.DivValue lhs rhs) =
   let {
     n = evalValue env state lhs;
     d = evalValue env state rhs;
-  } in (if Arith.equal_int d Arith.Zero_int then Arith.Zero_int else quot n d);
+  } in (if Arith.equal_int d Arith.zero_int then Arith.zero_int else quot n d);
 evalValue env state (SemanticsTypes.ChoiceValue choId) =
-  MList.findWithDefault Arith.Zero_int choId (SemanticsTypes.choices state);
+  MList.findWithDefault Arith.zero_int choId (SemanticsTypes.choices state);
 evalValue env state SemanticsTypes.TimeIntervalStart =
   fst (SemanticsTypes.timeInterval env);
 evalValue env state SemanticsTypes.TimeIntervalEnd =
   snd (SemanticsTypes.timeInterval env);
 evalValue env state (SemanticsTypes.UseValue valId) =
-  MList.findWithDefault Arith.Zero_int valId (SemanticsTypes.boundValues state);
+  MList.findWithDefault Arith.zero_int valId (SemanticsTypes.boundValues state);
 evalValue env state (SemanticsTypes.Cond cond thn els) =
   (if evalObservation env state cond then evalValue env state thn
     else evalValue env state els);
@@ -162,7 +162,7 @@ updateMoneyInAccount ::
         [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)] ->
           [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)];
 updateMoneyInAccount accId token money accountsV =
-  (if Arith.less_eq_int money Arith.Zero_int
+  (if Arith.less_eq_int money Arith.zero_int
     then MList.delete (accId, token) accountsV
     else MList.insert (accId, token) money accountsV);
 
@@ -171,7 +171,7 @@ moneyInAccount ::
     SemanticsTypes.Token ->
       [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)] -> Arith.Int;
 moneyInAccount accId token accountsV =
-  MList.findWithDefault Arith.Zero_int (accId, token) accountsV;
+  MList.findWithDefault Arith.zero_int (accId, token) accountsV;
 
 addMoneyToAccount ::
   SemanticsTypes.Party ->
@@ -183,7 +183,7 @@ addMoneyToAccount accId token money accountsV =
   let {
     balance = moneyInAccount accId token accountsV;
     newBalance = Arith.plus_int balance money;
-  } in (if Arith.less_eq_int money Arith.Zero_int then accountsV
+  } in (if Arith.less_eq_int money Arith.zero_int then accountsV
          else updateMoneyInAccount accId token newBalance accountsV);
 
 giveMoney ::
@@ -299,7 +299,7 @@ refundOne ::
     Maybe ((SemanticsTypes.Party, (SemanticsTypes.Token, Arith.Int)),
             [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)]);
 refundOne (((accId, tok), money) : rest) =
-  (if Arith.less_int Arith.Zero_int money
+  (if Arith.less_int Arith.zero_int money
     then Just ((accId, (tok, money)), rest) else refundOne rest);
 refundOne [] = Nothing;
 
@@ -320,7 +320,7 @@ reduceContractStep uu state SemanticsTypes.Close =
 reduceContractStep env state (SemanticsTypes.Pay accId payee token val cont) =
   let {
     moneyToPay = evalValue env state val;
-  } in (if Arith.less_eq_int moneyToPay Arith.Zero_int
+  } in (if Arith.less_eq_int moneyToPay Arith.zero_int
          then let {
                 warning = ReduceNonPositivePay accId payee token moneyToPay;
               } in Reduced warning ReduceNoPayment state cont
@@ -434,7 +434,7 @@ applyCases env state (SemanticsTypes.IDeposit accId1 party1 tok1 amount)
               Arith.equal_int amount (evalValue env state val)
       then let {
              warning =
-               (if Arith.less_int Arith.Zero_int amount then ApplyNoWarning
+               (if Arith.less_int Arith.zero_int amount then ApplyNoWarning
                  else ApplyNonPositiveDeposit party1 accId2 tok2 amount);
              newState =
                SemanticsTypes.accounts_update

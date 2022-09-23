@@ -46,7 +46,7 @@
 
         # We build the different sessions that conform the Marlowe specification
         isabelle build -v -b -d isabelle Util
-        isabelle build -v -b -d isabelle Core
+        isabelle build -v -b -e -d isabelle Core
         isabelle build -v -b -d isabelle StaticAnalysis
       '';
 
@@ -61,9 +61,11 @@
         #!/bin/bash
         isabelle jedit -d isabelle -u isabelle/Doc/Specification/Specification.thy
       '';
+
       latex = (pkgs.texlive.combine {
           inherit (pkgs.texlive) scheme-basic ulem collection-fontsrecommended mathpartir;
       });
+
       project = pkgs.haskell-nix.cabalProject' {
         src = ./.;
         compiler-nix-name = "ghc923";

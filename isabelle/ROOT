@@ -30,7 +30,9 @@ session Core in "Core" = HOL +
     Timeout
     TransactionBound
     ValidState
-  export_files (in generated) [3] "*:code/**"
+    CodeExports
+  export_files (in "../generated") [3] "*:code/**"
+
 
 session StaticAnalysis in "StaticAnalysis" = HOL +
   description "Proves around StaticAnalysis"
@@ -65,7 +67,7 @@ session Specification in "Doc/Specification" = HOL +
     Core
     Guarantees
     Extended
-  document_theories 
+  document_theories
     "Core.SemanticsTypes"
     "Core.BlockchainTypes"
   document_files

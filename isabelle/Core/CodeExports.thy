@@ -8,9 +8,11 @@ imports Semantics "HOL-Library.Code_Target_Numeral" HOL.String
 
 begin
 
-(*code_printing
+code_printing
   type_constructor ByteString \<rightharpoonup> (Haskell) "String"
-*)
+  | constant "less_eq_BS" \<rightharpoonup> (Haskell) infix 4 "<=" 
+  | constant "HOL.equal :: ByteString \<Rightarrow> ByteString \<Rightarrow> bool" \<rightharpoonup> (Haskell) infix 4 "=="
+
 (*
 definition member :: \<Zprime>a list \<Rightarrow> \<Zprime>a \<Rightarrow> bool where
 [code_abbrev]: member xs x \<leftarrow>\<rightarrow> x \<in> set xs

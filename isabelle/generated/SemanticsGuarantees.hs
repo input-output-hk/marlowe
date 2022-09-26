@@ -15,10 +15,8 @@ import qualified Orderings;
 less_eq_Party :: SemanticsTypes.Party -> SemanticsTypes.Party -> Bool;
 less_eq_Party (SemanticsTypes.Address uu) (SemanticsTypes.Role uv) = True;
 less_eq_Party (SemanticsTypes.Role uw) (SemanticsTypes.Address ux) = False;
-less_eq_Party (SemanticsTypes.Address x) (SemanticsTypes.Address y) =
-  Serialisation.less_eq_BS x y;
-less_eq_Party (SemanticsTypes.Role x) (SemanticsTypes.Role y) =
-  Serialisation.less_eq_BS x y;
+less_eq_Party (SemanticsTypes.Address x) (SemanticsTypes.Address y) = x <= y;
+less_eq_Party (SemanticsTypes.Role x) (SemanticsTypes.Role y) = x <= y;
 
 less_eq_Partya :: SemanticsTypes.Party -> SemanticsTypes.Party -> Bool;
 less_eq_Partya a b = less_eq_Party a b;
@@ -46,8 +44,7 @@ instance Orderings.Linorder SemanticsTypes.Party where {
 less_eq_Tok :: SemanticsTypes.Token -> SemanticsTypes.Token -> Bool;
 less_eq_Tok (SemanticsTypes.Token a b) (SemanticsTypes.Token c d) =
   (if Serialisation.less_BS a c then True
-    else (if Serialisation.less_BS c a then False
-           else Serialisation.less_eq_BS b d));
+    else (if Serialisation.less_BS c a then False else b <= d));
 
 less_eq_Token :: SemanticsTypes.Token -> SemanticsTypes.Token -> Bool;
 less_eq_Token a b = less_eq_Tok a b;
@@ -73,8 +70,7 @@ instance Orderings.Linorder SemanticsTypes.Token where {
 };
 
 less_eq_ValId :: SemanticsTypes.ValueId -> SemanticsTypes.ValueId -> Bool;
-less_eq_ValId (SemanticsTypes.ValueId a) (SemanticsTypes.ValueId b) =
-  Serialisation.less_eq_BS a b;
+less_eq_ValId (SemanticsTypes.ValueId a) (SemanticsTypes.ValueId b) = a <= b;
 
 less_eq_ValueId :: SemanticsTypes.ValueId -> SemanticsTypes.ValueId -> Bool;
 less_eq_ValueId a b = less_eq_ValId a b;

@@ -1,9 +1,8 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Arith(Int, equal_int, less_eq_int, less_int, Nat, Num(..), uminus_int,
-         zero_int, abs_int, one_nat, plus_int, nat_of_integer, minus_int,
-         times_int, times_nat, divide_int)
+  Arith(Int, equal_int, less_eq_int, less_int, uminus_int, zero_int, abs_int,
+         plus_int, minus_int, times_int, divide_int)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -38,13 +37,6 @@ instance Orderings.Ord Int where {
   less = less_int;
 };
 
-instance Orderings.Ord Integer where {
-  less_eq = (\ a b -> a <= b);
-  less = (\ a b -> a < b);
-};
-
-newtype Nat = Nat Integer;
-
 data Num = One | Bit0 Num | Bit1 Num;
 
 uminus_int :: Int -> Int;
@@ -55,9 +47,6 @@ zero_int = Int_of_integer (0 :: Integer);
 
 abs_int :: Int -> Int;
 abs_int i = (if less_int i zero_int then uminus_int i else i);
-
-one_nat :: Nat;
-one_nat = Nat (1 :: Integer);
 
 plus_int :: Int -> Int -> Int;
 plus_int k l = Int_of_integer (integer_of_int k + integer_of_int l);
@@ -84,20 +73,11 @@ divmod_integer k l =
      negate l - s));
                                 })))));
 
-integer_of_nat :: Nat -> Integer;
-integer_of_nat (Nat x) = x;
-
-nat_of_integer :: Integer -> Nat;
-nat_of_integer k = Nat (Orderings.max (0 :: Integer) k);
-
 minus_int :: Int -> Int -> Int;
 minus_int k l = Int_of_integer (integer_of_int k - integer_of_int l);
 
 times_int :: Int -> Int -> Int;
 times_int k l = Int_of_integer (integer_of_int k * integer_of_int l);
-
-times_nat :: Nat -> Nat -> Nat;
-times_nat m n = Nat (integer_of_nat m * integer_of_nat n);
 
 divide_integer :: Integer -> Integer -> Integer;
 divide_integer k l = fst (divmod_integer k l);

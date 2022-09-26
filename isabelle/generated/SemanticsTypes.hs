@@ -17,33 +17,31 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
-import qualified Serialisation;
 import qualified Arith;
 
-data Party = Address Serialisation.ByteString | Role Serialisation.ByteString;
+data Party = Address String | Role String;
 
 equal_Party :: Party -> Party -> Bool;
 equal_Party (Address x1) (Role x2) = False;
 equal_Party (Role x2) (Address x1) = False;
-equal_Party (Role x2) (Role y2) = Serialisation.equal_ByteString x2 y2;
-equal_Party (Address x1) (Address y1) = Serialisation.equal_ByteString x1 y1;
+equal_Party (Role x2) (Role y2) = x2 == y2;
+equal_Party (Address x1) (Address y1) = x1 == y1;
 
-data ChoiceId = ChoiceId Serialisation.ByteString Party;
+data ChoiceId = ChoiceId String Party;
 
 equal_ChoiceId :: ChoiceId -> ChoiceId -> Bool;
 equal_ChoiceId (ChoiceId x1 x2) (ChoiceId y1 y2) =
-  Serialisation.equal_ByteString x1 y1 && equal_Party x2 y2;
+  x1 == y1 && equal_Party x2 y2;
 
-newtype ValueId = ValueId Serialisation.ByteString;
+newtype ValueId = ValueId String;
 
 equal_ValueId :: ValueId -> ValueId -> Bool;
-equal_ValueId (ValueId x) (ValueId ya) = Serialisation.equal_ByteString x ya;
+equal_ValueId (ValueId x) (ValueId ya) = x == ya;
 
-data Token = Token Serialisation.ByteString Serialisation.ByteString;
+data Token = Token String String;
 
 equal_Token :: Token -> Token -> Bool;
-equal_Token (Token x1 x2) (Token y1 y2) =
-  Serialisation.equal_ByteString x1 y1 && Serialisation.equal_ByteString x2 y2;
+equal_Token (Token x1 x2) (Token y1 y2) = x1 == y1 && x2 == y2;
 
 data Value = AvailableMoney Party Token | Constant Arith.Int | NegValue Value
   | AddValue Value Value | SubValue Value Value | MulValue Value Value

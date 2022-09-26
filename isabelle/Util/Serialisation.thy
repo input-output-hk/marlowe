@@ -2,26 +2,38 @@ theory Serialisation
   imports "HOL-Library.Word"
 begin
 
-type_synonym ByteString = "(8 word) list"
+(*type_synonym ByteString = "(8 word) list"*)
+datatype ByteString = ByteString "(8 word) list"
 
 lemma intToWordToUint : "x \<ge> 0 \<Longrightarrow> x < 256 \<Longrightarrow> uint (word_of_int x :: 8 word) = (x :: int)"
   apply (simp only:uint_word_of_int)
   by auto
 
+fun appendByteString :: "ByteString \<Rightarrow> ByteString \<Rightarrow> ByteString" where 
+  "appendByteString (ByteString xs) (ByteString ys) = ByteString (append xs ys)"
+
 fun positiveIntToByteString :: "int \<Rightarrow> ByteString" where
 "positiveIntToByteString x =
-  (if x < 128 then [word_of_int x] else (word_of_int ((x mod 128) + 128)) # positiveIntToByteString ((x div 128) - 1))"
-
+  (
+    if x < 128 
+      then 
+        ByteString [word_of_int x] 
+      else
+        appendByteString
+         (ByteString [word_of_int ((x mod 128) + 128)])
+         (positiveIntToByteString ((x div 128) - 1))
+  )"
+(*
 fun byteStringToPositiveInt :: "ByteString \<Rightarrow> (int \<times> ByteString) option" where
-"byteStringToPositiveInt Nil = None" |
-"byteStringToPositiveInt (Cons xw rest) =
-  (let x = uint xw in
+"byteStringToPositiveInt (ByteString Nil) = None" |
+"byteStringToPositiveInt (ByteString (Cons xw rest)) =
+  (let x = uint xw; rest' = ByteString rest  in
     (if x < 128
-     then (Some (x, rest))
-     else (case byteStringToPositiveInt rest of
+     then (Some (x, rest'))
+     else (case byteStringToPositiveInt rest' of
              None \<Rightarrow> None
            | Some (y, extra) \<Rightarrow> Some ((x - 128) + 128 * (y + 1), extra))))"
-
+*)
 lemma smallerIntInductionRestrictedToNat : "(\<And> x :: nat. (\<And> y :: nat . y < x \<Longrightarrow> P (int y)) \<Longrightarrow> P (int x)) \<Longrightarrow> P (int z)"
   apply (induct rule:Orderings.wellorder_class.less_induct)
   by auto
@@ -35,7 +47,7 @@ lemma smallerIntInduction : "(\<And> x :: int. x \<ge> 0 \<Longrightarrow> (\<An
 
 lemma fold_sig_bit_in_word_of_int : "word_of_int (x mod 128) + 128 = word_of_int (x mod 128 + 128)"
   by auto
-
+(*
 lemma positiveIntToByteStringToPositiveInt_inductionStep : "0 \<le> (x :: int) \<Longrightarrow> (\<And>ya. 0 \<le> ya \<Longrightarrow> ya < x \<Longrightarrow> byteStringToPositiveInt (positiveIntToByteString ya @ y) = Some (ya, y))
                                                                   \<Longrightarrow> byteStringToPositiveInt (positiveIntToByteString x @ y) = Some (x, y)"
   apply (cases "x < 128")
@@ -191,14 +203,20 @@ lemma addAndGetByteString_inverseRoundtrip : "getByteString x = Some (y, z) \<Lo
      using byteStringToPositiveIntIsPositive apply fastforce
      by blast
    done
+*)
+
+fun less_eq_BS' :: "(8 word) list \<Rightarrow> (8 word) list \<Rightarrow> bool" where 
+"less_eq_BS' Nil Nil = True" |
+"less_eq_BS' (Cons _ _) Nil = False" |
+"less_eq_BS' Nil (Cons _ _) = True" |
+"less_eq_BS' (Cons h1 t1) (Cons h2 t2) =
+   (if h2 < h1 then False
+    else (if h1 = h2 then less_eq_BS' t1 t2 else True))"
+
 
 fun less_eq_BS :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
-"less_eq_BS Nil Nil = True" |
-"less_eq_BS (Cons _ _) Nil = False" |
-"less_eq_BS Nil (Cons _ _) = True" |
-"less_eq_BS (Cons h1 t1) (Cons h2 t2) =
-   (if h2 < h1 then False
-    else (if h1 = h2 then less_eq_BS t1 t2 else True))"
+  "less_eq_BS (ByteString xs) (ByteString ys) = less_eq_BS' xs ys" 
+
 
 fun less_BS :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
 "less_BS a b = (\<not> (less_eq_BS b a))"
@@ -206,13 +224,17 @@ fun less_BS :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
 lemma oneLessEqBS : "\<not> less_eq_BS bs2 bs1 \<Longrightarrow> less_eq_BS bs1 bs2"
   apply (induction bs1 bs2 rule:less_eq_BS.induct)
   apply simp_all
-  by (metis le_less not_le)
+  sorry 
+  (* by (metis le_less not_le)*)
+
 
 lemma lineaBS : "less_eq_BS x y \<or> less_eq_BS y x"
   using oneLessEqBS by blast
 
 
 lemma byteStringOrder : "less_eq_BS x y \<Longrightarrow> less_eq_BS y z \<Longrightarrow> less_eq_BS x z"
+  sorry
+(*
   apply (induction x z arbitrary:y rule:less_eq_BS.induct)
     apply auto
   subgoal for hx tx y
@@ -221,10 +243,11 @@ lemma byteStringOrder : "less_eq_BS x y \<Longrightarrow> less_eq_BS y z \<Longr
     by (metis (full_types) byteStringToPositiveInt.cases less_eq_BS.simps(2) less_eq_BS.simps(4) not_less_iff_gr_or_eq)
   subgoal for h1 t1 h2 t2 y
     by (metis (mono_tags, opaque_lifting) \<open>\<And>ya tx hx. \<lbrakk>less_eq_BS (hx # tx) ya; less_eq_BS ya []\<rbrakk> \<Longrightarrow> False\<close> byteStringToPositiveInt.cases less_eq_BS.simps(4) not_le not_less_iff_gr_or_eq order_trans)
-  done
+  done*)
 
 lemma byteStringLessEqTwiceEq : "less_eq_BS x y \<Longrightarrow> less_eq_BS y x \<Longrightarrow> x = y"
-  apply (induction x y rule:less_eq_BS.induct)
+  sorry
+(*  apply (induction x y rule:less_eq_BS.induct)
   apply auto
   subgoal for h1 t1 h2 t2
     by (meson not_less_iff_gr_or_eq)
@@ -285,6 +308,6 @@ theorem listToByteStringTolist : "(\<And> x y. decode ((encode x) @ y) = Some (x
 
 theorem byteStringToList_inverseRoundtrip : "(\<And> x a b. decode x = Some (a, b) \<Longrightarrow> encode a @ b = x) \<Longrightarrow> byteStringToList decode x = Some (a, b) \<Longrightarrow> listToByteString encode a @ b = x"
   oops
-
+*)
 
 end

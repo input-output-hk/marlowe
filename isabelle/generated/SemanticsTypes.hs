@@ -17,55 +17,33 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
-import qualified Type_Length;
-import qualified Numeral_Type;
-import qualified Word;
+import qualified Serialisation;
 import qualified Arith;
 
-data Party =
-  Address
-    [Word.Word
-       (Numeral_Type.Bit0
-         (Numeral_Type.Bit0 (Numeral_Type.Bit0 Numeral_Type.Num1)))]
-  | Role [Word.Word
-            (Numeral_Type.Bit0
-              (Numeral_Type.Bit0 (Numeral_Type.Bit0 Numeral_Type.Num1)))];
+data Party = Address Serialisation.ByteString | Role Serialisation.ByteString;
 
 equal_Party :: Party -> Party -> Bool;
 equal_Party (Address x1) (Role x2) = False;
 equal_Party (Role x2) (Address x1) = False;
-equal_Party (Role x2) (Role y2) = x2 == y2;
-equal_Party (Address x1) (Address y1) = x1 == y1;
+equal_Party (Role x2) (Role y2) = Serialisation.equal_ByteString x2 y2;
+equal_Party (Address x1) (Address y1) = Serialisation.equal_ByteString x1 y1;
 
-data ChoiceId =
-  ChoiceId
-    [Word.Word
-       (Numeral_Type.Bit0
-         (Numeral_Type.Bit0 (Numeral_Type.Bit0 Numeral_Type.Num1)))]
-    Party;
+data ChoiceId = ChoiceId Serialisation.ByteString Party;
 
 equal_ChoiceId :: ChoiceId -> ChoiceId -> Bool;
 equal_ChoiceId (ChoiceId x1 x2) (ChoiceId y1 y2) =
-  x1 == y1 && equal_Party x2 y2;
+  Serialisation.equal_ByteString x1 y1 && equal_Party x2 y2;
 
-newtype ValueId = ValueId
-  [Word.Word
-     (Numeral_Type.Bit0
-       (Numeral_Type.Bit0 (Numeral_Type.Bit0 Numeral_Type.Num1)))];
+newtype ValueId = ValueId Serialisation.ByteString;
 
 equal_ValueId :: ValueId -> ValueId -> Bool;
-equal_ValueId (ValueId x) (ValueId ya) = x == ya;
+equal_ValueId (ValueId x) (ValueId ya) = Serialisation.equal_ByteString x ya;
 
-data Token =
-  Token [Word.Word
-           (Numeral_Type.Bit0
-             (Numeral_Type.Bit0 (Numeral_Type.Bit0 Numeral_Type.Num1)))]
-    [Word.Word
-       (Numeral_Type.Bit0
-         (Numeral_Type.Bit0 (Numeral_Type.Bit0 Numeral_Type.Num1)))];
+data Token = Token Serialisation.ByteString Serialisation.ByteString;
 
 equal_Token :: Token -> Token -> Bool;
-equal_Token (Token x1 x2) (Token y1 y2) = x1 == y1 && x2 == y2;
+equal_Token (Token x1 x2) (Token y1 y2) =
+  Serialisation.equal_ByteString x1 y1 && Serialisation.equal_ByteString x2 y2;
 
 data Value = AvailableMoney Party Token | Constant Arith.Int | NegValue Value
   | AddValue Value Value | SubValue Value Value | MulValue Value Value

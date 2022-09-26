@@ -1,6 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module Serialisation(less_eq_BS, less_BS) where {
+module Serialisation(ByteString, less_eq_BS, less_BS, equal_ByteString) where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -12,22 +12,12 @@ import qualified Type_Length;
 import qualified Numeral_Type;
 import qualified Word;
 
-less_eq_BS ::
+newtype ByteString = ByteString
   [Word.Word
      (Numeral_Type.Bit0
-       (Numeral_Type.Bit0 (Numeral_Type.Bit0 Numeral_Type.Num1)))] ->
-    [Word.Word
-       (Numeral_Type.Bit0
-         (Numeral_Type.Bit0 (Numeral_Type.Bit0 Numeral_Type.Num1)))] ->
-      Bool;
-less_eq_BS [] [] = True;
-less_eq_BS (uu : uv) [] = False;
-less_eq_BS [] (uw : ux) = True;
-less_eq_BS (h1 : t1) (h2 : t2) =
-  (if Word.less_word h2 h1 then False
-    else (if Word.equal_word h1 h2 then less_eq_BS t1 t2 else True));
+       (Numeral_Type.Bit0 (Numeral_Type.Bit0 Numeral_Type.Num1)))];
 
-less_BS ::
+less_eq_BSa ::
   [Word.Word
      (Numeral_Type.Bit0
        (Numeral_Type.Bit0 (Numeral_Type.Bit0 Numeral_Type.Num1)))] ->
@@ -35,6 +25,20 @@ less_BS ::
        (Numeral_Type.Bit0
          (Numeral_Type.Bit0 (Numeral_Type.Bit0 Numeral_Type.Num1)))] ->
       Bool;
+less_eq_BSa [] [] = True;
+less_eq_BSa (uu : uv) [] = False;
+less_eq_BSa [] (uw : ux) = True;
+less_eq_BSa (h1 : t1) (h2 : t2) =
+  (if Word.less_word h2 h1 then False
+    else (if Word.equal_word h1 h2 then less_eq_BSa t1 t2 else True));
+
+less_eq_BS :: ByteString -> ByteString -> Bool;
+less_eq_BS (ByteString xs) (ByteString ys) = less_eq_BSa xs ys;
+
+less_BS :: ByteString -> ByteString -> Bool;
 less_BS a b = not (less_eq_BS b a);
+
+equal_ByteString :: ByteString -> ByteString -> Bool;
+equal_ByteString (ByteString x) (ByteString ya) = x == ya;
 
 }

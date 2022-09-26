@@ -4,9 +4,32 @@
 *)
 theory CodeExports
 
-imports Semantics "HOL-Library.Code_Target_Numeral" 
+imports Semantics "HOL-Library.Code_Target_Numeral" HOL.String
 
 begin
+
+(*code_printing
+  type_constructor ByteString \<rightharpoonup> (Haskell) "String"
+*)
+(*
+definition member :: \<Zprime>a list \<Rightarrow> \<Zprime>a \<Rightarrow> bool where
+[code_abbrev]: member xs x \<leftarrow>\<rightarrow> x \<in> set xs
+*)
+
+(*
+lemma [code abstract]:
+  "integer_of_nat (nat_of_integer k) = max 0 k"
+  by transfer auto
+*)
+
+(*lemma [code abstype]:
+  "ByteString == String.literal"*)
+
+(*
+lift_definition btos :: "ByteString \<Rightarrow> string"
+  is "map louqeascii_of"
+  oops
+*)
 
 export_code
   evalValue

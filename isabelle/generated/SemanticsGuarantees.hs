@@ -9,8 +9,6 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
 import qualified Serialisation;
-import qualified Numeral_Type;
-import qualified Word;
 import qualified SemanticsTypes;
 import qualified Orderings;
 

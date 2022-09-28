@@ -595,11 +595,19 @@ record TransactionOutputRecord = txOutWarnings :: "TransactionWarning list"
                                  txOutState :: State
                                  txOutContract :: Contract
 
+
 datatype TransactionOutput = TransactionOutput TransactionOutputRecord
                            | TransactionError TransactionError
 
 record Transaction = interval :: TimeInterval
                      inputs :: "Input list"
+
+fun txOutContract2 :: "TransactionOutputRecord \<Rightarrow> Contract" where 
+  "txOutContract2 a = txOutContract a" 
+
+definition txOutContract4 :: int where
+  "txOutContract4 = 4" 
+
 
 fun computeTransaction :: "Transaction \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> TransactionOutput" where
 "computeTransaction tx state contract =

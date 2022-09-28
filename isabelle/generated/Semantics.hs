@@ -1,12 +1,14 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Semantics(Payment, ReduceEffect, ReduceWarning, ReduceResult,
-             TransactionWarning, ApplyAllResult, ReduceStepResult,
-             TransactionError, TransactionOutputRecord_ext, TransactionOutput,
-             Transaction_ext, evalValue, evalObservation, reductionLoop,
+  Semantics(Payment(..), ReduceEffect, ReduceWarning, ReduceResult,
+             TransactionWarning(..), ApplyAllResult, ReduceStepResult,
+             TransactionError(..), TransactionOutputRecord_ext,
+             TransactionOutput(..), Transaction_ext(..), evalValue,
+             evalObservation, txOutWarnings, txOutPayments, reductionLoop,
              reduceContractUntilQuiescent, applyAllInputs, computeTransaction,
-             playTrace)
+             playTrace, equal_Payment, txOutState, txOutContract,
+             equal_TransactionWarning)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -600,5 +602,89 @@ playTrace ::
     SemanticsTypes.Contract -> [Transaction_ext ()] -> TransactionOutput;
 playTrace sl c t =
   playTraceAux (TransactionOutputRecord_ext [] [] (emptyState sl) c ()) t;
+
+equal_Payment :: Payment -> Payment -> Bool;
+equal_Payment (Payment x1 x2 x3 x4) (Payment y1 y2 y3 y4) =
+  SemanticsTypes.equal_Party x1 y1 &&
+    SemanticsTypes.equal_Payee x2 y2 &&
+      SemanticsTypes.equal_Token x3 y3 && Arith.equal_int x4 y4;
+
+txOutState ::
+  forall a. TransactionOutputRecord_ext a -> SemanticsTypes.State_ext ();
+txOutState
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutState;
+
+txOutContract ::
+  forall a. TransactionOutputRecord_ext a -> SemanticsTypes.Contract;
+txOutContract
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutContract;
+
+equal_TransactionWarning :: TransactionWarning -> TransactionWarning -> Bool;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionShadowing y41 y42 y43) =
+  SemanticsTypes.equal_ValueId x41 y41 &&
+    Arith.equal_int x42 y42 && Arith.equal_int x43 y43;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionPartialPay y31 y32 y33 y34 y35) =
+  SemanticsTypes.equal_Party x31 y31 &&
+    SemanticsTypes.equal_Payee x32 y32 &&
+      SemanticsTypes.equal_Token x33 y33 &&
+        Arith.equal_int x34 y34 && Arith.equal_int x35 y35;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionNonPositivePay y21 y22 y23 y24) =
+  SemanticsTypes.equal_Party x21 y21 &&
+    SemanticsTypes.equal_Payee x22 y22 &&
+      SemanticsTypes.equal_Token x23 y23 && Arith.equal_int x24 y24;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionNonPositiveDeposit y11 y12 y13 y14) =
+  SemanticsTypes.equal_Party x11 y11 &&
+    SemanticsTypes.equal_Party x12 y12 &&
+      SemanticsTypes.equal_Token x13 y13 && Arith.equal_int x14 y14;
+equal_TransactionWarning TransactionAssertionFailed TransactionAssertionFailed =
+  True;
 
 }

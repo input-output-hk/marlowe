@@ -1,6 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module Serialisation(less_BS) where {
+module Serialisation(less_BS, less_eq_ByteString) where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -11,5 +11,8 @@ import qualified Prelude;
 
 less_BS :: String -> String -> Bool;
 less_BS a b = not (b <= a);
+
+less_eq_ByteString :: String -> String -> Bool;
+less_eq_ByteString a b = a <= b;
 
 }

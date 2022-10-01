@@ -15,8 +15,10 @@ import qualified Orderings;
 less_eq_Party :: SemanticsTypes.Party -> SemanticsTypes.Party -> Bool;
 less_eq_Party (SemanticsTypes.Address uu) (SemanticsTypes.Role uv) = True;
 less_eq_Party (SemanticsTypes.Role uw) (SemanticsTypes.Address ux) = False;
-less_eq_Party (SemanticsTypes.Address x) (SemanticsTypes.Address y) = x <= y;
-less_eq_Party (SemanticsTypes.Role x) (SemanticsTypes.Role y) = x <= y;
+less_eq_Party (SemanticsTypes.Address x) (SemanticsTypes.Address y) =
+  Serialisation.less_eq_ByteString x y;
+less_eq_Party (SemanticsTypes.Role x) (SemanticsTypes.Role y) =
+  Serialisation.less_eq_ByteString x y;
 
 less_eq_Partya :: SemanticsTypes.Party -> SemanticsTypes.Party -> Bool;
 less_eq_Partya a b = less_eq_Party a b;

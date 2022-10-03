@@ -43,6 +43,16 @@ session StaticAnalysis in "StaticAnalysis" = HOL +
   theories
     StaticAnalysis
 
+
+session Examples in "Examples" = HOL +
+  description "Example marlowe contracts"
+  options [document = false, system_heaps = false]
+  sessions
+    "HOL-Library"
+    "Core"
+  theories
+    Swap
+
 chapter Doc
 
 session Cheatsheet in "Doc/Cheatsheet" = HOL +

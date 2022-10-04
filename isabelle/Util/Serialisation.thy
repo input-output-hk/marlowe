@@ -11,7 +11,7 @@ datatype ByteString = ByteString "(8 word) list"
 
 text \<open>The \<^term>\<open>BS\<close> helper allows to create a \<^term>\<open>ByteString\<close> out of a regular \<^term>\<open>string\<close>.\<close>
 
-definition BS :: "string \<Rightarrow> ByteString" where
+fun BS :: "string \<Rightarrow> ByteString" where
   "BS str = ByteString (map of_char str)"
 
 text \<open>For example \<^term>\<open>BS ''abc''\<close> is evaluated to @{value "BS ''abc''"}\<close>
@@ -32,10 +32,13 @@ fun less_eq_BS' :: "(8 word) list \<Rightarrow> (8 word) list \<Rightarrow> bool
 fun less_eq_BS :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
   "less_eq_BS (ByteString xs) (ByteString ys) = less_eq_BS' xs ys" 
 
-definition "a \<le> b = less_eq_BS a b" 
+(*definition "a \<le> b = less_eq_BS a b" *)
+
+definition "a \<le> b = less_eq_BS a b"
 
 fun less_BS :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
 "less_BS a b = (\<not> (less_eq_BS b a))"
+
 
 definition "a < b = less_BS a b"
 

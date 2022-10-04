@@ -134,7 +134,7 @@ sufficient to prove termination.
 
 \<close>
 
-subsection \<open>All Contracts Have a Maximum Time\<close>
+subsection \<open>All Contracts Have a Maximum Time\label{sec:max-time-guarantee}\<close>
 
 text \<open>If one sends an empty transaction with time equal to @{const maxTimeContract}, then the
 contract will close.\<close>
@@ -147,7 +147,7 @@ text \<open>Funds are not held in a contract after it closes.\<close>
 
 text \<open>@{thm closeIsSafe}\<close>
 
-subsection \<open>Transaction Bound\<close>
+subsection \<open>Transaction Bound\label{sec:transaction-bound}\<close>
 
 text \<open>There is a maximum number of transaction that can be accepted by a contract.\<close>
 

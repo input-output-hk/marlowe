@@ -7,7 +7,7 @@ session Util in "Util" = HOL +
     "HOL-Library"
   theories
     MList
-    Serialisation
+    ByteString
     SList
     Utils
     SpecificationLatexSugar
@@ -82,7 +82,7 @@ session Specification in "Doc/Specification" = HOL +
   document_theories
     "Core.SemanticsTypes"
     "Core.BlockchainTypes"
-    "Util.Serialisation"
+    "Util.ByteString"
     "Examples.Swap"
   document_files
     "root.tex"

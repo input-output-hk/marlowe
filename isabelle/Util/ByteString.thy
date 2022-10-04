@@ -1,10 +1,10 @@
 (*<*)
-theory Serialisation
+theory ByteString
   imports "HOL-Library.Word"
 begin
 (*>*)
 
-
+chapter \<open>ByteString \label{ref:bytestring}\<close>
 text \<open>Conceptually, a \<^term>\<open>ByteString\<close> is defined as a list of 8-bit words.\<close>
 
 datatype ByteString = ByteString "(8 word) list"

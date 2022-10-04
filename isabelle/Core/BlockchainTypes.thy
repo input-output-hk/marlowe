@@ -1,7 +1,7 @@
 (*<*)
 \<comment> \<open>This module defines the types we abstract from Blockchain specific implementation\<close>
 theory BlockchainTypes
-imports Main Util.Serialisation
+imports Main Util.ByteString
 begin
 (*>*)
 

@@ -29,11 +29,10 @@ library
         Product_Lexorder
         Product_Type
         SemanticsGuarantees
-        Serialisation
+        ByteString
     exposed-modules:
         Semantics
         SemanticsTypes
-        -- FIXME: Try to avoid exposing
         Arith
 
 test-suite marlowe-spec-test

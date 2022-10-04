@@ -188,8 +188,18 @@ subsubsection \<open>Maximum time\<close>
 text \<open>If the deadline of the second party is bigger than the first, then that deadline is the 
 maximum time of the contract.\<close>
 proposition 
-  "sp1 =  \<lparr> party = p1, amount = a1, currency = t1, depositDeadline = d1 \<rparr>   
-   \<Longrightarrow> sp2 = \<lparr> party = p2, amount = a2, currency = t2, depositDeadline = d2 \<rparr>
+  "sp1 = 
+         \<lparr> party = p1
+         , amount = a1
+         , currency = t1
+         , depositDeadline = d1
+         \<rparr>   
+   \<Longrightarrow> sp2 = 
+         \<lparr> party = p2
+         , amount = a2
+         , currency = t2
+         , depositDeadline = d2
+         \<rparr>
    \<Longrightarrow> d2 > d1
    \<Longrightarrow> d1 > 0
    \<Longrightarrow> contract = swap sp1 sp2 
@@ -219,6 +229,10 @@ lemma
   using  swapExample_def happyPathTransactions_def dollarProvider_def dollarToken_def adaProvider_def adaToken_def
   apply (simp_all)
   oops
+
+\<comment> \<open>Another lemma to add would be: If d2 < d1, and the first deposit is made before d1 but after d2, then the second deposit can never be made.\<close>
+\<comment> \<open>Another lemma to make would be around negative amounts, to show that they give warnings. Maybe show that if amounts are positive and d2 > d1 there can never be a warning?\<close>
+
 (*>*)
   
 

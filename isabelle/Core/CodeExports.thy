@@ -1,17 +1,31 @@
-(*
-   This theory contains the code necesary to export a runnable version of the Marlowe Semantics
-   in Haskell
-*)
+
+chapter "Code exports"
+
+text \<open>This theory contains the necessary code to export a version of the Marlowe Semantics in Haskell.
+ It is 
+
+\<close>
+
+text \<open>We start by importing the theories we want to export and a translation theory. The theory \<^term>\<open>Code_Target_Numeral\<close>
+ translates the default representation of numbers (which is suitable for logic reasoning) into a more performant representation.\<close>
+
 theory CodeExports
 
 imports Semantics "HOL-Library.Code_Target_Numeral"
 
 begin
 
+
+text \<open>We provide some Serialization options to use Haskell native \<^term>\<open>String\<close> instead of our logical
+represenation of \<^term>\<open>ByteString\<close>\<close>
 code_printing
   type_constructor ByteString \<rightharpoonup> (Haskell) "String"
   | constant "less_eq_BS" \<rightharpoonup> (Haskell) infix 4 "<=" 
   | constant "HOL.equal :: ByteString \<Rightarrow> ByteString \<Rightarrow> bool" \<rightharpoonup> (Haskell) infix 4 "=="
+
+
+text \<open>We export all the constants in one statement, because they don't add up, if you export two times,
+the second export will overwrite the first one.\<close>
 
 export_code
   \<comment> \<open>With the following exports, we declare that we want to have all the important semantic functions.
@@ -24,14 +38,12 @@ export_code
   applyAllInputs
   playTrace
   computeTransaction
-  
+ 
   \<comment> \<open> Force export of State record selectors\<close>
   txOutContract
   txOutWarnings
   txOutPayments
   txOutState
-
-
 
   \<comment> \<open>Force export of Arith.Int constructor\<close>
   int_of_integer

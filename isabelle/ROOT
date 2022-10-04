@@ -82,6 +82,7 @@ session Specification in "Doc/Specification" = HOL +
   document_theories
     "Core.SemanticsTypes"
     "Core.BlockchainTypes"
+    "Core.CodeExports"
     "Util.ByteString"
     "Examples.Swap"
   document_files

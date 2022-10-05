@@ -31,17 +31,20 @@ import qualified Arith;
 
 data Payment =
   Payment SemanticsTypes.Party SemanticsTypes.Payee SemanticsTypes.Token
-    Arith.Int;
+    Arith.Int
+  deriving (Prelude.Read, Prelude.Show);
 
 data ApplyWarning = ApplyNoWarning
   | ApplyNonPositiveDeposit SemanticsTypes.Party SemanticsTypes.Party
-      SemanticsTypes.Token Arith.Int;
+      SemanticsTypes.Token Arith.Int
+  deriving (Prelude.Read, Prelude.Show);
 
 data ApplyResult =
   Applied ApplyWarning (SemanticsTypes.State_ext ()) SemanticsTypes.Contract
-  | ApplyNoMatchError;
+  | ApplyNoMatchError deriving (Prelude.Read, Prelude.Show);
 
-data ReduceEffect = ReduceNoPayment | ReduceWithPayment Payment;
+data ReduceEffect = ReduceNoPayment | ReduceWithPayment Payment
+  deriving (Prelude.Read, Prelude.Show);
 
 data ReduceWarning = ReduceNoWarning
   | ReduceNonPositivePay SemanticsTypes.Party SemanticsTypes.Payee
@@ -49,12 +52,12 @@ data ReduceWarning = ReduceNoWarning
   | ReducePartialPay SemanticsTypes.Party SemanticsTypes.Payee
       SemanticsTypes.Token Arith.Int Arith.Int
   | ReduceShadowing SemanticsTypes.ValueId Arith.Int Arith.Int
-  | ReduceAssertionFailed;
+  | ReduceAssertionFailed deriving (Prelude.Read, Prelude.Show);
 
 data ReduceResult =
   ContractQuiescent Bool [ReduceWarning] [Payment] (SemanticsTypes.State_ext ())
     SemanticsTypes.Contract
-  | RRAmbiguousTimeIntervalError;
+  | RRAmbiguousTimeIntervalError deriving (Prelude.Read, Prelude.Show);
 
 data TransactionWarning =
   TransactionNonPositiveDeposit SemanticsTypes.Party SemanticsTypes.Party
@@ -64,30 +67,35 @@ data TransactionWarning =
   | TransactionPartialPay SemanticsTypes.Party SemanticsTypes.Payee
       SemanticsTypes.Token Arith.Int Arith.Int
   | TransactionShadowing SemanticsTypes.ValueId Arith.Int Arith.Int
-  | TransactionAssertionFailed;
+  | TransactionAssertionFailed deriving (Prelude.Read, Prelude.Show);
 
 data ApplyAllResult =
   ApplyAllSuccess Bool [TransactionWarning] [Payment]
     (SemanticsTypes.State_ext ()) SemanticsTypes.Contract
-  | ApplyAllNoMatchError | ApplyAllAmbiguousTimeIntervalError;
+  | ApplyAllNoMatchError | ApplyAllAmbiguousTimeIntervalError
+  deriving (Prelude.Read, Prelude.Show);
 
 data ReduceStepResult =
   Reduced ReduceWarning ReduceEffect (SemanticsTypes.State_ext ())
     SemanticsTypes.Contract
-  | NotReduced | AmbiguousTimeIntervalReductionError;
+  | NotReduced | AmbiguousTimeIntervalReductionError
+  deriving (Prelude.Read, Prelude.Show);
 
 data TransactionError = TEAmbiguousTimeIntervalError | TEApplyNoMatchError
-  | TEIntervalError SemanticsTypes.IntervalError | TEUselessTransaction;
+  | TEIntervalError SemanticsTypes.IntervalError | TEUselessTransaction
+  deriving (Prelude.Read, Prelude.Show);
 
 data TransactionOutputRecord_ext a =
   TransactionOutputRecord_ext [TransactionWarning] [Payment]
-    (SemanticsTypes.State_ext ()) SemanticsTypes.Contract a;
+    (SemanticsTypes.State_ext ()) SemanticsTypes.Contract a
+  deriving (Prelude.Read, Prelude.Show);
 
 data TransactionOutput = TransactionOutput (TransactionOutputRecord_ext ())
-  | TransactionError TransactionError;
+  | TransactionError TransactionError deriving (Prelude.Read, Prelude.Show);
 
 data Transaction_ext a =
-  Transaction_ext (Arith.Int, Arith.Int) [SemanticsTypes.Input] a;
+  Transaction_ext (Arith.Int, Arith.Int) [SemanticsTypes.Input] a
+  deriving (Prelude.Read, Prelude.Show);
 
 quot :: Arith.Int -> Arith.Int -> Arith.Int;
 quot x y =

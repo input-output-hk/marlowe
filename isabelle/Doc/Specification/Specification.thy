@@ -1,6 +1,6 @@
 (*<*)
 theory Specification
-  imports Main Core.CodeExports
+  imports Main CodeExports.CodeExports
 
 begin
 (*>*)

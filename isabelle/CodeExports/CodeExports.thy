@@ -2,8 +2,6 @@
 chapter "Code exports"
 
 text \<open>This theory contains the necessary code to export a version of the Marlowe Semantics in Haskell.
- It is 
-
 \<close>
 
 text \<open>We start by importing the theories we want to export and a translation theory. The theory \<^term>\<open>Code_Target_Numeral\<close>
@@ -11,17 +9,41 @@ text \<open>We start by importing the theories we want to export and a translati
 
 theory CodeExports
 
-imports Semantics "HOL-Library.Code_Target_Numeral"
+imports 
+  Core.Semantics 
+  Examples.Swap 
+  "HOL-Library.Code_Target_Numeral" 
+  HOL.String
 
 begin
 
-
 text \<open>We provide some Serialization options to use Haskell native \<^term>\<open>String\<close> instead of our logical
 represenation of \<^term>\<open>ByteString\<close>\<close>
+
 code_printing
-  type_constructor ByteString \<rightharpoonup> (Haskell) "String"
-  | constant "less_eq_BS" \<rightharpoonup> (Haskell) infix 4 "<=" 
-  | constant "HOL.equal :: ByteString \<Rightarrow> ByteString \<Rightarrow> bool" \<rightharpoonup> (Haskell) infix 4 "=="
+  \<comment> \<open>The first command tells the serializer to use Haskell \<close>
+  \<comment> \<open>native \<^term>\<open>String\<close> instead of our logical ByteString\<close>
+  type_constructor ByteString 
+      \<rightharpoonup> (Haskell) "String"
+  \<comment> \<open>The next three commands tells the serializer to use the operators provided by\<close>
+  \<comment> \<open>the Ord instance instead of the ones that work with the logical representation\<close>
+  | constant "less_eq_BS"
+      \<rightharpoonup> (Haskell) infix 4 "<=" 
+  | constant "less_BS"
+      \<rightharpoonup> (Haskell) infix 4 "<" 
+  | constant "HOL.equal :: ByteString \<Rightarrow> ByteString \<Rightarrow> bool" 
+      \<rightharpoonup> (Haskell) infix 4 "=="
+  \<comment> \<open>The next command tells the serializer to implode the logical Isabelle string\<close>
+  \<comment> \<open>into Haskell string. Because this is a textual rewrite, we need to force the\<close>
+  \<comment> \<open>generation of String.implode\<close>   
+  | constant "BS :: string \<Rightarrow> ByteString" 
+      \<rightharpoonup> (Haskell) "Stringa.implode"
+
+
+text \<open>With a \<^bold>\<open>code\_identifier\<close> we hint what the name of the module should be.\<close>
+
+code_identifier
+  code_module Swap \<rightharpoonup> (Haskell) Examples.Swap
 
 
 text \<open>We export all the constants in one statement, because they don't add up, if you export two times,
@@ -38,7 +60,15 @@ export_code
   applyAllInputs
   playTrace
   computeTransaction
- 
+
+  \<comment> \<open> Export examples to be used as oracle specificaiton tests\<close>
+  swapExample
+  happyPathTransactions
+  happyPathPayments
+
+  \<comment> \<open>Force the export of string implode (works together with the BS code\_printing hint) \<close>
+  String.implode
+
   \<comment> \<open> Force export of State record selectors\<close>
   txOutContract
   txOutWarnings
@@ -67,7 +97,7 @@ export_code
   equal_TransactionWarning_inst.equal_TransactionWarning
   equal_Payment_inst.equal_Payment
 
-  in Haskell 
+  in Haskell (string_classes)
 
 (*
    With these I'm trying to force the output of the Contract Eq instance, but is not working
@@ -75,4 +105,6 @@ export_code
   equal_Contract_inst.equal_Contract
 
 *)
+(*<*)
 end
+(*>*)

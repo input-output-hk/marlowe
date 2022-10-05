@@ -602,13 +602,6 @@ datatype TransactionOutput = TransactionOutput TransactionOutputRecord
 record Transaction = interval :: TimeInterval
                      inputs :: "Input list"
 
-fun txOutContract2 :: "TransactionOutputRecord \<Rightarrow> Contract" where 
-  "txOutContract2 a = txOutContract a" 
-
-definition txOutContract4 :: int where
-  "txOutContract4 = 4" 
-
-
 fun computeTransaction :: "Transaction \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> TransactionOutput" where
 "computeTransaction tx state contract =
   (let inps = inputs tx in

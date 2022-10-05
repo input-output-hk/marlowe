@@ -19,7 +19,7 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
 import qualified Prelude;
 import qualified Arith;
 
-data Party = Address String | Role String;
+data Party = Address String | Role String deriving (Prelude.Read, Prelude.Show);
 
 equal_Party :: Party -> Party -> Bool;
 equal_Party (Address x1) (Role x2) = False;
@@ -27,18 +27,18 @@ equal_Party (Role x2) (Address x1) = False;
 equal_Party (Role x2) (Role y2) = x2 == y2;
 equal_Party (Address x1) (Address y1) = x1 == y1;
 
-data ChoiceId = ChoiceId String Party;
+data ChoiceId = ChoiceId String Party deriving (Prelude.Read, Prelude.Show);
 
 equal_ChoiceId :: ChoiceId -> ChoiceId -> Bool;
 equal_ChoiceId (ChoiceId x1 x2) (ChoiceId y1 y2) =
   x1 == y1 && equal_Party x2 y2;
 
-newtype ValueId = ValueId String;
+newtype ValueId = ValueId String deriving (Prelude.Read, Prelude.Show);
 
 equal_ValueId :: ValueId -> ValueId -> Bool;
 equal_ValueId (ValueId x) (ValueId ya) = x == ya;
 
-data Token = Token String String;
+data Token = Token String String deriving (Prelude.Read, Prelude.Show);
 
 equal_Token :: Token -> Token -> Bool;
 equal_Token (Token x1 x2) (Token y1 y2) = x1 == y1 && x2 == y2;
@@ -46,12 +46,14 @@ equal_Token (Token x1 x2) (Token y1 y2) = x1 == y1 && x2 == y2;
 data Value = AvailableMoney Party Token | Constant Arith.Int | NegValue Value
   | AddValue Value Value | SubValue Value Value | MulValue Value Value
   | DivValue Value Value | ChoiceValue ChoiceId | TimeIntervalStart
-  | TimeIntervalEnd | UseValue ValueId | Cond Observation Value Value;
+  | TimeIntervalEnd | UseValue ValueId | Cond Observation Value Value
+  deriving (Prelude.Read, Prelude.Show);
 
 data Observation = AndObs Observation Observation
   | OrObs Observation Observation | NotObs Observation | ChoseSomething ChoiceId
   | ValueGE Value Value | ValueGT Value Value | ValueLT Value Value
-  | ValueLE Value Value | ValueEQ Value Value | TrueObs | FalseObs;
+  | ValueLE Value Value | ValueEQ Value Value | TrueObs | FalseObs
+  deriving (Prelude.Read, Prelude.Show);
 
 equal_Observation :: Observation -> Observation -> Bool;
 equal_Observation TrueObs FalseObs = False;
@@ -336,7 +338,7 @@ equal_Value (AvailableMoney x11 x12) (AvailableMoney y11 y12) =
 equal_Value TimeIntervalEnd TimeIntervalEnd = True;
 equal_Value TimeIntervalStart TimeIntervalStart = True;
 
-data Payee = Account Party | Party Party;
+data Payee = Account Party | Party Party deriving (Prelude.Read, Prelude.Show);
 
 equal_Payee :: Payee -> Payee -> Bool;
 equal_Payee (Account x1) (Party x2) = False;
@@ -345,13 +347,15 @@ equal_Payee (Party x2) (Party y2) = equal_Party x2 y2;
 equal_Payee (Account x1) (Account y1) = equal_Party x1 y1;
 
 data Action = Deposit Party Party Token Value
-  | Choice ChoiceId [(Arith.Int, Arith.Int)] | Notify Observation;
+  | Choice ChoiceId [(Arith.Int, Arith.Int)] | Notify Observation
+  deriving (Prelude.Read, Prelude.Show);
 
 data Contract = Close | Pay Party Payee Token Value Contract
   | If Observation Contract Contract | When [Case] Arith.Int Contract
-  | Let ValueId Value Contract | Assert Observation Contract;
+  | Let ValueId Value Contract | Assert Observation Contract
+  deriving (Prelude.Read, Prelude.Show);
 
-data Case = Case Action Contract;
+data Case = Case Action Contract deriving (Prelude.Read, Prelude.Show);
 
 equal_Action :: Action -> Action -> Bool;
 equal_Action (Choice x21 x22) (Notify x3) = False;
@@ -437,19 +441,22 @@ instance Eq ChoiceId where {
 };
 
 data Input = IDeposit Party Party Token Arith.Int | IChoice ChoiceId Arith.Int
-  | INotify;
+  | INotify deriving (Prelude.Read, Prelude.Show);
 
 data IntervalError = InvalidInterval (Arith.Int, Arith.Int)
-  | IntervalInPastError Arith.Int (Arith.Int, Arith.Int);
+  | IntervalInPastError Arith.Int (Arith.Int, Arith.Int)
+  deriving (Prelude.Read, Prelude.Show);
 
-data Environment_ext a = Environment_ext (Arith.Int, Arith.Int) a;
+data Environment_ext a = Environment_ext (Arith.Int, Arith.Int) a
+  deriving (Prelude.Read, Prelude.Show);
 
 data State_ext a =
   State_ext [((Party, Token), Arith.Int)] [(ChoiceId, Arith.Int)]
-    [(ValueId, Arith.Int)] Arith.Int a;
+    [(ValueId, Arith.Int)] Arith.Int a
+  deriving (Prelude.Read, Prelude.Show);
 
 data IntervalResult = IntervalTrimmed (Environment_ext ()) (State_ext ())
-  | IntervalError IntervalError;
+  | IntervalError IntervalError deriving (Prelude.Read, Prelude.Show);
 
 choices :: forall a. State_ext a -> [(ChoiceId, Arith.Int)];
 choices (State_ext accounts choices boundValues minTime more) = choices;

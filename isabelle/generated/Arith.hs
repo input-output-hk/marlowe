@@ -1,8 +1,9 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Arith(Int(..), equal_int, less_eq_int, less_int, uminus_int, zero_int,
-         abs_int, plus_int, minus_int, times_int, divide_int)
+  Arith(Int(..), equal_int, less_eq_int, less_int, Num(..), One, Zero,
+         Zero_neq_one, uminus_int, zero_int, abs_int, plus_int, minus_int,
+         times_int, of_bool, divide_int)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -14,7 +15,7 @@ import qualified Prelude;
 import qualified Product_Type;
 import qualified Orderings;
 
-newtype Int = Int_of_integer Integer;
+newtype Int = Int_of_integer Integer deriving (Prelude.Read, Prelude.Show);
 
 integer_of_int :: Int -> Integer;
 integer_of_int (Int_of_integer k) = k;
@@ -37,7 +38,32 @@ instance Orderings.Ord Int where {
   less = less_int;
 };
 
-data Num = One | Bit0 Num | Bit1 Num;
+data Num = One | Bit0 Num | Bit1 Num deriving (Prelude.Read, Prelude.Show);
+
+one_integer :: Integer;
+one_integer = (1 :: Integer);
+
+class One a where {
+  one :: a;
+};
+
+instance One Integer where {
+  one = one_integer;
+};
+
+class Zero a where {
+  zero :: a;
+};
+
+instance Zero Integer where {
+  zero = (0 :: Integer);
+};
+
+class (One a, Zero a) => Zero_neq_one a where {
+};
+
+instance Zero_neq_one Integer where {
+};
 
 uminus_int :: Int -> Int;
 uminus_int k = Int_of_integer (negate (integer_of_int k));
@@ -78,6 +104,10 @@ minus_int k l = Int_of_integer (integer_of_int k - integer_of_int l);
 
 times_int :: Int -> Int -> Int;
 times_int k l = Int_of_integer (integer_of_int k * integer_of_int l);
+
+of_bool :: forall a. (Zero_neq_one a) => Bool -> a;
+of_bool True = one;
+of_bool False = zero;
 
 divide_integer :: Integer -> Integer -> Integer;
 divide_integer k l = fst (divmod_integer k l);

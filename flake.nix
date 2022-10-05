@@ -46,8 +46,9 @@
 
         # We build the different sessions that conform the Marlowe specification
         isabelle build -v -b -d isabelle Util
-        isabelle build -v -b -e -d isabelle Core
+        isabelle build -v -b -d isabelle Core
         isabelle build -v -b -d isabelle Examples
+        isabelle build -v -b -e -d isabelle CodeExports
         isabelle build -v -b -d isabelle StaticAnalysis
       '';
 

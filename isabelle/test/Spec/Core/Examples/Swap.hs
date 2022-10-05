@@ -9,7 +9,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
 import SemanticsTypes (Contract (..), Party (..), Payee(..), Token(..), Value(..), Case(..), Action(..), Input(..), equal_Contract)
 import Semantics (TransactionOutput(..), Transaction_ext(..), TransactionWarning(..), Payment(..), playTrace, txOutContract, txOutWarnings, txOutPayments, equal_TransactionWarning, equal_Payment)
-
+import qualified Examples.Swap
 
 -- FIXME: Isabelle doesn't export type synonims by default, see if we can fix that or
 --        make a common module that acts as a wrapper with the aliases and the orphan instances.
@@ -22,32 +22,32 @@ instance Eq Contract where {
 };
 
 -- FIXME: Make all the show instances.
-instance Show Contract where
-  show Close = "Close"
-  show (Pay _ _ _ _ _) = "Pay"
-  show (If _ _ _) = "If"
-  show (When _ _ _) = "When"
-  show (Let _ _ _) = "Let"
-  show (Assert _ _) = "Assert"
+-- instance Show Contract where
+--   show Close = "Close"
+--   show (Pay _ _ _ _ _) = "Pay"
+--   show (If _ _ _) = "If"
+--   show (When _ _ _) = "When"
+--   show (Let _ _ _) = "Let"
+--   show (Assert _ _) = "Assert"
 
 instance Eq TransactionWarning where {
   a == b = equal_TransactionWarning a b;
 }
 
-instance Show TransactionWarning where
-  show (TransactionNonPositiveDeposit _ _ _ _) = "TransactionNonPositiveDeposit"
-  show (TransactionNonPositivePay _ _ _ _) = "TransactionNonPositivePay"
-  show (TransactionPartialPay _ _ _ _ _) = "TransactionPartialPay"
-  show (TransactionShadowing _ _ _) = "TransactionShadowing"
-  show (TransactionAssertionFailed) = "TransactionAssertionFailed"
+-- instance Show TransactionWarning where
+--   show (TransactionNonPositiveDeposit _ _ _ _) = "TransactionNonPositiveDeposit"
+--   show (TransactionNonPositivePay _ _ _ _) = "TransactionNonPositivePay"
+--   show (TransactionPartialPay _ _ _ _ _) = "TransactionPartialPay"
+--   show (TransactionShadowing _ _ _) = "TransactionShadowing"
+--   show (TransactionAssertionFailed) = "TransactionAssertionFailed"
 
 
 instance Eq Payment where {
   a == b = equal_Payment a b;
 }
 
-instance Show Payment where
-  show (Payment _ _ _ _) = "Payment"
+-- instance Show Payment where
+--   show (Payment _ _ _ _) = "Payment"
 
 ------- Contract definition -------
 
@@ -79,7 +79,8 @@ contract firstParty secondParty =
 ------- Contract tests -------
 tests :: TestTree
 tests = testGroup "Swap"
-    [ testCase "Golden path" testGoldenPath
+    [ testCase "Manual happy path" testHappyPath
+    , testCase "Generated happy path" testGeneratedHappyPath
     ]
 
 
@@ -106,8 +107,8 @@ tokenBProvider = SwapParty { party = partyB
                            , amount = Constant amountB
                            , depositDeadline = Arith.Int_of_integer 20
                            }
-testGoldenPath :: IO ()
-testGoldenPath = do
+testHappyPath :: IO ()
+testHappyPath = do
   let inputs = [ IDeposit partyA partyA tokenA amountA
                , IDeposit partyB partyB tokenB amountB
                ]
@@ -122,4 +123,12 @@ testGoldenPath = do
                           , Payment partyB (Party $ partyA) tokenB amountB
                           ]
 
+testGeneratedHappyPath :: IO ()
+testGeneratedHappyPath =
+   case playTrace (Arith.Int_of_integer 0) (Examples.Swap.swapExample) Examples.Swap.happyPathTransactions of
+    TransactionError _ -> assertFailure "playTrace failed its execution"
+    TransactionOutput o -> do
+      txOutContract o @?= Close
+      txOutWarnings o @?= []
+      txOutPayments o @?= Examples.Swap.happyPathPayments
 

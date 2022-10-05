@@ -30,8 +30,7 @@ session Core in "Core" = HOL +
     Timeout
     TransactionBound
     ValidState
-    CodeExports
-  export_files (in "../generated") [3] "*:code/**"
+
 
 
 session StaticAnalysis in "StaticAnalysis" = HOL +
@@ -53,6 +52,17 @@ session Examples in "Examples" = HOL +
   theories
     Swap
 
+session CodeExports in "CodeExports" = HOL +
+  description "Create haskell code out of the isabelle specification"
+  options [document = false, system_heaps = false]
+  sessions
+    "HOL-Library"
+    "Core"
+    "Examples"
+  theories
+    CodeExports
+  export_files (in "../generated") [3] "*:code/**"
+
 chapter Doc
 
 session Cheatsheet in "Doc/Cheatsheet" = HOL +
@@ -72,7 +82,9 @@ session Specification in "Doc/Specification" = HOL +
     "HOL-Library"
     "Core"
     "Util"
+    "CodeExports"
     "Examples"
+    
   theories
     Specification
     Core
@@ -82,7 +94,7 @@ session Specification in "Doc/Specification" = HOL +
   document_theories
     "Core.SemanticsTypes"
     "Core.BlockchainTypes"
-    "Core.CodeExports"
+    "CodeExports.CodeExports"
     "Util.ByteString"
     "Examples.Swap"
   document_files

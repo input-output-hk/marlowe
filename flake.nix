@@ -43,6 +43,8 @@
           isabelle build -v -b HOL-Library
         fi
 
+        # We clean the generated files to avoid orphans
+        rm -Rf isabelle/generated
 
         # We build the different sessions that conform the Marlowe specification
         isabelle build -v -b -d isabelle Util

@@ -21,33 +21,13 @@ instance Eq Contract where {
   a == b = equal_Contract a b;
 };
 
--- FIXME: Make all the show instances.
--- instance Show Contract where
---   show Close = "Close"
---   show (Pay _ _ _ _ _) = "Pay"
---   show (If _ _ _) = "If"
---   show (When _ _ _) = "When"
---   show (Let _ _ _) = "Let"
---   show (Assert _ _) = "Assert"
-
 instance Eq TransactionWarning where {
   a == b = equal_TransactionWarning a b;
 }
 
--- instance Show TransactionWarning where
---   show (TransactionNonPositiveDeposit _ _ _ _) = "TransactionNonPositiveDeposit"
---   show (TransactionNonPositivePay _ _ _ _) = "TransactionNonPositivePay"
---   show (TransactionPartialPay _ _ _ _ _) = "TransactionPartialPay"
---   show (TransactionShadowing _ _ _) = "TransactionShadowing"
---   show (TransactionAssertionFailed) = "TransactionAssertionFailed"
-
-
 instance Eq Payment where {
   a == b = equal_Payment a b;
 }
-
--- instance Show Payment where
---   show (Payment _ _ _ _) = "Payment"
 
 ------- Contract definition -------
 

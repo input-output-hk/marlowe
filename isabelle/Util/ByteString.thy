@@ -7,14 +7,67 @@ begin
 chapter \<open>ByteString \label{sec:bytestring}\<close>
 text \<open>Conceptually, a \<^term>\<open>ByteString\<close> is defined as a list of 8-bit words.\<close>
 
-datatype ByteString = ByteString "(8 word) list"
+datatype (plugins del: "size") ByteString = ByteString "(8 word) list"
+
+
+definition emptyByteString :: "ByteString" where
+"emptyByteString = ByteString []"
+
+fun singletonByteString :: "8 word \<Rightarrow> ByteString" where
+"singletonByteString w = ByteString [w]"
+
+fun consByteString :: "8 word \<Rightarrow> ByteString \<Rightarrow> ByteString" where
+"consByteString w (ByteString t) = ByteString (w # t)"
+
+fun appendByteStrings :: "ByteString \<Rightarrow> ByteString \<Rightarrow> ByteString" where
+"appendByteStrings (ByteString a) (ByteString b) = ByteString (a @ b)"
+
+fun innerListByteString :: "ByteString \<Rightarrow> 8 word list" where
+"innerListByteString (ByteString x) = x"
+
+lemma lazyConsByteString : "consByteString w t = ByteString (w # innerListByteString t)"
+  by (metis consByteString.simps innerListByteString.elims)
+
+lemma intToWordToUint : "x \<ge> 0 \<Longrightarrow> x < 256 \<Longrightarrow> uint (word_of_int x :: 8 word) = (x :: int)"
+  apply (simp only:uint_word_of_int)
+  by auto
+
+lemma appendByteStringsAssoc : "appendByteStrings (appendByteStrings x y) z = appendByteStrings x (appendByteStrings y z)"
+  by (metis append.assoc appendByteStrings.simps innerListByteString.elims)
+
+fun lengthByteString :: "ByteString \<Rightarrow> nat" where
+"lengthByteString (ByteString x) = length x"
+
+fun takeByteString :: "nat \<Rightarrow> ByteString \<Rightarrow> ByteString" where
+"takeByteString n (ByteString x) = ByteString (take n x)"
+
+fun dropByteString :: "nat \<Rightarrow> ByteString \<Rightarrow> ByteString" where
+"dropByteString n (ByteString x) = ByteString (drop n x)"
+
+lemma appendTakeDropByteString : "appendByteStrings (takeByteString n x) (dropByteString n x) = x"
+  by (metis appendByteStrings.simps append_take_drop_id dropByteString.simps innerListByteString.cases takeByteString.simps)
+
 
 text \<open>The \<^term>\<open>BS\<close> helper allows to create a \<^term>\<open>ByteString\<close> out of a regular \<^term>\<open>string\<close>.\<close>
 
 fun BS :: "string \<Rightarrow> ByteString" where
   "BS str = ByteString (map of_char str)"
 
+
 text \<open>For example \<^term>\<open>BS ''abc''\<close> is evaluated to @{value "BS ''abc''"}\<close>
+
+
+subsubsection \<open>Size\<close>
+
+instantiation ByteString :: size
+begin
+
+definition size_ByteString where
+  size_ByteString_overloaded_def: "size_ByteString = lengthByteString"
+instance ..
+
+end
+
 
 section \<open>Ordering\<close>
 
@@ -30,7 +83,6 @@ fun less_eq_BS' :: "(8 word) list \<Rightarrow> (8 word) list \<Rightarrow> bool
 "less_eq_BS' (Cons h1 t1) (Cons h2 t2) =
    (if h2 < h1 then False
     else (if h1 = h2 then less_eq_BS' t1 t2 else True))"
-
 
 fun less_eq_BS :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
   "less_eq_BS (ByteString xs) (ByteString ys) = less_eq_BS' xs ys" 
@@ -96,6 +148,14 @@ lemma byteStringLessEqTwiceEq' : "less_eq_BS' x y \<Longrightarrow> less_eq_BS' 
 lemma byteStringLessEqTwiceEq : "less_eq_BS x y \<Longrightarrow> less_eq_BS y x \<Longrightarrow> x = y"
 (*<*)
   by (metis ByteString.exhaust byteStringLessEqTwiceEq' less_eq_BS.simps)
+(*>*)
 
+lemma lineaBS : "less_eq_BS x y \<or> less_eq_BS y x"
+(*<*)
+  using oneLessEqBS by blast
 end
 (*>*)
+
+
+
+

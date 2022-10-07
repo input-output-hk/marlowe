@@ -8,6 +8,7 @@ session Util in "Util" = HOL +
   theories
     MList
     ByteString
+    Serialisation
     SList
     Utils
     SpecificationLatexSugar

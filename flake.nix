@@ -87,8 +87,16 @@
         } ''
           export HOME=$TMP
           unpackPhase
+          mv isabelle/generated isabelle/generated-old
           build-marlowe-proofs false
+          if ! diff --recursive --new-file --brief isabelle/generated isabelle/generated-old
+          then
+            echo "isabelle build generated different files, did you check in isabelle/generated?" >&2
+            exit 1
+          fi
+
           build-marlowe-docs
+
           touch $out
         '';
       };

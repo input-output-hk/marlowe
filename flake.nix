@@ -56,6 +56,9 @@
 
       build-marlowe-docs = writeShellScriptBinInRepoRoot "build-marlowe-docs" ''
         #!/bin/bash
+        echo "Generating Literate Haskell Tex"
+        lhs2TeX reference/src/Language/Marlowe/Json.lhs | sed -n '/begin{hscode}/,$p' > isabelle/Doc/Specification/document/json.tex
+
         echo "Building Marlowe docs"
         isabelle document -v -V -d isabelle -P papers Cheatsheet
         isabelle document -v -V -d isabelle -P papers Specification
@@ -67,7 +70,7 @@
       '';
 
       latex = (pkgs.texlive.combine {
-          inherit (pkgs.texlive) scheme-basic ulem collection-fontsrecommended mathpartir;
+          inherit (pkgs.texlive) scheme-basic ulem collection-fontsrecommended mathpartir stmaryrd polytable lazylist;
       });
 
       project = pkgs.haskell-nix.cabalProject' {
@@ -75,7 +78,7 @@
         compiler-nix-name = "ghc923";
         shell.tools.cabal = {};
         shell.inputsFrom = [ self.packages.${system}.isabelle-test ];
-        shell.nativeBuildInputs = [build-marlowe-proofs edit-marlowe-proofs build-marlowe-docs latex];
+        shell.nativeBuildInputs = [build-marlowe-proofs edit-marlowe-proofs build-marlowe-docs latex pkgs.haskellPackages.lhs2tex];
       };
 
       flake = project.flake {};

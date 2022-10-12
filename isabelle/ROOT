@@ -85,7 +85,7 @@ session Specification in "Doc/Specification" = HOL +
     "Util"
     "CodeExports"
     "Examples"
-    
+
   theories
     Specification
     Core
@@ -100,4 +100,6 @@ session Specification in "Doc/Specification" = HOL +
     "Examples.Swap"
   document_files
     "root.tex"
+    "json.tex"
+    "literate-haskell.sty"
 

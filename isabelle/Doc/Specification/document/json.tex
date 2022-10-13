@@ -1,10 +1,44 @@
+
+
+The Json specification for Marlowe Core is defined in Literate Haskell using the Aeson library. In order
+to fully understand the specification, some knowledge of the library is recommended. For each type we
+define a way to parse the JSON value to the datatype (FromJSON instances) and a way to serialize the
+datatype to JSON (ToJSON instances).
+
+
+\isamarkupsubsection{Party}
+
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{5}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{9}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
-\>[B]{}\mathbf{module}\;\Conid{\Conid{Language}.\Conid{Marlowe}.Json}\;\mathbf{where}{}\<[E]%
-\\[\blanklineskip]%
-\>[B]{}\Varid{testLiterate}\mathbin{::}\Conid{IO}\;(){}\<[E]%
+\>[B]{}\mathbf{instance}\;\Conid{ToJSON}\;\Conid{Party}\;\mathbf{where}{}\<[E]%
 \\
-\>[B]{}\Varid{testLiterate}\mathrel{=}\Varid{putStrLn}\;\text{\ttfamily \char34 Yes,~this~is~literate~haskell.~Thanks~sed!\char34}{}\<[E]%
+\>[B]{}\hsindent{5}{}\<[5]%
+\>[5]{}\Varid{toJSON}\;(\Conid{Address}\;\Varid{address})\mathrel{=}{}\<[E]%
+\\
+\>[5]{}\hsindent{4}{}\<[9]%
+\>[9]{}\Varid{object}\;[\mskip1.5mu \text{\ttfamily \char34 address\char34}\mathbin{.=}\Varid{address}\mskip1.5mu]{}\<[E]%
+\\
+\>[B]{}\hsindent{5}{}\<[5]%
+\>[5]{}\Varid{toJSON}\;(\Conid{Role}\;\Varid{name})\mathrel{=}{}\<[E]%
+\\
+\>[5]{}\hsindent{4}{}\<[9]%
+\>[9]{}\Varid{object}\;[\mskip1.5mu \text{\ttfamily \char34 role\char95 token\char34}\mathbin{.=}\Varid{name}\mskip1.5mu]{}\<[E]%
+\\[\blanklineskip]%
+\>[B]{}\Varid{addressExample}\mathbin{::}\Conid{Party}{}\<[E]%
+\\
+\>[B]{}\Varid{addressExample}\mathrel{=}\Conid{Address}\;\text{\ttfamily \char34 example~address\char34}{}\<[E]%
+\\[\blanklineskip]%
+\>[B]{}\Varid{roleExample}\mathbin{::}\Conid{Party}{}\<[E]%
+\\
+\>[B]{}\Varid{roleExample}\mathrel{=}\Conid{Role}\;\text{\ttfamily \char34 example~role\char34}{}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
+\par
+
+The example address is serialized as \ensuremath{\{\mskip1.5mu \text{\ttfamily \char34 address\char34}\mathbin{:}\text{\ttfamily \char34 example~address\char34}\mskip1.5mu\}}, and the role
+example as \ensuremath{\{\mskip1.5mu \text{\ttfamily \char34 role\char95 token\char34}\mathbin{:}\text{\ttfamily \char34 example~role\char34}\mskip1.5mu\}}
+
+

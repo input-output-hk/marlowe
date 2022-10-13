@@ -57,7 +57,7 @@
       build-marlowe-docs = writeShellScriptBinInRepoRoot "build-marlowe-docs" ''
         #!/bin/bash
         echo "Generating Literate Haskell Tex"
-        lhs2TeX reference/src/Language/Marlowe/Json.lhs | sed -n '/begin{hscode}/,$p' > isabelle/Doc/Specification/document/json.tex
+        lhs2TeX isabelle/haskell/MarloweCoreJson.lhs | sed '1,/PATTERN FOR SED/d' > isabelle/Doc/Specification/document/marlowe-core-json.tex
 
         echo "Building Marlowe docs"
         isabelle document -v -V -d isabelle -P papers Cheatsheet

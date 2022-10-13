@@ -100,6 +100,6 @@ session Specification in "Doc/Specification" = HOL +
     "Examples.Swap"
   document_files
     "root.tex"
-    "json.tex"
+    "marlowe-core-json.tex"
     "literate-haskell.sty"
 

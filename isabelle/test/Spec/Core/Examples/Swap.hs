@@ -7,27 +7,14 @@ module Spec.Core.Examples.Swap (tests) where
 import qualified Arith;
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
-import SemanticsTypes (Contract (..), Party (..), Payee(..), Token(..), Value(..), Case(..), Action(..), Input(..), equal_Contract)
-import Semantics (TransactionOutput(..), Transaction_ext(..), TransactionWarning(..), Payment(..), playTrace, txOutContract, txOutWarnings, txOutPayments, equal_TransactionWarning, equal_Payment)
+import CoreOrphanEq
+import SemanticsTypes (Contract (..), Party (..), Payee(..), Token(..), Value(..), Case(..), Action(..), Input(..))
+import Semantics (TransactionOutput(..), Transaction_ext(..), TransactionWarning(..), Payment(..), playTrace, txOutContract, txOutWarnings, txOutPayments)
 import qualified Examples.Swap
 
 -- FIXME: Isabelle doesn't export type synonims by default, see if we can fix that or
 --        make a common module that acts as a wrapper with the aliases and the orphan instances.
 type Timeout = Arith.Int
-
--- FIXME: I wasn't able to export some Eq instances (it does export the equal_X functions). See if
---        we can resolve that or at least put the manual instances in a separate module.
-instance Eq Contract where {
-  a == b = equal_Contract a b;
-};
-
-instance Eq TransactionWarning where {
-  a == b = equal_TransactionWarning a b;
-}
-
-instance Eq Payment where {
-  a == b = equal_Payment a b;
-}
 
 ------- Contract definition -------
 

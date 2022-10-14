@@ -1,6 +1,6 @@
 index-state: 2022-06-23T00:00:00Z
 packages: isabelle
-          reference
+          haskell
 
 write-ghc-environment-files: never
 tests: true

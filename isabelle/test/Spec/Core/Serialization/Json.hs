@@ -5,7 +5,7 @@ module Spec.Core.Serialization.Json (tests) where
 
 import Data.Aeson (decode, encode)
 import qualified Data.ByteString.Lazy as L
-import MarloweCoreJson (addressExample, roleExample, dolarToken, internalPayeeExample)
+import MarloweCoreJson (addressExample, roleExample, dolarToken, internalPayeeExample, choiceExample)
 import Test.Tasty (TestTree, TestName, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Test.Tasty.Golden (goldenVsStringDiff)
@@ -25,6 +25,7 @@ tests = testGroup "Core Json"
     [ partyTests
     , tokenTests
     , payeeTests
+    , choiceIdTests
     ]
 
 -- === Party ===
@@ -100,5 +101,28 @@ testPayeeRoundtrip =
 testGoldenInternalPayee :: TestTree
 testGoldenInternalPayee = goldenTest
     "Golden Internal Payee"
-    (goldenPath </> "test/Spec/Core/Serialization/golden/internal-payee.golden")
+    (goldenPath </> "internal-payee.golden")
     (pure $ encode internalPayeeExample)
+
+-- === ChoiceId ===
+
+choiceIdTests :: TestTree
+choiceIdTests = testGroup "ChoiceId"
+    [ testCase "ChoiceId Roundtrip" testChoiceIdRoundtrip
+    , testGoldenChoiceId
+    ]
+
+
+-- TODO: Generate Gen instances and change for a property based test.
+testChoiceIdRoundtrip :: IO ()
+testChoiceIdRoundtrip =
+    let
+        roundtrip = decode $ encode choiceExample
+    in
+        roundtrip @?= Just choiceExample
+
+testGoldenChoiceId :: TestTree
+testGoldenChoiceId = goldenTest
+    "Golden Choice Id"
+    (goldenPath </> "choice-id.golden")
+    (pure $ encode choiceExample)

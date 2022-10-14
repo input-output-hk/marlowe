@@ -11,7 +11,7 @@
 
 -- We configure ghci to include the relevant files so that \eval can print
 -- them
-%options ghci -iisabelle/generated:isabelle/haskell
+%options cabal exec ghci -- -iisabelle/generated:isabelle/haskell
 
 -- The tex that this file generates includes all the necesary directives
 -- to be called by pdflatex directly, but we are actually including this
@@ -31,12 +31,21 @@ import Control.Applicative ((<|>), (<*>))
 import CoreOrphanEq
 import Data.Aeson (object, withObject, (.=), (.:), encode)
 import Data.Aeson.Types (ToJSON(..), FromJSON(..))
+import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
-import SemanticsTypes (Party(..), Token(..), Payee(..))
+import SemanticsTypes (Party(..), Token(..), Payee(..), ChoiceId(..))
 
+-- These are some helper functions to print and pretty print a ToJSON example
 encodeExample :: ToJSON a => a -> IO ()
 encodeExample a = putStrLn $ C.unpack $ encode a
+
+prettyEncodeExample :: ToJSON a => a -> IO ()
+prettyEncodeExample a = putStrLn $ wrapInVerbatim $ C.unpack $ encodePretty a
+    where
+    wrapInVerbatim :: String -> String
+    wrapInVerbatim str = "\\begin{verbatim}" ++ str ++ "\\end{verbatim}"
+
 \end{code}
 %endif
 
@@ -159,3 +168,40 @@ externalPayeeExample = Party roleExample
 \par
 
 is serialized as \eval{encodeExample externalPayeeExample}
+
+\isamarkupsection{ChoiceId}
+
+The \emph{ChoiceId} type is serialized as an object with two properties, \emph{choice\_name} and
+\emph{choice\_owner}
+
+
+\begin{code}
+
+instance ToJSON ChoiceId where
+  toJSON (ChoiceId name party) = object
+      [ "choice_name" .= name
+      , "choice_owner" .= party
+      ]
+
+
+instance FromJSON ChoiceId where
+  parseJSON = withObject "ChoiceId"
+    (\v ->
+       ChoiceId <$> (v .: "choice_name")
+                <*> (v .: "choice_owner")
+    )
+
+\end{code}
+
+for example, the following \emph{ChoiceId}
+
+\begin{code}
+
+choiceExample :: ChoiceId
+choiceExample = ChoiceId "ada price" addressExample
+\end{code}
+
+
+is serialized as
+
+\perform{prettyEncodeExample choiceExample}

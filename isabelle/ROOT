@@ -29,6 +29,7 @@ session Core in "Core" = HOL +
     SemanticsTypes
     SingleInputTransactions
     Timeout
+    TimeRange
     TransactionBound
     ValidState
 

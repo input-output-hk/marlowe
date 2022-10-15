@@ -723,6 +723,10 @@ fun gtIfNone :: "int option \<Rightarrow> int \<Rightarrow> bool" where
 "gtIfNone None _ = True" |
 "gtIfNone (Some x) y = (x > y)"
 
+fun geIfNone :: "int option \<Rightarrow> int \<Rightarrow> bool" where
+"geIfNone None _ = True" |
+"geIfNone (Some x) y = (x \<ge> y)"
+
 fun subIfSome :: "int option \<Rightarrow> int \<Rightarrow> int option" where
 "subIfSome None _ = None" |
 "subIfSome (Some x) y = Some (x - y)"

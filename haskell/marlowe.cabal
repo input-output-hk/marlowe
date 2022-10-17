@@ -1,11 +1,11 @@
 name:                   marlowe
 version:                0.3.0.0
 license:                BSD3
-license-file:           LICENSE
+license-file:           ../LICENSE
 author:                 Alexander Nemish
 maintainer:             alexander.nemish@iohk.io
 build-type:             Simple
-extra-source-files:     README.md
+extra-source-files:     ../README.md
 cabal-version:          >= 1.10
 
 executable marlowe

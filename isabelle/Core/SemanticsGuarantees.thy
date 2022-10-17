@@ -10,8 +10,8 @@ begin
 fun less_eq_Party :: "Party \<Rightarrow> Party \<Rightarrow> bool" where
 "less_eq_Party (Address _) (Role _) = True" |
 "less_eq_Party (Role _) (Address _) = False" |
-"less_eq_Party (Address x) (Address y) = less_eq_BS x y" |
-"less_eq_Party (Role x) (Role y) = less_eq_BS x y"
+"less_eq_Party (Address x) (Address y) =  (x \<le> y)" |
+"less_eq_Party (Role x) (Role y) =  (x \<le> y)"
 
 fun less_Party :: "Party \<Rightarrow> Party \<Rightarrow> bool" where
 "less_Party a b = (\<not> (less_eq_Party b a))"
@@ -29,8 +29,8 @@ lemma linearParty : "x \<le> y \<or> y \<le> (x::Party)"
   apply (cases x)
   subgoal for x
     apply (cases y)
-    subgoal for y
-      using less_eq_Party.simps(3) less_eq_Party_def oneLessEqBS by blast
+    subgoal for y      
+      by (metis SemanticsGuarantees.less_eq_Party.elims(3) SemanticsTypes.Party.distinct(1) SemanticsTypes.Party.inject(1) less_eq_ByteString_def less_eq_Party_def oneLessEqBS)
     subgoal for y
       by (simp add: less_eq_Party_def)
     done
@@ -39,7 +39,7 @@ lemma linearParty : "x \<le> y \<or> y \<le> (x::Party)"
     subgoal for y
       by (simp add: less_eq_Party_def)
     subgoal for y
-      using less_eq_Party.simps(4) less_eq_Party_def oneLessEqBS by blast
+      by (meson SemanticsGuarantees.less_eq_Party.simps(4) less_eq_ByteString_def less_eq_Party_def oneLessEqBS)
     done
   done
 
@@ -57,30 +57,26 @@ next
   thus "x \<le> x" by simp
 next
   fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: Party)"
+  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: Party)"    
     apply (auto simp add:less_eq_Party_def)
     apply (cases x)
      apply (cases y)
       apply (cases z)
-    using byteStringOrder less_eq_Party.simps(3) apply blast
+    apply (meson SemanticsGuarantees.less_eq_Party.simps(3) less_eq_BS_trans less_eq_ByteString_def)
       apply simp_all
+    
      apply (metis Party.exhaust less_eq_Party.simps(1) less_eq_Party.simps(2))
      apply (cases y)
       apply (cases z)
       apply simp_all
-    by (metis Party.exhaust byteStringOrder less_eq_Party.simps(2) less_eq_Party.simps(4))
+    by (metis (full_types) SemanticsGuarantees.less_eq_Party.elims(2) SemanticsGuarantees.less_eq_Party.simps(4) SemanticsTypes.Party.simps(4) less_eq_BS_trans less_eq_ByteString_def)
+  
   thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
 next
   fix x y z
   have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Party)"
-    apply (auto simp add:less_eq_Party_def)
-    apply (cases x)
-     apply (cases y)
-    apply (simp add: byteStringLessEqTwiceEq)
-     apply simp
-     apply (cases y)
-     apply simp
-    by (simp add: byteStringLessEqTwiceEq)
+    by (smt (verit) SemanticsGuarantees.less_eq_Party.elims(2) SemanticsGuarantees.less_eq_Party.simps(3) SemanticsTypes.Party.inject(2) SemanticsTypes.Party.simps(4) byteStringLessEqTwiceEq less_eq_ByteString_def less_eq_Party_def)
+ 
   thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Party)" by simp
 next
   fix x y
@@ -111,7 +107,7 @@ qed
 end
 
 lemma linearToken : "x \<le> y \<or> y \<le> (x::Token)"
-  by (smt Token.simps(1) less_eq_Tok.elims(3) less_eq_Token_def lineaBS)
+  by (smt (verit, best) SemanticsGuarantees.less_eq_Tok.elims(3) SemanticsTypes.Token.inject less_eq_Token_def oneLessEqBS)
 
 instantiation "Token" :: linorder
 begin
@@ -128,7 +124,7 @@ next
 next
   fix x y z
   have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: Token)"
-    by (smt byteStringOrder less_BS.simps less_eq_Tok.elims(2) less_eq_Tok.simps less_eq_Token_def oneLessEqBS)
+    by (smt less_eq_BS_trans less_BS.simps less_eq_Tok.elims(2) less_eq_Tok.simps less_eq_Token_def oneLessEqBS)
   thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
 next
   fix x y z
@@ -185,7 +181,7 @@ next
     apply (cases y)
     apply (cases z)
     apply (simp only:less_eq_ChoiceId_def)
-    by (smt byteStringOrder less_BS.simps less_eq_ChoId.simps oneLessEqBS order.trans)
+    by (smt less_eq_BS_trans less_BS.simps less_eq_ChoId.simps oneLessEqBS order.trans)
   thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
 next
   fix x y z
@@ -236,7 +232,7 @@ next
 next
   fix x y z
   have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: ValueId)"
-    by (smt ValueId.simps(1) byteStringOrder less_eq_ValId.elims(2) less_eq_ValId.elims(3) less_eq_ValueId_def)
+    by (smt ValueId.simps(1) less_eq_BS_trans less_eq_ValId.elims(2) less_eq_ValId.elims(3) less_eq_ValueId_def)
   thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
 next
   fix x y z

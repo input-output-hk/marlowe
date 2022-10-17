@@ -43,10 +43,14 @@
           isabelle build -v -b HOL-Library
         fi
 
+        # We clean the generated files to avoid orphans
+        rm -Rf isabelle/generated
 
         # We build the different sessions that conform the Marlowe specification
         isabelle build -v -b -d isabelle Util
         isabelle build -v -b -d isabelle Core
+        isabelle build -v -b -d isabelle Examples
+        isabelle build -v -b -e -d isabelle CodeExports
         isabelle build -v -b -d isabelle StaticAnalysis
       '';
 
@@ -61,9 +65,11 @@
         #!/bin/bash
         isabelle jedit -d isabelle -u isabelle/Doc/Specification/Specification.thy
       '';
+
       latex = (pkgs.texlive.combine {
           inherit (pkgs.texlive) scheme-basic ulem collection-fontsrecommended mathpartir;
       });
+
       project = pkgs.haskell-nix.cabalProject' {
         src = ./.;
         compiler-nix-name = "ghc923";
@@ -81,8 +87,16 @@
         } ''
           export HOME=$TMP
           unpackPhase
+          mv isabelle/generated isabelle/generated-old
           build-marlowe-proofs false
+          if ! diff --recursive --new-file --brief isabelle/generated isabelle/generated-old
+          then
+            echo "isabelle build generated different files, did you check in isabelle/generated?" >&2
+            exit 1
+          fi
+
           build-marlowe-docs
+
           touch $out
         '';
       };

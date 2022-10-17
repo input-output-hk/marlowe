@@ -595,6 +595,7 @@ record TransactionOutputRecord = txOutWarnings :: "TransactionWarning list"
                                  txOutState :: State
                                  txOutContract :: Contract
 
+
 datatype TransactionOutput = TransactionOutput TransactionOutputRecord
                            | TransactionError TransactionError
 

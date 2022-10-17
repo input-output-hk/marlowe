@@ -688,19 +688,19 @@ fun calculateSymVars :: "State option \<Rightarrow> Transaction list \<Rightarro
 (* Test1 for calculateSymVars *)
 
 definition role_alice :: Party where
-"role_alice = Role [1]"
+"role_alice = Role (BS ''alice'')"
 
 definition role_bob :: Party where
-"role_bob = Role [2]"
+"role_bob = Role (BS ''bob'')"
 
 definition role_carol :: Party where
-"role_carol = Role [3]"
+"role_carol = Role (BS ''carol'')"
 
 definition token_ada :: Token where
-"token_ada = Token [] []"
+"token_ada = Token (BS '''') (BS '''')"
 
 definition choice_choice :: ChoiceName where
-"choice_choice = [1]"
+"choice_choice = BS ''1''"
 
 definition badEscrow_aux :: Contract where
 "badEscrow_aux = (When [

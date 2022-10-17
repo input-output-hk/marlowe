@@ -4,7 +4,7 @@ theory SemanticsTypes
   imports
     BlockchainTypes
     ListTools
-    Util.Serialisation
+    Util.ByteString
     "Util.SpecificationLatexSugar"
 begin
 (*>*)

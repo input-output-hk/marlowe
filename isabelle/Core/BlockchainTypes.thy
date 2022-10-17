@@ -1,7 +1,7 @@
 (*<*)
 \<comment> \<open>This module defines the types we abstract from Blockchain specific implementation\<close>
 theory BlockchainTypes
-imports Main Util.Serialisation
+imports Main Util.ByteString
 begin
 (*>*)
 
@@ -35,8 +35,8 @@ text \<open>To define a fixed participant in the contract \secref{sec:participan
 and to make payouts to them, we need to express an \<^term>\<open>Address\<close>.\<close>
 type_synonym Address = ByteString
 
-text \<open>In the context of this specification, these string types are opaque, and we don't enforce
-a particular encoding or format.\<close>
+text \<open>In the context of this specification, these \<^term>\<open>ByteString\<close> types are opaque, and we don't enforce
+a particular encoding or format, only that they can be sorted \secref{sec:bytestring}.\<close>
 
 text \<open>The \<^term>\<open>Timeout\<close>s that prevent us from waiting forever for external \<^term>\<open>Input\<close>s are represented
 by the number of milliseconds from the Unix Epoch \<^footnote>\<open>January 1st, 1970 at 00:00:00 UTC\<close>. \<close>

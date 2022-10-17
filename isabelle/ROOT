@@ -7,6 +7,7 @@ session Util in "Util" = HOL +
     "HOL-Library"
   theories
     MList
+    ByteString
     Serialisation
     SList
     Utils
@@ -30,7 +31,8 @@ session Core in "Core" = HOL +
     Timeout
     TransactionBound
     ValidState
-  export_files (in generated) [3] "*:code/**"
+
+
 
 session StaticAnalysis in "StaticAnalysis" = HOL +
   description "Proves around StaticAnalysis"
@@ -40,6 +42,27 @@ session StaticAnalysis in "StaticAnalysis" = HOL +
     "Core"
   theories
     StaticAnalysis
+
+
+session Examples in "Examples" = HOL +
+  description "Example marlowe contracts"
+  options [document = false, system_heaps = false]
+  sessions
+    "HOL-Library"
+    "Core"
+  theories
+    Swap
+
+session CodeExports in "CodeExports" = HOL +
+  description "Create haskell code out of the isabelle specification"
+  options [document = false, system_heaps = false]
+  sessions
+    "HOL-Library"
+    "Core"
+    "Examples"
+  theories
+    CodeExports
+  export_files (in "../generated") [3] "*:code/**"
 
 chapter Doc
 
@@ -60,14 +83,21 @@ session Specification in "Doc/Specification" = HOL +
     "HOL-Library"
     "Core"
     "Util"
+    "CodeExports"
+    "Examples"
+    
   theories
     Specification
     Core
     Guarantees
     Extended
-  document_theories 
+    Examples
+  document_theories
     "Core.SemanticsTypes"
     "Core.BlockchainTypes"
+    "CodeExports.CodeExports"
+    "Util.ByteString"
+    "Examples.Swap"
   document_files
     "root.tex"
 

@@ -27,14 +27,20 @@
 
 module MarloweCoreJson where
 
+import Arith (Int(..))
+import qualified Arith
 import Control.Applicative ((<|>), (<*>))
 import CoreOrphanEq
-import Data.Aeson (object, withObject, (.=), (.:), encode)
-import Data.Aeson.Types (ToJSON(..), FromJSON(..))
+import ArithNumInstance
+import Data.Aeson (object, withObject, withText, withScientific, (.=), (.:), encode)
+import Data.Aeson.Types (Parser, ToJSON(..), FromJSON(..))
+import qualified Data.Aeson.Types as JSON
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
-import SemanticsTypes (Party(..), Token(..), Payee(..), ChoiceId(..))
+import qualified Data.Text as T
+import Data.Scientific (Scientific, floatingOrInteger)
+import SemanticsTypes (Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..))
 
 -- These are some helper functions to print and pretty print a ToJSON example
 encodeExample :: ToJSON a => a -> IO ()
@@ -196,7 +202,6 @@ instance FromJSON ChoiceId where
 for example, the following \emph{ChoiceId}
 
 \begin{code}
-
 choiceExample :: ChoiceId
 choiceExample = ChoiceId "ada price" addressExample
 \end{code}
@@ -205,3 +210,381 @@ choiceExample = ChoiceId "ada price" addressExample
 is serialized as
 
 \perform{prettyEncodeExample choiceExample}
+
+\isamarkupsection{Values}
+
+The \emph{ValueId} type is serialized as a literal string.
+
+\begin{code}
+instance ToJSON ValueId where
+    toJSON (ValueId x) = toJSON x
+
+instance FromJSON ValueId where
+    parseJSON = withText "ValueId" $ return . ValueId . T.unpack
+\end{code}
+
+The \emph{Value} serialization depends on the constructor. A \emph{Constant}
+is serialized as a \emph{number}, \emph{TimeIntervalStart} and \emph{TimeIntervalEnd} are serialized as literal
+strings, and the rest are serialized as a single object (with keys depending on the constructor).
+
+\begin{code}
+instance ToJSON Value where
+  toJSON (AvailableMoney accountId token) = object
+      [ "amount_of_token" .= token
+      , "in_account" .= accountId
+      ]
+  toJSON (Constant (Int_of_integer x)) = toJSON x
+  toJSON (NegValue x) = object
+      [ "negate" .= x ]
+  toJSON (AddValue lhs rhs) = object
+      [ "add" .= lhs
+      , "and" .= rhs
+      ]
+  toJSON (SubValue lhs rhs) = object
+      [ "value" .= lhs
+      , "minus" .= rhs
+      ]
+  toJSON (MulValue lhs rhs) = object
+      [ "multiply" .= lhs
+      , "times" .= rhs
+      ]
+  toJSON (DivValue lhs rhs) = object
+      [ "divide" .= lhs
+      , "by" .= rhs
+      ]
+  toJSON (ChoiceValue choiceId) = object
+      [ "value_of_choice" .= choiceId ]
+  toJSON TimeIntervalStart = JSON.String $ T.pack "time_interval_start"
+  toJSON TimeIntervalEnd = JSON.String $ T.pack "time_interval_end"
+  toJSON (UseValue valueId) = object
+      [ "use_value" .= valueId ]
+  toJSON (Cond obs tv ev) = object
+      [ "if" .= obs
+      , "then" .= tv
+      , "else" .= ev
+      ]
+
+instance FromJSON Value where
+  parseJSON (JSON.Object v) =
+        (AvailableMoney <$> (v .: "in_account")
+                        <*> (v .: "amount_of_token"))
+    <|> (NegValue <$> (v .: "negate"))
+    <|> (AddValue <$> (v .: "add")
+                  <*> (v .: "and"))
+    <|> (SubValue <$> (v .: "value")
+                  <*> (v .: "minus"))
+    <|> (MulValue <$> (v .: "multiply")
+                  <*> (v .: "times"))
+    <|> (DivValue <$> (v .: "divide") <*> (v .: "by"))
+    <|> (ChoiceValue <$> (v .: "value_of_choice"))
+    <|> (UseValue <$> (v .: "use_value"))
+    <|> (Cond <$> (v .: "if")
+              <*> (v .: "then")
+              <*> (v .: "else"))
+  parseJSON (JSON.String "time_interval_start") = return TimeIntervalStart
+  parseJSON (JSON.String "time_interval_end") = return TimeIntervalEnd
+  parseJSON (JSON.Number n) = Constant <$> getInteger "constant value" n
+  parseJSON _ = fail "Value must be either a string, object or an integer"
+
+\end{code}
+
+Some examples for each \emph{Value}s type
+
+\isamarkupsubsubsection{Constant}
+
+\begin{code}
+constantExample :: Value
+constantExample = Constant 1
+\end{code}
+
+is serialized as \eval{encodeExample constantExample}
+
+\isamarkupsubsubsection{TimeIntervalStart}
+
+\begin{code}
+intervalStartExample :: Value
+intervalStartExample = TimeIntervalStart
+\end{code}
+
+is serialized as \eval{encodeExample intervalStartExample}
+
+\isamarkupsubsubsection{TimeIntervalEnd}
+
+\begin{code}
+intervalEndExample :: Value
+intervalEndExample = TimeIntervalEnd
+\end{code}
+
+is serialized as \eval{encodeExample intervalEndExample}
+
+\isamarkupsubsubsection{AddValue}
+
+\begin{code}
+addExample :: Value
+addExample = AddValue (Constant 1) (Constant 2)
+\end{code}
+
+is serialized as \eval{encodeExample addExample}
+
+
+\isamarkupsubsubsection{SubValue}
+
+\begin{code}
+subExample :: Value
+subExample = SubValue (Constant 4) (Constant 2)
+\end{code}
+
+is serialized as \eval{encodeExample subExample}
+
+
+\isamarkupsubsubsection{MulValue}
+
+\begin{code}
+mulExample :: Value
+mulExample = MulValue (Constant 3) (Constant 6)
+\end{code}
+
+is serialized as \eval{encodeExample mulExample}
+
+
+\isamarkupsubsubsection{DivValue}
+
+\begin{code}
+divExample :: Value
+divExample = DivValue (Constant 8) (Constant 4)
+\end{code}
+
+is serialized as \eval{encodeExample divExample}
+
+\isamarkupsubsubsection{NegValue}
+
+\begin{code}
+negateExample :: Value
+negateExample = NegValue (Constant 3)
+\end{code}
+
+is serialized as \eval{encodeExample negateExample}
+
+\isamarkupsubsubsection{ChoiceValue}
+
+\begin{code}
+choiceValueExample :: Value
+choiceValueExample = ChoiceValue choiceExample
+\end{code}
+
+is serialized as \perform{prettyEncodeExample choiceValueExample}
+
+\isamarkupsubsubsection{UseValue}
+
+\begin{code}
+useValueExample :: Value
+useValueExample = UseValue (ValueId "variable name")
+\end{code}
+
+is serialized as \eval{encodeExample useValueExample}
+
+\isamarkupsubsubsection{Cond}
+
+\begin{code}
+condExample :: Value
+condExample = Cond TrueObs addExample mulExample
+\end{code}
+
+is serialized as \perform{prettyEncodeExample condExample}
+
+\isamarkupsubsubsection{AvailableMoney}
+
+\begin{code}
+availableMoneyExample :: Value
+availableMoneyExample = AvailableMoney addressExample dolarToken
+\end{code}
+
+is serialized as \perform{prettyEncodeExample availableMoneyExample}
+
+\isamarkupsection{Observation}
+
+The \emph{Observation} type is serialized as native boolean (for \emph{TrueObs} and \emph{FalseObs}) or as an object with different properties, depending on the constructor.
+
+\begin{code}
+instance ToJSON Observation where
+  toJSON (AndObs lhs rhs) = object
+      [ "both" .= lhs
+      , "and" .= rhs
+      ]
+  toJSON (OrObs lhs rhs) = object
+      [ "either" .= lhs
+      , "or" .= rhs
+      ]
+  toJSON (NotObs v) = object
+      [ "not" .= v ]
+  toJSON (ChoseSomething choiceId) = object
+      [ "chose_something_for" .= choiceId ]
+  toJSON (ValueGE lhs rhs) = object
+      [ "value" .= lhs
+      , "ge_than" .= rhs
+      ]
+  toJSON (ValueGT lhs rhs) = object
+      [ "value" .= lhs
+      , "gt" .= rhs
+      ]
+  toJSON (ValueLT lhs rhs) = object
+      [ "value" .= lhs
+      , "lt" .= rhs
+      ]
+  toJSON (ValueLE lhs rhs) = object
+      [ "value" .= lhs
+      , "le_than" .= rhs
+      ]
+  toJSON (ValueEQ lhs rhs) = object
+      [ "value" .= lhs
+      , "equal_to" .= rhs
+      ]
+  toJSON TrueObs = toJSON True
+  toJSON FalseObs = toJSON False
+
+
+instance FromJSON Observation where
+  parseJSON (JSON.Bool True) = return TrueObs
+  parseJSON (JSON.Bool False) = return FalseObs
+  parseJSON (JSON.Object v) =
+        (AndObs <$> (v .: "both")
+                <*> (v .: "and"))
+    <|> (OrObs <$> (v .: "either")
+               <*> (v .: "or"))
+    <|> (NotObs <$> (v .: "not"))
+    <|> (ChoseSomething <$> (v .: "chose_something_for"))
+    <|> (ValueGE <$> (v .: "value")
+                 <*> (v .: "ge_than"))
+    <|> (ValueGT <$> (v .: "value")
+                 <*> (v .: "gt"))
+    <|> (ValueLT <$> (v .: "value")
+                 <*> (v .: "lt"))
+    <|> (ValueLE <$> (v .: "value")
+                 <*> (v .: "le_than"))
+    <|> (ValueEQ <$> (v .: "value")
+                 <*> (v .: "equal_to"))
+  parseJSON _ = fail "Observation must be either an object or a boolean"
+\end{code}
+
+Some examples for each \emph{Observation} type
+
+\isamarkupsubsubsection{TrueObs}
+
+\begin{code}
+trueExample :: Observation
+trueExample = TrueObs
+\end{code}
+
+is serialized as \eval{encodeExample trueExample}
+
+\isamarkupsubsubsection{FalseObs}
+
+\begin{code}
+falseExample :: Observation
+falseExample = FalseObs
+\end{code}
+
+is serialized as \eval{encodeExample falseExample}
+
+\isamarkupsubsubsection{AndObs}
+
+\begin{code}
+andExample :: Observation
+andExample = AndObs TrueObs FalseObs
+\end{code}
+
+is serialized as \eval{encodeExample andExample}
+
+\isamarkupsubsubsection{OrObs}
+
+\begin{code}
+orExample :: Observation
+orExample = OrObs TrueObs FalseObs
+\end{code}
+
+is serialized as \eval{encodeExample orExample}
+
+\isamarkupsubsubsection{NotObs}
+
+\begin{code}
+notExample :: Observation
+notExample = NotObs TrueObs
+\end{code}
+
+is serialized as \eval{encodeExample notExample}
+
+
+\isamarkupsubsubsection{ChoseSomething}
+
+\begin{code}
+choseExample :: Observation
+choseExample = ChoseSomething choiceExample
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample choseExample}
+
+
+\isamarkupsubsubsection{ValueGE}
+
+\begin{code}
+valueGEExample :: Observation
+valueGEExample = ValueGE (Constant 1) (Constant 2)
+\end{code}
+
+is serialized as \eval{encodeExample valueGEExample}
+
+
+\isamarkupsubsubsection{ValueGT}
+
+\begin{code}
+valueGTExample :: Observation
+valueGTExample = ValueGT (Constant 1) (Constant 2)
+\end{code}
+
+is serialized as \eval{encodeExample valueGTExample}
+
+
+\isamarkupsubsubsection{ValueLT}
+
+\begin{code}
+valueLTExample :: Observation
+valueLTExample = ValueLT (Constant 1) (Constant 2)
+\end{code}
+
+is serialized as \eval{encodeExample valueLTExample}
+
+
+\isamarkupsubsubsection{ValueLE}
+
+\begin{code}
+valueLEExample :: Observation
+valueLEExample = ValueLE (Constant 1) (Constant 2)
+\end{code}
+
+is serialized as \eval{encodeExample valueLEExample}
+
+
+\isamarkupsubsubsection{ValueEQ}
+
+\begin{code}
+valueEQExample :: Observation
+valueEQExample = ValueEQ (Constant 1) (Constant 2)
+\end{code}
+
+is serialized as \eval{encodeExample valueEQExample}
+
+
+\isamarkupsection{Parse utils}
+
+These are some Aeson utils to help parse a number to the Isabelle exported \emph{Arith\.Int}
+
+\begin{code}
+getInteger :: String -> Scientific -> Parser Arith.Int
+getInteger ctx x = case (floatingOrInteger x :: Either Double Integer) of
+                 Right a -> return $ Int_of_integer a
+                 Left _  -> fail $ "parsing " ++ ctx ++ " failed, expected integer, but encountered floating point"
+
+withInteger :: String -> JSON.Value -> Parser Arith.Int
+withInteger ctx = withScientific ctx $ getInteger ctx
+\end{code}

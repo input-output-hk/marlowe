@@ -25,6 +25,8 @@ library
         aeson,
         aeson-pretty,
         bytestring,
+        text,
+        scientific,
     other-modules:
         ByteString
         HOL
@@ -39,6 +41,7 @@ library
         Stringa
     exposed-modules:
         Arith
+        ArithNumInstance
         CoreOrphanEq
         Examples.Swap
         MarloweCoreJson
@@ -55,6 +58,7 @@ test-suite marlowe-spec-test
         Spec.Core.Serialization.Json
     build-depends:
         aeson,
+        aeson-pretty,
         base >=4.9 && <5,
         bytestring,
         marlowe-spec,

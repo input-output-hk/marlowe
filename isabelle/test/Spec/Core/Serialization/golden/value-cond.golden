@@ -1,0 +1,11 @@
+{
+    "else": {
+        "multiply": 3,
+        "times": 6
+    },
+    "if": true,
+    "then": {
+        "add": 1,
+        "and": 2
+    }
+}

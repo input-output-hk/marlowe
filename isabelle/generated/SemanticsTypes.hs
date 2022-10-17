@@ -3,11 +3,12 @@
 module
   SemanticsTypes(Party(..), equal_Party, ChoiceId(..), equal_ChoiceId,
                   ValueId(..), equal_ValueId, Token(..), equal_Token, Value(..),
-                  Observation(..), Payee(..), equal_Payee, Action(..),
-                  Contract(..), Case(..), equal_Contract, Input(..),
-                  IntervalError(..), Environment_ext(..), State_ext(..),
-                  IntervalResult(..), choices, minTime, accounts, boundValues,
-                  choices_update, minTime_update, accounts_update, timeInterval,
+                  Observation(..), equal_Observation, equal_Value, Payee(..),
+                  equal_Payee, Action(..), Contract(..), Case(..),
+                  equal_Contract, Input(..), IntervalError(..),
+                  Environment_ext(..), State_ext(..), IntervalResult(..),
+                  choices, minTime, accounts, boundValues, choices_update,
+                  minTime_update, accounts_update, timeInterval,
                   boundValues_update)
   where {
 

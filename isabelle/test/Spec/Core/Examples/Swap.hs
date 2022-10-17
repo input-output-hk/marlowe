@@ -4,7 +4,8 @@
 module Spec.Core.Examples.Swap (tests) where
 
 
-import qualified Arith;
+import qualified Arith
+import ArithNumInstance
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
 import CoreOrphanEq
@@ -60,27 +61,27 @@ tokenA = Token "symbol-a" "a"
 tokenB = Token "symbol-b" "b"
 
 amountA, amountB :: Arith.Int
-amountA = Arith.Int_of_integer 10
-amountB = Arith.Int_of_integer 20
+amountA = 10
+amountB = 20
 
 tokenAProvider, tokenBProvider :: SwapParty
 tokenAProvider = SwapParty { party = partyA
                            , currency = tokenA
                            , amount = Constant amountA
-                           , depositDeadline = Arith.Int_of_integer 10
+                           , depositDeadline = 10
                            }
 tokenBProvider = SwapParty { party = partyB
                            , currency = tokenB
                            , amount = Constant amountB
-                           , depositDeadline = Arith.Int_of_integer 20
+                           , depositDeadline = 20
                            }
 testHappyPath :: IO ()
 testHappyPath = do
   let inputs = [ IDeposit partyA partyA tokenA amountA
                , IDeposit partyB partyB tokenB amountB
                ]
-  let singleTx = Transaction_ext (Arith.Int_of_integer 0, Arith.Int_of_integer 5) inputs ()
-  case playTrace (Arith.Int_of_integer 1) (contract tokenAProvider tokenBProvider) [singleTx] of
+  let singleTx = Transaction_ext (0, 5) inputs ()
+  case playTrace 1 (contract tokenAProvider tokenBProvider) [singleTx] of
     TransactionError _ -> assertFailure "playTrace failed its execution"
     TransactionOutput o -> do
       txOutContract o @?= Close
@@ -92,7 +93,7 @@ testHappyPath = do
 
 testGeneratedHappyPath :: IO ()
 testGeneratedHappyPath =
-   case playTrace (Arith.Int_of_integer 0) (Examples.Swap.swapExample) Examples.Swap.happyPathTransactions of
+   case playTrace 0 (Examples.Swap.swapExample) Examples.Swap.happyPathTransactions of
     TransactionError _ -> assertFailure "playTrace failed its execution"
     TransactionOutput o -> do
       txOutContract o @?= Close

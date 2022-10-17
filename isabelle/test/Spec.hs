@@ -35,6 +35,8 @@ main = defaultMain tests
 tests :: TestTree
 tests =
   testGroup "Marlowe Spec"
-    [ Spec.Core.Examples.Swap.tests
+    [ testGroup "Examples"
+      [ Spec.Core.Examples.Swap.tests
+      ]
     , Spec.Core.Serialization.Json.tests
     ]

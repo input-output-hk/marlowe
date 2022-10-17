@@ -1,0 +1,9 @@
+{
+    "amount_of_token": {
+        "currency_symbol": "85bb65",
+        "token_name": "dolar"
+    },
+    "in_account": {
+        "address": "example address"
+    }
+}

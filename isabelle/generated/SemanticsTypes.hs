@@ -4,7 +4,7 @@ module
   SemanticsTypes(Party(..), equal_Party, ChoiceId(..), equal_ChoiceId,
                   ValueId(..), equal_ValueId, Token(..), equal_Token, Value(..),
                   Observation(..), equal_Observation, equal_Value, Payee(..),
-                  equal_Payee, Action(..), Contract(..), Case(..),
+                  equal_Payee, Bound(..), Action(..), Contract(..), Case(..),
                   equal_Contract, Input(..), IntervalError(..),
                   Environment_ext(..), State_ext(..), IntervalResult(..),
                   choices, minTime, accounts, boundValues, choices_update,
@@ -347,9 +347,10 @@ equal_Payee (Party x2) (Account x1) = False;
 equal_Payee (Party x2) (Party y2) = equal_Party x2 y2;
 equal_Payee (Account x1) (Account y1) = equal_Party x1 y1;
 
-data Action = Deposit Party Party Token Value
-  | Choice ChoiceId [(Arith.Int, Arith.Int)] | Notify Observation
-  deriving (Prelude.Read, Prelude.Show);
+data Bound = Bound Arith.Int Arith.Int deriving (Prelude.Read, Prelude.Show);
+
+data Action = Deposit Party Party Token Value | Choice ChoiceId [Bound]
+  | Notify Observation deriving (Prelude.Read, Prelude.Show);
 
 data Contract = Close | Pay Party Payee Token Value Contract
   | If Observation Contract Contract | When [Case] Arith.Int Contract
@@ -357,6 +358,14 @@ data Contract = Close | Pay Party Payee Token Value Contract
   deriving (Prelude.Read, Prelude.Show);
 
 data Case = Case Action Contract deriving (Prelude.Read, Prelude.Show);
+
+equal_Bound :: Bound -> Bound -> Bool;
+equal_Bound (Bound x1 x2) (Bound y1 y2) =
+  Arith.equal_int x1 y1 && Arith.equal_int x2 y2;
+
+instance Eq Bound where {
+  a == b = equal_Bound a b;
+};
 
 equal_Action :: Action -> Action -> Bool;
 equal_Action (Choice x21 x22) (Notify x3) = False;

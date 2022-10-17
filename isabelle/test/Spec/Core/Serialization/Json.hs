@@ -33,6 +33,7 @@ tests = testGroup "Core Json Serialization"
     , tokenTests
     , payeeTests
     , choiceIdTests
+    , boundTests
     , valueTests
     , observationTests
     ]
@@ -81,6 +82,15 @@ choiceIdTests = testGroup "ChoiceId"
         "Golden Choice Id"
         (goldenPath </> "choice-id.golden")
         (pure $ encode choiceExample)
+    ]
+
+boundTests :: TestTree
+boundTests = testGroup "Bound"
+    [ roundtripTest "Bound Roundtrip" [exampleBound]
+    , goldenTest
+        "Golden Bound"
+        (goldenPath </> "bound.golden")
+        (pure $ encode exampleBound)
     ]
 
 valueTests :: TestTree

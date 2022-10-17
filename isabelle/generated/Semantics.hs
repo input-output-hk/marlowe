@@ -17,6 +17,7 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
+import qualified Product_Type;
 import qualified Option;
 import qualified List;
 import qualified Orderings;
@@ -24,7 +25,6 @@ import qualified MList;
 import qualified HOL;
 import qualified SemanticsGuarantees;
 import qualified Product_Lexorder;
-import qualified Product_Type;
 import qualified ListTools;
 import qualified SemanticsTypes;
 import qualified Arith;
@@ -104,10 +104,11 @@ quot x y =
     else Arith.uminus_int
            (Arith.divide_int (Arith.abs_int x) (Arith.abs_int y)));
 
-inBounds :: Arith.Int -> [(Arith.Int, Arith.Int)] -> Bool;
+inBounds :: Arith.Int -> [SemanticsTypes.Bound] -> Bool;
 inBounds num =
   ListTools.anya
-    (\ (l, u) -> Arith.less_eq_int l num && Arith.less_eq_int num u);
+    (\ (SemanticsTypes.Bound l u) ->
+      Arith.less_eq_int l num && Arith.less_eq_int num u);
 
 evalValue ::
   SemanticsTypes.Environment_ext () ->

@@ -40,7 +40,7 @@ import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Data.Text as T
 import Data.Scientific (Scientific, floatingOrInteger)
-import SemanticsTypes (Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..))
+import SemanticsTypes (Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..))
 
 -- These are some helper functions to print and pretty print a ToJSON example
 encodeExample :: ToJSON a => a -> IO ()
@@ -175,7 +175,7 @@ externalPayeeExample = Party roleExample
 
 is serialized as \eval{encodeExample externalPayeeExample}
 
-\isamarkupsection{ChoiceId}
+\isamarkupsection{ChoicesId}
 
 The \emph{ChoiceId} type is serialized as an object with two properties, \emph{choice\_name} and
 \emph{choice\_owner}
@@ -210,6 +210,35 @@ choiceExample = ChoiceId "ada price" addressExample
 is serialized as
 
 \perform{prettyEncodeExample choiceExample}
+
+
+\isamarkupsection{Bound}
+
+The \emph{Bound} type is serialized as an object with two properties, \emph{from} and
+\emph{to}
+
+\begin{code}
+instance ToJSON Bound where
+  toJSON (Bound from to) = object
+      [ "from" .= from
+      , "to" .= to
+      ]
+
+instance FromJSON Bound where
+  parseJSON = withObject "Bound" (\v ->
+       Bound <$> (getInteger "lower bound"=<< (v .: "from"))
+             <*> (getInteger "higher bound" =<< (v .: "to"))
+                                 )
+\end{code}
+
+for example, the following \emph{Bound}
+
+\begin{code}
+exampleBound :: Bound
+exampleBound = Bound 2 10
+\end{code}
+
+is serialized as \eval{encodeExample exampleBound}
 
 \isamarkupsection{Values}
 
@@ -587,4 +616,11 @@ getInteger ctx x = case (floatingOrInteger x :: Either Double Integer) of
 
 withInteger :: String -> JSON.Value -> Parser Arith.Int
 withInteger ctx = withScientific ctx $ getInteger ctx
+
+instance ToJSON Arith.Int where
+  toJSON (Int_of_integer x) = toJSON x
+
+instance FromJSON Arith.Int where
+  parseJSON (JSON.Number x) = getInteger "Int" x
+  parseJSON _ = fail "expecting integer"
 \end{code}

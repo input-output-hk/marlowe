@@ -493,7 +493,7 @@ datatype ApplyResult = Applied ApplyWarning State Contract
                      | ApplyNoMatchError
 
 fun inBounds :: "ChosenNum \<Rightarrow> Bound list \<Rightarrow> bool" where
-"inBounds num = any (\<lambda> (l, u) \<Rightarrow> num \<ge> l \<and> num \<le> u)"
+"inBounds num = any (\<lambda> (Bound l u) \<Rightarrow> num \<ge> l \<and> num \<le> u)"
 
 fun applyCases :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightarrow> Case list \<Rightarrow> ApplyResult" where
 "applyCases env state (IDeposit accId1 party1 tok1 amount)

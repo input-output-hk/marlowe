@@ -117,8 +117,7 @@ text \<open>Choices are \<^term>\<open>Bound\<close>ed. As an argument for the \
 pass a list of \<^term>\<open>Bound\<close>s that limit the integer that we can choose. The \<^term>\<open>Bound\<close>
 data type is a tuple of integers that represents an \<^bold>\<open>inclusive\<close> lower and upper bound.\<close>
 
-type_synonym Bound = "int \<times> int"
-
+datatype Bound = Bound int int
 
 
 subsection \<open>Values and Observations\label{sec:values-and-observations} \<close>

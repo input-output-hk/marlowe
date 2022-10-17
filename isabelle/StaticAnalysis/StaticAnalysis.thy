@@ -293,7 +293,7 @@ fun const :: "'a \<Rightarrow> 'b \<Rightarrow> 'a" where
 
 fun ensureBounds :: "int \<Rightarrow> Bound list \<Rightarrow> bool" where
 "ensureBounds cho Nil = False" |
-"ensureBounds cho (Cons (lowBnd, hiBnd) t) =
+"ensureBounds cho (Cons (Bound lowBnd hiBnd) t) =
   (((cho \<ge> lowBnd) \<and> (cho \<le> hiBnd)) \<or> ensureBounds cho t)"
 
 fun addFreshTimesToState :: "SymState \<Rightarrow> (int \<times> int \<times> SymState) Symbolic" where
@@ -708,13 +708,13 @@ definition badEscrow_aux :: Contract where
                      (Choice
                         (ChoiceId choice_choice
                            role_alice) [
-                        (0, 1)])
+                        (Bound 0 1)])
                      (When [
                         (Case
                            (Choice
                               (ChoiceId choice_choice
                                  role_bob) [
-                              (0, 1)])
+                              (Bound 0 1)])
                            (If
                               (ValueEQ
                                  (ChoiceValue
@@ -740,13 +740,13 @@ definition badEscrow_aux :: Contract where
                                        (Choice
                                           (ChoiceId choice_choice
                                              role_carol) [
-                                          (1, 1)]) Close)
+                                          (Bound 1 1)]) Close)
                                     ,
                                     (Case
                                        (Choice
                                           (ChoiceId choice_choice
                                              role_carol) [
-                                          (0, 0)])
+                                          (Bound 0 0)])
                                        (Pay
                                           role_alice
                                           (Party
@@ -758,13 +758,13 @@ definition badEscrow_aux :: Contract where
                                  (Choice
                                     (ChoiceId choice_choice
                                        role_carol) [
-                                    (1, 1)]) Close)
+                                    (Bound 1 1)]) Close)
                               ,
                               (Case
                                  (Choice
                                     (ChoiceId choice_choice
                                        role_carol) [
-                                    (0, 0)])
+                                    (Bound 0 0)])
                                  (Pay
                                     role_alice
                                     (Party
@@ -776,13 +776,13 @@ definition badEscrow_aux :: Contract where
                            (Choice
                               (ChoiceId choice_choice
                                  role_carol) [
-                              (1, 1)]) Close)
+                              (Bound 1 1)]) Close)
                         ,
                         (Case
                            (Choice
                               (ChoiceId choice_choice
                                  role_carol) [
-                              (0, 0)])
+                              (Bound 0 0)])
                            (Pay
                               role_alice
                               (Party

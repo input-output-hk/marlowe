@@ -61,6 +61,12 @@ export_code
   playTrace
   computeTransaction
 
+   \<comment> \<open> Export utility functions\<close>
+  getOutcomes
+  getSignatures
+  maxTimeContract
+  calculateTimeInterval
+
   \<comment> \<open> Export examples to be used as oracle specificaiton tests\<close>
   swapExample
   happyPathTransactions

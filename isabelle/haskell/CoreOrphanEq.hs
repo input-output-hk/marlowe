@@ -5,7 +5,7 @@
 -- theory.
 module CoreOrphanEq where
 
-import SemanticsTypes (Contract, Payee, Value, Observation, equal_Contract, equal_Payee, equal_Value, equal_Observation)
+import SemanticsTypes (Action, Contract, Payee, Value, Observation, equal_Contract, equal_Payee, equal_Value, equal_Observation, equal_Action)
 import Semantics (TransactionWarning, Payment, equal_TransactionWarning, equal_Payment)
 
 instance Eq Contract where {
@@ -32,4 +32,9 @@ instance Eq Value where {
 
 instance Eq Observation where {
   a == b = equal_Observation a b;
+};
+
+
+instance Eq Action where {
+  a == b = equal_Action a b;
 };

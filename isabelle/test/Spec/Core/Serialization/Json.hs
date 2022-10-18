@@ -6,6 +6,7 @@ module Spec.Core.Serialization.Json (tests) where
 import Data.Aeson (ToJSON, FromJSON, decode, encode)
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as L
+import qualified Examples.Swap
 import MarloweCoreJson
 import Test.Tasty (TestTree, TestName, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -36,6 +37,9 @@ tests = testGroup "Core Json Serialization"
     , boundTests
     , valueTests
     , observationTests
+    , actionTests
+    , caseTests
+    , contractTests
     ]
 
 
@@ -77,11 +81,11 @@ payeeTests = testGroup "Payee"
 
 choiceIdTests :: TestTree
 choiceIdTests = testGroup "ChoiceId"
-    [ roundtripTest "ChoiceId Roundtrip" [choiceExample]
+    [ roundtripTest "ChoiceId Roundtrip" [choiceIdExample]
     , goldenTest
         "Golden Choice Id"
         (goldenPath </> "choice-id.golden")
-        (pure $ encode choiceExample)
+        (pure $ encode choiceIdExample)
     ]
 
 boundTests :: TestTree
@@ -218,4 +222,74 @@ observationTests = testGroup "Observation"
         "Golden Observation Equal"
         (goldenPath </> "observation-eq.golden")
         (pure $ encode valueEQExample)
+    ]
+
+actionTests :: TestTree
+actionTests = testGroup "Action"
+    [ roundtripTest "Action roundtrip"
+        [ depositExample
+        , choiceExample
+        , notifyExample
+        ]
+    , goldenTest
+        "Golden Action Deposit"
+        (goldenPath </> "action-deposit.golden")
+        (pure $ encodePretty depositExample)
+    , goldenTest
+        "Golden Action Choice"
+        (goldenPath </> "action-choice.golden")
+        (pure $ encodePretty choiceExample)
+    , goldenTest
+        "Golden Action Notify"
+        (goldenPath </> "action-notify.golden")
+        (pure $ encodePretty notifyExample)
+    ]
+
+caseTests :: TestTree
+caseTests = testGroup "Case"
+    [ roundtripTest "Case roundtrip" [caseExample]
+    , goldenTest
+        "Golden Case"
+        (goldenPath </> "case.golden")
+        (pure $ encodePretty caseExample)
+    ]
+contractTests :: TestTree
+contractTests = testGroup "Contract"
+    [ roundtripTest "Contract roundtrip"
+        [ closeExample
+        , payExample
+        , ifExample
+        , whenExample
+        , letExample
+        , assertExample
+        , Examples.Swap.swapExample
+        ]
+    , goldenTest
+        "Golden Contract Close"
+        (goldenPath </> "contract-close.golden")
+        (pure $ encode closeExample)
+    , goldenTest
+        "Golden Contract Pay"
+        (goldenPath </> "contract-pay.golden")
+        (pure $ encodePretty payExample)
+    , goldenTest
+        "Golden Contract If"
+        (goldenPath </> "contract-if.golden")
+        (pure $ encodePretty ifExample)
+    , goldenTest
+        "Golden Contract When"
+        (goldenPath </> "contract-when.golden")
+        (pure $ encodePretty whenExample)
+    , goldenTest
+        "Golden Contract Let"
+        (goldenPath </> "contract-let.golden")
+        (pure $ encodePretty letExample)
+    , goldenTest
+        "Golden Contract Assert"
+        (goldenPath </> "contract-assert.golden")
+        (pure $ encodePretty assertExample)
+    , goldenTest
+        "Golden Contract Swap"
+        (goldenPath </> "contract-swap.golden")
+        (pure $ encodePretty Examples.Swap.swapExample)
     ]

@@ -1,0 +1,13 @@
+{
+    "case": {
+        "notify_if": {
+            "chose_something_for": {
+                "choice_name": "ada price",
+                "choice_owner": {
+                    "address": "example address"
+                }
+            }
+        }
+    },
+    "then": "close"
+}

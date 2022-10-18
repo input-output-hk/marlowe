@@ -32,15 +32,17 @@ import qualified Arith
 import Control.Applicative ((<|>), (<*>))
 import CoreOrphanEq
 import ArithNumInstance
-import Data.Aeson (object, withObject, withText, withScientific, (.=), (.:), encode)
+import Data.Aeson (object, withArray, withObject, withText, withScientific, (.=), (.:), encode)
 import Data.Aeson.Types (Parser, ToJSON(..), FromJSON(..))
 import qualified Data.Aeson.Types as JSON
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
+import qualified Data.Foldable as F
 import qualified Data.Text as T
 import Data.Scientific (Scientific, floatingOrInteger)
-import SemanticsTypes (Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..))
+import qualified Examples.Swap
+import SemanticsTypes (Action(..), Case(..), Contract(..), Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..))
 
 -- These are some helper functions to print and pretty print a ToJSON example
 encodeExample :: ToJSON a => a -> IO ()
@@ -202,14 +204,14 @@ instance FromJSON ChoiceId where
 for example, the following \emph{ChoiceId}
 
 \begin{code}
-choiceExample :: ChoiceId
-choiceExample = ChoiceId "ada price" addressExample
+choiceIdExample :: ChoiceId
+choiceIdExample = ChoiceId "ada price" addressExample
 \end{code}
 
 
 is serialized as
 
-\perform{prettyEncodeExample choiceExample}
+\perform{prettyEncodeExample choiceIdExample}
 
 
 \isamarkupsection{Bound}
@@ -398,7 +400,7 @@ is serialized as \eval{encodeExample negateExample}
 
 \begin{code}
 choiceValueExample :: Value
-choiceValueExample = ChoiceValue choiceExample
+choiceValueExample = ChoiceValue choiceIdExample
 \end{code}
 
 is serialized as \perform{prettyEncodeExample choiceValueExample}
@@ -547,7 +549,7 @@ is serialized as \eval{encodeExample notExample}
 
 \begin{code}
 choseExample :: Observation
-choseExample = ChoseSomething choiceExample
+choseExample = ChoseSomething choiceIdExample
 \end{code}
 
 is serialized as
@@ -603,6 +605,251 @@ valueEQExample = ValueEQ (Constant 1) (Constant 2)
 
 is serialized as \eval{encodeExample valueEQExample}
 
+\isamarkupsection{Action}
+
+The \emph{Action} type is serialized as an object with different properties, depending the constructor.
+
+\begin{code}
+instance ToJSON Action where
+  toJSON (Deposit accountId party token val) = object
+      [ "into_account" .= accountId
+      , "party" .= party
+      , "of_token" .= token
+      , "deposits" .= val
+      ]
+  toJSON (Choice choiceId bounds) = object
+      [ "for_choice" .= choiceId
+      , "choose_between" .= toJSONList (map toJSON bounds)
+      ]
+  toJSON (Notify obs) = object
+      [ "notify_if" .= obs ]
+
+
+instance FromJSON Action where
+  parseJSON = withObject "Action" (\v ->
+       (Deposit <$> (v .: "into_account")
+                <*> (v .: "party")
+                <*> (v .: "of_token")
+                <*> (v .: "deposits"))
+   <|> (Choice <$> (v .: "for_choice")
+               <*> ((v .: "choose_between") >>=
+                    withArray "Bound list" (\bl ->
+                      mapM parseJSON (F.toList bl)
+                                            )))
+   <|> (Notify <$> (v .: "notify_if"))
+                                  )
+\end{code}
+
+Some examples for each \emph{Action} type
+
+\isamarkupsubsubsection{Deposit}
+
+\begin{code}
+depositExample :: Action
+depositExample = Deposit
+                    addressExample
+                    roleExample
+                    dolarToken
+                    constantExample
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample depositExample}
+
+\isamarkupsubsubsection{Choice}
+
+\begin{code}
+choiceExample :: Action
+choiceExample = Choice
+                    choiceIdExample
+                    [Bound 0 1, Bound 4 8]
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample choiceExample}
+
+
+\isamarkupsubsubsection{Notify}
+
+\begin{code}
+notifyExample :: Action
+notifyExample = Notify (ChoseSomething choiceIdExample)
+
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample notifyExample}
+
+\isamarkupsection{Case}
+The \emph{Case} type is serialized as an object with two properties (\emph{case} and \emph{then}).
+
+\begin{code}
+instance ToJSON Case where
+    toJSON (Case act cont) = object
+        [ "case" .= act
+        , "then" .= cont
+        ]
+
+instance FromJSON Case where
+    parseJSON = withObject "Case"
+      (\v ->
+        Case <$> (v .: "case") <*> (v .: "then")
+      )
+\end{code}
+
+For example, the following \emph{Case}
+
+\begin{code}
+caseExample :: Case
+caseExample = Case notifyExample Close
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample caseExample}
+
+\isamarkupsection{Contract}
+
+The \emph{Contract} type is serialized as the literal string "close" or as an object, depending on the constructor
+
+\begin{code}
+
+instance ToJSON Contract where
+  toJSON Close = JSON.String $ T.pack "close"
+  toJSON (Pay accountId payee token value contract) = object
+      [ "from_account" .= accountId
+      , "to" .= payee
+      , "token" .= token
+      , "pay" .= value
+      , "then" .= contract
+      ]
+  toJSON (If obs cont1 cont2) = object
+      [ "if" .= obs
+      , "then" .= cont1
+      , "else" .= cont2
+      ]
+  toJSON (When caseList timeout cont) = object
+      [ "when" .= toJSONList (map toJSON caseList)
+      , "timeout" .= timeout
+      , "timeout_continuation" .= cont
+      ]
+  toJSON (Let valId value cont) = object
+      [ "let" .= valId
+      , "be" .= value
+      , "then" .= cont
+      ]
+  toJSON (Assert obs cont) = object
+      [ "assert" .= obs
+      , "then" .= cont
+      ]
+
+
+instance FromJSON Contract where
+  parseJSON (JSON.String "close") = return Close
+  parseJSON (JSON.Object v) =
+        (Pay <$> (v .: "from_account")
+             <*> (v .: "to")
+             <*> (v .: "token")
+             <*> (v .: "pay")
+             <*> (v .: "then"))
+    <|> (If <$> (v .: "if")
+            <*> (v .: "then")
+            <*> (v .: "else"))
+    <|> (When <$> ((v .: "when") >>=
+                   withArray "Case list" (\cl ->
+                     mapM parseJSON (F.toList cl)
+                                          ))
+              <*> (withInteger "when timeout" =<< (v .: "timeout"))
+              <*> (v .: "timeout_continuation"))
+    <|> (Let <$> (v .: "let")
+             <*> (v .: "be")
+             <*> (v .: "then"))
+    <|> (Assert <$> (v .: "assert")
+                <*> (v .: "then"))
+  parseJSON _ =
+    fail "Contract must be either an object or a the string \"close\""
+\end{code}
+
+Some examples for each \emph{Contract} type
+
+\isamarkupsubsubsection{Close}
+
+\begin{code}
+closeExample :: Contract
+closeExample = Close
+\end{code}
+
+is serialized as \eval{encodeExample closeExample}
+
+
+\isamarkupsubsubsection{Pay}
+
+\begin{code}
+payExample :: Contract
+payExample = Pay
+                roleExample
+                internalPayeeExample
+                dolarToken
+                (Constant 10)
+                Close
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample payExample}
+
+
+\isamarkupsubsubsection{If}
+
+\begin{code}
+ifExample :: Contract
+ifExample = If
+                TrueObs
+                Close
+                Close
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample ifExample}
+
+\isamarkupsubsubsection{When}
+
+\begin{code}
+whenExample :: Contract
+whenExample = When
+                [ Case (Notify TrueObs) Close
+                , Case (Notify FalseObs) Close
+                ]
+                20
+                Close
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample whenExample}
+
+\isamarkupsubsubsection{Let}
+
+\begin{code}
+letExample :: Contract
+letExample = Let (ValueId "var") (Constant 10) Close
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample letExample}
+
+
+\isamarkupsubsubsection{Assert}
+
+\begin{code}
+assertExample :: Contract
+assertExample = Assert choseExample Close
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample assertExample}
+
+\isamarkupsection{Full Example}
+
+The Swap Example, defined in section \secref{sec:swap-example-execution} is serialized as
+\perform{prettyEncodeExample Examples.Swap.swapExample}
 
 \isamarkupsection{Parse utils}
 

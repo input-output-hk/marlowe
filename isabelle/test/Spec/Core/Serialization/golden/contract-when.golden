@@ -1,0 +1,18 @@
+{
+    "timeout": 20,
+    "timeout_continuation": "close",
+    "when": [
+        {
+            "case": {
+                "notify_if": true
+            },
+            "then": "close"
+        },
+        {
+            "case": {
+                "notify_if": false
+            },
+            "then": "close"
+        }
+    ]
+}

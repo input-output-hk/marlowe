@@ -78,7 +78,7 @@ fun swap :: "SwapParty \<Rightarrow> SwapParty \<Rightarrow> Contract" where
                 )))
   "
 
-subsection \<open>Example execution\<close>
+subsection \<open>Example execution\label{sec:swap-example-execution}\<close>
 
 text \<open>Let's define two participants that want to trade USD and ADA in the cardano blockchain.\<close>
 

@@ -5,7 +5,7 @@ module
                   ValueId(..), equal_ValueId, Token(..), equal_Token, Value(..),
                   Observation(..), equal_Observation, equal_Value, Payee(..),
                   equal_Payee, Bound(..), Action(..), Contract(..), Case(..),
-                  equal_Contract, Input(..), IntervalError(..),
+                  equal_Action, equal_Contract, Input(..), IntervalError(..),
                   Environment_ext(..), State_ext(..), IntervalResult(..),
                   choices, minTime, accounts, boundValues, choices_update,
                   minTime_update, accounts_update, timeInterval,

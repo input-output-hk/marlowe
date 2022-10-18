@@ -98,6 +98,7 @@ export_code
   equal_Payment_inst.equal_Payment
   equal_Value_inst.equal_Value
   equal_Observation_inst.equal_Observation
+  equal_Action_inst.equal_Action
 
 
   in Haskell (string_classes)

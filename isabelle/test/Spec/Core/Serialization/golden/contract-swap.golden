@@ -1,0 +1,73 @@
+{
+    "timeout": 1664812800000,
+    "timeout_continuation": "close",
+    "when": [
+        {
+            "case": {
+                "deposits": 10,
+                "into_account": {
+                    "role_token": "Ada Provider"
+                },
+                "of_token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                },
+                "party": {
+                    "role_token": "Ada Provider"
+                }
+            },
+            "then": {
+                "timeout": 1664816400000,
+                "timeout_continuation": "close",
+                "when": [
+                    {
+                        "case": {
+                            "deposits": 20,
+                            "into_account": {
+                                "role_token": "Dollar Provider"
+                            },
+                            "of_token": {
+                                "currency_symbol": "85bb65",
+                                "token_name": "dollar"
+                            },
+                            "party": {
+                                "role_token": "Dollar Provider"
+                            }
+                        },
+                        "then": {
+                            "from_account": {
+                                "role_token": "Ada Provider"
+                            },
+                            "pay": 10,
+                            "then": {
+                                "from_account": {
+                                    "role_token": "Dollar Provider"
+                                },
+                                "pay": 20,
+                                "then": "close",
+                                "to": {
+                                    "party": {
+                                        "role_token": "Ada Provider"
+                                    }
+                                },
+                                "token": {
+                                    "currency_symbol": "85bb65",
+                                    "token_name": "dollar"
+                                }
+                            },
+                            "to": {
+                                "party": {
+                                    "role_token": "Dollar Provider"
+                                }
+                            },
+                            "token": {
+                                "currency_symbol": "",
+                                "token_name": ""
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

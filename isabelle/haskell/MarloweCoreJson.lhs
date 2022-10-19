@@ -874,13 +874,14 @@ instance ToJSON Input where
 instance FromJSON Input where
   parseJSON (JSON.String "input_notify") = return INotify
   parseJSON (JSON.Object v) =
-    IChoice <$> v .: "for_choice_id"
+        IChoice <$> v .: "for_choice_id"
                 <*> v .: "input_that_chooses_num"
-    <|> IDeposit  <$> v .: "into_account"
-              <*> v .: "input_from_party"
-              <*> v .: "of_token"
-              <*> v .: "that_deposits"
-  parseJSON _ = fail "Input must be either an object or the string \"input_notify\""
+    <|> IDeposit <$> v .: "into_account"
+                 <*> v .: "input_from_party"
+                 <*> v .: "of_token"
+                 <*> v .: "that_deposits"
+  parseJSON _ =
+    fail "Input must be either an object or the string \"input_notify\""
 \end{code}
 
 Some examples for each \emph{Input} type
@@ -1073,7 +1074,8 @@ instance ToJSON TransactionWarning where
 
 
 instance FromJSON TransactionWarning where
-  parseJSON (JSON.String "assertion_failed") = return TransactionAssertionFailed
+  parseJSON (JSON.String "assertion_failed") =
+    return TransactionAssertionFailed
   parseJSON (JSON.Object v) =
         (TransactionNonPositiveDeposit <$> (v .: "party")
                                        <*> (v .: "in_account")
@@ -1093,7 +1095,8 @@ instance FromJSON TransactionWarning where
     <|> (TransactionShadowing <$> (v .: "value_id")
                               <*> (v .: "had_value")
                               <*> (v .: "is_now_assigned"))
-  parseJSON _ = fail "Contract must be either an object or a the string \"close\""
+  parseJSON _ =
+    fail "Contract must be either an object or a the string \"close\""
 \end{code}
 
 Some examples for each \emph{TransactionWarning} type
@@ -1247,10 +1250,14 @@ instance FromJSON TransactionError where
         do
             tag :: String <- v .: "tag"
             case tag of
-                "TEAmbiguousTimeIntervalError" -> pure TEAmbiguousTimeIntervalError
-                "TEApplyNoMatchError" -> pure TEApplyNoMatchError
-                "TEIntervalError" -> TEIntervalError <$> v .: "contents"
-                "TEUselessTransaction" -> pure TEUselessTransaction
+                "TEAmbiguousTimeIntervalError" ->
+                    pure TEAmbiguousTimeIntervalError
+                "TEApplyNoMatchError" ->
+                    pure TEApplyNoMatchError
+                "TEIntervalError" ->
+                    TEIntervalError <$> v .: "contents"
+                "TEUselessTransaction" ->
+                    pure TEUselessTransaction
       )
 \end{code}
 

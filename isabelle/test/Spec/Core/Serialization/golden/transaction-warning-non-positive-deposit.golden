@@ -1,0 +1,13 @@
+{
+    "asked_to_deposit": 20,
+    "in_account": {
+        "role_token": "example role"
+    },
+    "of_token": {
+        "currency_symbol": "85bb65",
+        "token_name": "dolar"
+    },
+    "party": {
+        "address": "example address"
+    }
+}

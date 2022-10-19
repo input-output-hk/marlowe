@@ -5,20 +5,12 @@
 -- theory.
 module CoreOrphanEq where
 
-import SemanticsTypes (Action, Contract, Payee, Value, Observation, equal_Contract, equal_Payee, equal_Value, equal_Observation, equal_Action)
-import Semantics (TransactionWarning, Payment, equal_TransactionWarning, equal_Payment)
+import SemanticsTypes (Action, Contract, Payee, Value, Observation, State_ext, IntervalError, equal_Contract, equal_Payee, equal_Value, equal_Observation, equal_Action, equal_State_ext, equal_IntervalError)
+import Semantics (Transaction_ext, TransactionError, TransactionOutput, equal_Transaction_ext, equal_TransactionError, equal_TransactionOutput)
 
 instance Eq Contract where {
   a == b = equal_Contract a b;
 };
-
-instance Eq TransactionWarning where {
-  a == b = equal_TransactionWarning a b;
-}
-
-instance Eq Payment where {
-  a == b = equal_Payment a b;
-}
 
 instance Eq Payee where {
   a == b = equal_Payee a b;
@@ -38,3 +30,25 @@ instance Eq Observation where {
 instance Eq Action where {
   a == b = equal_Action a b;
 };
+
+
+instance Eq a => Eq (Transaction_ext a) where {
+  a == b = equal_Transaction_ext a b;
+};
+
+instance Eq a => Eq (State_ext a) where {
+  a == b = equal_State_ext a b;
+};
+
+instance Eq IntervalError where {
+  a == b = equal_IntervalError a b;
+};
+
+instance Eq TransactionError where {
+  a == b = equal_TransactionError a b;
+};
+
+instance Eq TransactionOutput where {
+  a == b = equal_TransactionOutput a b;
+}
+

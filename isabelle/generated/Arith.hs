@@ -1,8 +1,8 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Arith(Int(..), less_eq_int, less_int, Num(..), One, Zero, Zero_neq_one,
-         uminus_int, zero_int, abs_int, plus_int, equal_int, minus_int,
+  Arith(Int(..), equal_int, less_eq_int, less_int, Num(..), One, Zero,
+         Zero_neq_one, uminus_int, zero_int, abs_int, plus_int, minus_int,
          times_int, of_bool, divide_int)
   where {
 
@@ -19,6 +19,13 @@ newtype Int = Int_of_integer Integer deriving (Prelude.Read, Prelude.Show);
 
 integer_of_int :: Int -> Integer;
 integer_of_int (Int_of_integer k) = k;
+
+equal_int :: Int -> Int -> Bool;
+equal_int k l = integer_of_int k == integer_of_int l;
+
+instance Eq Int where {
+  a == b = equal_int a b;
+};
 
 less_eq_int :: Int -> Int -> Bool;
 less_eq_int k l = integer_of_int k <= integer_of_int l;
@@ -91,9 +98,6 @@ divmod_integer k l =
                                       else (negate r - (1 :: Integer),
      negate l - s));
                                 })))));
-
-equal_int :: Int -> Int -> Bool;
-equal_int k l = integer_of_int k == integer_of_int l;
 
 minus_int :: Int -> Int -> Int;
 minus_int k l = Int_of_integer (integer_of_int k - integer_of_int l);

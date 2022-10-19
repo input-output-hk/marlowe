@@ -1,0 +1,13 @@
+{
+    "input_from_party": {
+        "role_token": "example role"
+    },
+    "into_account": {
+        "address": "example address"
+    },
+    "of_token": {
+        "currency_symbol": "85bb65",
+        "token_name": "dolar"
+    },
+    "that_deposits": 5
+}

@@ -1,0 +1,10 @@
+{
+    "contents": {
+        "intervalInPastError": [
+            30,
+            10,
+            20
+        ]
+    },
+    "tag": "TEIntervalError"
+}

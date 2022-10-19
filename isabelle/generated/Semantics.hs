@@ -1,14 +1,15 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Semantics(Payment(..), ReduceEffect, ReduceWarning, ReduceResult,
-             TransactionWarning(..), ApplyAllResult, ReduceStepResult,
-             TransactionError(..), TransactionOutputRecord_ext,
+  Semantics(Payment(..), equal_Payment, TransactionWarning(..),
+             equal_TransactionWarning, ReduceEffect, ReduceWarning,
+             ReduceResult, ApplyAllResult, ReduceStepResult,
+             TransactionError(..), TransactionOutputRecord_ext(..),
              TransactionOutput(..), Transaction_ext(..), evalValue,
              evalObservation, txOutWarnings, txOutPayments, reductionLoop,
              reduceContractUntilQuiescent, applyAllInputs, computeTransaction,
-             playTrace, equal_Payment, txOutState, txOutContract,
-             equal_TransactionWarning)
+             playTrace, txOutState, txOutContract, equal_TransactionError,
+             equal_TransactionOutput, equal_Transaction_ext)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -34,6 +35,94 @@ data Payment =
     Arith.Int
   deriving (Prelude.Read, Prelude.Show);
 
+equal_Payment :: Payment -> Payment -> Bool;
+equal_Payment (Payment x1 x2 x3 x4) (Payment y1 y2 y3 y4) =
+  SemanticsTypes.equal_Party x1 y1 &&
+    SemanticsTypes.equal_Payee x2 y2 &&
+      SemanticsTypes.equal_Token x3 y3 && Arith.equal_int x4 y4;
+
+instance Eq Payment where {
+  a == b = equal_Payment a b;
+};
+
+data TransactionWarning =
+  TransactionNonPositiveDeposit SemanticsTypes.Party SemanticsTypes.Party
+    SemanticsTypes.Token Arith.Int
+  | TransactionNonPositivePay SemanticsTypes.Party SemanticsTypes.Payee
+      SemanticsTypes.Token Arith.Int
+  | TransactionPartialPay SemanticsTypes.Party SemanticsTypes.Payee
+      SemanticsTypes.Token Arith.Int Arith.Int
+  | TransactionShadowing SemanticsTypes.ValueId Arith.Int Arith.Int
+  | TransactionAssertionFailed deriving (Prelude.Read, Prelude.Show);
+
+equal_TransactionWarning :: TransactionWarning -> TransactionWarning -> Bool;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionShadowing y41 y42 y43) =
+  SemanticsTypes.equal_ValueId x41 y41 &&
+    Arith.equal_int x42 y42 && Arith.equal_int x43 y43;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionPartialPay y31 y32 y33 y34 y35) =
+  SemanticsTypes.equal_Party x31 y31 &&
+    SemanticsTypes.equal_Payee x32 y32 &&
+      SemanticsTypes.equal_Token x33 y33 &&
+        Arith.equal_int x34 y34 && Arith.equal_int x35 y35;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionNonPositivePay y21 y22 y23 y24) =
+  SemanticsTypes.equal_Party x21 y21 &&
+    SemanticsTypes.equal_Payee x22 y22 &&
+      SemanticsTypes.equal_Token x23 y23 && Arith.equal_int x24 y24;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionNonPositiveDeposit y11 y12 y13 y14) =
+  SemanticsTypes.equal_Party x11 y11 &&
+    SemanticsTypes.equal_Party x12 y12 &&
+      SemanticsTypes.equal_Token x13 y13 && Arith.equal_int x14 y14;
+equal_TransactionWarning TransactionAssertionFailed TransactionAssertionFailed =
+  True;
+
+instance Eq TransactionWarning where {
+  a == b = equal_TransactionWarning a b;
+};
+
 data ApplyWarning = ApplyNoWarning
   | ApplyNonPositiveDeposit SemanticsTypes.Party SemanticsTypes.Party
       SemanticsTypes.Token Arith.Int
@@ -58,16 +147,6 @@ data ReduceResult =
   ContractQuiescent Bool [ReduceWarning] [Payment] (SemanticsTypes.State_ext ())
     SemanticsTypes.Contract
   | RRAmbiguousTimeIntervalError deriving (Prelude.Read, Prelude.Show);
-
-data TransactionWarning =
-  TransactionNonPositiveDeposit SemanticsTypes.Party SemanticsTypes.Party
-    SemanticsTypes.Token Arith.Int
-  | TransactionNonPositivePay SemanticsTypes.Party SemanticsTypes.Payee
-      SemanticsTypes.Token Arith.Int
-  | TransactionPartialPay SemanticsTypes.Party SemanticsTypes.Payee
-      SemanticsTypes.Token Arith.Int Arith.Int
-  | TransactionShadowing SemanticsTypes.ValueId Arith.Int Arith.Int
-  | TransactionAssertionFailed deriving (Prelude.Read, Prelude.Show);
 
 data ApplyAllResult =
   ApplyAllSuccess Bool [TransactionWarning] [Payment]
@@ -612,12 +691,6 @@ playTrace ::
 playTrace sl c t =
   playTraceAux (TransactionOutputRecord_ext [] [] (emptyState sl) c ()) t;
 
-equal_Payment :: Payment -> Payment -> Bool;
-equal_Payment (Payment x1 x2 x3 x4) (Payment y1 y2 y3 y4) =
-  SemanticsTypes.equal_Party x1 y1 &&
-    SemanticsTypes.equal_Payee x2 y2 &&
-      SemanticsTypes.equal_Token x3 y3 && Arith.equal_int x4 y4;
-
 txOutState ::
   forall a. TransactionOutputRecord_ext a -> SemanticsTypes.State_ext ();
 txOutState
@@ -632,68 +705,57 @@ txOutContract
     txOutContract more)
   = txOutContract;
 
-equal_TransactionWarning :: TransactionWarning -> TransactionWarning -> Bool;
-equal_TransactionWarning (TransactionShadowing x41 x42 x43)
-  TransactionAssertionFailed = False;
-equal_TransactionWarning TransactionAssertionFailed
-  (TransactionShadowing x41 x42 x43) = False;
-equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
-  TransactionAssertionFailed = False;
-equal_TransactionWarning TransactionAssertionFailed
-  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
-equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
-  (TransactionShadowing x41 x42 x43) = False;
-equal_TransactionWarning (TransactionShadowing x41 x42 x43)
-  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
-equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
-  TransactionAssertionFailed = False;
-equal_TransactionWarning TransactionAssertionFailed
-  (TransactionNonPositivePay x21 x22 x23 x24) = False;
-equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
-  (TransactionShadowing x41 x42 x43) = False;
-equal_TransactionWarning (TransactionShadowing x41 x42 x43)
-  (TransactionNonPositivePay x21 x22 x23 x24) = False;
-equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
-  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
-equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
-  (TransactionNonPositivePay x21 x22 x23 x24) = False;
-equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
-  TransactionAssertionFailed = False;
-equal_TransactionWarning TransactionAssertionFailed
-  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
-equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
-  (TransactionShadowing x41 x42 x43) = False;
-equal_TransactionWarning (TransactionShadowing x41 x42 x43)
-  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
-equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
-  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
-equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
-  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
-equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
-  (TransactionNonPositivePay x21 x22 x23 x24) = False;
-equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
-  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
-equal_TransactionWarning (TransactionShadowing x41 x42 x43)
-  (TransactionShadowing y41 y42 y43) =
-  SemanticsTypes.equal_ValueId x41 y41 &&
-    Arith.equal_int x42 y42 && Arith.equal_int x43 y43;
-equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
-  (TransactionPartialPay y31 y32 y33 y34 y35) =
-  SemanticsTypes.equal_Party x31 y31 &&
-    SemanticsTypes.equal_Payee x32 y32 &&
-      SemanticsTypes.equal_Token x33 y33 &&
-        Arith.equal_int x34 y34 && Arith.equal_int x35 y35;
-equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
-  (TransactionNonPositivePay y21 y22 y23 y24) =
-  SemanticsTypes.equal_Party x21 y21 &&
-    SemanticsTypes.equal_Payee x22 y22 &&
-      SemanticsTypes.equal_Token x23 y23 && Arith.equal_int x24 y24;
-equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
-  (TransactionNonPositiveDeposit y11 y12 y13 y14) =
-  SemanticsTypes.equal_Party x11 y11 &&
-    SemanticsTypes.equal_Party x12 y12 &&
-      SemanticsTypes.equal_Token x13 y13 && Arith.equal_int x14 y14;
-equal_TransactionWarning TransactionAssertionFailed TransactionAssertionFailed =
-  True;
+equal_TransactionError :: TransactionError -> TransactionError -> Bool;
+equal_TransactionError (TEIntervalError x3) TEUselessTransaction = False;
+equal_TransactionError TEUselessTransaction (TEIntervalError x3) = False;
+equal_TransactionError TEApplyNoMatchError TEUselessTransaction = False;
+equal_TransactionError TEUselessTransaction TEApplyNoMatchError = False;
+equal_TransactionError TEApplyNoMatchError (TEIntervalError x3) = False;
+equal_TransactionError (TEIntervalError x3) TEApplyNoMatchError = False;
+equal_TransactionError TEAmbiguousTimeIntervalError TEUselessTransaction =
+  False;
+equal_TransactionError TEUselessTransaction TEAmbiguousTimeIntervalError =
+  False;
+equal_TransactionError TEAmbiguousTimeIntervalError (TEIntervalError x3) =
+  False;
+equal_TransactionError (TEIntervalError x3) TEAmbiguousTimeIntervalError =
+  False;
+equal_TransactionError TEAmbiguousTimeIntervalError TEApplyNoMatchError = False;
+equal_TransactionError TEApplyNoMatchError TEAmbiguousTimeIntervalError = False;
+equal_TransactionError (TEIntervalError x3) (TEIntervalError y3) =
+  SemanticsTypes.equal_IntervalError x3 y3;
+equal_TransactionError TEUselessTransaction TEUselessTransaction = True;
+equal_TransactionError TEApplyNoMatchError TEApplyNoMatchError = True;
+equal_TransactionError TEAmbiguousTimeIntervalError TEAmbiguousTimeIntervalError
+  = True;
+
+equal_TransactionOutputRecord_ext ::
+  forall a.
+    (Eq a) => TransactionOutputRecord_ext a ->
+                TransactionOutputRecord_ext a -> Bool;
+equal_TransactionOutputRecord_ext
+  (TransactionOutputRecord_ext txOutWarningsa txOutPaymentsa txOutStatea
+    txOutContracta morea)
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutWarningsa == txOutWarnings &&
+      txOutPaymentsa == txOutPayments &&
+        SemanticsTypes.equal_State_ext txOutStatea txOutState &&
+          SemanticsTypes.equal_Contract txOutContracta txOutContract &&
+            morea == more;
+
+equal_TransactionOutput :: TransactionOutput -> TransactionOutput -> Bool;
+equal_TransactionOutput (TransactionOutput x1) (TransactionError x2) = False;
+equal_TransactionOutput (TransactionError x2) (TransactionOutput x1) = False;
+equal_TransactionOutput (TransactionError x2) (TransactionError y2) =
+  equal_TransactionError x2 y2;
+equal_TransactionOutput (TransactionOutput x1) (TransactionOutput y1) =
+  equal_TransactionOutputRecord_ext x1 y1;
+
+equal_Transaction_ext ::
+  forall a. (Eq a) => Transaction_ext a -> Transaction_ext a -> Bool;
+equal_Transaction_ext (Transaction_ext intervala inputsa morea)
+  (Transaction_ext interval inputs more) =
+  intervala == interval && inputsa == inputs && morea == more;
 
 }

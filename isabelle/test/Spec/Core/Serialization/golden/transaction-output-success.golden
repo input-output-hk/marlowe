@@ -1,0 +1,42 @@
+{
+    "contract": "close",
+    "payments": [
+        {
+            "amount": 10,
+            "payment_from": {
+                "role_token": "Ada Provider"
+            },
+            "to": {
+                "party": {
+                    "role_token": "Dollar Provider"
+                }
+            },
+            "token": {
+                "currency_symbol": "",
+                "token_name": ""
+            }
+        },
+        {
+            "amount": 20,
+            "payment_from": {
+                "role_token": "Dollar Provider"
+            },
+            "to": {
+                "party": {
+                    "role_token": "Ada Provider"
+                }
+            },
+            "token": {
+                "currency_symbol": "85bb65",
+                "token_name": "dollar"
+            }
+        }
+    ],
+    "state": {
+        "accounts": [],
+        "boundValues": [],
+        "choices": [],
+        "minTime": 1664812900000
+    },
+    "warnings": []
+}

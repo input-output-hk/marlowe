@@ -40,6 +40,14 @@ tests = testGroup "Core Json Serialization"
     , actionTests
     , caseTests
     , contractTests
+    , inputTests
+    , transactionTests
+    , paymentTests
+    , stateTests
+    , transactionWarningTests
+    , intervalErrorTests
+    , transactionErrorTests
+    , transactionOutputTests
     ]
 
 
@@ -253,6 +261,7 @@ caseTests = testGroup "Case"
         (goldenPath </> "case.golden")
         (pure $ encodePretty caseExample)
     ]
+
 contractTests :: TestTree
 contractTests = testGroup "Contract"
     [ roundtripTest "Contract roundtrip"
@@ -292,4 +301,148 @@ contractTests = testGroup "Contract"
         "Golden Contract Swap"
         (goldenPath </> "contract-swap.golden")
         (pure $ encodePretty Examples.Swap.swapExample)
+    ]
+
+inputTests :: TestTree
+inputTests = testGroup "Input"
+    [ roundtripTest "Input roundtrip"
+        [ iNotifyExample
+        , iChoiceExample
+        , iDepositExample
+        ]
+    , goldenTest
+        "Golden Input Notify"
+        (goldenPath </> "input-notify.golden")
+        (pure $ encode iNotifyExample)
+    , goldenTest
+        "Golden Input Choice"
+        (goldenPath </> "input-choice.golden")
+        (pure $ encodePretty iChoiceExample)
+    , goldenTest
+        "Golden Input Deposit"
+        (goldenPath </> "input-deposit.golden")
+        (pure $ encodePretty iDepositExample)
+    ]
+
+transactionTests :: TestTree
+transactionTests = testGroup "Transaction"
+    [ roundtripTest "Transaction roundtrip"
+        [ transactionExample
+        ]
+    , goldenTest
+        "Golden Transaction"
+        (goldenPath </> "transaction.golden")
+        (pure $ encodePretty transactionExample)
+    ]
+
+paymentTests :: TestTree
+paymentTests = testGroup "Payment"
+    [ roundtripTest "Payment roundtrip"
+        [ paymentExample
+        ]
+    , goldenTest
+        "Golden Payment"
+        (goldenPath </> "payment.golden")
+        (pure $ encodePretty paymentExample)
+    ]
+
+stateTests :: TestTree
+stateTests = testGroup "State"
+    [ roundtripTest "State roundtrip"
+        [ stateExample
+        ]
+    , goldenTest
+        "Golden State"
+        (goldenPath </> "state.golden")
+        (pure $ encodePretty stateExample)
+    ]
+
+transactionWarningTests :: TestTree
+transactionWarningTests =  testGroup "TransactionWarning"
+    [ roundtripTest "TransactionWarning roundtrip"
+        [ transactionNonPositiveDepositExample
+        , transactionNonPositivePayExample
+        , transactionPartialPayExample
+        , transactionShadowingExample
+        , transactionAssertionFailedExample
+        ]
+    , goldenTest
+        "Golden TransactionWarning Non Positive Deposit"
+        (goldenPath </> "transaction-warning-non-positive-deposit.golden")
+        (pure $ encodePretty transactionNonPositiveDepositExample)
+    , goldenTest
+        "Golden TransactionWarning Non Positive Pay"
+        (goldenPath </> "transaction-warning-non-positive-pay.golden")
+        (pure $ encodePretty transactionNonPositivePayExample)
+    , goldenTest
+        "Golden TransactionWarning Partial pay"
+        (goldenPath </> "transaction-warning-partial-pay.golden")
+        (pure $ encodePretty transactionPartialPayExample)
+    , goldenTest
+        "Golden TransactionWarning Shadowing"
+        (goldenPath </> "transaction-warning-shadowing.golden")
+        (pure $ encodePretty transactionShadowingExample)
+    , goldenTest
+        "Golden TransactionWarning Assertion Failed"
+        (goldenPath </> "transaction-warning-assertion-failed.golden")
+        (pure $ encode transactionAssertionFailedExample)
+    ]
+
+intervalErrorTests :: TestTree
+intervalErrorTests =  testGroup "IntervalError"
+    [ roundtripTest "IntervalError roundtrip"
+        [ invalidIntervalExample
+        , intervalInPastErrorExample
+        ]
+    , goldenTest
+        "Golden IntervalError InvalidInterval"
+        (goldenPath </> "interval-error-invalid-interval.golden")
+        (pure $ encodePretty invalidIntervalExample)
+    , goldenTest
+        "Golden IntervalError IntervalInPastError"
+        (goldenPath </> "interval-error-interval-in-past.golden")
+        (pure $ encodePretty intervalInPastErrorExample)
+    ]
+
+
+transactionErrorTests :: TestTree
+transactionErrorTests = testGroup "TransactionError"
+    [ roundtripTest "TransactionError roundtrip"
+        [ teAmbiguousTimeIntervalErrorExample
+        , teApplyNoMatchErrorExample
+        , teIntervalErrorExample
+        , teUselessTransactionExample
+        ]
+    , goldenTest
+        "Golden TransactionError AmbiguousTimeIntervalError"
+        (goldenPath </> "transaction-error-ambiguous-time-interval-error.golden")
+        (pure $ encodePretty teAmbiguousTimeIntervalErrorExample)
+    , goldenTest
+        "Golden TransactionError ApplyNoMatchError"
+        (goldenPath </> "transaction-error-apply-no-match-error.golden")
+        (pure $ encodePretty teApplyNoMatchErrorExample)
+    , goldenTest
+        "Golden TransactionError IntervalError"
+        (goldenPath </> "transaction-error-interval-error.golden")
+        (pure $ encodePretty teIntervalErrorExample)
+    , goldenTest
+        "Golden TransactionError UselessTransaction"
+        (goldenPath </> "transaction-error-useless-transaction.golden")
+        (pure $ encodePretty teUselessTransactionExample)
+    ]
+
+transactionOutputTests :: TestTree
+transactionOutputTests = testGroup "TransactionOutput"
+    [ roundtripTest "TransactionOutput roundtrip"
+        [ transactionOutputErrorExample
+        , transactionOutputSuccessExample
+        ]
+    , goldenTest
+        "Golden TransactionOutput Error"
+        (goldenPath </> "transaction-output-error.golden")
+        (pure $ encodePretty transactionOutputErrorExample)
+    , goldenTest
+        "Golden TransactionOutput Success"
+        (goldenPath </> "transaction-output-success.golden")
+        (pure $ encodePretty transactionOutputSuccessExample)
     ]

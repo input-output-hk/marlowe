@@ -24,6 +24,9 @@
 -- seen by Haskell.
 \begin{code}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 
 module MarloweCoreJson where
 
@@ -32,7 +35,7 @@ import qualified Arith
 import Control.Applicative ((<|>), (<*>))
 import CoreOrphanEq
 import ArithNumInstance
-import Data.Aeson (object, withArray, withObject, withText, withScientific, (.=), (.:), encode)
+import Data.Aeson (object, withArray, withObject, withText, withScientific, (.=), (.:), (.:?), encode)
 import Data.Aeson.Types (Parser, ToJSON(..), FromJSON(..))
 import qualified Data.Aeson.Types as JSON
 import Data.Aeson.Encode.Pretty (encodePretty)
@@ -42,7 +45,10 @@ import qualified Data.Foldable as F
 import qualified Data.Text as T
 import Data.Scientific (Scientific, floatingOrInteger)
 import qualified Examples.Swap
-import SemanticsTypes (Action(..), Case(..), Contract(..), Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..))
+import SemanticsTypes (Action(..), Case(..), Contract(..), Input(..), Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..), State_ext(..), IntervalError(..))
+import Semantics (Transaction_ext(..), Payment(..), TransactionWarning(..), TransactionError(..), TransactionOutput(..), TransactionOutputRecord_ext(..), txOutWarnings, txOutPayments, txOutState, txOutContract, playTrace )
+
+
 
 -- These are some helper functions to print and pretty print a ToJSON example
 encodeExample :: ToJSON a => a -> IO ()
@@ -846,7 +852,515 @@ assertExample = Assert choseExample Close
 is serialized as
 \perform{prettyEncodeExample assertExample}
 
-\isamarkupsection{Full Example}
+
+\isamarkupsection{Input}
+The \emph{Input} type is serialized as the literal string "input\_notify" or as an object, depending on the constructor.
+
+\begin{code}
+instance ToJSON Input where
+  toJSON (IDeposit accId party tok amount) = object
+      [ "input_from_party" .= party
+      , "that_deposits" .= amount
+      , "of_token" .= tok
+      , "into_account" .= accId
+      ]
+  toJSON (IChoice choiceId chosenNum) = object
+      [ "input_that_chooses_num" .= chosenNum
+      , "for_choice_id" .= choiceId
+      ]
+  toJSON INotify = JSON.String $ T.pack "input_notify"
+
+
+instance FromJSON Input where
+  parseJSON (JSON.String "input_notify") = return INotify
+  parseJSON (JSON.Object v) =
+    IChoice <$> v .: "for_choice_id"
+                <*> v .: "input_that_chooses_num"
+    <|> IDeposit  <$> v .: "into_account"
+              <*> v .: "input_from_party"
+              <*> v .: "of_token"
+              <*> v .: "that_deposits"
+  parseJSON _ = fail "Input must be either an object or the string \"input_notify\""
+\end{code}
+
+Some examples for each \emph{Input} type
+
+\isamarkupsubsubsection{INotify}
+
+\begin{code}
+iNotifyExample :: Input
+iNotifyExample = INotify
+\end{code}
+
+is serialized as \eval{encodeExample iNotifyExample}
+
+
+\isamarkupsubsubsection{IChoice}
+
+\begin{code}
+iChoiceExample :: Input
+iChoiceExample = IChoice choiceIdExample 3
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample iChoiceExample}
+
+
+\isamarkupsubsubsection{IDeposit}
+
+\begin{code}
+iDepositExample :: Input
+iDepositExample = IDeposit addressExample roleExample dolarToken 5
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample iDepositExample}
+
+\isamarkupsection{Transaction}
+
+The \emph{Transaction} type is serialized as an object with two properties, \emph{tx\_interval} and \emph{tx\_inputs}.
+
+
+\begin{code}
+instance ToJSON (Transaction_ext a) where
+  toJSON (Transaction_ext (from, to) txInps _) = object
+      [ "tx_interval" .= timeIntervalJSON
+      , "tx_inputs" .= toJSONList (map toJSON txInps)
+      ]
+    where timeIntervalJSON = object [ "from" .= from
+                                    , "to" .= to
+                                    ]
+
+instance FromJSON (Transaction_ext ()) where
+  parseJSON (JSON.Object v) =
+        Transaction_ext <$> (parseTimeInterval =<< (v .: "tx_interval"))
+                         <*> ((v .: "tx_inputs") >>=
+                   withArray "Transaction input list" (\cl ->
+                     mapM parseJSON (F.toList cl)
+                                                      ))
+                         <*> pure ()
+    where parseTimeInterval = withObject "TimeInterval" (\v ->
+            do from <- withInteger "TimeInterval from" =<< (v .: "from")
+               to <- withInteger "TimeInterval to" =<< (v .: "to")
+               return (from, to)
+                                                      )
+  parseJSON _ = fail "Transaction must be an object"
+
+\end{code}
+
+for example, the following \emph{Transaction}
+
+\begin{code}
+transactionExample :: Transaction_ext ()
+transactionExample = Transaction_ext
+                        (10, 100)
+                        [ iChoiceExample
+                        , iNotifyExample
+                        ]
+                        ()
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample transactionExample}
+
+\isamarkupsection{Payment}
+
+The \emph{Payment} type is serialized as a single object with three properties
+
+\begin{code}
+instance ToJSON Payment where
+  toJSON (Payment from to token amount) = object
+      [ "payment_from" .= from
+      , "to" .= to
+      , "token" .= token
+      , "amount" .= amount
+      ]
+
+instance FromJSON Payment where
+    parseJSON = withObject "Payment"
+      (\v ->
+        Payment <$> (v .: "payment_from")
+                <*> (v .: "to")
+                <*> (v .: "token")
+                <*> (v .: "amount")
+      )
+\end{code}
+
+for example, the following \emph{Payment}
+
+\begin{code}
+paymentExample :: Payment
+paymentExample = Payment
+                    addressExample
+                    externalPayeeExample
+                    dolarToken
+                    10
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample paymentExample}
+
+\isamarkupsection{State}
+The \emph{State} type is serialized as a single object with four properties. Each Map is represented by a list
+of key value tuples.
+
+\begin{code}
+instance ToJSON (State_ext ()) where
+  toJSON (State_ext accounts choices boundValues minTime _) = object
+        [ "accounts" .= toJSON accounts
+        , "choices" .= toJSON choices
+        , "boundValues" .= toJSON boundValues
+        , "minTime" .= minTime
+        ]
+
+instance FromJSON (State_ext ()) where
+    parseJSON = withObject "State"
+      (\v ->
+        State_ext <$> (v .: "accounts")
+                <*> (v .: "choices")
+                <*> (v .: "boundValues")
+                <*> (v .: "minTime")
+                <*> pure ()
+      )
+\end{code}
+
+for example, the following state
+
+\begin{code}
+stateExample :: State_ext ()
+stateExample = State_ext
+                [((roleExample, dolarToken), 20)]
+                [(choiceIdExample, 10)]
+                [(ValueId "example", 30)]
+                90
+                ()
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample stateExample}
+
+\isamarkupsection{TransactionWarning}
+
+The \emph{TransactionWarning} type is serialized as a literal string (in case of \emph{TransactionAssertionFailed}) or as an object with different properties, depending the constructor.
+
+\begin{code}
+instance ToJSON TransactionWarning where
+  toJSON (TransactionNonPositiveDeposit party accId tok amount) = object
+      [ "party" .= party
+      , "asked_to_deposit" .= amount
+      , "of_token" .= tok
+      , "in_account" .= accId
+      ]
+  toJSON (TransactionNonPositivePay accId payee tok amount) = object
+      [ "account" .= accId
+      , "asked_to_pay" .= amount
+      , "of_token" .= tok
+      , "to_payee" .= payee
+      ]
+  toJSON (TransactionPartialPay accId payee tok paid expected) = object
+      [ "account" .= accId
+      , "asked_to_pay" .= expected
+      , "of_token" .= tok
+      , "to_payee" .= payee
+      , "but_only_paid" .= paid
+      ]
+  toJSON (TransactionShadowing valId oldVal newVal) = object
+      [ "value_id" .= valId
+      , "had_value" .= oldVal
+      , "is_now_assigned" .= newVal
+      ]
+  toJSON TransactionAssertionFailed = JSON.String $ T.pack "assertion_failed"
+
+
+instance FromJSON TransactionWarning where
+  parseJSON (JSON.String "assertion_failed") = return TransactionAssertionFailed
+  parseJSON (JSON.Object v) =
+        (TransactionNonPositiveDeposit <$> (v .: "party")
+                                       <*> (v .: "in_account")
+                                       <*> (v .: "of_token")
+                                       <*> (v .: "asked_to_deposit"))
+    <|> (do maybeButOnlyPaid <- v .:? "but_only_paid"
+            case maybeButOnlyPaid :: Maybe Scientific of
+              Nothing -> TransactionNonPositivePay <$> (v .: "account")
+                                                   <*> (v .: "to_payee")
+                                                   <*> (v .: "of_token")
+                                                   <*> (v .: "asked_to_pay")
+              Just butOnlyPaid -> TransactionPartialPay <$> (v .: "account")
+                                                        <*> (v .: "to_payee")
+                                                        <*> (v .: "of_token")
+                                                        <*> getInteger "but only paid" butOnlyPaid
+                                                        <*> (v .: "asked_to_pay"))
+    <|> (TransactionShadowing <$> (v .: "value_id")
+                              <*> (v .: "had_value")
+                              <*> (v .: "is_now_assigned"))
+  parseJSON _ = fail "Contract must be either an object or a the string \"close\""
+\end{code}
+
+Some examples for each \emph{TransactionWarning} type
+
+
+\isamarkupsubsubsection{TransactionNonPositiveDeposit}
+
+\begin{code}
+transactionNonPositiveDepositExample :: TransactionWarning
+transactionNonPositiveDepositExample = TransactionNonPositiveDeposit
+                                            addressExample
+                                            roleExample
+                                            dolarToken
+                                            20
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample transactionNonPositiveDepositExample}
+
+
+\isamarkupsubsubsection{TransactionNonPositivePay}
+
+\begin{code}
+transactionNonPositivePayExample :: TransactionWarning
+transactionNonPositivePayExample = TransactionNonPositivePay
+                                            addressExample
+                                            internalPayeeExample
+                                            dolarToken
+                                            20
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample transactionNonPositivePayExample}
+
+
+\isamarkupsubsubsection{TransactionPartialPay}
+
+\begin{code}
+transactionPartialPayExample :: TransactionWarning
+transactionPartialPayExample = TransactionPartialPay
+                                            addressExample
+                                            internalPayeeExample
+                                            dolarToken
+                                            20
+                                            30
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample transactionPartialPayExample}
+
+
+\isamarkupsubsubsection{TransactionShadowing}
+
+\begin{code}
+transactionShadowingExample :: TransactionWarning
+transactionShadowingExample = TransactionShadowing
+                                            (ValueId "example")
+                                            4
+                                            5
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample transactionShadowingExample}
+
+
+\isamarkupsubsubsection{TransactionAssertionFailed}
+
+\begin{code}
+transactionAssertionFailedExample :: TransactionWarning
+transactionAssertionFailedExample = TransactionAssertionFailed
+\end{code}
+
+is serialized as \eval{encodeExample transactionAssertionFailedExample}
+
+
+\isamarkupsection{IntervalError}
+
+The \emph{IntervalError} type is serialized as an object with a single property (depending on the constructor)
+and in a tuple, the values.
+\begin{code}
+instance ToJSON IntervalError where
+  toJSON (InvalidInterval (s, e)) = object
+    [ ("invalidInterval" .=  toJSON (s, e)) ]
+  toJSON (IntervalInPastError t (s, e)) = object
+    [ ("intervalInPastError" .=  toJSON (t, s, e)) ]
+
+instance FromJSON IntervalError where
+  parseJSON (JSON.Object v) =
+    let
+      parseInvalidInterval = do
+        (s, e) <- v .: "invalidInterval"
+        pure $ InvalidInterval (s , e)
+      parseIntervalInPastError = do
+        (t, s, e) <- v .: "intervalInPastError"
+        pure $ IntervalInPastError t (s, e)
+    in
+      parseIntervalInPastError <|> parseInvalidInterval
+  parseJSON invalid =
+      JSON.prependFailure "parsing IntervalError failed, " (JSON.typeMismatch "Object" invalid)
+\end{code}
+
+Some examples for each \emph{IntervalError} type
+
+
+\isamarkupsubsubsection{InvalidInterval}
+
+\begin{code}
+invalidIntervalExample :: IntervalError
+invalidIntervalExample = InvalidInterval (10, 20)
+\end{code}
+
+is serialized as \eval{encodeExample invalidIntervalExample}
+
+
+\isamarkupsubsubsection{IntervalInPastError}
+
+\begin{code}
+intervalInPastErrorExample :: IntervalError
+intervalInPastErrorExample = IntervalInPastError 30 (10, 20)
+\end{code}
+
+is serialized as \eval{encodeExample intervalInPastErrorExample}
+
+\isamarkupsection{TransactionError}
+
+The \emph{TransactionError} type is serialized as an object with a \emph{tag} property that differentiates
+the type, and a \emph{contents} property that includes the parameter if any.
+
+\begin{code}
+instance ToJSON TransactionError where
+  toJSON TEAmbiguousTimeIntervalError = object
+    [ "tag" .= JSON.String "TEAmbiguousTimeIntervalError"
+    , "contents" .= JSON.Null
+    ]
+  toJSON TEApplyNoMatchError = object
+    [ "tag" .= JSON.String "TEApplyNoMatchError"
+    , "contents" .= JSON.Null
+    ]
+  toJSON (TEIntervalError e) = object
+    [ "tag" .= JSON.String "TEIntervalError"
+    , "contents" .= toJSON e
+    ]
+  toJSON TEUselessTransaction = object
+    [ "tag" .= JSON.String "TEUselessTransaction"
+    , "contents" .= JSON.Null
+    ]
+
+instance FromJSON TransactionError where
+    parseJSON = withObject "TransactionError"
+      (\v ->
+        do
+            tag :: String <- v .: "tag"
+            case tag of
+                "TEAmbiguousTimeIntervalError" -> pure TEAmbiguousTimeIntervalError
+                "TEApplyNoMatchError" -> pure TEApplyNoMatchError
+                "TEIntervalError" -> TEIntervalError <$> v .: "contents"
+                "TEUselessTransaction" -> pure TEUselessTransaction
+      )
+\end{code}
+
+Some examples for each \emph{TransactionError} type
+
+\isamarkupsubsubsection{TEAmbiguousTimeIntervalError}
+
+\begin{code}
+teAmbiguousTimeIntervalErrorExample :: TransactionError
+teAmbiguousTimeIntervalErrorExample = TEAmbiguousTimeIntervalError
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample teAmbiguousTimeIntervalErrorExample}
+
+
+\isamarkupsubsubsection{TEApplyNoMatchError}
+
+\begin{code}
+teApplyNoMatchErrorExample :: TransactionError
+teApplyNoMatchErrorExample = TEApplyNoMatchError
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample teApplyNoMatchErrorExample}
+
+
+\isamarkupsubsubsection{TEIntervalError}
+
+\begin{code}
+teIntervalErrorExample :: TransactionError
+teIntervalErrorExample = TEIntervalError intervalInPastErrorExample
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample teIntervalErrorExample}
+
+\isamarkupsubsubsection{TEUselessTransaction}
+
+\begin{code}
+teUselessTransactionExample :: TransactionError
+teUselessTransactionExample = TEUselessTransaction
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample teUselessTransactionExample}
+
+
+\isamarkupsection{TransactionOutput}
+
+The \emph{TransactionOutput} is serialized as a single object with one property (\emph{transaction\_error})
+in case of an error, or 4 properties in case of success.
+
+
+\begin{code}
+instance ToJSON TransactionOutput where
+  toJSON (TransactionError err) = object
+    [ "transaction_error" .= toJSON err ]
+  toJSON (TransactionOutput out)
+    = object
+        [ "warnings" .= toJSON (txOutWarnings out)
+        , "payments" .= toJSON (txOutPayments out)
+        , "state" .= toJSON (txOutState out)
+        , "contract" .= toJSON (txOutContract out)
+        ]
+
+
+instance FromJSON TransactionOutput where
+  parseJSON = withObject "TransactionOutput"
+                (\v ->
+                     (TransactionError <$> ( v .: "transaction_error"))
+                  <|>( TransactionOutput <$>
+                        ( TransactionOutputRecord_ext
+                            <$> (v .: "warnings")
+                            <*> (v .: "payments")
+                            <*> (v .: "state")
+                            <*> (v .: "contract")
+                            <*> pure ()
+                        )
+                     )
+                )
+\end{code}
+
+Some examples for each \emph{TransactionOutput} type
+
+\isamarkupsubsubsection{TransactionError}
+
+\begin{code}
+transactionOutputErrorExample :: TransactionOutput
+transactionOutputErrorExample = TransactionError teUselessTransactionExample
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample transactionOutputErrorExample}
+
+
+\isamarkupsubsubsection{TransactionOutput}
+
+\begin{code}
+transactionOutputSuccessExample :: TransactionOutput
+transactionOutputSuccessExample = playTrace
+                                    0
+                                    Examples.Swap.swapExample
+                                    Examples.Swap.happyPathTransactions
+\end{code}
+
+is serialized as
+\perform{prettyEncodeExample transactionOutputSuccessExample}
+
+\isamarkupsection{Full Contract Example}
 
 The Swap Example, defined in section \secref{sec:swap-example-execution} is serialized as
 \perform{prettyEncodeExample Examples.Swap.swapExample}

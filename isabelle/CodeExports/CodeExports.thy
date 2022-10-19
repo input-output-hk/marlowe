@@ -93,13 +93,21 @@ export_code
   \<comment> \<open>Force the export of the transaction record\<close>
   Transaction_ext
 
+  \<comment> \<open>Force the export of the transaction output record\<close>
+  TransactionOutputRecord_ext
+
   \<comment> \<open>Force the export on some equality functions (sadly it does not force the Eq instance)\<close>
   equal_TransactionWarning_inst.equal_TransactionWarning
   equal_Payment_inst.equal_Payment
   equal_Value_inst.equal_Value
   equal_Observation_inst.equal_Observation
   equal_Action_inst.equal_Action
-
+  equal_Input_inst.equal_Input
+  equal_Transaction_ext_inst.equal_Transaction_ext
+  equal_State_ext_inst.equal_State_ext
+  equal_IntervalError_inst.equal_IntervalError
+  equal_TransactionError_inst.equal_TransactionError
+  equal_TransactionOutput_inst.equal_TransactionOutput
 
   in Haskell (string_classes)
 

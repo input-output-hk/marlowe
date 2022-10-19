@@ -1,0 +1,15 @@
+{
+    "amount": 10,
+    "payment_from": {
+        "address": "example address"
+    },
+    "to": {
+        "party": {
+            "role_token": "example role"
+        }
+    },
+    "token": {
+        "currency_symbol": "85bb65",
+        "token_name": "dolar"
+    }
+}

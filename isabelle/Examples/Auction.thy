@@ -116,10 +116,6 @@ lemma applyCasesDistributiveAgainstAppend : "(\<And> applyWarn newState cont . a
   apply metis
   by metis
 
-lemma temporaryLemma : "(\<forall>x. x \<in> set ps \<longrightarrow> \<not> member (partyToValueId x) bv) \<Longrightarrow> 
-                        y \<in> set ps \<Longrightarrow> 0 = (case lookup (partyToValueId y) bv of None \<Rightarrow> 0 | Some z \<Rightarrow> z)"
-  by simp
-
 lemma applyInputContractLoopNoWarnings : "invariantHoldsForAuction terms m ps qs curState \<Longrightarrow> (\<And> applyWarn newState cont. applyInput env curState head (contractLoop m ps qs terms) = Applied applyWarn newState cont \<Longrightarrow> applyWarn = ApplyNoWarning)"
   and applyInputHandleChooseNoWarnings : "invariantHoldsForAuction terms m ps qs curState \<Longrightarrow> x \<in> set qs \<Longrightarrow> (\<And> applyWarn newState cont. applyCases env curState head [ handleChoose m ps qs terms x ] = Applied applyWarn newState cont \<Longrightarrow> applyWarn = ApplyNoWarning)"
   and applyInputHandleDepositNoWarnings : "invariantHoldsForAuction terms m ps qs curState \<Longrightarrow> x \<in> set ps \<Longrightarrow> (\<And> applyWarn newState cont. applyCases env curState head [ handleDeposit m ps qs terms x ] = Applied applyWarn newState cont \<Longrightarrow> applyWarn = ApplyNoWarning)"
@@ -288,6 +284,8 @@ lemma reduceUntilQuiescentApplyInput_isSafe : "invariantHoldsForAuction terms m 
   Lemmas con respecto a la preservación de invariante al aplicar un input + algun paso más
 *)
 
+
+(*
 lemma applyInputHandleChoosePreservesInvariant : "invariantHoldsForAuction terms m ps qs fixSta \<Longrightarrow>
                                                   applyInput env fixSta (IChoice (choice p) cho) (contractLoop m ps qs terms) = 
                                                   Applied applyWarn curState (Let (partyToValueId p) (ChoiceValue (choice p)) (contractLoop m (p # ps) (remove p qs) terms)) \<Longrightarrow>
@@ -300,23 +298,21 @@ lemma reduceLetAfterApplyInputHandleChoosePreservesInvariant : "findWithDefault 
                                                                 Reduced wa ef curState (contractLoop m (p # ps) (remove p qs) terms) \<Longrightarrow>
                                                                 invariantHoldsForAuction terms m (p # ps) (remove p qs) curState"
   sorry
+*)
 
-lemma applyAllInputsPreservesInvariantOrClose : "invariantHoldsForAuction terms m ps qs fixSta \<Longrightarrow>
-                                                 applyAllInputs env fixSta (contractLoop m ps qs terms) inps = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow>
-                                                 cont = Close \<or> (cont = contractLoop newm newps newqs terms \<and> invariantHoldsForAuction terms newm newps newqs newState)"
-  sorry
-
-lemma applyAllInputsToClose_isSafe : "invariantHoldsForAuction terms m ps qs fixSta \<Longrightarrow>
-                                      applyAllInputs env fixSta (contractLoop m ps qs terms) inps = ApplyAllSuccess reduced warnings payments newState Close \<Longrightarrow>
-                                      warnings = []"
-  sorry
 
 
 lemma auctionIsSafe_applyAllInputs : "invariantHoldsForAuction terms m ps qs fixSta \<Longrightarrow>
                                       applyAllInputs env fixSta (contractLoop m ps qs terms) inps = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow>
                                       warnings = []"
-  using applyAllInputsToClose_isSafe applyAllInputsPreservesInvariantOrClose
-  by (metis contractLoop.simps(1) settle.simps(1)) 
+  sorry
+
+
+lemma applyAllInputsPreservesInvariant : "invariantHoldsForAuction terms m ps qs sta \<Longrightarrow>
+                                              applyAllInputs env fixSta (contractLoop m ps qs terms) inps = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow>
+                                              cont \<noteq> Close \<Longrightarrow>
+                                               (\<exists> nm nps nqs . cont = contractLoop nm nps nqs terms \<and> invariantHoldsForAuction terms nm nps nqs newState)"
+  sorry
 
 lemma fixingIntervalPreservesInvariant : "invariantHoldsForAuction terms m ps qs sta \<Longrightarrow>
                                           fixInterval (low, high) sta = IntervalTrimmed env fixSta \<Longrightarrow> 
@@ -336,28 +332,82 @@ lemma auctionIsSafe_computeTransaction : "invariantHoldsForAuction terms m ps qs
   using fixingIntervalPreservesInvariant auctionIsSafe_computeTransactionFixSta
   by (smt (verit, ccfv_SIG) IntervalResult.simps(6) closeIsSafe computeTransaction.simps fixInterval.elims)
 
+lemma computeTransactionPreservesInvariant : "invariantHoldsForAuction terms m ps qs sta \<Longrightarrow>
+                                              computeTransaction tra sta (contractLoop m ps qs terms) = TransactionOutput \<lparr>txOutWarnings = txOutWarningsa, txOutPayments = txOutPaymentsa, txOutState = txOutStatea, txOutContract = txOutContracta\<rparr> \<Longrightarrow>
+                                              txOutContracta \<noteq> Close \<Longrightarrow>
+                                               (\<exists> nm nps nqs . txOutContracta = contractLoop nm nps nqs terms \<and> invariantHoldsForAuction terms nm nps nqs txOutStatea)"
+  apply (simp only:computeTransaction.simps Let_def)
+  apply (cases "fixInterval (interval tra) sta")
+   apply (simp only:IntervalResult.case)
+     subgoal for env fixSta
+       apply (cases "applyAllInputs env fixSta (contractLoop m ps qs terms) (inputs tra)")
+         apply (simp only:ApplyAllResult.case)
+         apply (metis Semantics.TransactionOutput.inject(1) Semantics.TransactionOutput.simps(4) Semantics.TransactionOutputRecord.ext_inject applyAllInputsPreservesInvariant)
+        apply simp
+       by simp
+     by simp
 
-lemma computeTransactionPreservesInvariantOrClose : "invariantHoldsForAuction terms m ps qs sta \<Longrightarrow>
-                                                      computeTransaction tra sta (contractLoop m ps qs terms) = TransactionOutput trec \<Longrightarrow>
-                                                      cont = txOutContract trec \<Longrightarrow> newState = txOutState trec \<Longrightarrow>
-                                                      cont = Close \<or> (cont = contractLoop newm newps newqs terms \<and> invariantHoldsForAuction terms newm newps newqs newState)"
-  sorry
+lemma applyLoopOfCloseIsClose : "applyAllLoop x env fixSta Close inps wa err = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow> cont = Close"
+  apply (induction inps arbitrary:x env fixSta inps wa err)
+  subgoal for x env fixSta inps wa err
+    apply (simp only:applyAllLoop.simps[of x env fixSta Close inps wa err])
+    apply (cases "reduceContractUntilQuiescent env fixSta Close")
+    subgoal for reduced reduceWarns pays curState cont
+      apply (simp only:ReduceResult.case)
+    by (metis (no_types, lifting) List.list.simps(4) List.list.simps(5) Semantics.ApplyAllResult.distinct(1) Semantics.ApplyAllResult.inject Semantics.ApplyResult.simps(5) Semantics.applyInput.simps(2) Semantics.reduceContractUntilQuiescent.elims closeIdemp_reductionLoop neq_Nil_conv)
+  by simp
+  by blast
+
+lemma applyAllInputsOfCloseIsClose : "applyAllInputs env fixSta Close inps = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow> cont = Close"
+  by (simp add: applyLoopOfCloseIsClose)
+
+lemma playTraceOfClose_isSafe : "playTraceAux \<lparr>txOutWarnings = wa, txOutPayments = ef, txOutState = sta, txOutContract = Close\<rparr> t = TransactionOutput transResRec \<Longrightarrow> txOutWarnings transResRec = wa"
+  apply (induction t arbitrary:wa ef sta transResRec)
+  apply auto[1]
+  subgoal for a t wa ef sta transResRec
+    apply (simp only:playTraceAux.simps)
+    apply (simp only:computeTransaction.simps)
+    apply (cases "fixInterval (interval a) sta")
+     apply (simp only:IntervalResult.case)
+    subgoal for env fixSta
+      apply (cases "applyAllInputs env fixSta Close (inputs a)")
+      subgoal for reduced warnings payments newState cont
+        apply (simp only:ApplyAllResult.case Let_def)
+        apply (split if_split_asm)
+         apply simp
+        apply (simp only:TransactionOutput.case)
+        apply (simp del:playTraceAux.simps applyAllInputs.simps)
+        by (metis append_self_conv applyAllInputsOfCloseIsClose closeIsSafe_applyAllInputs)
+       apply simp
+      by force
+    by simp
+  done
 
 lemma auctionIsSafe_playTraceAux : "invariantHoldsForAuction terms m ps qs sta \<Longrightarrow>
                                     playTraceAux \<lparr> txOutWarnings = Nil
-                                                 , txOutPayments = Nil
-                                                 , txOutState = emptyState sl
-                                                 , txOutContract = (contractLoop m ps qs terms) \<rparr> (Cons h t) = TransactionOutput transResRec \<Longrightarrow>
+                                                 , txOutPayments = ef
+                                                 , txOutState = sta
+                                                 , txOutContract = contractLoop m ps qs terms \<rparr> l = TransactionOutput transResRec \<Longrightarrow>
                                     txOutWarnings transResRec = []"
-  apply (simp only:playTraceAux.simps Let_def)
-  apply (split TransactionOutput.splits)
-  defer
-   apply simp
-  using fixingIntervalPreservesInvariant apply (simp del:applyAllInputs.simps)
-  using applyAllInputsToClose_isSafe applyAllInputsPreservesInvariantOrClose
-
-
-  sorry
+  apply (induction "\<lparr> txOutWarnings = Nil
+                    , txOutPayments = ef
+                    , txOutState = sta
+                    , txOutContract = contractLoop m ps qs terms \<rparr>" l arbitrary:m ps qs sta ef transResRec rule:playTraceAux.induct)
+  subgoal for m ps qs sta ef transResRec
+    by auto
+    subgoal for warnings payments state cont h t m ps qs sta ef transResRec
+      apply (simp only:playTraceAux.simps(2)[of "[]" "ef" "sta" "contractLoop m ps qs terms" "h" "t"] Let_def)
+      apply (cases "computeTransaction h sta (contractLoop m ps qs terms)")
+       apply (simp only:TransactionOutput.case)
+      subgoal for x2
+        apply (cases x2)
+        subgoal for txOutWarningsa txOutPaymentsa txOutStatea txOutContracta
+          apply (cases "txOutContracta = Close")
+           apply (metis Semantics.TransactionOutputRecord.update_convs(1) Semantics.TransactionOutputRecord.update_convs(2) auctionIsSafe_computeTransaction eq_Nil_appendI playTraceOfClose_isSafe)
+          by (smt (verit, ccfv_threshold) List.append.right_neutral Semantics.TransactionOutputRecord.ext_inject Semantics.TransactionOutputRecord.update_convs(1) Semantics.TransactionOutputRecord.update_convs(2) auctionIsSafe_computeTransaction computeTransactionPreservesInvariant)
+        done
+      by force
+    done
 
 lemma auctionIsSafe_contractLoop : "invariantHoldsForAuction terms m ps qs (emptyState slot) \<Longrightarrow>
                          playTrace slot (contractLoop m ps qs terms) txList  = TransactionOutput txOut \<Longrightarrow> 

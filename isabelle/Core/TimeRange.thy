@@ -2,6 +2,17 @@ theory TimeRange
 imports Semantics PositiveAccounts QuiescentResult MoneyPreservation Timeout TransactionBound
 begin
 
+
+text \<open>
+The following function checks if a closed and bounded time interval is inside 
+an open 
+\<close>
+fun inInterval :: "TimeInterval \<Rightarrow> OptBoundTimeInterval \<Rightarrow> bool" where
+"inInterval (min1, max1) (OptBoundTimeInterval (None, None)) = True" |
+"inInterval (_, max1) (OptBoundTimeInterval (None, Some max2)) = (max1 \<le> max2)" |
+"inInterval (min1, _) (OptBoundTimeInterval (Some min2, None)) = (min1 \<ge> min2)" |
+"inInterval (min1, max1) (OptBoundTimeInterval (Some min2, Some max2)) = (min1 \<ge> min2 \<and> max1 \<le> max2)"
+
 fun isCompatible :: "POSIXTime \<times> POSIXTime \<Rightarrow> POSIXTime option \<times> POSIXTime option \<Rightarrow> bool" where
 "isCompatible (min1, max1) (None, None) = True" |
 "isCompatible (_, max1) (None, Some max2) = (max1 \<le> max2)" |
@@ -262,7 +273,7 @@ lemma reduceStep_ifCaseLtCt_aux : "isCompatible (a, b) (calculateTimeInterval n 
   using compatibleIdempotency2 by presburger
   done
 
-lemma reduceStep_ifCaseLtCt : "isCompatible (timeInterval env) (calculateTimeInterval n ct (When x41 x42 x43)) \<Longrightarrow> 
+lemma reduceStep_ifCaseLtCt : "isCompatible (timeInterval env) (calculateTimeInterval n ct (When x41 x42 x43)) \<Longrightarrow>
                                reduceContractStep env state (When x41 x42 x43) = NotReduced \<Longrightarrow> isValidInterval (timeInterval env) \<Longrightarrow> ct < x42"
   apply (cases env)
   subgoal for timeInterv
@@ -307,7 +318,7 @@ lemma reduceContractUntilQuiescent_ifCaseLtCt : "isCompatible (timeInterval env)
 lemma calculateTimeIntervalAvoidsAmbiguousInterval_applyAllLoop :
 "geIfNone n (int (length inps)) \<Longrightarrow>
  isCompatible (timeInterval env) (calculateTimeInterval n ct c) \<Longrightarrow>
- isValidInterval (timeInterval env) \<Longrightarrow> 
+ isValidInterval (timeInterval env) \<Longrightarrow>
  applyAllLoop b env s c inps wa ef \<noteq>
  ApplyAllAmbiguousTimeIntervalError"
   apply (induction b env s c inps wa ef arbitrary: n ct rule:applyAllLoop.induct)
@@ -341,7 +352,7 @@ lemma calculateTimeIntervalAvoidsAmbiguousInterval_applyAllLoop :
 lemma calculateTimeIntervalAvoidsAmbiguousInterval_applyAllInputs :
 "geIfNone n (int (length inps)) \<Longrightarrow>
  isCompatible (minInterv, maxInterv) (calculateTimeInterval n ct c) \<Longrightarrow>
- isValidInterval (minInterv, maxInterv) \<Longrightarrow> 
+ isValidInterval (minInterv, maxInterv) \<Longrightarrow>
  applyAllInputs \<lparr> timeInterval = (minInterv, maxInterv) \<rparr> s c inps
     \<noteq> ApplyAllAmbiguousTimeIntervalError"
   apply (simp only:applyAllInputs.simps)

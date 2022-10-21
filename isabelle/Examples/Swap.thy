@@ -100,14 +100,14 @@ definition
       \<lparr> party = adaProvider
       , amount = Constant 10
       , currency = adaToken
-      , depositDeadline = 1664812800000
+      , depositDeadline = 3
       \<rparr>
       \<comment> \<open>Party B trades 20 cents\<close>
       \<comment> \<open>deposited before Monday, October 3, 2022 5:00:00 PM GMT\<close>
       \<lparr> party = dollarProvider
       , amount = Constant 20
       , currency = dollarToken
-      , depositDeadline = 1664816400000 
+      , depositDeadline = 5 
       \<rparr>
   "
 
@@ -115,11 +115,13 @@ subsubsection \<open>Happy path\<close>
 
 text \<open>If both parties deposit before their deadline,\<close>
 
+value "calculateTimeInterval None 1 swapExample"
+value "calculateTimeInterval (Some 2) 0 swapExample"
 definition
   "happyPathTransactions = 
     [ 
       \<comment> \<open>First party deposit\<close>
-      \<lparr> interval = (1664812600000, 1664812700000)
+      \<lparr> interval = (2, 2)
       , inputs = [
                   IDeposit 
                     adaProvider 
@@ -129,7 +131,7 @@ definition
                  ] 
       \<rparr>
      \<comment> \<open>Second party deposit\<close>
-    , \<lparr> interval = (1664812900000, 1664813100000)
+    , \<lparr> interval = (2, 2)
       , inputs = [
                   IDeposit 
                     dollarProvider

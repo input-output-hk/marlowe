@@ -2,14 +2,14 @@
 
 module
   Semantics(Payment(..), ReduceEffect, ReduceWarning, ReduceResult,
-             TransactionWarning(..), ApplyAllResult, ReduceStepResult,
-             TransactionError(..), TransactionOutputRecord_ext,
-             TransactionOutput(..), Transaction_ext(..), evalValue,
-             evalObservation, txOutWarnings, txOutPayments, reductionLoop,
-             reduceContractUntilQuiescent, applyAllInputs, computeTransaction,
-             playTrace, getOutcomes, maxTimeContract, getSignatures,
-             calculateTimeInterval, equal_Payment, txOutState, txOutContract,
-             equal_TransactionWarning)
+             TransactionWarning(..), ApplyAllResult, OpenTimeInterval,
+             ReduceStepResult, TransactionError(..),
+             TransactionOutputRecord_ext, TransactionOutput(..),
+             Transaction_ext(..), evalValue, evalObservation, txOutWarnings,
+             txOutPayments, reductionLoop, reduceContractUntilQuiescent,
+             applyAllInputs, computeTransaction, playTrace, getOutcomes,
+             maxTimeContract, getSignatures, calculateTimeInterval,
+             equal_Payment, txOutState, txOutContract, equal_TransactionWarning)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -75,6 +75,9 @@ data ApplyAllResult =
   ApplyAllSuccess Bool [TransactionWarning] [Payment]
     (SemanticsTypes.State_ext ()) SemanticsTypes.Contract
   | ApplyAllNoMatchError | ApplyAllAmbiguousTimeIntervalError
+  deriving (Prelude.Read, Prelude.Show);
+
+newtype OpenTimeInterval = OpenTimeInterval (Maybe Arith.Int, Maybe Arith.Int)
   deriving (Prelude.Read, Prelude.Show);
 
 data ReduceStepResult =
@@ -701,16 +704,14 @@ maxTimeContract (SemanticsTypes.Assert vb contract) = maxTimeContract contract;
 getSignatures :: [SemanticsTypes.Input] -> [SemanticsTypes.Party];
 getSignatures l = List.foldl addSig SList.empty l;
 
-combineIntervals ::
-  (Maybe Arith.Int, Maybe Arith.Int) ->
-    (Maybe Arith.Int, Maybe Arith.Int) -> (Maybe Arith.Int, Maybe Arith.Int);
-combineIntervals (min1, max1) (min2, max2) =
-  (maxOpt min1 min2, minOpt max1 max2);
+combineIntervals :: OpenTimeInterval -> OpenTimeInterval -> OpenTimeInterval;
+combineIntervals (OpenTimeInterval (min1, max1)) (OpenTimeInterval (min2, max2))
+  = OpenTimeInterval (maxOpt min1 min2, minOpt max1 max2);
 
 calculateTimeInterval ::
-  Maybe Arith.Int ->
-    Arith.Int -> SemanticsTypes.Contract -> (Maybe Arith.Int, Maybe Arith.Int);
-calculateTimeInterval uu uv SemanticsTypes.Close = (Nothing, Nothing);
+  Maybe Arith.Int -> Arith.Int -> SemanticsTypes.Contract -> OpenTimeInterval;
+calculateTimeInterval uu uv SemanticsTypes.Close =
+  OpenTimeInterval (Nothing, Nothing);
 calculateTimeInterval n t (SemanticsTypes.Pay uw ux uy uz c) =
   calculateTimeInterval n t c;
 calculateTimeInterval n t (SemanticsTypes.If va ct cf) =
@@ -718,8 +719,9 @@ calculateTimeInterval n t (SemanticsTypes.If va ct cf) =
     (calculateTimeInterval n t cf);
 calculateTimeInterval n t (SemanticsTypes.When [] timeout tcont) =
   (if Arith.less_int t timeout
-    then (Nothing, Just (Arith.minus_int timeout Arith.one_int))
-    else combineIntervals (Just timeout, Nothing)
+    then OpenTimeInterval
+           (Nothing, Just (Arith.minus_int timeout Arith.one_int))
+    else combineIntervals (OpenTimeInterval (Just timeout, Nothing))
            (calculateTimeInterval n t tcont));
 calculateTimeInterval n t
   (SemanticsTypes.When (SemanticsTypes.Case vb cont : tail) timeout tcont) =

@@ -103,6 +103,8 @@ export_code
   equal_TransactionWarning_inst.equal_TransactionWarning
   equal_Payment_inst.equal_Payment
 
+
+  calculateTimeInterval2
   in Haskell (string_classes)
 
 (*

@@ -110,13 +110,17 @@ definition
       , depositDeadline = 5 
       \<rparr>
   "
-
+\<comment> \<open>(-\<infinity>, deadlineA],  \<close>
+\<comment> \<open>OptBoundTimeInterval -> minTime -> TimeInterval\<close>
 subsubsection \<open>Happy path\<close>
 
 text \<open>If both parties deposit before their deadline,\<close>
 
 value "calculateTimeInterval None 1 swapExample"
-value "calculateTimeInterval (Some 2) 0 swapExample"
+value "calculateTimeInterval (Some 3) 0 swapExample"
+value  "calculateTimeInterval2 None 1 swapExample"
+value  "calculateTimeInterval2 (Some 3) 1 swapExample"
+value  "calculateTimeInterval2 (Some 3) 10 swapExample"
 definition
   "happyPathTransactions = 
     [ 

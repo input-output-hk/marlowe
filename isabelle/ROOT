@@ -32,6 +32,7 @@ session Core in "Core" = HOL +
     TimeRange
     TransactionBound
     ValidState
+    OptBoundTimeInterval3
 
 
 
@@ -96,6 +97,7 @@ session Specification in "Doc/Specification" = HOL +
   document_theories
     "Core.SemanticsTypes"
     "Core.BlockchainTypes"
+    "Core.OptBoundTimeInterval3"
     "CodeExports.CodeExports"
     "Util.ByteString"
     "Examples.Swap"

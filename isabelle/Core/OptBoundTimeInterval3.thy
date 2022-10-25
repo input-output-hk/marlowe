@@ -1,167 +1,226 @@
 theory OptBoundTimeInterval3
-  imports Semantics
+  imports SemanticsTypes
 begin
 
+section "Time Interval"
 text
 \<open>
-Represents a closed (inclusive) interval endpoint
+A BEndpoint represents either an Unbounded (-\<infinity> or \<infinity>) endpoint or a closed bounded (inclusive)
+endpoint.
 \<close>
 datatype BEndpoint =
   Unbounded
   | Bounded POSIXTime
 
-type_synonym OptBoundTimeInterval3 = "BEndpoint \<times> BEndpoint"
+text
+\<open>
+An Optionally bounded TimeInterval, is a normal TimeInterval  that might be unbounded on the
+left or right.
+\<close>
+type_synonym OptBoundTimeInterval = "BEndpoint \<times> BEndpoint"
+
+text
+\<open>
+We can think of an \<^emph>\<open>OptBoundTimeInterval\<close> as sets with four possible options:
+\<^item> Totally unbound: (-\<infinity>, \<infinity>)
+\<^item> Left bound [low, \<infinity>)
+\<^item> Right bound (-\<infinity>, high]
+\<^item> Bound [low, high].
+\<close>
+fun bToSet :: "OptBoundTimeInterval => POSIXTime set" where
+   "bToSet (Unbounded, Unbounded)   = {x. True}"
+ | "bToSet (Bounded l, Unbounded)   = {l..}"
+ | "bToSet (Unbounded, Bounded r) = {..r}"
+ | "bToSet (Bounded l, Bounded r) = {l..r}"
 
 
-fun toSet :: "OptBoundTimeInterval3 => POSIXTime set" where
-   "toSet (Unbounded, Unbounded)   = {x. True}"
- | "toSet (Bounded l, Unbounded)   = {l..}"
- | "toSet (Unbounded, Bounded r) = {..r}"
- | "toSet (Bounded l, Bounded r) = {l..r}"
+subsection "Interval intesection"
 
+text
+\<open>
+The interval intersection is achieved by calculating the maximum lower bound and the minimum
+higher bound, favouring Bounded to Unbounded endpoits.
+\<close>
 fun maxLow :: "BEndpoint \<Rightarrow> BEndpoint \<Rightarrow> BEndpoint" where
   "maxLow Unbounded y = y"
 | "maxLow x Unbounded = x"
 | "maxLow (Bounded x) (Bounded y) = Bounded (max x y)"
-(*
-interpretation semigroup maxLow 
-  apply (unfold_locales)
-  subgoal for a b c
-    apply (cases a)
-    apply simp
-    apply (cases b)
-    apply simp
-    apply (cases c)
-     apply simp   
-    by simp
-    done
-*)
+
+
 fun minHigh :: "BEndpoint \<Rightarrow> BEndpoint \<Rightarrow> BEndpoint" where
   "minHigh Unbounded y = y"
 | "minHigh x Unbounded = x"
 | "minHigh (Bounded x) (Bounded y) = Bounded (min x y)"
-(*
-interpretation semigroup minHigh 
-  apply (unfold_locales)
-  subgoal for a b c
-    apply (cases a)
-    apply simp
-    apply (cases b)
-    apply simp
-    apply (cases c)
-     apply simp   
-    by simp
-    done
-*)
-fun intersectInterval :: "OptBoundTimeInterval3 \<Rightarrow> OptBoundTimeInterval3 \<Rightarrow> OptBoundTimeInterval3"
+
+fun intersectInterval :: "OptBoundTimeInterval \<Rightarrow> OptBoundTimeInterval \<Rightarrow> OptBoundTimeInterval"
 where
  "intersectInterval (low1, high1) (low2, high2)
     = (maxLow low1 low2, minHigh high1 high2)"
-(*
-interpretation semigroup "intersectInterval" 
+
+
+subsubsection "Associativity"
+text
+\<open>
+Every function related to Interval Intersection is associative
+\<close>
+
+lemma maxLow_assoc [simp]: "maxLow (maxLow a b) c = maxLow a (maxLow b c)"
+(*<*)
+  apply (cases a)
+   apply simp
+  apply (cases b)
+   apply simp
+  apply (cases c)
+  by auto
+(*>*)
+
+lemma minHigh_assoc [simp]: "minHigh (minHigh a b) c = minHigh a (minHigh b c)"
+(*<*)
+  apply (cases a)
+   apply simp
+    apply (cases b)
+   apply simp
+  apply (cases c)
+  by auto
+(*>*)
+
+interpretation semigroup "intersectInterval"
+(*<*)
   apply (unfold_locales)
   subgoal for a b c
-    apply (cases a)
-    subgoal for l1 h1
-    apply (cases b)
-      subgoal for l2 h2
-        apply (cases c)
-        subgoal for l3 h3
-          apply auto
-          apply (cases l1)
-            apply simp
-          apply (cases l2)         
-            apply simp
-          apply (cases l3)
-            apply simp
-           apply simp  
-          apply (cases h1)
-            apply simp
-          apply (cases h2)         
-            apply simp
-          apply (cases h3)
-           apply simp
-          by simp 
-        done
-      done
-    done
+    by (metis OptBoundTimeInterval3.intersectInterval.simps maxLow_assoc minHigh_assoc surj_pair)
   done
-*)
-(*
-interpretation abel_semigroup "intersectInterval" 
+(*>*)
+
+subsubsection "Commutative"
+text
+\<open>
+Every function related to Interval Intersection is commutative
+\<close>
+
+lemma maxLow_comm [simp]: "maxLow a b = maxLow b a"
+  (*<*)
+  apply (cases a)
+  apply (metis OptBoundTimeInterval3.BEndpoint.exhaust OptBoundTimeInterval3.maxLow.simps(1) OptBoundTimeInterval3.maxLow.simps(2))
+   apply auto
+   apply (cases b)
+  by auto
+  (*>*)
+
+lemma minHigh_comm [simp]: "minHigh a b = minHigh b a"
+  (*<*)
+  apply (cases a)
+  apply (metis OptBoundTimeInterval3.BEndpoint.distinct(1) OptBoundTimeInterval3.minHigh.elims)
+   apply auto
+   apply (cases b)
+  by auto
+  (*>*)
+
+interpretation abel_semigroup "intersectInterval"
+  (*<*)
   apply unfold_locales
   subgoal for a b
-    apply (cases a)
-    a
-*)
+    by (metis (no_types, opaque_lifting) OptBoundTimeInterval3.intersectInterval.elims fst_conv maxLow_comm minHigh_comm snd_conv)
+  done
+  (*>*)
 
-(*
-lemma zzz4 [simp]: "\<nexists> l. l < l1 \<and> l \<in> toSet ((Bounded l1), b)"
-  by (cases b) auto
-*)
 
-lemma a1: " x \<in> toSet (maxLow l1 l2, r) \<Longrightarrow> x \<in> toSet (l1, r)"
+subsubsection "intersectInterval is the same as \<inter>"
+text
+\<open>
+This section proves that the function \<^emph>\<open>intersectInterval\<close> behaves the same as set intersection. In order to
+prove that theorem we have the following lemmas
+\<close>
+lemma (*<*)belongsToSubBelongsToSet_low_1:(*>*)
+  "x \<in> bToSet (maxLow l1 l2, r) \<Longrightarrow> x \<in> bToSet (l1, r)"
+
+(*<*)
   apply (cases l1)
    apply auto
-   apply (metis OptBoundTimeInterval3.BEndpoint.exhaust OptBoundTimeInterval3.toSet.simps(1) OptBoundTimeInterval3.toSet.simps(3) OptBoundTimeInterval3.toSet.simps(4) atLeastAtMost_iff atMost_iff mem_Collect_eq)
+   apply (metis BEndpoint.exhaust bToSet.simps(1) bToSet.simps(3) bToSet.simps(4) atLeastAtMost_iff atMost_iff mem_Collect_eq)
   apply (cases l2)
-  apply auto 
-  by (metis Lattices.linorder_class.max.bounded_iff OptBoundTimeInterval3.BEndpoint.exhaust OptBoundTimeInterval3.toSet.simps(2) OptBoundTimeInterval3.toSet.simps(4) atLeastAtMost_iff atLeast_iff)
+  apply auto
+  by (metis Lattices.linorder_class.max.bounded_iff BEndpoint.exhaust bToSet.simps(2) bToSet.simps(4) atLeastAtMost_iff atLeast_iff)
+(*>*)
 
-lemma a2: " x \<in> toSet (maxLow l1 l2, r) \<Longrightarrow> x \<in> toSet (l2, r)"
+lemma (*<*)belongsToSubBelongsToSet_low_2:(*>*)
+  "x \<in> bToSet (maxLow l1 l2, r) \<Longrightarrow> x \<in> bToSet (l2, r)"
+
+(*<*)
   apply (cases l1)
-  by auto (smt (verit, best) OptBoundTimeInterval3.BEndpoint.exhaust OptBoundTimeInterval3.maxLow.simps(1) OptBoundTimeInterval3.maxLow.simps(3) a1)
+  by auto (smt (verit, best) BEndpoint.exhaust maxLow.simps(1) maxLow.simps(3) belongsToSubBelongsToSet_low_1)
+(*>*)
 
-lemma a3: " x \<in> toSet (l, minHigh r1 r2) \<Longrightarrow> x \<in> toSet (l, r1)"
+lemma (*<*)belongsToSubBelongsToSet_high_1:(*>*)
+  "x \<in> bToSet (l, minHigh r1 r2) \<Longrightarrow> x \<in> bToSet (l, r1)"
+
+(*<*)
   apply (induction r1 arbitrary: l)
    apply auto
      apply (cases r2)
-    apply auto  
-   apply (metis OptBoundTimeInterval3.BEndpoint.exhaust OptBoundTimeInterval3.toSet.simps(1) OptBoundTimeInterval3.toSet.simps(2) OptBoundTimeInterval3.toSet.simps(4) UNIV_I UNIV_def atLeastAtMost_iff atLeast_iff)
-  by (smt (verit, best) OptBoundTimeInterval3.BEndpoint.distinct(1) OptBoundTimeInterval3.BEndpoint.inject OptBoundTimeInterval3.minHigh.elims OptBoundTimeInterval3.toSet.elims Pair_inject atLeastAtMost_iff atMost_iff)
+    apply auto
+   apply (metis BEndpoint.exhaust bToSet.simps(1) bToSet.simps(2) bToSet.simps(4) UNIV_I UNIV_def atLeastAtMost_iff atLeast_iff)
+  by (smt (verit, best) BEndpoint.distinct(1) BEndpoint.inject minHigh.elims bToSet.elims Pair_inject atLeastAtMost_iff atMost_iff)
+(*>*)
 
+lemma (*<*)belongsToSubBelongsToSet_high_2:(*>*)
+  "x \<in> bToSet (l, minHigh r1 r2) \<Longrightarrow> x \<in> bToSet (l, r2)"
 
-lemma a4: " x \<in> toSet (l, minHigh r1 r2) \<Longrightarrow> x \<in> toSet (l, r2)"
+(*<*)
   apply (cases r1)
    apply auto
-  by (smt (verit, best) OptBoundTimeInterval3.BEndpoint.exhaust OptBoundTimeInterval3.minHigh.simps(1) OptBoundTimeInterval3.minHigh.simps(3) a3)
+  by (smt (verit, best) BEndpoint.exhaust minHigh.simps(1) minHigh.simps(3) belongsToSubBelongsToSet_high_1)
+(*>*)
 
+lemma (*<*)belongsToSubSet_BelongsToMaxLowSet [simp]:(*>*)
+  "x \<in> bToSet (l1, r) \<and> x \<in> bToSet (l2, r) \<Longrightarrow> x \<in> bToSet (maxLow l1 l2, r)"
 
-lemma belongsToIntersectBelongsToSetA: "x \<in> toSet (intersectInterval a b) \<Longrightarrow> x \<in> toSet a"
-  by (metis OptBoundTimeInterval3.intersectInterval.simps a1 a3 surjective_pairing)
-
-lemma b1 [simp]: "x \<in> toSet (l1, r) \<and> x \<in> toSet (l2, r) \<Longrightarrow> x \<in> toSet (maxLow l1 l2, r)" 
+(*<*)
   apply (cases l1)
    apply auto
   apply (cases l2)
    apply auto
   by linarith
+(*>*)
 
-lemma b2 [simp]: "x \<in> toSet (l, r1) \<and> x \<in> toSet (l, r2) \<Longrightarrow> x \<in> toSet (l, minHigh r1 r2)" 
+lemma (*<*)belongsToSubSet_BelongsToMinHighSet [simp]:(*>*)
+  "x \<in> bToSet (l, r1) \<and> x \<in> bToSet (l, r2) \<Longrightarrow> x \<in> bToSet (l, minHigh r1 r2)"
+
+(*<*)
   apply (cases r1)
    apply auto
   apply (cases r2)
    apply auto
   by linarith
+(*>*)
 
-lemma c1: " x \<in> toSet (l1, r1) \<and> x \<in> toSet (l2, r2) \<Longrightarrow> x \<in> toSet (maxLow l1 l2, minHigh r1 r2)"
+lemma (*<*)belongsToSubSet_BelongsToSet:(*>*)
+ "x \<in> bToSet (l1, r1) \<and> x \<in> bToSet (l2, r2) \<Longrightarrow> x \<in> bToSet (maxLow l1 l2, minHigh r1 r2)"
+
+(*<*)
   apply (induction l1 arbitrary: r1)
    apply (auto)
-   apply (metis OptBoundTimeInterval3.BEndpoint.exhaust OptBoundTimeInterval3.minHigh.simps(1) OptBoundTimeInterval3.toSet.simps(2) OptBoundTimeInterval3.toSet.simps(3) OptBoundTimeInterval3.toSet.simps(4) a3 atLeastAtMost_iff atLeast_iff atMost_iff b2)
+   apply (metis BEndpoint.exhaust minHigh.simps(1) bToSet.simps(2) bToSet.simps(3) bToSet.simps(4) belongsToSubBelongsToSet_high_1 atLeastAtMost_iff atLeast_iff atMost_iff belongsToSubSet_BelongsToMinHighSet)
   apply (induction l2 arbitrary: r2)
    apply auto
-  apply (metis OptBoundTimeInterval3.BEndpoint.exhaust OptBoundTimeInterval3.toSet.simps(2) OptBoundTimeInterval3.toSet.simps(3) OptBoundTimeInterval3.toSet.simps(4) atLeastAtMost_iff atLeast_iff atMost_iff b2)
-  by (metis Lattices.linorder_class.max.absorb_iff2 Lattices.linorder_class.max.commute OptBoundTimeInterval3.BEndpoint.exhaust OptBoundTimeInterval3.toSet.simps(2) OptBoundTimeInterval3.toSet.simps(4) atLeastAtMost_iff atLeast_iff b2 nle_le)  
+  apply (metis BEndpoint.exhaust bToSet.simps(2) bToSet.simps(3) bToSet.simps(4) atLeastAtMost_iff atLeast_iff atMost_iff belongsToSubSet_BelongsToMinHighSet)
+  by (metis Lattices.linorder_class.max.absorb_iff2 Lattices.linorder_class.max.commute BEndpoint.exhaust bToSet.simps(2) bToSet.simps(4) atLeastAtMost_iff atLeast_iff belongsToSubSet_BelongsToMinHighSet nle_le)
+(*>*)
 
-theorem intersectIntervalIsIntersect: "toSet (intersectInterval a b) = toSet a \<inter> toSet b"
+theorem (*<*)intersectIntervalIsIntersect:(*>*)
+  "bToSet (intersectInterval a b) = bToSet a \<inter> bToSet b"
+
+(*<*)
   apply (cases a)
     apply (cases b)
   apply auto
-  using a1 a3 apply blast
-  using a2 a4 apply blast
-  using c1 by presburger
+  using belongsToSubBelongsToSet_low_1 belongsToSubBelongsToSet_high_1 apply blast
+  using belongsToSubBelongsToSet_low_2 belongsToSubBelongsToSet_high_2 apply blast
+  using belongsToSubSet_BelongsToSet by presburger
+(*>*)
 
 
+subsection "In interval"
 fun ttoSet :: "TimeInterval \<Rightarrow> POSIXTime set" where
   "ttoSet (l, r) = {l..r}"
 

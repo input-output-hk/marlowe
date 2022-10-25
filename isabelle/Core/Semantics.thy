@@ -1,5 +1,5 @@
 theory Semantics
-imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" SemanticsTypes SemanticsGuarantees
+imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" SemanticsTypes SemanticsGuarantees OptBoundTimeInterval3
 begin
 
 (* EVALUATION *)
@@ -707,8 +707,38 @@ and maxTimeCase :: "Case \<Rightarrow> int" where
 "maxTimeCase (Case _ contract) = maxTimeContract contract"
 
 
+subsection "calculateNonAmigousInterval" 
 
-(* quotient_type what = OptBoundTimeInterval2 / "POSIXTime set" *)
+fun gtIfNone :: "int option \<Rightarrow> int \<Rightarrow> bool" where
+"gtIfNone None _ = True" |
+"gtIfNone (Some x) y = (x > y)"
+
+fun geIfNone :: "int option \<Rightarrow> int \<Rightarrow> bool" where
+"geIfNone None _ = True" |
+"geIfNone (Some x) y = (x \<ge> y)"
+
+fun subIfSome :: "int option \<Rightarrow> int \<Rightarrow> int option" where
+"subIfSome None _ = None" |
+"subIfSome (Some x) y = Some (x - y)"
+
+
+fun calculateNonAmigousInterval :: "int option \<Rightarrow> POSIXTime \<Rightarrow> Contract \<Rightarrow> OptBoundTimeInterval"
+where
+"calculateNonAmigousInterval _ _ Close = (Unbounded, Unbounded)" |
+"calculateNonAmigousInterval n t (Pay _ _ _ _ c) = calculateNonAmigousInterval n t c" |
+"calculateNonAmigousInterval n t (If _ ct cf) = intersectInterval (calculateNonAmigousInterval n t ct)
+                                                           (calculateNonAmigousInterval n t cf)" |
+"calculateNonAmigousInterval n t (When Nil timeout tcont) =
+  (if t < timeout
+   then (Unbounded, Bounded (timeout - 1))
+   else intersectInterval (Bounded timeout, Unbounded) (calculateNonAmigousInterval n t tcont))" |
+"calculateNonAmigousInterval n t (When (Cons (Case _ cont ) tail) timeout tcont) =
+  (if gtIfNone n 0
+   then intersectInterval (calculateNonAmigousInterval (subIfSome n 1) t cont)
+                         (calculateNonAmigousInterval n t (When tail timeout tcont))
+   else calculateNonAmigousInterval n t (When tail timeout tcont))" |
+"calculateNonAmigousInterval n t (Let _ _ c) = calculateNonAmigousInterval n t c" |
+"calculateNonAmigousInterval n t (Assert _ c) = calculateNonAmigousInterval n t c"
 
 
 end

@@ -220,9 +220,48 @@ theorem (*<*)intersectIntervalIsIntersect:(*>*)
 (*>*)
 
 
-subsection "In interval"
-fun ttoSet :: "TimeInterval \<Rightarrow> POSIXTime set" where
-  "ttoSet (l, r) = {l..r}"
+subsection "In Interval"
 
+
+text \<open>
+The inInterval function checks if a closed and bounded Time Interval is inside 
+an optional bounded closed time interval  
+\<close>
+fun inInterval :: "TimeInterval \<Rightarrow> OptBoundTimeInterval \<Rightarrow> bool" where
+"inInterval (min1, max1) (Unbounded, Unbounded) = True" |
+"inInterval (_, max1) (Unbounded, Bounded max2) = (max1 \<le> max2)" |
+"inInterval (min1, _) (Bounded min2, Unbounded) = (min1 \<ge> min2)" |
+"inInterval (min1, max1) (Bounded min2, Bounded max2) = (min1 \<ge> min2 \<and> max1 \<le> max2)"
+
+text 
+\<open>
+We can think of a TimeInterval as the set of times included by the boundaries
+\<close>
+fun tToSet :: "TimeInterval \<Rightarrow> POSIXTime set" where
+  "tToSet (l, r) = {l..r}"
+
+
+subsubsection "In interval implies a subset"
+
+text 
+\<open>
+A Time Interval is valid only if the left bound is lower or equal than the higher bound.
+\<close>
+fun validTimeInterval :: "TimeInterval \<Rightarrow> bool" where 
+  "validTimeInterval (l, r) = (l \<le> r)"
+
+text 
+\<open>
+If the Time Interval is valid, then the \<^emph>\<open>inInterval\<close> function implies a subset.
+\<close>
+theorem (*<*)inInterval_subset: (*>*)
+  "validTimeInterval a \<Longrightarrow> inInterval a b = (tToSet a \<subseteq> bToSet b)"
+(*<*)
+  apply (cases a)
+  apply (cases b)
+  apply auto
+  using OptBoundTimeInterval3.inInterval.elims(2) apply fastforce
+  using OptBoundTimeInterval3.inInterval.elims(3) by fastforce
+(*>*)
 
 end

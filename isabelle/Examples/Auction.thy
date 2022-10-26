@@ -51,11 +51,9 @@ and handleChoose :: "AuctionWinner \<Rightarrow> Party list \<Rightarrow> Party 
 and handleDeposit :: "AuctionWinner \<Rightarrow> Party list \<Rightarrow> Party list \<Rightarrow> AuctionTerms \<Rightarrow> Party \<Rightarrow> Case" 
 where
 "handleChoose m ps qs terms p = Case (Choice (choice p) [(minBid terms, maxBid terms)])
-                                               (Let (partyToValueId p) 
-                                                  (ChoiceValue (choice p))
-                                                  (contractLoop m (p # ps) (remove p qs) terms))" |
+                                              (contractLoop m (p # ps) (remove p qs) terms)" |
 "handleDeposit m ps qs terms p = 
-   (let v = (UseValue (partyToValueId p)) in
+   (let v = ChoiceValue (choice p) in
     let ps' = (remove p ps) in
     (Case (Deposit p p token_ada v)
           (case m of
@@ -87,22 +85,13 @@ fun auction :: "Party \<Rightarrow> int \<Rightarrow> int \<Rightarrow> Party li
 
 
 definition invariantHoldsForAuction :: "AuctionTerms \<Rightarrow> AuctionWinner \<Rightarrow> Party list \<Rightarrow> Party list \<Rightarrow> State \<Rightarrow> bool" where
-"invariantHoldsForAuction terms m ps qs curState = ((\<forall>x . x \<in> set qs \<longrightarrow> \<not> member (partyToValueId x) (boundValues curState))
-                                                  \<and> (\<forall>x . x \<in> set ps \<longrightarrow> findWithDefault 0 (partyToValueId x) (boundValues curState) > 0)
-                                                  \<and> (\<forall>x y . m = Some (x, y) \<longrightarrow> ((lookup (y, token_ada) (accounts curState) = lookup (partyToValueId y) (boundValues curState))
-                                                          \<and> (findWithDefault 0 (partyToValueId y) (boundValues curState) > 0)
-                                                          \<and> (UseValue (partyToValueId y)) = x))
+"invariantHoldsForAuction terms m ps qs curState = ((\<forall>x . x \<in> set qs \<longrightarrow> \<not> member (choice x) (choices curState))
+                                                  \<and> (\<forall>x . x \<in> set ps \<longrightarrow> findWithDefault 0 (choice x) (choices curState) > 0)
+                                                  \<and> (\<forall>x y . m = Some (x, y) \<longrightarrow> ((lookup (y, token_ada) (accounts curState) = lookup (choice y) (choices curState))
+                                                          \<and> (findWithDefault 0 (choice y) (choices curState) > 0)
+                                                          \<and> (ChoiceValue (choice y) = x)))
                                                   \<and> (minBid terms > 0)
                                                   \<and> (distinct (ps @ qs)))"
-
-fun contractLoop_maybeLet :: "Party option \<Rightarrow> AuctionWinner \<Rightarrow> Party list \<Rightarrow> Party list \<Rightarrow> AuctionTerms \<Rightarrow> Contract" where
-"contractLoop_maybeLet None m ps qs terms = contractLoop m ps qs terms" |
-"contractLoop_maybeLet (Some p) m ps qs terms = (Let (partyToValueId p) (ChoiceValue (choice p)) (contractLoop m ps qs terms))"
-
-fun maybeFixState :: "Party option \<Rightarrow> State \<Rightarrow> State" where
-"maybeFixState None s = s" |
-"maybeFixState (Some p) s = s \<lparr> boundValues := MList.insert (partyToValueId p) (findWithDefault 0 (choice p) (choices s)) (boundValues s) \<rparr>"
-                         
 
 lemma applyCasesOfMap : "(\<And> p applyWarn newState cont2. p \<in> set ps \<Longrightarrow> applyCases env curState head [f p] = Applied applyWarn newState cont2 \<Longrightarrow> applyWarn = ApplyNoWarning)
                                \<Longrightarrow> (applyCases env curState head (map f ps) = Applied applyWarn newState cont2 \<Longrightarrow> applyWarn = ApplyNoWarning)"
@@ -142,7 +131,7 @@ lemma applyInputContractLoopNoWarnings : "invariantHoldsForAuction terms m ps qs
        apply (split if_split_asm)
     apply (meson ApplyResult.inject)
     subgoal for enva state accId1 party1 tok1 amount accId2
-      by (metis MList.findWithDefault.simps invariantHoldsForAuction_def)
+      by (metis Auction.choice.simps MList.findWithDefault.elims invariantHoldsForAuction_def)
     by (metis Semantics.applyCases.simps(10) Semantics.applyInput.simps(2) closeIsSafe_applyInput)
     apply simp
     apply (metis ApplyResult.simps(3) applyInput.simps(2) applyInput.simps(3) settle.elims)
@@ -175,11 +164,11 @@ lemma contractLoopReducedSatisfyInvariant : "ps \<noteq> [] \<or> qs \<noteq> []
                                              invariantHoldsForAuction terms m [] [] sta"
   apply (simp only:invariantHoldsForAuction_def)
   apply auto
-  apply (smt (verit, ccfv_SIG) Contract.inject(1) distinct_append findWithDefault.simps invariantHoldsForAuction_def member.elims(2) reduceContractLoopEqualsSettlement settle.simps(2))
-  apply (smt (verit, ccfv_SIG) Contract.inject(1) distinct_append findWithDefault.simps invariantHoldsForAuction_def member.elims(2) reduceContractLoopEqualsSettlement settle.simps(2))
-  apply (smt (verit, ccfv_SIG) Contract.inject(1) distinct_append findWithDefault.simps invariantHoldsForAuction_def member.elims(2) reduceContractLoopEqualsSettlement settle.simps(2))
-  by (smt (verit, ccfv_SIG) Contract.inject(1) distinct_append findWithDefault.simps invariantHoldsForAuction_def member.elims(2) reduceContractLoopEqualsSettlement settle.simps(2))
-
+  apply (smt (verit, best) Auction.choice.simps MList.findWithDefault.simps MList.member.simps Option.option.inject Product_Type.prod.inject distinct_append invariantHoldsForAuction_def reduceContractLoopEqualsSettlement)
+  apply (smt (verit, best) Auction.choice.simps MList.findWithDefault.simps MList.member.simps Option.option.inject Product_Type.prod.inject distinct_append invariantHoldsForAuction_def reduceContractLoopEqualsSettlement)
+  apply (smt (verit, best) Auction.choice.simps MList.findWithDefault.simps MList.member.simps Option.option.inject Product_Type.prod.inject distinct_append invariantHoldsForAuction_def reduceContractLoopEqualsSettlement)
+  by (smt (verit, best) Auction.choice.simps MList.findWithDefault.simps MList.member.simps Option.option.inject Product_Type.prod.inject distinct_append invariantHoldsForAuction_def reduceContractLoopEqualsSettlement)
+  
 lemma auctionSettlementSafe_reduceContractStep : "invariantHoldsForAuction terms m ps qs fixSta \<Longrightarrow>
                                                   reduceContractStep env fixSta (contractLoop m ps qs terms) = Reduced wa ef sta cont \<Longrightarrow> 
                                                   cont = Close \<or> (cont = settle m terms \<and> invariantHoldsForAuction terms m [] [] sta)"
@@ -234,11 +223,6 @@ lemma auctionIsSafe_reduceContractUntilQuiescent : "invariantHoldsForAuction ter
                                                     reduceWarns = []"
   by (metis auctionIsSafe_reductionLoop reduceContractUntilQuiescent.simps)
 
-lemma auctionIsSafe_reduceContractUntilQuiescent_ext : "invariantHoldsForAuction terms m ps qs (maybeFixState mp fixSta) \<Longrightarrow>
-                                                        reduceContractUntilQuiescent env fixSta (contractLoop_maybeLet mp m ps qs terms) = ContractQuiescent reduced reduceWarns pays curState cont \<Longrightarrow>
-                                                        reduceWarns = []"
-  sorry
-
 lemma reduceSettlementUntilQuiescentIsClose : "reductionLoop reducedBefore env curState (settle m terms) wa ef = ContractQuiescent reducedAfter reduceWarns pays newState cont \<Longrightarrow>
                                                cont = Close"
   apply (cases m)
@@ -261,7 +245,6 @@ lemma settleIsSafe_applyAllInputs : "invariantHoldsForAuction terms m [] [] fixS
    apply (smt (z3) ApplyAllResult.distinct(3) ApplyAllResult.inject ReduceResult.exhaust ReduceResult.simps(4) ReduceResult.simps(5) append_Nil2 applyAllInputs.simps applyAllLoop.simps auctionIsSafe_reduceContractUntilQuiescent contractLoop.simps(1) convertReduceWarnings.simps(1) list.simps(4))
   using reduceSettlementUntilQuiescentIsClose auctionIsSafe_reduceContractUntilQuiescent
   by (smt (z3) ApplyAllResult.simps(3) ApplyAllResult.simps(5) ApplyResult.case(2) ReduceResult.exhaust ReduceResult.simps(4) ReduceResult.simps(5) applyAllInputs.simps applyAllLoop.simps applyInput.simps(2) list.simps(5) reduceContractUntilQuiescent.simps) 
-  
 
 lemma auctionIsSafe_applyAllInputsToClose : "invariantHoldsForAuction terms m ps qs fixSta \<Longrightarrow>
                                       reduceContractUntilQuiescent env fixSta (contractLoop m ps qs terms) = ContractQuiescent reduced1 reduceWarns1 pays1 curState1 Close \<Longrightarrow>
@@ -293,108 +276,131 @@ lemma reduceUntilQuiescentApplyInput_isSafe : "invariantHoldsForAuction terms m 
   using reduceUntilQuiescentIsFixedOrClose apply (metis ApplyResult.simps(3) applyInput.simps(2) applyInputContractLoopNoWarnings list.distinct(1))
   using reduceUntilQuiescentIsFixedOrClose by (metis ApplyResult.simps(3) applyInput.simps(2) applyInputContractLoopNoWarnings list.distinct(1))
 
-lemma reduceContractUntilQuiescent_preserves_invariant : "(ps \<noteq> [] \<or> qs \<noteq> []) \<Longrightarrow>
-                                                          invariantHoldsForAuction terms m ps qs (maybeFixState mp state) \<Longrightarrow>
-                                                          reduceContractUntilQuiescent env state (contractLoop_maybeLet mp m ps qs terms) = ContractQuiescent nreduced [] npays ncurState ncont \<Longrightarrow>
-                                                          invariantHoldsForAuction terms m ps qs ncurState"
+lemma reduceContractUntilQuiescent_of_contractLoop_indempotent : "ps \<noteq> [] \<or> qs \<noteq> [] \<Longrightarrow>
+                                                                  reduceContractUntilQuiescent env state (contractLoop m ps qs terms) = ContractQuiescent False [] [] state ncont \<Longrightarrow>
+                                                                  ncont = (contractLoop m ps qs terms) \<or> ncont = Close"
+  apply (cases ps)
+  apply (cases qs)
+    apply blast
+  subgoal for h t
+    apply (simp only:contractLoop.simps reduceContractUntilQuiescent.simps)
+    apply (auto split:ReduceStepResult.splits)
+    apply (simp only:Let_def)
+    apply (auto split:prod.splits)
+    by (metis Semantics.ReduceStepResult.distinct(1) Semantics.ReduceStepResult.distinct(3) Semantics.ReduceStepResult.inject Semantics.reductionLoop.elims reduceSettlementUntilQuiescentIsClose)
+    apply (simp only:contractLoop.simps reduceContractUntilQuiescent.simps)
+    apply (auto split:ReduceStepResult.splits)
+    apply (simp only:Let_def)
+    apply (auto split:prod.splits)
+    by (metis Semantics.ReduceStepResult.distinct(1) Semantics.ReduceStepResult.distinct(3) Semantics.ReduceStepResult.inject Semantics.reductionLoop.simps reduceSettlementUntilQuiescentIsClose)
+
+lemma reduceContractUntilQuiescent_preserves_invariant : "ps \<noteq> [] \<or> qs \<noteq> [] \<Longrightarrow>
+                                                              invariantHoldsForAuction terms m ps qs state \<Longrightarrow>
+                                                              reduceContractUntilQuiescent env state (contractLoop m ps qs terms) = ContractQuiescent nreduced [] npays ncurState ncont \<Longrightarrow>
+                                                              (ncont = Close \<or> invariantHoldsForAuction terms m ps qs ncurState)"
+  using reduceUntilQuiescentIsFixedOrClose by blast
+
+lemma auctionIsSafe_applyCases : "When ca t c = contractLoop nm nps nqs terms \<Longrightarrow>
+                                  applyCases env ncurState hi ca = Applied applyWarn newState cont \<Longrightarrow>
+                                  invariantHoldsForAuction terms nm nps nqs ncurState \<Longrightarrow>
+                                  \<exists>nm nps nqs. cont = contractLoop nm nps nqs terms \<and> invariantHoldsForAuction terms nm nps nqs newState"
   sorry
 
+lemma auctionIsSafe_applyInput : "applyInput env ncurState hi ncont = Applied applyWarn newState cont \<Longrightarrow>
+                                  ncont = contractLoop nm nps nqs terms \<Longrightarrow> invariantHoldsForAuction terms nm nps nqs ncurState \<Longrightarrow>
+                                  cont \<noteq> Close \<Longrightarrow>
+                                  \<exists>nm nps nqs. cont = contractLoop nm nps nqs terms \<and> invariantHoldsForAuction terms nm nps nqs newState"
+  apply (cases ncont)
+  apply simp
+  apply force
+  apply force
+  subgoal for ca t c
+    apply (simp only:applyInput.simps)
+    by (metis Semantics.applyInput.simps(1) auctionIsSafe_applyCases)
+  apply force
+  by force
 
-(*
-  Lemmas con respecto a la preservación de invariante al aplicar un input + algun paso más
-*)
+lemma applyLoop_of_Close_NoWarnings : "applyAllLoop x env state Close ti wa ef = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow> wa = warnings"
+  apply (cases ti)
+  apply (smt (z3) List.append.right_neutral List.list.simps(4) Semantics.ApplyAllResult.distinct(3) Semantics.ApplyAllResult.inject Semantics.ReduceResult.exhaust Semantics.ReduceResult.simps(4) Semantics.ReduceResult.simps(5) Semantics.applyAllLoop.simps Semantics.convertReduceWarnings.simps(1) closeIsSafe_reduceContractUntilQuiescent)
+  by (smt (z3) List.list.case_eq_if List.list.simps(3) Semantics.ApplyAllResult.simps(3) Semantics.ApplyAllResult.simps(5) Semantics.ApplyResult.simps(5) Semantics.ReduceResult.exhaust Semantics.ReduceResult.simps(4) Semantics.ReduceResult.simps(5) Semantics.applyAllLoop.simps Semantics.applyInput.simps(2) closeIdemp_reduceContractUntilQuiescent)
 
-
-(*
-lemma applyInputHandleChoosePreservesInvariant : "invariantHoldsForAuction terms m ps qs fixSta \<Longrightarrow>
-                                                  applyInput env fixSta (IChoice (choice p) cho) (contractLoop m ps qs terms) = 
-                                                  Applied applyWarn curState (Let (partyToValueId p) (ChoiceValue (choice p)) (contractLoop m (p # ps) (remove p qs) terms)) \<Longrightarrow>
-                                                  (invariantHoldsForAuction terms m ps (remove p qs) curState \<and> (findWithDefault 0 (choice p) (choices curState) > 0))"
-  sorry
-
-lemma reduceLetAfterApplyInputHandleChoosePreservesInvariant : "findWithDefault 0 (choice p) (choices fixSta) > 0 \<Longrightarrow>
-                                                                invariantHoldsForAuction terms m ps qs fixSta \<Longrightarrow>
-                                                                reduceContractStep env fixSta (Let (partyToValueId p) (ChoiceValue (choice p)) (contractLoop m (p # ps) (remove p qs) terms)) =
-                                                                Reduced wa ef curState (contractLoop m (p # ps) (remove p qs) terms) \<Longrightarrow>
-                                                                invariantHoldsForAuction terms m (p # ps) (remove p qs) curState"
-  sorry
-*)
-(*
-
-lemma applyInput_INotify_contractLoop_ApplyAllNoMatch : "applyInput env ncurState INotify (contractLoop m ps qs terms) = ApplyNoMatchError"
-  and applyInput_INotify_handleChoose_ApplyAllNoMatch : "applyCases env ncurState INotify [handleChoose m ps qs terms p] = ApplyNoMatchError"
-  and applyInput_INotify_handleDeposit_ApplyAllNoMatch : "applyCases env ncurState INotify [handleDeposit m ps qs terms p] = ApplyNoMatchError"
-  apply (induction m ps qs terms and m ps qs terms p and m ps qs terms p m rule:contractLoop_handleChoose_handleDeposit.induct)
-*)
-(*
-"(applyAllLoop contractChanged env sta (contractLoop m ps qs terms) inps wa ef = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow> warnings = wa)
-
-        ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow>
-        warnings = _appendL (_appendL warningsa (convertReduceWarnings x12)) (convertApplyWarning x11a)) \<Longrightarrow>
-*)
-                         
-
-lemma auctionIsSafe_applyLoop : "invariantHoldsForAuction terms m ps qs (maybeFixState mp fixSta) \<Longrightarrow>
-                                 applyAllLoop contractChanged env fixSta (contractLoop_maybeLet mp m ps qs terms) inps wa ef = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow>
+lemma auctionIsSafe_applyLoop : "invariantHoldsForAuction terms m ps qs fixSta \<Longrightarrow>
+                                 applyAllLoop contractChanged env fixSta (contractLoop m ps qs terms) inps wa ef = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow>
                                  warnings = wa"
-  apply (induction contractChanged env fixSta "(contractLoop_maybeLet mp m ps qs terms)" inps wa ef arbitrary:mp m ps qs terms rule:applyAllLoop.induct)
-  subgoal for contractChanged env state inputs warningsa paymentsa mp m ps qs terms
-    apply (simp only:applyAllLoop.simps[of contractChanged env state "contractLoop_maybeLet mp m ps qs terms" inputs warningsa paymentsa])
-    apply (cases "reduceContractUntilQuiescent env state (contractLoop_maybeLet mp m ps qs terms)")
+  apply (induction contractChanged env fixSta "contractLoop m ps qs terms" inps wa ef arbitrary:m ps qs terms rule:applyAllLoop.induct)
+  subgoal for contractChanged env state inputs warningsa paymentsa m ps qs terms
+    apply (simp only:applyAllLoop.simps[of contractChanged env state "contractLoop m ps qs terms" inputs warningsa paymentsa])
+    apply (cases "reduceContractUntilQuiescent env state (contractLoop m ps qs terms)")
     subgoal for nreduced nreduceWarns npays ncurState ncont
       apply (simp only:ReduceResult.case)
       apply (subgoal_tac "nreduceWarns = []")
-      defer
-      apply (meson auctionIsSafe_reduceContractUntilQuiescent_ext)
+      subgoal
       apply (cases inputs)
       apply simp
       subgoal for hi ti
-        apply (simp only:list.case)
         apply (cases "ps = [] \<and> qs = []")
         subgoal
-          apply (cases mp)
-           apply (simp only:maybeFixState.simps contractLoop_maybeLet.simps)
-           apply (metis Auction.contractLoop.simps(1) Semantics.ApplyAllResult.simps(3) Semantics.ApplyResult.simps(5) Semantics.applyInput.simps(2) Semantics.reduceContractUntilQuiescent.elims reduceSettlementUntilQuiescentIsClose)
-           apply (simp only:maybeFixState.simps contractLoop_maybeLet.simps)
-          by (metis (no_types, lifting) Auction.contractLoop.simps(1) Semantics.ApplyAllResult.simps(3) Semantics.ApplyResult.simps(5) Semantics.ReduceStepResult.case(1) Semantics.applyInput.simps(2) Semantics.reduceContractStep.simps(5) Semantics.reduceContractUntilQuiescent.simps Semantics.reductionLoop.simps reduceSettlementUntilQuiescentIsClose)
-        apply (subgoal_tac "invariantHoldsForAuction terms m ps qs ncurState")
-         defer
-         apply (meson reduceContractUntilQuiescent_preserves_invariant)
-        apply (cases "applyInput env ncurState hi ncont")
-        subgoal for applyWarn newState cont
-          apply (subgoal_tac "applyWarn = ApplyNoWarning")
-          subgoal
-          apply (simp only:ApplyResult.case)
-          apply (simp only:convertReduceWarnings.simps convertApplyWarning.simps)
-           apply (subgoal_tac "warnings = warningsa @ (convertReduceWarnings []) @ (convertApplyWarning ApplyNoWarning)")
-            using Semantics.convertApplyWarning.simps(1) Semantics.convertReduceWarnings.simps(1) apply force
-            sorry (* apply induction rule *)
-          subgoal
-            sorry (* applyWarn = ApplyNoWarning *)
+          using reduceSettlementUntilQuiescentIsClose by fastforce
+        subgoal
+          apply (cases "applyInput env ncurState hi ncont")
+          apply (simp only:list.case ApplyResult.case)
+          subgoal for applyWarn newState cont
+            apply (cases "ncont = Close")
+            apply simp
+            apply (cases "cont = Close")
+            apply (metis Semantics.convertApplyWarning.simps(1) Semantics.convertReduceWarnings.simps(1) append_Nil2 applyLoop_of_Close_NoWarnings reduceUntilQuiescentApplyInput_isSafe)
+            apply (subgoal_tac "applyWarn = ApplyNoWarning")
+            subgoal
+              apply (subgoal_tac "\<exists> nm nps nqs. (cont = contractLoop nm nps nqs terms \<and> invariantHoldsForAuction terms nm nps nqs newState)")
+              subgoal
+                using Semantics.convertApplyWarning.simps(1) Semantics.convertReduceWarnings.simps(1) by blast
+              subgoal
+                apply (subgoal_tac "\<exists>nm nps nqs. (ncont = contractLoop nm nps nqs terms \<and> invariantHoldsForAuction terms nm nps nqs ncurState)")
+                subgoal
+                  by (meson auctionIsSafe_applyInput)
+                subgoal
+                  by (metis reduceUntilQuiescentIsFixedOrClose)
+                  done
+                done
+              by (meson reduceUntilQuiescentApplyInput_isSafe)
+            by force
           done
-        by simp
-      done
-    by simp
+        done
+      by (meson auctionIsSafe_reduceContractUntilQuiescent)
+    by force
   done
 
 lemma auctionIsSafe_applyAllInputs : "invariantHoldsForAuction terms m ps qs fixSta \<Longrightarrow>
                                       applyAllInputs env fixSta (contractLoop m ps qs terms) inps = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow>
                                       warnings = []"
   apply (simp only:applyAllInputs.simps)
-  by (metis Auction.contractLoop_maybeLet.simps(1) Auction.maybeFixState.simps(1) auctionIsSafe_applyLoop)
+  by (simp add: auctionIsSafe_applyLoop)
 
+
+lemma applyLoopPreservesInvariant : "invariantHoldsForAuction terms m ps qs sta \<Longrightarrow>
+    applyAllLoop contractChanged env fixSta (contractLoop m ps qs terms) inps wa ef = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow>
+    cont \<noteq> Close \<Longrightarrow> \<exists>nm nps nqs. cont = contractLoop nm nps nqs terms \<and> invariantHoldsForAuction terms nm nps nqs newState"
+  sorry
 
 lemma applyAllInputsPreservesInvariant : "invariantHoldsForAuction terms m ps qs sta \<Longrightarrow>
                                               applyAllInputs env fixSta (contractLoop m ps qs terms) inps = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow>
                                               cont \<noteq> Close \<Longrightarrow>
                                                (\<exists> nm nps nqs . cont = contractLoop nm nps nqs terms \<and> invariantHoldsForAuction terms nm nps nqs newState)"
-  sorry
+  apply (simp only:applyAllInputs.simps)
+  by (simp add: applyLoopPreservesInvariant)
 
 lemma fixingIntervalPreservesInvariant : "invariantHoldsForAuction terms m ps qs sta \<Longrightarrow>
                                           fixInterval (low, high) sta = IntervalTrimmed env fixSta \<Longrightarrow> 
                                           invariantHoldsForAuction terms m ps qs fixSta"
-  by (smt (verit, best) IntervalResult.distinct(1) IntervalResult.inject(1) State.select_convs(1) State.select_convs(3) State.surjective State.update_convs(4) fixInterval.simps invariantHoldsForAuction_def)
-
+  apply (simp only:fixInterval.simps Let_def)
+  apply (split if_split_asm)
+  apply blast
+  apply (split if_split_asm)
+  apply force
+  apply (cases sta)
+  apply (cases fixSta)
+  using invariantHoldsForAuction_def by force
 
 lemma auctionIsSafe_computeTransactionFixSta : "fixInterval (interval tra) sta = IntervalTrimmed env fixSta \<Longrightarrow> 
                                                 invariantHoldsForAuction terms m ps qs fixSta \<Longrightarrow>

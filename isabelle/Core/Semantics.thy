@@ -1,5 +1,5 @@
 theory Semantics
-imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" SemanticsTypes SemanticsGuarantees OptBoundTimeInterval3
+imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" SemanticsTypes SemanticsGuarantees OptBoundTimeInterval
 begin
 
 (* EVALUATION *)

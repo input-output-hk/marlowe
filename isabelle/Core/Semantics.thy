@@ -1,5 +1,5 @@
 theory Semantics
-imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" SemanticsTypes SemanticsGuarantees
+imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" SemanticsTypes SemanticsGuarantees OptBoundTimeInterval
 begin
 
 (* EVALUATION *)
@@ -705,5 +705,40 @@ and maxTimeCase :: "Case \<Rightarrow> int" where
 "maxTimeContract (Let _ _ contract) = maxTimeContract contract" |
 "maxTimeContract (Assert _ contract) = maxTimeContract contract" |
 "maxTimeCase (Case _ contract) = maxTimeContract contract"
+
+
+subsection "calculateNonAmbiguousInterval" 
+
+fun gtIfNone :: "int option \<Rightarrow> int \<Rightarrow> bool" where
+"gtIfNone None _ = True" |
+"gtIfNone (Some x) y = (x > y)"
+
+fun geIfNone :: "int option \<Rightarrow> int \<Rightarrow> bool" where
+"geIfNone None _ = True" |
+"geIfNone (Some x) y = (x \<ge> y)"
+
+fun subIfSome :: "int option \<Rightarrow> int \<Rightarrow> int option" where
+"subIfSome None _ = None" |
+"subIfSome (Some x) y = Some (x - y)"
+
+
+fun calculateNonAmbiguousInterval :: "int option \<Rightarrow> POSIXTime \<Rightarrow> Contract \<Rightarrow> OptBoundTimeInterval"
+where
+"calculateNonAmbiguousInterval _ _ Close = (Unbounded, Unbounded)" |
+"calculateNonAmbiguousInterval n t (Pay _ _ _ _ c) = calculateNonAmbiguousInterval n t c" |
+"calculateNonAmbiguousInterval n t (If _ ct cf) = intersectInterval (calculateNonAmbiguousInterval n t ct)
+                                                           (calculateNonAmbiguousInterval n t cf)" |
+"calculateNonAmbiguousInterval n t (When Nil timeout tcont) =
+  (if t < timeout
+   then (Unbounded, Bounded (timeout - 1))
+   else intersectInterval (Bounded timeout, Unbounded) (calculateNonAmbiguousInterval n t tcont))" |
+"calculateNonAmbiguousInterval n t (When (Cons (Case _ cont ) tail) timeout tcont) =
+  (if gtIfNone n 0
+   then intersectInterval (calculateNonAmbiguousInterval (subIfSome n 1) t cont)
+                         (calculateNonAmbiguousInterval n t (When tail timeout tcont))
+   else calculateNonAmbiguousInterval n t (When tail timeout tcont))" |
+"calculateNonAmbiguousInterval n t (Let _ _ c) = calculateNonAmbiguousInterval n t c" |
+"calculateNonAmbiguousInterval n t (Assert _ c) = calculateNonAmbiguousInterval n t c"
+
 
 end

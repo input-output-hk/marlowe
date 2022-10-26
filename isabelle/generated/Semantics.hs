@@ -8,8 +8,10 @@ module
              TransactionOutput(..), Transaction_ext(..), evalValue,
              evalObservation, txOutWarnings, txOutPayments, reductionLoop,
              reduceContractUntilQuiescent, applyAllInputs, computeTransaction,
-             playTrace, txOutState, txOutContract, equal_TransactionError,
-             equal_TransactionOutput, equal_Transaction_ext)
+             playTrace, getOutcomes, maxTimeContract, getSignatures,
+             calculateNonAmbiguousInterval, txOutState, txOutContract,
+             equal_TransactionError, equal_TransactionOutput,
+             equal_Transaction_ext)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -18,15 +20,17 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
+import qualified OptBoundTimeInterval;
 import qualified Product_Type;
-import qualified Option;
 import qualified List;
 import qualified Orderings;
+import qualified Option;
 import qualified MList;
 import qualified HOL;
-import qualified SemanticsGuarantees;
 import qualified Product_Lexorder;
 import qualified ListTools;
+import qualified SList;
+import qualified SemanticsGuarantees;
 import qualified SemanticsTypes;
 import qualified Arith;
 
@@ -182,6 +186,17 @@ quot x y =
     then Arith.divide_int x y
     else Arith.uminus_int
            (Arith.divide_int (Arith.abs_int x) (Arith.abs_int y)));
+
+addSig ::
+  [SemanticsTypes.Party] -> SemanticsTypes.Input -> [SemanticsTypes.Party];
+addSig acc (SemanticsTypes.IDeposit uu p uv uw) = SList.insert p acc;
+addSig acc (SemanticsTypes.IChoice (SemanticsTypes.ChoiceId ux p) uy) =
+  SList.insert p acc;
+addSig acc SemanticsTypes.INotify = acc;
+
+gtIfNone :: Maybe Arith.Int -> Arith.Int -> Bool;
+gtIfNone Nothing uu = True;
+gtIfNone (Just x) y = Arith.less_int y x;
 
 inBounds :: Arith.Int -> [SemanticsTypes.Bound] -> Bool;
 inBounds num =
@@ -690,6 +705,107 @@ playTrace ::
     SemanticsTypes.Contract -> [Transaction_ext ()] -> TransactionOutput;
 playTrace sl c t =
   playTraceAux (TransactionOutputRecord_ext [] [] (emptyState sl) c ()) t;
+
+subIfSome :: Maybe Arith.Int -> Arith.Int -> Maybe Arith.Int;
+subIfSome Nothing uu = Nothing;
+subIfSome (Just x) y = Just (Arith.minus_int x y);
+
+addOutcome ::
+  SemanticsTypes.Party ->
+    Arith.Int ->
+      [(SemanticsTypes.Party, Arith.Int)] ->
+        [(SemanticsTypes.Party, Arith.Int)];
+addOutcome party diffValue trOut =
+  let {
+    newValue = (case MList.lookup party trOut of {
+                 Nothing -> diffValue;
+                 Just value -> Arith.plus_int value diffValue;
+               });
+  } in MList.insert party newValue trOut;
+
+getPartiesFromReduceEffect ::
+  [ReduceEffect] -> [(SemanticsTypes.Party, (SemanticsTypes.Token, Arith.Int))];
+getPartiesFromReduceEffect
+  (ReduceWithPayment (Payment src (SemanticsTypes.Party p) tok m) : t) =
+  (p, (tok, Arith.uminus_int m)) : getPartiesFromReduceEffect t;
+getPartiesFromReduceEffect (ReduceNoPayment : t) = getPartiesFromReduceEffect t;
+getPartiesFromReduceEffect
+  (ReduceWithPayment (Payment va (SemanticsTypes.Account ve) vc vd) : t) =
+  getPartiesFromReduceEffect t;
+getPartiesFromReduceEffect [] = [];
+
+getPartiesFromInput ::
+  [SemanticsTypes.Input] ->
+    [(SemanticsTypes.Party, (SemanticsTypes.Token, Arith.Int))];
+getPartiesFromInput (SemanticsTypes.IDeposit uu p tok m : t) =
+  (p, (tok, m)) : getPartiesFromInput t;
+getPartiesFromInput (SemanticsTypes.IChoice v va : t) = getPartiesFromInput t;
+getPartiesFromInput (SemanticsTypes.INotify : t) = getPartiesFromInput t;
+getPartiesFromInput [] = [];
+
+emptyOutcome :: [(SemanticsTypes.Party, Arith.Int)];
+emptyOutcome = MList.empty;
+
+getOutcomes ::
+  [ReduceEffect] ->
+    [SemanticsTypes.Input] -> [(SemanticsTypes.Party, Arith.Int)];
+getOutcomes eff inp =
+  List.foldl (\ acc (p, (_, m)) -> addOutcome p m acc) emptyOutcome
+    (getPartiesFromReduceEffect eff ++ getPartiesFromInput inp);
+
+maxTimeCase :: SemanticsTypes.Case -> Arith.Int;
+maxTimeCase (SemanticsTypes.Case vc contract) = maxTimeContract contract;
+
+maxTimeContract :: SemanticsTypes.Contract -> Arith.Int;
+maxTimeContract SemanticsTypes.Close = Arith.zero_int;
+maxTimeContract (SemanticsTypes.Pay uu uv uw ux contract) =
+  maxTimeContract contract;
+maxTimeContract (SemanticsTypes.If uy contractTrue contractFalse) =
+  Orderings.max (maxTimeContract contractTrue) (maxTimeContract contractFalse);
+maxTimeContract (SemanticsTypes.When [] timeout contract) =
+  Orderings.max timeout (maxTimeContract contract);
+maxTimeContract (SemanticsTypes.When (head : tail) timeout contract) =
+  Orderings.max (maxTimeCase head)
+    (maxTimeContract (SemanticsTypes.When tail timeout contract));
+maxTimeContract (SemanticsTypes.Let uz va contract) = maxTimeContract contract;
+maxTimeContract (SemanticsTypes.Assert vb contract) = maxTimeContract contract;
+
+getSignatures :: [SemanticsTypes.Input] -> [SemanticsTypes.Party];
+getSignatures l = List.foldl addSig SList.empty l;
+
+calculateNonAmbiguousInterval ::
+  Maybe Arith.Int ->
+    Arith.Int ->
+      SemanticsTypes.Contract ->
+        (OptBoundTimeInterval.BEndpoint, OptBoundTimeInterval.BEndpoint);
+calculateNonAmbiguousInterval uu uv SemanticsTypes.Close =
+  (OptBoundTimeInterval.Unbounded, OptBoundTimeInterval.Unbounded);
+calculateNonAmbiguousInterval n t (SemanticsTypes.Pay uw ux uy uz c) =
+  calculateNonAmbiguousInterval n t c;
+calculateNonAmbiguousInterval n t (SemanticsTypes.If va ct cf) =
+  OptBoundTimeInterval.intersectInterval (calculateNonAmbiguousInterval n t ct)
+    (calculateNonAmbiguousInterval n t cf);
+calculateNonAmbiguousInterval n t (SemanticsTypes.When [] timeout tcont) =
+  (if Arith.less_int t timeout
+    then (OptBoundTimeInterval.Unbounded,
+           OptBoundTimeInterval.Bounded (Arith.minus_int timeout Arith.one_int))
+    else OptBoundTimeInterval.intersectInterval
+           (OptBoundTimeInterval.Bounded timeout,
+             OptBoundTimeInterval.Unbounded)
+           (calculateNonAmbiguousInterval n t tcont));
+calculateNonAmbiguousInterval n t
+  (SemanticsTypes.When (SemanticsTypes.Case vb cont : tail) timeout tcont) =
+  (if gtIfNone n Arith.zero_int
+    then OptBoundTimeInterval.intersectInterval
+           (calculateNonAmbiguousInterval (subIfSome n Arith.one_int) t cont)
+           (calculateNonAmbiguousInterval n t
+             (SemanticsTypes.When tail timeout tcont))
+    else calculateNonAmbiguousInterval n t
+           (SemanticsTypes.When tail timeout tcont));
+calculateNonAmbiguousInterval n t (SemanticsTypes.Let vc vd c) =
+  calculateNonAmbiguousInterval n t c;
+calculateNonAmbiguousInterval n t (SemanticsTypes.Assert ve c) =
+  calculateNonAmbiguousInterval n t c;
 
 txOutState ::
   forall a. TransactionOutputRecord_ext a -> SemanticsTypes.State_ext ();

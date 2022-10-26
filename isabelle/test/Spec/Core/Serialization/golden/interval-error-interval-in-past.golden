@@ -1,7 +1,7 @@
 {
-    "intervalInPastError": [
-        30,
-        10,
-        20
-    ]
+    "intervalInPastError": {
+        "from": 10,
+        "minTime": 30,
+        "to": 20
+    }
 }

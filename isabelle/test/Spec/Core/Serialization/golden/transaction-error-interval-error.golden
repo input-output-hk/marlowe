@@ -1,10 +1,10 @@
 {
-    "contents": {
-        "intervalInPastError": [
-            30,
-            10,
-            20
-        ]
+    "context": {
+        "intervalInPastError": {
+            "from": 10,
+            "minTime": 30,
+            "to": 20
+        }
     },
-    "tag": "TEIntervalError"
+    "error": "TEIntervalError"
 }

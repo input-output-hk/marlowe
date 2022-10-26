@@ -325,7 +325,7 @@ instance FromJSON Value where
 
 \end{code}
 
-Some examples for each \emph{Value}s type
+Here are some examples for each \emph{Value}s constructor:
 
 \isamarkupsubsubsection{Constant}
 
@@ -503,7 +503,7 @@ instance FromJSON Observation where
   parseJSON _ = fail "Observation must be either an object or a boolean"
 \end{code}
 
-Some examples for each \emph{Observation} type
+Here are some examples for each \emph{Observation} constructor:
 
 \isamarkupsubsubsection{TrueObs}
 
@@ -613,7 +613,7 @@ is serialized as \eval{encodeExample valueEQExample}
 
 \isamarkupsection{Action}
 
-The \emph{Action} type is serialized as an object with different properties, depending the constructor.
+The \emph{Action} type is serialized as an object with different properties, depending on the constructor.
 
 \begin{code}
 instance ToJSON Action where
@@ -646,7 +646,7 @@ instance FromJSON Action where
                                   )
 \end{code}
 
-Some examples for each \emph{Action} type
+Here are some examples for each \emph{Action} constructor:
 
 \isamarkupsubsubsection{Deposit}
 
@@ -775,7 +775,7 @@ instance FromJSON Contract where
     fail "Contract must be either an object or a the string \"close\""
 \end{code}
 
-Some examples for each \emph{Contract} type
+Here are some examples for each \emph{Contract} constructor:
 
 \isamarkupsubsubsection{Close}
 
@@ -884,7 +884,7 @@ instance FromJSON Input where
     fail "Input must be either an object or the string \"input_notify\""
 \end{code}
 
-Some examples for each \emph{Input} type
+Here are some examples for each \emph{Input} constructor:
 
 \isamarkupsubsubsection{INotify}
 
@@ -949,7 +949,7 @@ instance FromJSON (Transaction_ext ()) where
 
 \end{code}
 
-for example, the following \emph{Transaction}
+For example, the following \emph{Transaction}
 
 \begin{code}
 transactionExample :: Transaction_ext ()
@@ -1099,7 +1099,7 @@ instance FromJSON TransactionWarning where
     fail "Contract must be either an object or a the string \"close\""
 \end{code}
 
-Some examples for each \emph{TransactionWarning} type
+Here are some examples for each \emph{TransactionWarning} constructor:
 
 
 \isamarkupsubsubsection{TransactionNonPositiveDeposit}
@@ -1174,23 +1174,41 @@ is serialized as \eval{encodeExample transactionAssertionFailedExample}
 
 \isamarkupsection{IntervalError}
 
-The \emph{IntervalError} type is serialized as an object with a single property (depending on the constructor)
-and in a tuple, the values.
+The \emph{IntervalError} type is serialized as an object with a single property that corresponds to the error type, and the context of
+the error as a sub-object.
 \begin{code}
 instance ToJSON IntervalError where
   toJSON (InvalidInterval (s, e)) = object
-    [ ("invalidInterval" .=  toJSON (s, e)) ]
+    [ ("invalidInterval" .=
+        object
+          [ "from" .= toJSON s
+          , "to"  .= toJSON e
+          ]
+      )
+    ]
   toJSON (IntervalInPastError t (s, e)) = object
-    [ ("intervalInPastError" .=  toJSON (t, s, e)) ]
+    [ ("intervalInPastError" .=
+        object
+          [ "minTime" .= toJSON t
+          , "from" .= toJSON s
+          , "to"  .= toJSON e
+          ]
+      )
+    ]
 
 instance FromJSON IntervalError where
   parseJSON (JSON.Object v) =
     let
       parseInvalidInterval = do
-        (s, e) <- v .: "invalidInterval"
+        err <- v .: "invalidInterval"
+        s <- err .: "from"
+        e <- err .: "to"
         pure $ InvalidInterval (s , e)
       parseIntervalInPastError = do
-        (t, s, e) <- v .: "intervalInPastError"
+        err <- v .: "intervalInPastError"
+        t <- err .: "minTime"
+        s <- err .: "from"
+        e <- err .: "to"
         pure $ IntervalInPastError t (s, e)
     in
       parseIntervalInPastError <|> parseInvalidInterval
@@ -1198,7 +1216,7 @@ instance FromJSON IntervalError where
       JSON.prependFailure "parsing IntervalError failed, " (JSON.typeMismatch "Object" invalid)
 \end{code}
 
-Some examples for each \emph{IntervalError} type
+Here are some examples for each \emph{IntervalError} constructor:
 
 
 \isamarkupsubsubsection{InvalidInterval}
@@ -1222,46 +1240,37 @@ is serialized as \eval{encodeExample intervalInPastErrorExample}
 
 \isamarkupsection{TransactionError}
 
-The \emph{TransactionError} type is serialized as an object with a \emph{tag} property that differentiates
-the type, and a \emph{contents} property that includes the parameter if any.
+The \emph{TransactionError} type is serialized as a literal string for errors without context, or as an object
+with the error type.
 
 \begin{code}
 instance ToJSON TransactionError where
-  toJSON TEAmbiguousTimeIntervalError = object
-    [ "tag" .= JSON.String "TEAmbiguousTimeIntervalError"
-    , "contents" .= JSON.Null
-    ]
-  toJSON TEApplyNoMatchError = object
-    [ "tag" .= JSON.String "TEApplyNoMatchError"
-    , "contents" .= JSON.Null
-    ]
+  toJSON TEAmbiguousTimeIntervalError = JSON.String "TEAmbiguousTimeIntervalError"
+  toJSON TEApplyNoMatchError = JSON.String "TEApplyNoMatchError"
+  toJSON TEUselessTransaction = JSON.String "TEUselessTransaction"
   toJSON (TEIntervalError e) = object
-    [ "tag" .= JSON.String "TEIntervalError"
-    , "contents" .= toJSON e
-    ]
-  toJSON TEUselessTransaction = object
-    [ "tag" .= JSON.String "TEUselessTransaction"
-    , "contents" .= JSON.Null
+    [ "error" .= JSON.String "TEIntervalError"
+    , "context" .= toJSON e
     ]
 
 instance FromJSON TransactionError where
-    parseJSON = withObject "TransactionError"
-      (\v ->
-        do
-            tag :: String <- v .: "tag"
-            case tag of
-                "TEAmbiguousTimeIntervalError" ->
-                    pure TEAmbiguousTimeIntervalError
-                "TEApplyNoMatchError" ->
-                    pure TEApplyNoMatchError
-                "TEIntervalError" ->
-                    TEIntervalError <$> v .: "contents"
-                "TEUselessTransaction" ->
-                    pure TEUselessTransaction
-      )
+    parseJSON (JSON.String "TEAmbiguousTimeIntervalError") = return TEAmbiguousTimeIntervalError
+    parseJSON (JSON.String "TEApplyNoMatchError") = return TEApplyNoMatchError
+    parseJSON (JSON.String "TEUselessTransaction") = return TEUselessTransaction
+    parseJSON (JSON.Object v) =
+      do
+       errorType :: String <- v .: "error"
+       case errorType of
+           "TEIntervalError" ->
+               TEIntervalError <$> v .: "context"
+           _ ->
+             fail "Invalid error type"
+    parseJSON _ =
+      fail "TransactionError must be either a string or an object"
+
 \end{code}
 
-Some examples for each \emph{TransactionError} type
+Here are some examples for each \emph{TransactionError} constructor:
 
 \isamarkupsubsubsection{TEAmbiguousTimeIntervalError}
 
@@ -1341,7 +1350,7 @@ instance FromJSON TransactionOutput where
                 )
 \end{code}
 
-Some examples for each \emph{TransactionOutput} type
+Here are some examples for each \emph{TransactionOutput} constructor:
 
 \isamarkupsubsubsection{TransactionError}
 

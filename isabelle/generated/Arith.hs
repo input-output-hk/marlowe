@@ -2,8 +2,8 @@
 
 module
   Arith(Int(..), equal_int, less_eq_int, less_int, Num(..), One, Zero,
-         Zero_neq_one, uminus_int, zero_int, abs_int, plus_int, minus_int,
-         times_int, of_bool, divide_int)
+         Zero_neq_one, uminus_int, zero_int, abs_int, one_int, plus_int,
+         minus_int, times_int, of_bool, divide_int)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -73,6 +73,9 @@ zero_int = Int_of_integer (0 :: Integer);
 
 abs_int :: Int -> Int;
 abs_int i = (if less_int i zero_int then uminus_int i else i);
+
+one_int :: Int;
+one_int = Int_of_integer (1 :: Integer);
 
 plus_int :: Int -> Int -> Int;
 plus_int k l = Int_of_integer (integer_of_int k + integer_of_int l);

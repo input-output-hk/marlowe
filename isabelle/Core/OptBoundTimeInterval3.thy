@@ -2,10 +2,10 @@ theory OptBoundTimeInterval3
   imports SemanticsTypes
 begin
 
-section "Time Interval"
+chapter "Time Interval"
 text
 \<open>
-A BEndpoint represents either an Unbounded (-\<infinity> or \<infinity>) endpoint or a closed bounded (inclusive)
+A BEndpoint represents either an Unbounded (-\infty or \infty) endpoint or a closed (inclusive) bounded
 endpoint.
 \<close>
 datatype BEndpoint =
@@ -22,9 +22,9 @@ type_synonym OptBoundTimeInterval = "BEndpoint \<times> BEndpoint"
 text
 \<open>
 We can think of an \<^emph>\<open>OptBoundTimeInterval\<close> as sets with four possible options:
-\<^item> Totally unbound: (-\<infinity>, \<infinity>)
-\<^item> Left bound [low, \<infinity>)
-\<^item> Right bound (-\<infinity>, high]
+\<^item> Totally unbound: (-\infty, \infty)
+\<^item> Left bound [low, \infty)
+\<^item> Right bound (-\infty, high]
 \<^item> Bound [low, high].
 \<close>
 fun bToSet :: "OptBoundTimeInterval => POSIXTime set" where
@@ -34,7 +34,7 @@ fun bToSet :: "OptBoundTimeInterval => POSIXTime set" where
  | "bToSet (Bounded l, Bounded r) = {l..r}"
 
 
-subsection "Interval intesection"
+section "Interval intesection"
 
 text
 \<open>
@@ -58,7 +58,7 @@ where
     = (maxLow low1 low2, minHigh high1 high2)"
 
 
-subsubsection "Associativity"
+subsection "Associativity"
 text
 \<open>
 Every function related to Interval Intersection is associative
@@ -92,7 +92,7 @@ interpretation semigroup "intersectInterval"
   done
 (*>*)
 
-subsubsection "Commutative"
+subsection "Commutative"
 text
 \<open>
 Every function related to Interval Intersection is commutative
@@ -125,7 +125,7 @@ interpretation abel_semigroup "intersectInterval"
   (*>*)
 
 
-subsubsection "intersectInterval is the same as \<inter>"
+subsection "intersectInterval is set intersection"
 text
 \<open>
 This section proves that the function \<^emph>\<open>intersectInterval\<close> behaves the same as set intersection. In order to
@@ -220,7 +220,7 @@ theorem (*<*)intersectIntervalIsIntersect:(*>*)
 (*>*)
 
 
-subsection "In Interval"
+section "In Interval"
 
 
 text \<open>
@@ -247,15 +247,18 @@ text
 \<open>
 A Time Interval is valid only if the left bound is lower or equal than the higher bound.
 \<close>
+
 fun validTimeInterval :: "TimeInterval \<Rightarrow> bool" where 
   "validTimeInterval (l, r) = (l \<le> r)"
+
 
 text 
 \<open>
 If the Time Interval is valid, then the \<^emph>\<open>inInterval\<close> function implies a subset.
 \<close>
-theorem (*<*)inInterval_subset: (*>*)
+theorem inInterval_subset: 
   "validTimeInterval a \<Longrightarrow> inInterval a b = (tToSet a \<subseteq> bToSet b)"
+
 (*<*)
   apply (cases a)
   apply (cases b)

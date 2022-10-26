@@ -65,7 +65,7 @@ export_code
   getOutcomes
   getSignatures
   maxTimeContract
-  calculateTimeInterval
+  calculateNonAmigousInterval
 
   \<comment> \<open> Export examples to be used as oracle specificaiton tests\<close>
   swapExample
@@ -103,8 +103,6 @@ export_code
   equal_TransactionWarning_inst.equal_TransactionWarning
   equal_Payment_inst.equal_Payment
 
-
-  calculateTimeInterval2
   in Haskell (string_classes)
 
 (*

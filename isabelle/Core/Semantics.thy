@@ -1,5 +1,5 @@
 theory Semantics
-imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" SemanticsTypes SemanticsGuarantees
+imports Main Util.MList Util.SList ListTools "HOL-Library.Product_Lexorder" SemanticsTypes SemanticsGuarantees OptBoundTimeInterval
 begin
 
 (* EVALUATION *)
@@ -706,18 +706,8 @@ and maxTimeCase :: "Case \<Rightarrow> int" where
 "maxTimeContract (Assert _ contract) = maxTimeContract contract" |
 "maxTimeCase (Case _ contract) = maxTimeContract contract"
 
-fun minOpt :: "POSIXTime option => POSIXTime option => POSIXTime option" where
-"minOpt None y = y" |
-"minOpt x None = x" |
-"minOpt (Some x) (Some y) = (Some (min x y))"
 
-fun maxOpt :: "POSIXTime option => POSIXTime option => POSIXTime option" where
-"maxOpt None y = y" |
-"maxOpt x None = x" |
-"maxOpt (Some x) (Some y) = (Some (max x y))"
-
-fun combineIntervals :: "POSIXTime option \<times> POSIXTime option \<Rightarrow> POSIXTime option \<times> POSIXTime option \<Rightarrow> POSIXTime option \<times> POSIXTime option" where
-"combineIntervals (min1, max1) (min2, max2) = (maxOpt min1 min2, minOpt max1 max2)"
+subsection "calculateNonAmbiguousInterval" 
 
 fun gtIfNone :: "int option \<Rightarrow> int \<Rightarrow> bool" where
 "gtIfNone None _ = True" |
@@ -731,22 +721,24 @@ fun subIfSome :: "int option \<Rightarrow> int \<Rightarrow> int option" where
 "subIfSome None _ = None" |
 "subIfSome (Some x) y = Some (x - y)"
 
-fun calculateTimeInterval :: "int option \<Rightarrow> POSIXTime \<Rightarrow> Contract \<Rightarrow> POSIXTime option \<times> POSIXTime option"
+
+fun calculateNonAmbiguousInterval :: "int option \<Rightarrow> POSIXTime \<Rightarrow> Contract \<Rightarrow> OptBoundTimeInterval"
 where
-"calculateTimeInterval _ _ Close = (None, None)" |
-"calculateTimeInterval n t (Pay _ _ _ _ c) = calculateTimeInterval n t c" |
-"calculateTimeInterval n t (If _ ct cf) = combineIntervals (calculateTimeInterval n t ct)
-                                                           (calculateTimeInterval n t cf)" |
-"calculateTimeInterval n t (When Nil timeout tcont) =
+"calculateNonAmbiguousInterval _ _ Close = (Unbounded, Unbounded)" |
+"calculateNonAmbiguousInterval n t (Pay _ _ _ _ c) = calculateNonAmbiguousInterval n t c" |
+"calculateNonAmbiguousInterval n t (If _ ct cf) = intersectInterval (calculateNonAmbiguousInterval n t ct)
+                                                           (calculateNonAmbiguousInterval n t cf)" |
+"calculateNonAmbiguousInterval n t (When Nil timeout tcont) =
   (if t < timeout
-   then (None, (Some (timeout - 1)))
-   else combineIntervals (Some timeout, None) (calculateTimeInterval n t tcont))" |
-"calculateTimeInterval n t (When (Cons (Case _ cont ) tail) timeout tcont) =
+   then (Unbounded, Bounded (timeout - 1))
+   else intersectInterval (Bounded timeout, Unbounded) (calculateNonAmbiguousInterval n t tcont))" |
+"calculateNonAmbiguousInterval n t (When (Cons (Case _ cont ) tail) timeout tcont) =
   (if gtIfNone n 0
-   then combineIntervals (calculateTimeInterval (subIfSome n 1) t cont)
-                         (calculateTimeInterval n t (When tail timeout tcont))
-   else calculateTimeInterval n t (When tail timeout tcont))" |
-"calculateTimeInterval n t (Let _ _ c) = calculateTimeInterval n t c" |
-"calculateTimeInterval n t (Assert _ c) = calculateTimeInterval n t c"
+   then intersectInterval (calculateNonAmbiguousInterval (subIfSome n 1) t cont)
+                         (calculateNonAmbiguousInterval n t (When tail timeout tcont))
+   else calculateNonAmbiguousInterval n t (When tail timeout tcont))" |
+"calculateNonAmbiguousInterval n t (Let _ _ c) = calculateNonAmbiguousInterval n t c" |
+"calculateNonAmbiguousInterval n t (Assert _ c) = calculateNonAmbiguousInterval n t c"
+
 
 end

@@ -8,8 +8,8 @@ module
              evalObservation, txOutWarnings, txOutPayments, reductionLoop,
              reduceContractUntilQuiescent, applyAllInputs, computeTransaction,
              playTrace, getOutcomes, maxTimeContract, getSignatures,
-             calculateTimeInterval, equal_Payment, txOutState, txOutContract,
-             equal_TransactionWarning)
+             calculateNonAmbiguousInterval, equal_Payment, txOutState,
+             txOutContract, equal_TransactionWarning)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -18,14 +18,15 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
+import qualified OptBoundTimeInterval;
 import qualified List;
+import qualified Orderings;
 import qualified Option;
 import qualified MList;
 import qualified HOL;
 import qualified Product_Lexorder;
 import qualified Product_Type;
 import qualified ListTools;
-import qualified Orderings;
 import qualified SList;
 import qualified SemanticsGuarantees;
 import qualified SemanticsTypes;
@@ -112,16 +113,6 @@ addSig acc (SemanticsTypes.IDeposit uu p uv uw) = SList.insert p acc;
 addSig acc (SemanticsTypes.IChoice (SemanticsTypes.ChoiceId ux p) uy) =
   SList.insert p acc;
 addSig acc SemanticsTypes.INotify = acc;
-
-maxOpt :: Maybe Arith.Int -> Maybe Arith.Int -> Maybe Arith.Int;
-maxOpt Nothing y = y;
-maxOpt (Just v) Nothing = Just v;
-maxOpt (Just x) (Just y) = Just (Orderings.max x y);
-
-minOpt :: Maybe Arith.Int -> Maybe Arith.Int -> Maybe Arith.Int;
-minOpt Nothing y = y;
-minOpt (Just v) Nothing = Just v;
-minOpt (Just x) (Just y) = Just (Orderings.min x y);
 
 gtIfNone :: Maybe Arith.Int -> Arith.Int -> Bool;
 gtIfNone Nothing uu = True;
@@ -701,37 +692,39 @@ maxTimeContract (SemanticsTypes.Assert vb contract) = maxTimeContract contract;
 getSignatures :: [SemanticsTypes.Input] -> [SemanticsTypes.Party];
 getSignatures l = List.foldl addSig SList.empty l;
 
-combineIntervals ::
-  (Maybe Arith.Int, Maybe Arith.Int) ->
-    (Maybe Arith.Int, Maybe Arith.Int) -> (Maybe Arith.Int, Maybe Arith.Int);
-combineIntervals (min1, max1) (min2, max2) =
-  (maxOpt min1 min2, minOpt max1 max2);
-
-calculateTimeInterval ::
+calculateNonAmbiguousInterval ::
   Maybe Arith.Int ->
-    Arith.Int -> SemanticsTypes.Contract -> (Maybe Arith.Int, Maybe Arith.Int);
-calculateTimeInterval uu uv SemanticsTypes.Close = (Nothing, Nothing);
-calculateTimeInterval n t (SemanticsTypes.Pay uw ux uy uz c) =
-  calculateTimeInterval n t c;
-calculateTimeInterval n t (SemanticsTypes.If va ct cf) =
-  combineIntervals (calculateTimeInterval n t ct)
-    (calculateTimeInterval n t cf);
-calculateTimeInterval n t (SemanticsTypes.When [] timeout tcont) =
+    Arith.Int ->
+      SemanticsTypes.Contract ->
+        (OptBoundTimeInterval.BEndpoint, OptBoundTimeInterval.BEndpoint);
+calculateNonAmbiguousInterval uu uv SemanticsTypes.Close =
+  (OptBoundTimeInterval.Unbounded, OptBoundTimeInterval.Unbounded);
+calculateNonAmbiguousInterval n t (SemanticsTypes.Pay uw ux uy uz c) =
+  calculateNonAmbiguousInterval n t c;
+calculateNonAmbiguousInterval n t (SemanticsTypes.If va ct cf) =
+  OptBoundTimeInterval.intersectInterval (calculateNonAmbiguousInterval n t ct)
+    (calculateNonAmbiguousInterval n t cf);
+calculateNonAmbiguousInterval n t (SemanticsTypes.When [] timeout tcont) =
   (if Arith.less_int t timeout
-    then (Nothing, Just (Arith.minus_int timeout Arith.one_int))
-    else combineIntervals (Just timeout, Nothing)
-           (calculateTimeInterval n t tcont));
-calculateTimeInterval n t
+    then (OptBoundTimeInterval.Unbounded,
+           OptBoundTimeInterval.Bounded (Arith.minus_int timeout Arith.one_int))
+    else OptBoundTimeInterval.intersectInterval
+           (OptBoundTimeInterval.Bounded timeout,
+             OptBoundTimeInterval.Unbounded)
+           (calculateNonAmbiguousInterval n t tcont));
+calculateNonAmbiguousInterval n t
   (SemanticsTypes.When (SemanticsTypes.Case vb cont : tail) timeout tcont) =
   (if gtIfNone n Arith.zero_int
-    then combineIntervals
-           (calculateTimeInterval (subIfSome n Arith.one_int) t cont)
-           (calculateTimeInterval n t (SemanticsTypes.When tail timeout tcont))
-    else calculateTimeInterval n t (SemanticsTypes.When tail timeout tcont));
-calculateTimeInterval n t (SemanticsTypes.Let vc vd c) =
-  calculateTimeInterval n t c;
-calculateTimeInterval n t (SemanticsTypes.Assert ve c) =
-  calculateTimeInterval n t c;
+    then OptBoundTimeInterval.intersectInterval
+           (calculateNonAmbiguousInterval (subIfSome n Arith.one_int) t cont)
+           (calculateNonAmbiguousInterval n t
+             (SemanticsTypes.When tail timeout tcont))
+    else calculateNonAmbiguousInterval n t
+           (SemanticsTypes.When tail timeout tcont));
+calculateNonAmbiguousInterval n t (SemanticsTypes.Let vc vd c) =
+  calculateNonAmbiguousInterval n t c;
+calculateNonAmbiguousInterval n t (SemanticsTypes.Assert ve c) =
+  calculateNonAmbiguousInterval n t c;
 
 equal_Payment :: Payment -> Payment -> Bool;
 equal_Payment (Payment x1 x2 x3 x4) (Payment y1 y2 y3 y4) =

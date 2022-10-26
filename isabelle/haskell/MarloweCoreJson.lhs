@@ -234,7 +234,7 @@ instance ToJSON Bound where
 
 instance FromJSON Bound where
   parseJSON = withObject "Bound" (\v ->
-       Bound <$> (getInteger "lower bound"=<< (v .: "from"))
+       Bound <$> (getInteger "lower bound" =<< (v .: "from"))
              <*> (getInteger "higher bound" =<< (v .: "to"))
                                  )
 \end{code}
@@ -1179,21 +1179,19 @@ the error as a sub-object.
 \begin{code}
 instance ToJSON IntervalError where
   toJSON (InvalidInterval (s, e)) = object
-    [ ("invalidInterval" .=
-        object
-          [ "from" .= toJSON s
-          , "to"  .= toJSON e
-          ]
-      )
+    [ "invalidInterval" .=
+       object
+         [ "from" .= toJSON s
+         , "to"  .= toJSON e
+         ]
     ]
   toJSON (IntervalInPastError t (s, e)) = object
-    [ ("intervalInPastError" .=
-        object
-          [ "minTime" .= toJSON t
-          , "from" .= toJSON s
-          , "to"  .= toJSON e
-          ]
-      )
+    [ "intervalInPastError" .=
+       object
+         [ "minTime" .= toJSON t
+         , "from" .= toJSON s
+         , "to"  .= toJSON e
+         ]
     ]
 
 instance FromJSON IntervalError where
@@ -1338,15 +1336,15 @@ instance FromJSON TransactionOutput where
   parseJSON = withObject "TransactionOutput"
                 (\v ->
                      (TransactionError <$> ( v .: "transaction_error"))
-                  <|>( TransactionOutput <$>
-                        ( TransactionOutputRecord_ext
+                  <|> (TransactionOutput <$>
+                         (TransactionOutputRecord_ext
                             <$> (v .: "warnings")
                             <*> (v .: "payments")
                             <*> (v .: "state")
                             <*> (v .: "contract")
                             <*> pure ()
-                        )
-                     )
+                         )
+                      )
                 )
 \end{code}
 

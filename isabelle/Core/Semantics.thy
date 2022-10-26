@@ -707,7 +707,7 @@ and maxTimeCase :: "Case \<Rightarrow> int" where
 "maxTimeCase (Case _ contract) = maxTimeContract contract"
 
 
-subsection "calculateNonAmigousInterval" 
+subsection "calculateNonAmbiguousInterval" 
 
 fun gtIfNone :: "int option \<Rightarrow> int \<Rightarrow> bool" where
 "gtIfNone None _ = True" |
@@ -722,23 +722,23 @@ fun subIfSome :: "int option \<Rightarrow> int \<Rightarrow> int option" where
 "subIfSome (Some x) y = Some (x - y)"
 
 
-fun calculateNonAmigousInterval :: "int option \<Rightarrow> POSIXTime \<Rightarrow> Contract \<Rightarrow> OptBoundTimeInterval"
+fun calculateNonAmbiguousInterval :: "int option \<Rightarrow> POSIXTime \<Rightarrow> Contract \<Rightarrow> OptBoundTimeInterval"
 where
-"calculateNonAmigousInterval _ _ Close = (Unbounded, Unbounded)" |
-"calculateNonAmigousInterval n t (Pay _ _ _ _ c) = calculateNonAmigousInterval n t c" |
-"calculateNonAmigousInterval n t (If _ ct cf) = intersectInterval (calculateNonAmigousInterval n t ct)
-                                                           (calculateNonAmigousInterval n t cf)" |
-"calculateNonAmigousInterval n t (When Nil timeout tcont) =
+"calculateNonAmbiguousInterval _ _ Close = (Unbounded, Unbounded)" |
+"calculateNonAmbiguousInterval n t (Pay _ _ _ _ c) = calculateNonAmbiguousInterval n t c" |
+"calculateNonAmbiguousInterval n t (If _ ct cf) = intersectInterval (calculateNonAmbiguousInterval n t ct)
+                                                           (calculateNonAmbiguousInterval n t cf)" |
+"calculateNonAmbiguousInterval n t (When Nil timeout tcont) =
   (if t < timeout
    then (Unbounded, Bounded (timeout - 1))
-   else intersectInterval (Bounded timeout, Unbounded) (calculateNonAmigousInterval n t tcont))" |
-"calculateNonAmigousInterval n t (When (Cons (Case _ cont ) tail) timeout tcont) =
+   else intersectInterval (Bounded timeout, Unbounded) (calculateNonAmbiguousInterval n t tcont))" |
+"calculateNonAmbiguousInterval n t (When (Cons (Case _ cont ) tail) timeout tcont) =
   (if gtIfNone n 0
-   then intersectInterval (calculateNonAmigousInterval (subIfSome n 1) t cont)
-                         (calculateNonAmigousInterval n t (When tail timeout tcont))
-   else calculateNonAmigousInterval n t (When tail timeout tcont))" |
-"calculateNonAmigousInterval n t (Let _ _ c) = calculateNonAmigousInterval n t c" |
-"calculateNonAmigousInterval n t (Assert _ c) = calculateNonAmigousInterval n t c"
+   then intersectInterval (calculateNonAmbiguousInterval (subIfSome n 1) t cont)
+                         (calculateNonAmbiguousInterval n t (When tail timeout tcont))
+   else calculateNonAmbiguousInterval n t (When tail timeout tcont))" |
+"calculateNonAmbiguousInterval n t (Let _ _ c) = calculateNonAmbiguousInterval n t c" |
+"calculateNonAmbiguousInterval n t (Assert _ c) = calculateNonAmbiguousInterval n t c"
 
 
 end

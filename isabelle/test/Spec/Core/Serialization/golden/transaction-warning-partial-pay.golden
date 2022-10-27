@@ -1,0 +1,16 @@
+{
+    "account": {
+        "address": "example address"
+    },
+    "asked_to_pay": 30,
+    "but_only_paid": 20,
+    "of_token": {
+        "currency_symbol": "85bb65",
+        "token_name": "dolar"
+    },
+    "to_payee": {
+        "account": {
+            "address": "example address"
+        }
+    }
+}

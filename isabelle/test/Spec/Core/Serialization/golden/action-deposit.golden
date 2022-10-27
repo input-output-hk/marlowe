@@ -1,0 +1,13 @@
+{
+    "deposits": 1,
+    "into_account": {
+        "address": "example address"
+    },
+    "of_token": {
+        "currency_symbol": "85bb65",
+        "token_name": "dolar"
+    },
+    "party": {
+        "role_token": "example role"
+    }
+}

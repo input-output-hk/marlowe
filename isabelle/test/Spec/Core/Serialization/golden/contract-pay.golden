@@ -1,0 +1,16 @@
+{
+    "from_account": {
+        "role_token": "example role"
+    },
+    "pay": 10,
+    "then": "close",
+    "to": {
+        "account": {
+            "address": "example address"
+        }
+    },
+    "token": {
+        "currency_symbol": "85bb65",
+        "token_name": "dolar"
+    }
+}

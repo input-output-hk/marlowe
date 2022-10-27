@@ -10,7 +10,7 @@ cabal-version:          >= 1.10
 
 executable marlowe
     default-language:   Haskell2010
-    build-depends:      base >=4.9,
+    build-depends:      base,
                         base16-bytestring,
                         bytestring,
                         containers,
@@ -23,9 +23,11 @@ executable marlowe
                         tasty-smallcheck,
                         tasty-quickcheck,
                         text,
-                        template-haskell >=2.17,
+                        template-haskell,
                         time,
-                        wl-pprint -any
+                        aeson,
+                        wl-pprint -any,
+                        marlowe-spec
     other-modules:
                         Language.Marlowe
                         Language.Marlowe.Pretty

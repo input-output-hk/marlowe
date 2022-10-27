@@ -24,6 +24,7 @@ module Main
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@=?))
 import qualified Spec.Core.Examples.Swap (tests)
+import qualified Spec.Core.Serialization.Json (tests)
 
 -- | Entry point for the tests.
 main :: IO ()
@@ -34,6 +35,8 @@ main = defaultMain tests
 tests :: TestTree
 tests =
   testGroup "Marlowe Spec"
-    [
-      Spec.Core.Examples.Swap.tests
+    [ testGroup "Examples"
+      [ Spec.Core.Examples.Swap.tests
+      ]
+    , Spec.Core.Serialization.Json.tests
     ]

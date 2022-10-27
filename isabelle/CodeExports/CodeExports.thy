@@ -9,10 +9,10 @@ text \<open>We start by importing the theories we want to export and a translati
 
 theory CodeExports
 
-imports 
-  Core.Semantics 
-  Examples.Swap 
-  "HOL-Library.Code_Target_Numeral" 
+imports
+  Core.Semantics
+  Examples.Swap
+  "HOL-Library.Code_Target_Numeral"
   HOL.String
 
 begin
@@ -23,20 +23,20 @@ represenation of \<^term>\<open>ByteString\<close>\<close>
 code_printing
   \<comment> \<open>The first command tells the serializer to use Haskell \<close>
   \<comment> \<open>native \<^term>\<open>String\<close> instead of our logical ByteString\<close>
-  type_constructor ByteString 
+  type_constructor ByteString
       \<rightharpoonup> (Haskell) "String"
   \<comment> \<open>The next three commands tells the serializer to use the operators provided by\<close>
   \<comment> \<open>the Ord instance instead of the ones that work with the logical representation\<close>
   | constant "less_eq_BS"
-      \<rightharpoonup> (Haskell) infix 4 "<=" 
+      \<rightharpoonup> (Haskell) infix 4 "<="
   | constant "less_BS"
-      \<rightharpoonup> (Haskell) infix 4 "<" 
-  | constant "HOL.equal :: ByteString \<Rightarrow> ByteString \<Rightarrow> bool" 
+      \<rightharpoonup> (Haskell) infix 4 "<"
+  | constant "HOL.equal :: ByteString \<Rightarrow> ByteString \<Rightarrow> bool"
       \<rightharpoonup> (Haskell) infix 4 "=="
   \<comment> \<open>The next command tells the serializer to implode the logical Isabelle string\<close>
   \<comment> \<open>into Haskell string. Because this is a textual rewrite, we need to force the\<close>
-  \<comment> \<open>generation of String.implode\<close>   
-  | constant "BS :: string \<Rightarrow> ByteString" 
+  \<comment> \<open>generation of String.implode\<close>
+  | constant "BS :: string \<Rightarrow> ByteString"
       \<rightharpoonup> (Haskell) "Stringa.implode"
 
 
@@ -83,7 +83,7 @@ export_code
 
   \<comment> \<open>Force export of Arith.Int constructor\<close>
   int_of_integer
-  
+
   \<comment> \<open>Force export of TransactionOutput constructors\<close>
   TransactionOutput
 
@@ -99,9 +99,21 @@ export_code
   \<comment> \<open>Force the export of the transaction record\<close>
   Transaction_ext
 
+  \<comment> \<open>Force the export of the transaction output record\<close>
+  TransactionOutputRecord_ext
+
   \<comment> \<open>Force the export on some equality functions (sadly it does not force the Eq instance)\<close>
   equal_TransactionWarning_inst.equal_TransactionWarning
   equal_Payment_inst.equal_Payment
+  equal_Value_inst.equal_Value
+  equal_Observation_inst.equal_Observation
+  equal_Action_inst.equal_Action
+  equal_Input_inst.equal_Input
+  equal_Transaction_ext_inst.equal_Transaction_ext
+  equal_State_ext_inst.equal_State_ext
+  equal_IntervalError_inst.equal_IntervalError
+  equal_TransactionError_inst.equal_TransactionError
+  equal_TransactionOutput_inst.equal_TransactionOutput
 
   in Haskell (string_classes)
 

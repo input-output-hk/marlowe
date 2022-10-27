@@ -1,0 +1,10 @@
+{
+    "context": {
+        "intervalInPastError": {
+            "from": 10,
+            "minTime": 30,
+            "to": 20
+        }
+    },
+    "error": "TEIntervalError"
+}

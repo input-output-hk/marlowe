@@ -17,3 +17,6 @@ isabelle/**/*~
 
 # Document partials
 isabelle/**/output
+
+# Generated tex file from literate haskell
+isabelle/**/marlowe-core-json.tex

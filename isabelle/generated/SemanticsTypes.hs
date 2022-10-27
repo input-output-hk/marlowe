@@ -3,12 +3,13 @@
 module
   SemanticsTypes(Party(..), equal_Party, ChoiceId(..), equal_ChoiceId,
                   ValueId(..), equal_ValueId, Token(..), equal_Token, Value(..),
-                  Observation(..), Payee(..), equal_Payee, Action(..),
-                  Contract(..), Case(..), equal_Contract, Input(..),
+                  Observation(..), equal_Observation, equal_Value, Payee(..),
+                  equal_Payee, Bound(..), Action(..), Contract(..), Case(..),
+                  equal_Action, equal_Contract, Input(..), equal_Input,
                   IntervalError(..), Environment_ext(..), State_ext(..),
                   IntervalResult(..), choices, minTime, accounts, boundValues,
                   choices_update, minTime_update, accounts_update, timeInterval,
-                  boundValues_update)
+                  boundValues_update, equal_State_ext, equal_IntervalError)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -346,9 +347,10 @@ equal_Payee (Party x2) (Account x1) = False;
 equal_Payee (Party x2) (Party y2) = equal_Party x2 y2;
 equal_Payee (Account x1) (Account y1) = equal_Party x1 y1;
 
-data Action = Deposit Party Party Token Value
-  | Choice ChoiceId [(Arith.Int, Arith.Int)] | Notify Observation
-  deriving (Prelude.Read, Prelude.Show);
+data Bound = Bound Arith.Int Arith.Int deriving (Prelude.Read, Prelude.Show);
+
+data Action = Deposit Party Party Token Value | Choice ChoiceId [Bound]
+  | Notify Observation deriving (Prelude.Read, Prelude.Show);
 
 data Contract = Close | Pay Party Payee Token Value Contract
   | If Observation Contract Contract | When [Case] Arith.Int Contract
@@ -356,6 +358,14 @@ data Contract = Close | Pay Party Payee Token Value Contract
   deriving (Prelude.Read, Prelude.Show);
 
 data Case = Case Action Contract deriving (Prelude.Read, Prelude.Show);
+
+equal_Bound :: Bound -> Bound -> Bool;
+equal_Bound (Bound x1 x2) (Bound y1 y2) =
+  Arith.equal_int x1 y1 && Arith.equal_int x2 y2;
+
+instance Eq Bound where {
+  a == b = equal_Bound a b;
+};
 
 equal_Action :: Action -> Action -> Bool;
 equal_Action (Choice x21 x22) (Notify x3) = False;
@@ -424,6 +434,27 @@ equal_Case :: Case -> Case -> Bool;
 equal_Case (Case x1 x2) (Case y1 y2) =
   equal_Action x1 y1 && equal_Contract x2 y2;
 
+data Input = IDeposit Party Party Token Arith.Int | IChoice ChoiceId Arith.Int
+  | INotify deriving (Prelude.Read, Prelude.Show);
+
+equal_Input :: Input -> Input -> Bool;
+equal_Input (IChoice x21 x22) INotify = False;
+equal_Input INotify (IChoice x21 x22) = False;
+equal_Input (IDeposit x11 x12 x13 x14) INotify = False;
+equal_Input INotify (IDeposit x11 x12 x13 x14) = False;
+equal_Input (IDeposit x11 x12 x13 x14) (IChoice x21 x22) = False;
+equal_Input (IChoice x21 x22) (IDeposit x11 x12 x13 x14) = False;
+equal_Input (IChoice x21 x22) (IChoice y21 y22) =
+  equal_ChoiceId x21 y21 && Arith.equal_int x22 y22;
+equal_Input (IDeposit x11 x12 x13 x14) (IDeposit y11 y12 y13 y14) =
+  equal_Party x11 y11 &&
+    equal_Party x12 y12 && equal_Token x13 y13 && Arith.equal_int x14 y14;
+equal_Input INotify INotify = True;
+
+instance Eq Input where {
+  a == b = equal_Input a b;
+};
+
 instance Eq Party where {
   a == b = equal_Party a b;
 };
@@ -439,9 +470,6 @@ instance Eq ValueId where {
 instance Eq ChoiceId where {
   a == b = equal_ChoiceId a b;
 };
-
-data Input = IDeposit Party Party Token Arith.Int | IChoice ChoiceId Arith.Int
-  | INotify deriving (Prelude.Read, Prelude.Show);
 
 data IntervalError = InvalidInterval (Arith.Int, Arith.Int)
   | IntervalInPastError Arith.Int (Arith.Int, Arith.Int)
@@ -499,5 +527,20 @@ boundValues_update ::
 boundValues_update boundValuesa
   (State_ext accounts choices boundValues minTime more) =
   State_ext accounts choices (boundValuesa boundValues) minTime more;
+
+equal_State_ext :: forall a. (Eq a) => State_ext a -> State_ext a -> Bool;
+equal_State_ext (State_ext accountsa choicesa boundValuesa minTimea morea)
+  (State_ext accounts choices boundValues minTime more) =
+  accountsa == accounts &&
+    choicesa == choices &&
+      boundValuesa == boundValues &&
+        Arith.equal_int minTimea minTime && morea == more;
+
+equal_IntervalError :: IntervalError -> IntervalError -> Bool;
+equal_IntervalError (InvalidInterval x1) (IntervalInPastError x21 x22) = False;
+equal_IntervalError (IntervalInPastError x21 x22) (InvalidInterval x1) = False;
+equal_IntervalError (IntervalInPastError x21 x22) (IntervalInPastError y21 y22)
+  = Arith.equal_int x21 y21 && x22 == y22;
+equal_IntervalError (InvalidInterval x1) (InvalidInterval y1) = x1 == y1;
 
 }

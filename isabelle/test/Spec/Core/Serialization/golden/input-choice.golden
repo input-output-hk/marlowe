@@ -1,0 +1,9 @@
+{
+    "for_choice_id": {
+        "choice_name": "ada price",
+        "choice_owner": {
+            "address": "example address"
+        }
+    },
+    "input_that_chooses_num": 3
+}

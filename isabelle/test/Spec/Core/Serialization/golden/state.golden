@@ -1,0 +1,34 @@
+{
+    "accounts": [
+        [
+            [
+                {
+                    "role_token": "example role"
+                },
+                {
+                    "currency_symbol": "85bb65",
+                    "token_name": "dolar"
+                }
+            ],
+            20
+        ]
+    ],
+    "boundValues": [
+        [
+            "example",
+            30
+        ]
+    ],
+    "choices": [
+        [
+            {
+                "choice_name": "ada price",
+                "choice_owner": {
+                    "address": "example address"
+                }
+            },
+            10
+        ]
+    ],
+    "minTime": 90
+}

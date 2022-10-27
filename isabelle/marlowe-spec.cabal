@@ -16,9 +16,17 @@ extra-source-files:
     ../README.md
 
 library
-    hs-source-dirs: generated
+    hs-source-dirs:
+        generated
+        haskell
     default-language: Haskell2010
-    build-depends: base >=4.9 && <5
+    build-depends:
+        base >=4.9 && <5,
+        aeson,
+        aeson-pretty,
+        bytestring,
+        text,
+        scientific,
     other-modules:
         ByteString
         HOL
@@ -33,7 +41,10 @@ library
         Stringa
     exposed-modules:
         Arith
+        ArithNumInstance
+        CoreOrphanEq
         Examples.Swap
+        MarloweCoreJson
         Semantics
         SemanticsTypes
 
@@ -44,8 +55,14 @@ test-suite marlowe-spec-test
     main-is: Spec.hs
     other-modules:
         Spec.Core.Examples.Swap
+        Spec.Core.Serialization.Json
     build-depends:
+        aeson,
+        aeson-pretty,
         base >=4.9 && <5,
+        bytestring,
         marlowe-spec,
+        filepath,
         tasty,
         tasty-hunit,
+        tasty-golden,

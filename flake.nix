@@ -81,8 +81,9 @@
 
           project = pkgs.haskell-nix.cabalProject' {
             src = ./.;
-            compiler-nix-name = "ghc923";
+            compiler-nix-name = "ghc924";
             shell.tools.cabal = {};
+            shell.tools.haskell-language-server = {};
             shell.inputsFrom = [ self.packages.${system}.isabelle-test ];
             shell.nativeBuildInputs = [build-marlowe-proofs edit-marlowe-proofs build-marlowe-docs latex pkgs.haskellPackages.lhs2tex tulliaPackage];
           };

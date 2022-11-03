@@ -38,11 +38,13 @@ library
         Product_Lexorder
         Product_Type
         SemanticsGuarantees
+        SList
         Stringa
     exposed-modules:
         Arith
         ArithNumInstance
         CoreOrphanEq
+        OptBoundTimeInterval
         Examples.Swap
         MarloweCoreJson
         Semantics

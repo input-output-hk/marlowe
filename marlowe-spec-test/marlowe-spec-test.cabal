@@ -13,7 +13,7 @@ author:             Hernan Rajchert
 maintainer:         hernan.rajchert@iohk.io
 
 extra-source-files:
-    ../README.md
+    README.md
 
 common lang
     default-language: Haskell2010

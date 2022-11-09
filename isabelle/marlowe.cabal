@@ -35,9 +35,11 @@ library
         MList
         Option
         Orderings
+        OptBoundTimeInterval
         Product_Lexorder
         Product_Type
         SemanticsGuarantees
+        SList
         Stringa
     exposed-modules:
         Arith

@@ -88,7 +88,7 @@
             inherit evalSystem;
             shell.tools.cabal = { inherit evalSystem; };
             shell.tools.haskell-language-server = { inherit evalSystem; };
-            shell.inputsFrom = [ self.packages.${system}.isabelle-test ];
+            shell.inputsFrom = [ packages.isabelle-test ];
             shell.nativeBuildInputs = [build-marlowe-proofs edit-marlowe-proofs build-marlowe-docs latex pkgs.haskellPackages.lhs2tex tulliaPackage];
           };
 

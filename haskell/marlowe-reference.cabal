@@ -1,6 +1,6 @@
 name:                   marlowe-reference
 version:                0.3.0.0
-license:                BSD3
+license:                BSD-3-Clause
 license-file:           ../LICENSE
 author:                 Alexander Nemish
 maintainer:             alexander.nemish@iohk.io

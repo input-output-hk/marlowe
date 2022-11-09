@@ -21,8 +21,11 @@
 
       supportedSystems = [ system.x86_64-linux system.x86_64-darwin ];
 
-      base = eachSystem supportedSystems (system:
+      base = { evalSystem ? null }: eachSystem supportedSystems (system:
+        let evalSystem' = if evalSystem == null then system else evalSystem; in
         let
+          evalSystem = evalSystem';
+
           overlays = [ haskellNix.overlay ];
 
           pkgs = import nixpkgs { inherit system overlays; inherit (haskellNix) config; };
@@ -82,15 +85,15 @@
           project = pkgs.haskell-nix.cabalProject' {
             src = ./.;
             compiler-nix-name = "ghc924";
-            shell.tools.cabal = {};
-            shell.tools.haskell-language-server = {};
+            inherit evalSystem;
+            shell.tools.cabal = { inherit evalSystem; };
+            shell.tools.haskell-language-server = { inherit evalSystem; };
             shell.inputsFrom = [ self.packages.${system}.isabelle-test ];
             shell.nativeBuildInputs = [build-marlowe-proofs edit-marlowe-proofs build-marlowe-docs latex pkgs.haskellPackages.lhs2tex tulliaPackage];
           };
 
           flake = project.flake { };
-        in
-        flake // {
+
           packages = flake.packages // {
             isabelle-test = isabelle-pkgs.runCommand "isabelle-test"
               {
@@ -112,18 +115,23 @@
               touch $out
             '';
           };
-          hydraJobs = self.packages.${system};
-          ciJobs = self.packages.${system};
+        in
+        flake // {
+          inherit packages;
+          hydraJobs = packages;
+          ciJobs = packages;
         } // tullia.fromSimple system (import ./nix/tullia.nix self system)
       );
-      pkgsLinux = nixpkgs.legacyPackages.x86_64-linux;
+      hydraSystem = "x86_64-linux";
+      pkgsHydra = nixpkgs.legacyPackages.${hydraSystem};
+      baseHydra = base { evalSystem = hydraSystem; };
     in
-    base // {
-      hydraJobs = base.hydraJobs // {
-        forceNewEval = pkgsLinux.writeText "forceNewEval" (self.rev or self.lastModified);
-        required = pkgsLinux.releaseTools.aggregate {
+    base {} // {
+      hydraJobs = baseHydra.hydraJobs // {
+        forceNewEval = pkgsHydra.writeText "forceNewEval" (self.rev or self.lastModified);
+        required = pkgsHydra.releaseTools.aggregate {
           name = "marlowe";
-          constituents = builtins.concatMap (system: map (x: "${x}.${system}") (builtins.attrNames base.hydraJobs)) supportedSystems;
+          constituents = builtins.concatMap (system: map (x: "${x}.${system}") (builtins.attrNames baseHydra.hydraJobs)) supportedSystems;
         };
       };
     };

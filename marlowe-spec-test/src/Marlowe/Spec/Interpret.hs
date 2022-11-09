@@ -81,11 +81,7 @@ type InterpretJsonRequest = Request JSON.Value -> IO (Response JSON.Value)
 
 testResponse :: InterpretJsonRequest -> TestName -> Request JSON.Value -> (Response JSON.Value -> Assertion) -> TestTree
 testResponse interpret testName req assertion =
-  testCase testName
-    (do
-      response <- interpret req
-      assertion response
-    )
+  testCase testName $ assertion =<< interpret req
 
 exactMatch :: InterpretJsonRequest -> TestName -> Request JSON.Value -> Response JSON.Value -> TestTree
 exactMatch interpret testName req expected = testResponse interpret testName req (\actual -> actual @?= expected)

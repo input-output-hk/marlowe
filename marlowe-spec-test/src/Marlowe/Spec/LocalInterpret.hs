@@ -29,6 +29,4 @@ interpretLocal _ = RequestNotImplemented
 
 testLocal :: TestName -> Request JSON.Value -> Response JSON.Value -> TestTree
 testLocal testName request expected = testCase testName
-    (do
-        interpretLocal request @?= expected
-    )
+    (interpretLocal request @?= expected)

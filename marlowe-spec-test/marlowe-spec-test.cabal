@@ -1,0 +1,69 @@
+cabal-version:      2.4
+name:               marlowe-spec-test
+version:            0.1.0.0
+
+-- A short (one-line) description of the package.
+synopsis: Marlowe spec compliance utility tool
+
+
+-- The license under which the package is released.
+license:            BSD-3-Clause
+license-file:       ../LICENSE
+author:             Hernan Rajchert
+maintainer:         hernan.rajchert@iohk.io
+
+extra-source-files:
+    README.md
+
+common lang
+    default-language: Haskell2010
+    default-extensions: ScopedTypeVariables
+                        DeriveGeneric StandaloneDeriving
+    ghc-options:
+        -Wall -Wnoncanonical-monad-instances
+        -Wincomplete-uni-patterns -Wincomplete-record-updates
+        -Wredundant-constraints -Widentities
+        -Wunused-packages
+
+library
+    import: lang
+    hs-source-dirs: src
+    exposed-modules:
+        Marlowe.Spec
+        Marlowe.Spec.ClientProcess
+        Marlowe.Spec.Core
+        Marlowe.Spec.Core.Examples
+        Marlowe.Spec.Core.Examples.Swap
+        Marlowe.Spec.Core.Serialization.Json
+        Marlowe.Spec.Interpret
+        Marlowe.Spec.LocalInterpret
+        Marlowe.Spec.TypeId
+    build-depends:
+        aeson,
+        base >=4.9 && <5,
+        bytestring,
+        marlowe,
+        tasty,
+        tasty-hunit,
+        process,
+        text,
+        optparse-applicative,
+
+executable marlowe-spec
+    import: lang
+    hs-source-dirs: app
+    main-is: Main.hs
+    build-depends:
+        base >=4.9 && <5,
+        marlowe-spec-test,
+        tasty,
+
+test-suite marlowe-spec-test
+    import: lang
+    hs-source-dirs: test
+    type: exitcode-stdio-1.0
+    main-is: LocalSpec.hs
+    build-depends:
+        base >=4.9 && <5,
+        marlowe-spec-test,
+        tasty,

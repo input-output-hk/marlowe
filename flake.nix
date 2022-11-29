@@ -12,10 +12,12 @@
     # texlive-nixpkgs.url = "nixpkgs/nixos-22.05";
 
     tullia.url = "github:input-output-hk/tullia";
+
+    nixLsp.url = "github:oxalica/nil";
   };
 
 
-  outputs = { self, flake-utils, nixpkgs, haskellNix, isabelle-nixpkgs, tullia }:
+  outputs = { self, flake-utils, nixpkgs, haskellNix, isabelle-nixpkgs, tullia, nixLsp }:
     let
       inherit (flake-utils.lib) eachSystem system;
 
@@ -26,7 +28,7 @@
         let
           evalSystem = evalSystem';
 
-          overlays = [ haskellNix.overlay ];
+          overlays = [ haskellNix.overlay nixLsp.overlays.nil];
 
           pkgs = import nixpkgs { inherit system overlays; inherit (haskellNix) config; };
 
@@ -88,7 +90,7 @@
             shell.tools.cabal = { inherit evalSystem; };
             shell.tools.haskell-language-server = { inherit evalSystem; };
             shell.inputsFrom = [ packages.isabelle-test ];
-            shell.nativeBuildInputs = [ build-marlowe-proofs edit-marlowe-proofs build-marlowe-docs latex pkgs.haskellPackages.lhs2tex tulliaPackage ];
+            shell.nativeBuildInputs = [ build-marlowe-proofs edit-marlowe-proofs build-marlowe-docs latex pkgs.haskellPackages.lhs2tex tulliaPackage pkgs.nil ];
           };
 
           flake = project.flake { };

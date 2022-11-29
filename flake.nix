@@ -9,7 +9,6 @@
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
 
     isabelle-nixpkgs.url = "nixpkgs/nixos-22.05";
-    # texlive-nixpkgs.url = "nixpkgs/nixos-22.05";
 
     tullia.url = "github:input-output-hk/tullia";
 
@@ -90,7 +89,14 @@
             shell.tools.cabal = { inherit evalSystem; };
             shell.tools.haskell-language-server = { inherit evalSystem; };
             shell.inputsFrom = [ packages.isabelle-test ];
-            shell.nativeBuildInputs = [ build-marlowe-proofs edit-marlowe-proofs build-marlowe-docs latex pkgs.haskellPackages.lhs2tex tulliaPackage pkgs.nil ];
+            shell.nativeBuildInputs =
+              ( with scripts; [
+                  build-marlowe-proofs
+                  edit-marlowe-proofs
+                  build-marlowe-docs
+              ]
+              ) ++
+              [ latex pkgs.haskellPackages.lhs2tex tulliaPackage pkgs.nil];
           };
 
           flake = project.flake { };
@@ -98,7 +104,12 @@
           packages = flake.packages // {
             isabelle-test = isabelle-pkgs.runCommand "isabelle-test"
               {
-                nativeBuildInputs = [ isabelle-pkgs.isabelle isabelle-pkgs.perl isabelle-pkgs.nettools latex build-marlowe-proofs build-marlowe-docs ];
+                nativeBuildInputs =
+                  ( with scripts; [
+                      build-marlowe-proofs
+                      build-marlowe-docs
+                  ]) ++
+                  [ isabelle-pkgs.isabelle isabelle-pkgs.perl isabelle-pkgs.nettools latex ];
                 src = ./isabelle;
               } ''
               export HOME=$TMP

@@ -96,7 +96,7 @@
             };
           };
           packages = flake.packages // {
-            inherit (tests) isabelle-test;
+            inherit (tests) isabelle-test nixpkgsFmt;
           };
         in
         flake // {

@@ -32,6 +32,7 @@ library
         Marlowe.Spec
         Marlowe.Spec.ClientProcess
         Marlowe.Spec.Core
+        Marlowe.Spec.Core.Arbitrary
         Marlowe.Spec.Core.Examples
         Marlowe.Spec.Core.Examples.Swap
         Marlowe.Spec.Core.Serialization.Json
@@ -48,6 +49,9 @@ library
         process,
         text,
         optparse-applicative,
+        QuickCheck-GenT,
+        QuickCheck,
+        transformers
 
 executable marlowe-spec
     import: lang

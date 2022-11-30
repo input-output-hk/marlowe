@@ -2,10 +2,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Marlowe.Spec.Core.Serialization.Json where
 
 import Control.Applicative ((<|>))
+import Control.Monad (join)
 import Data.Aeson.Types (Result(..), ToJSON(..), FromJSON(..))
 import Data.Aeson (object, (.=), (.:), withObject)
 import qualified Data.Aeson.Types as JSON
@@ -16,9 +18,11 @@ import GHC.Stack (HasCallStack)
 import Test.Tasty (TestTree, testGroup)
 import Marlowe.Spec.Interpret (Response (..), InterpretJsonRequest, exactMatch, Request (..), testResponse)
 import Marlowe.Spec.TypeId (TypeId(..), HasTypeId (..))
-import Test.Tasty.Providers (TestName)
-import Test.Tasty.HUnit (Assertion, assertBool)
+import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 import qualified SemanticsTypes as C
+import QuickCheck.GenT (runGenT)
+import Marlowe.Spec.Core.Arbitrary (arbitraryToken)
+import Test.QuickCheck (generate)
 
 
 data SerializationResponse transport
@@ -46,71 +50,77 @@ instance FromJSON (SerializationResponse JSON.Value) where
     asUnknownType v = UnknownType <$> v .: "unknown-type"
     asError v = SerializationError <$> v .: "serialization-error"
 
-localJsonRoundtripSerialization :: TypeId -> JSON.Value -> SerializationResponse JSON.Value
-localJsonRoundtripSerialization (TypeId _ p) v = roundtrip p
-    where
-    roundtrip :: forall a. ToJSON a => FromJSON a => Proxy a -> SerializationResponse JSON.Value
-    roundtrip _  = case JSON.fromJSON v :: Result a of
-            Error str -> SerializationError str
-            Success c ->  SerializationSuccess $ JSON.toJSON c
-
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Json Serialization"
-  [ roundtripExampleTest i "Bound example" condExample
+  [ testCase "Bound example" $ roundtripTest i condExample
   , valueTests i
   , observationTests i
   , invalidType i
+  , tokenTest i
   ]
 
 valueTests :: InterpretJsonRequest -> TestTree
 valueTests i = testGroup "Value examples"
-  [ roundtripExampleTest i "Constant" constantExample
-  , roundtripExampleTest i "Interval start" intervalStartExample
-  , roundtripExampleTest i "Interval end" intervalEndExample
-  , roundtripExampleTest i "Add" addExample
-  , roundtripExampleTest i "Sub" subExample
-  , roundtripExampleTest i "Mul" mulExample
-  , roundtripExampleTest i "Div" divExample
-  , roundtripExampleTest i "Negate" negateExample
-  -- , roundtripExampleTest i "Choice value" choiceValueExample
-  , roundtripExampleTest i "Use" useValueExample
-  , roundtripExampleTest i "Cond" condExample
-  -- ,roundtripExampleTest i "Available money" availableMoneyExample
+  [ testCase "Constant" $ roundtripTest i constantExample
+  , testCase "Interval start" $ roundtripTest i intervalStartExample
+  , testCase "Interval end" $ roundtripTest i intervalEndExample
+  , testCase "Add" $ roundtripTest i addExample
+  , testCase "Sub" $ roundtripTest i subExample
+  , testCase "Mul" $ roundtripTest i mulExample
+  , testCase "Div" $ roundtripTest i divExample
+  , testCase "Negate" $ roundtripTest i negateExample
+  -- , testCase "Choice value" $ roundtripTest i choiceValueExample
+  , testCase "Use" $ roundtripTest i useValueExample
+  , testCase "Cond" $ roundtripTest i condExample
+  -- ,testCase "Available money" $ roundtripTest i availableMoneyExample
   , testResponse i "Invalid value"
-    (TestRoundtripSerialization (TypeId "Core.Value" (Proxy :: Proxy C.Value)) (JSON.String "invalid"))
+    (TestRoundtripSerialization
+      (TypeId "Core.Value" (Proxy @C.Value))
+      (JSON.String "invalid value")
+    )
     assertSerializationError
   ]
 
 observationTests :: InterpretJsonRequest -> TestTree
 observationTests i = testGroup "Observation examples"
-  [ roundtripExampleTest i "True" trueExample
-  , roundtripExampleTest i "False" falseExample
-  , roundtripExampleTest i "And" andExample
-  , roundtripExampleTest i "Or" orExample
-  , roundtripExampleTest i "Not" notExample
-  -- , roundtripExampleTest i "Chose" choseExample
-  , roundtripExampleTest i "Value GE" valueGEExample
-  , roundtripExampleTest i "Value GT" valueGTExample
-  , roundtripExampleTest i "Value LT" valueLTExample
-  , roundtripExampleTest i "Value LE" valueLEExample
-  , roundtripExampleTest i "Value EQ" valueEQExample
+  [ testCase "True" $ roundtripTest i trueExample
+  , testCase "False" $ roundtripTest i falseExample
+  , testCase "And" $ roundtripTest i andExample
+  , testCase "Or" $ roundtripTest i orExample
+  , testCase "Not" $ roundtripTest i notExample
+  -- , testCase "Chose" $ roundtripTest i choseExample
+  , testCase "Value GE" $ roundtripTest i valueGEExample
+  , testCase "Value GT" $ roundtripTest i valueGTExample
+  , testCase "Value LT" $ roundtripTest i valueLTExample
+  , testCase "Value LE" $ roundtripTest i valueLEExample
+  , testCase "Value EQ" $ roundtripTest i valueEQExample
   , testResponse i "Invalid observation"
     (TestRoundtripSerialization (TypeId "Core.Observation" (Proxy :: Proxy C.Observation)) (JSON.String "invalid"))
     assertSerializationError
 
   ]
 
+-- TODO: Convert to property test once this task is done
+-- SCP-4696 Improve thread usage
+tokenTest :: InterpretJsonRequest -> TestTree
+tokenTest i = testCase "Token test" $ do
+  -- Any token that is randomly generated should pass the roundtrip test
+  token <- join $ generate $ runGenT $ arbitraryToken i
+  roundtripTest i token
+
 invalidType :: InterpretJsonRequest -> TestTree
 invalidType i = testResponse i "Invalid type"
     (TestRoundtripSerialization (TypeId "InvalidType" (Proxy :: Proxy ())) (JSON.String "invalid"))
     assertUnknownType
 
-roundtripExampleTest :: (HasTypeId a, ToJSON a) => InterpretJsonRequest -> TestName -> a -> TestTree
-roundtripExampleTest i name example = exactMatch i name (serializationRequest example) (serializationSuccess example)
+roundtripTest :: (HasTypeId a, ToJSON a) => InterpretJsonRequest -> a -> Assertion
+roundtripTest interpret a = do
+  res <- interpret serializationRequest
+  successResponse @?= res
   where
-  serializationRequest a = TestRoundtripSerialization (getTypeId a) $ toJSON a
-  serializationSuccess a = RequestResponse $ JSON.toJSON $ SerializationSuccess $ JSON.toJSON a
+  serializationRequest = TestRoundtripSerialization (getTypeId a) $ toJSON a
+  successResponse = RequestResponse $ toJSON $ SerializationSuccess $ toJSON a
 
 assertSerializationError :: HasCallStack => Response JSON.Value -> Assertion
 assertSerializationError = assertBool "The serialization response should be SerializationError" . isSerializationError

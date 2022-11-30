@@ -7,4 +7,4 @@ import Marlowe.Spec (tests)
 import Marlowe.Spec.LocalInterpret (interpretLocal)
 
 main :: IO ()
-main = defaultMain $ tests (pure . interpretLocal)
+main = defaultMain $ tests interpretLocal

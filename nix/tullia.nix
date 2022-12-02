@@ -15,61 +15,53 @@ Learn more: https://github.com/input-output-hk/cicero
 let
   ciInputName = "GitHub event";
   repository = "input-output-hk/marlowe";
+  ciTaskTopAttr = "hydraJobs";
+
 in rec {
-  tasks = let
-    mkTask = top: {config, lib, ...}: {
-      preset = {
-        nix.enable = true;
+  tasks.ci = {config, lib, ...}: {
+    preset = {
+      nix.enable = true;
 
-        github.status = {
-          enable = config.actionRun.facts != {};
-          inherit repository;
-          revision = config.preset.github.lib.readRevision ciInputName null;
-        };
+      github.status = {
+        enable = config.actionRun.facts != {};
+        inherit repository;
+        revision = config.preset.github.lib.readRevision ciInputName null;
       };
-
-      command.text = let
-        flakeUrl = ''github:${repository}/"$(${lib.escapeShellArg config.preset.github.status.revision})"'';
-      in config.preset.github.status.lib.reportBulk {
-        bulk.text = ''
-          echo '["x86_64-linux", "x86_64-darwin"]' | nix-systems -i \
-          | jq 'with_entries(.key |= {"x86_64-linux": "linux", "x86_64-darwin": "macos"}[.])'
-        '';
-        each.text = ''nix build -L ${flakeUrl}#${lib.escapeShellArg top}."$1".required'';
-        skippedDescription = lib.escapeShellArg "No nix builder available for this platform";
-      };
-
-      # some hydra jobs run NixOS tests
-      env.NIX_CONFIG = ''
-        extra-system-features = kvm
-      '';
-
-      memory = 1024 * 32;
-      nomad.resources.cpu = 10000;
     };
-  in {
-    "ci/push" = mkTask "hydraJobs";
-    "ci/pr" = mkTask "hydraJobsPr";
+
+    command.text = let
+      flakeUrl = ''github:${repository}/"$(${lib.escapeShellArg config.preset.github.status.revision})"'';
+    in config.preset.github.status.lib.reportBulk {
+      bulk.text = ''
+        echo '["x86_64-linux", "x86_64-darwin"]' | nix-systems -i
+      '';
+      each.text = ''nix build -L ${flakeUrl}#${lib.escapeShellArg ciTaskTopAttr}."$1".required'';
+      skippedDescription = lib.escapeShellArg "No nix builder available for this platform";
+    };
+
+    # some hydra jobs run NixOS tests
+    env.NIX_CONFIG = ''
+      extra-system-features = kvm
+    '';
+
+    memory = 1024 * 32;
+    nomad.resources.cpu = 10000;
   };
 
   actions = {
-    "marlowe/ci/push" = {
-      task = "ci/push";
+    "marlowe/ci" = {
+      task = "ci";
       io = ''
-        #lib.io.github_push
-        #input: "${ciInputName}"
-        #repo: "${repository}"
+        let github = {
+          #input: "${ciInputName}"
+          #repo: "${repository}"
+        }
+        #lib.merge
+        #ios: [
+          #lib.io.github_push & github,
+          { #lib.io.github_pr, github, #target_default: false },
       '';
     };
 
-    "marlowe/ci/pr" = {
-      task = "ci/pr";
-      io = ''
-        #lib.io.github_pr
-        #input: "${ciInputName}"
-        #repo: "${repository}"
-        #target_default: false
-      '';
-    };
   };
 }

@@ -58,31 +58,30 @@ text \<open>
 
 For every Marlowe Contract there is a time after which an empty transaction can be issued that will
 close the contract and refund all the money in its accounts.
-
-FIXME: This theorem doesn't actually prove the narrative. Are we missing a theorem?
-
 \<close>
 
-text \<open>@{thm timeOutTransaction_closes_contract2}\<close>
+text \<open>@{thm [display,names_short, margin=40] timedOutTransaction_closes_contract3}\<close>
 
 section \<open>Positive Accounts\<close>
 
 text \<open>
 
 There are some values for State that are allowed by its type but make no sense, especially in the
-case of Isabelle semantics where we use lists instead of maps:
+case of Isabelle semantics where we use lists of key values to represent maps:
 \begin{enumerate}
-\item The lists represent maps, so they should have no repeated keys.
-\item We want two maps that are equal to be represented the same, so we force keys to be in ascending order.
-\item We only want to record those accounts that contain a positive amount.
+\item The lists represent maps, so they should have no repeated keys (@{term valid_map}).
+\item Two equal maps should be represented equally, so we force keys to be in ascending order  (@{term valid_map}).
+\item Only the accounts that contain a positive amount are relevant (@{term allAccountsPositiveState}).
 \end{enumerate}
-We call a value for State valid if the first two properties are true. And we say it has positive
-accounts if the third property is true.
-
 \<close>
-text \<open>FIXME: Address the review comment "Is this a note for us or the explanation to the user of what @{term playTraceAux_preserves_validAndPositive_state} proves?".\<close>
 
-text \<open>@{thm playTraceAux_preserves_validAndPositive_state}\<close>
+
+
+text \<open>@{code_stmts validAndPositive_state constant: validAndPositive_state valid_state valid_map allAccountsPositive allAccountsPositiveState (Haskell)}\<close>
+
+text \<open>If the accounts are valid and possitive, then applying an input preserves that property.\<close>
+
+text \<open>@{thm [display,names_short, margin=40] playTraceAux_preserves_validAndPositive_state}\<close>
 
 section \<open>Quiescent Result\<close>
 
@@ -112,7 +111,7 @@ section \<open>Reducing a Contract until Quiescence Is Idempotent\<close>
 text \<open>Once a contract is quiescent, further reduction will not change the contract or state,
 and it will not produce any payments or warnings.\<close>
 
-text \<open>@{thm reduceContractUntilQuiescentIdempotent}\<close>
+text \<open>@{thm [display,names_short, margin=40] reduceContractUntilQuiescentIdempotent}\<close>
 
 section \<open>Split Transactions Into Single Input Does Not Affect the Result\<close>
 

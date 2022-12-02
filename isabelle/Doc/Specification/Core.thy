@@ -19,12 +19,25 @@ subsection \<open>Compute Transaction\label{sec:computeTransaction}\<close>
 
 text \<open>The entry point into Marlowe semantics is the function @{const computeTransaction} that
 applies input to a prior state to transition to a posterior state, perhaps reporting warnings or
-throwing an error, all in the context of an environment for the transaction.\<close>
+throwing an error, all in the context of an @{term environment} \secref{sec:state-and-env} for the transaction.\<close>
+
 text \<open>@{const computeTransaction} :: @{typeof computeTransaction}\<close>
-text \<open>FIXME: Print record: @{term [names_short, margin=40]Transaction}
+
+(* FIXME: remove duplicate definition *)
+record TransactionOutputRecord = txOutWarnings :: "TransactionWarning list"
+                                 txOutPayments :: "Payment list"
+                                 txOutState :: State
+                                 txOutContract :: Contract
+
+
+text \<open>
 @{datatype [display,names_short, margin=40]TransactionOutput}
-\<close> text \<open>FIXME: Print record: @{term [names_short, margin=40]TransactionOutputRecord}
-\<close>
+\<close> 
+
+(* FIXME: remove duplicate definition *)
+record Transaction = interval :: TimeInterval
+                     inputs :: "Input list"
+
 
 text \<open>This function adjusts the time interval for the transaction using @{const fixInterval} and
 then applies all of the transaction inputs to the contract using @{const applyAllInputs}. It
@@ -34,10 +47,15 @@ text \<open>@{code_stmts computeTransaction constant: computeTransaction (Haskel
 subsection \<open>Fix Interval\<close>
 
 text \<open>The @{const fixInterval} functions combines the minimum-time constraint of @{term State}
-with the time interval of @{term Environment} to yield a ``trimmed'' validity interval and a minimum
+with the time interval of @{term Environment} \secref{sec:state-and-env} to yield a ``trimmed'' validity interval and a minimum
 time for the new state that will result from applying the transaction. It throws an error if the
 interval is nonsensical or in the past.\<close>
-text \<open>FIXME: print type synonym: @{term [names_short, margin=40]IntervalResult}\<close>
+
+text \<open>
+@{datatype [display,names_short, margin=40]IntervalResult}
+\<close>
+
+(* FIXME: synonim are expanding *)
 text \<open>@{code_stmts fixInterval constant: fixInterval (Haskell)}\<close>
 
 subsection \<open>Apply All Inputs\label{sec:applyAllInputs}\<close>
@@ -158,13 +176,13 @@ text \<open>Division is a special case because we only evaluate to natural numbe
 
 text \<open>@{thm [display,names_short, margin=40] evalValue_DivValue}\<close>
 
-text \<open>TODO: lemmas around division? maybe extend the following to proof evalValue and not just div\<close>
+(* \<open>TODO: lemmas around division? maybe extend the following to proof evalValue and not just div\<close>*)
 text \<open>@{thm divMultiply}\<close>
 text \<open>@{thm divAbsMultiply}\<close>
-text \<open>COMMENT(BWB): I suggest that the lemmas be (i) exact multiples divide with no remainder, (ii)
+(*text \<open>COMMENT(BWB): I suggest that the lemmas be (i) exact multiples divide with no remainder, (ii)
       the remainder equals the excess above an exact multiple, and (iii) negation commutues with
       division.\<close>
-
+*)
 subsubsection \<open>Choice Value\<close>
 
 text \<open>For the \<^emph>\<open>ChoiceValue\<close> case, @{const evalValue} will look in its state if a @{typ Party} has

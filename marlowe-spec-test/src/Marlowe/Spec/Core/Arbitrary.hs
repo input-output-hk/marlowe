@@ -5,8 +5,8 @@
 
 module Marlowe.Spec.Core.Arbitrary where
 
-import SemanticsTypes (Token(..))
-import QuickCheck.GenT (GenT)
+import SemanticsTypes (Token(..), Party)
+import QuickCheck.GenT (GenT, frequency)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), parseValidResponse)
 import Data.Data (Proxy(..))
 import Marlowe.Spec.TypeId (TypeId(..))
@@ -45,4 +45,13 @@ arbitraryToken interpret = liftIO do
   case parseValidResponse res of
     Left err -> throwIO $ GenerateRandomValueException err
     Right (UnknownType _) -> throwIO $ GenerateRandomValueException "Client process doesn't know how to generate Core.Token"
+    Right (RandomValue t) -> pure t
+
+
+arbitraryParty :: InterpretJsonRequest -> GenT IO Party
+arbitraryParty interpret = liftIO do
+  res <- interpret (GenerateRandomValue $ TypeId "Core.Party" (Proxy :: Proxy Party))
+  case parseValidResponse res of
+    Left err -> throwIO $ GenerateRandomValueException err
+    Right (UnknownType _) -> throwIO $ GenerateRandomValueException "Client process doesn't know how to generate Core.Party"
     Right (RandomValue t) -> pure t

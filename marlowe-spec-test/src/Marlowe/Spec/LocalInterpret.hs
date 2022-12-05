@@ -11,7 +11,7 @@ import Marlowe.Spec.TypeId (TypeId (..), fromTypeName)
 import Marlowe.Spec.Core.Serialization.Json
 import Data.Data (Proxy)
 import Data.Aeson (Result (..),FromJSON,ToJSON)
-import SemanticsTypes (Token(Token))
+import SemanticsTypes (Token(Token), Party (..))
 import Test.QuickCheck (Gen, frequency, Arbitrary (arbitrary), generate)
 import qualified Marlowe.Spec.Core.Arbitrary as RandomResponse
 
@@ -37,8 +37,8 @@ interpretLocal (GenerateRandomValue t@(TypeId name _)) =
     <$> JSON.toJSON
     <$> case name of
       "Core.Token" -> RandomResponse.RandomValue <$> JSON.toJSON <$> generate arbitraryToken
+      "Core.Party" -> RandomResponse.RandomValue <$> JSON.toJSON <$> generate arbitraryParty
       _ -> pure $ RandomResponse.UnknownType t
-
 
 arbitraryToken :: Gen Token
 arbitraryToken =
@@ -46,6 +46,51 @@ arbitraryToken =
     [(50, pure $ Token "" "")
     ,(50, Token <$> arbitrary <*> arbitrary)
     ]
+
+
+-- | Some role names.
+randomRoleNames :: [String]
+randomRoleNames =
+  [
+    "Cy"
+  , "Noe"
+  , "Sten"
+  , "Cara"
+  , "Alene"
+  , "Hande"
+  , ""
+  , "I"
+  , "Zakkai"
+  , "Laurent"
+  , "Prosenjit"
+  , "Dafne Helge Mose"
+  , "Nonso Ernie Blanka"
+  , "Umukoro Alexander Columb"
+  , "Urbanus Roland Alison Ty Ryoichi"
+  , "Alcippe Alende Blanka Roland Dafne"  -- NB: Too long for Cardano ledger.
+  ]
+
+-- | Part of the Fibonacci sequence.
+fibonaccis :: Num a => [a]
+fibonaccis = [2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584]
+
+
+-- | Inverse-Fibanoncci frequencies.
+fibonacciFrequencies :: Integral a => [a]
+fibonacciFrequencies = (1000000 `div`) <$> fibonaccis
+
+
+-- | Select an element of a list with propability proportional to inverse-Fibonacci weights.
+arbitraryFibonacci :: [a] -> Gen a
+arbitraryFibonacci = frequency . zip fibonacciFrequencies . fmap pure
+
+
+arbitraryParty :: Gen Party
+arbitraryParty = do
+  isAddress <- frequency [(2, pure True), (8, pure False)]
+  if isAddress
+    then Address <$> arbitrary
+    else Role <$> arbitraryFibonacci randomRoleNames
 
 localJsonRoundtripSerialization :: TypeId -> JSON.Value -> SerializationResponse JSON.Value
 localJsonRoundtripSerialization t@(TypeId name proxy) v = case fromTypeName name of

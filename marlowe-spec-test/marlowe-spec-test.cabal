@@ -50,8 +50,7 @@ library
         text,
         optparse-applicative,
         QuickCheck-GenT,
-        QuickCheck,
-        transformers
+        QuickCheck
 
 executable marlowe-spec
     import: lang

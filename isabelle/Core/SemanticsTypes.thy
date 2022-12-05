@@ -317,12 +317,8 @@ interval within which the transaction is occurring.\<close>
 
 record Environment = timeInterval :: TimeInterval
 
-
-
-
-
-\<comment> \<open>TODO: see if we want to add data types of Semantic here (Transaction, etc) or if we want to
-move this types to Semantic\<close>
+(* TODO: see if we want to add data types of Semantic here (Transaction, etc) or if we want to
+move this types to Semantic *)
 (* Processing of time interval *)
 datatype IntervalError = InvalidInterval TimeInterval
                        | IntervalInPastError POSIXTime TimeInterval

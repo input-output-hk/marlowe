@@ -1,14 +1,14 @@
 # Marlowe Spec Test
 
-This tool is a test suite that checks if a particular Marlowe implementation conforms to the specification.
+This documentation refers to the Marlowe Test Spec Driver, a test suite that checks that a particular Marlowe implementation conforms to the specification.
 
-The tool receives as an argument the path to a process (with no arguments) that we call "client process". The client process listens for semantic requests over `stdin` and replies via `stdout`, any `stderr` message is just printed.
+The driver receives as an argument the path to a program that we call "client process". The client process is called with no arguments, and it listens for requests over `stdin` and replies via `stdout`, any `stderr` message is treated as debug information.
 
 ## Usage
 
 **Important Note**
 
-We haven't packaged the tool yet, so in order to run it, you need to be inside the `nix develop` shell and execute it with `cabal run`.
+We haven't packaged the driver yet, so in order to run it, you need to be inside the `nix develop` shell and execute it with `cabal run`.
 
 ```bash
 # Whenever you see something like
@@ -19,7 +19,7 @@ $ marlowe-spec -c <path/to/cli>
 
 ### Get help
 
-To list all available options, you can invoke the tool with `--help`
+To list all available options, you can invoke the driver with `--help`
 
 ```bash
 $ marlowe-spec --help
@@ -29,7 +29,12 @@ Mmm... tasty test suite
 Usage: marlowe-spec [-p|--pattern PATTERN] [-t|--timeout DURATION]
                     [-l|--list-tests] [-j|--num-threads NUMBER] [-q|--quiet]
                     [--hide-successes] [--color never|always|auto]
-                    [--ansi-tricks ARG] [-c|--cli-path CLI_PATH] [--trace-cp]
+                    [--ansi-tricks ARG] [-c|--cli-path CLI_PATH]
+                    [--trace-cp TRACE_CP] [--pool-size POOL_SIZE]
+                    [--quickcheck-tests NUMBER] [--quickcheck-replay SEED]
+                    [--quickcheck-show-replay] [--quickcheck-max-size NUMBER]
+                    [--quickcheck-max-ratio NUMBER] [--quickcheck-verbose]
+                    [--quickcheck-shrinks NUMBER]
 
 Available options:
   -h,--help                Show this help text
@@ -48,10 +53,26 @@ Available options:
   --ansi-tricks ARG        Enable various ANSI terminal tricks. Can be set to
                            'true' or 'false'. (default: true)
   -c,--cli-path CLI_PATH   Path to the client application to test
-  --trace-cp               Trace client process
+  --trace-cp TRACE_CP      If provided, filepath of the client process trace log
+  --pool-size POOL_SIZE    Number of client process to spawn (default 10)
+  --quickcheck-tests NUMBER
+                           Number of test cases for QuickCheck to generate.
+                           Underscores accepted: e.g. 10_000_000
+  --quickcheck-replay SEED Random seed to use for replaying a previous test run
+                           (use same --quickcheck-max-size)
+  --quickcheck-show-replay Show a replay token for replaying tests
+  --quickcheck-max-size NUMBER
+                           Size of the biggest test cases quickcheck generates
+  --quickcheck-max-ratio NUMBER
+                           Maximum number of discared tests per successful test
+                           before giving up
+  --quickcheck-verbose     Show the generated test cases
+  --quickcheck-shrinks NUMBER
+                           Number of shrinks allowed before QuickCheck will fail
+                           a test
 ```
 ### Run the test suite
-In order to run the test suite, you need to pass the process to test via the `-c` parameter.
+In order to run the test suite, you need to pass the path to the program to test via the `-c` parameter.
 
 ```bash
 $ marlowe-spec -c <path/to/cli>
@@ -74,10 +95,10 @@ $ marlowe-spec -c <path/to/cli> -p '/Invalid type/'
 ```
 
 ### Add debug information
-When a test fails, it can be useful to inspect the request that the driver is asking and what the client is responding. You can add `--trace-cp` to print this information.
+When a test fails, it can be useful to inspect the request that the driver is asking and what the client is responding. You can add `--trace-cp <path/to/log/file>` to log this information.
 
 ## Request/Response
-The testing tool (also known as the driver) makes requests to the client process via `stdin` and listens to responses via `stdout`. For the moment, the two processes communicates via `Json`, but we plan to add `CBOR` in the future.
+The driver makes requests to the client process via `stdin` and listens to responses via `stdout`. For the moment, the two processes communicates via `Json`, but we plan to add `CBOR` in the future.
 
 The requests are enclosed with triple backtick
 
@@ -95,18 +116,27 @@ All responses are wrapped to provide some common cases
 
 ### Response wrap
 
-If the request is not known by the client process, it should reply `"UnknownRequest"`. Similarly, if its known but not implemented, it should reply `"RequestNotImplemented"`.
+- If the request is not known by the client process, it should reply:
+```json
+"UnknownRequest"
+```
 
-If a request is known, but it is malformed or faulty somehow, then an `InvalidRequest` should be responded as follow
+- Similarly, if its known but not implemented, it should reply:
+
+```json
+"RequestNotImplemented"
+```
+
+- If a request is known, but it is malformed or faulty somehow, then an `InvalidRequest` should be responded as follow
 
 ```json
 {"invalid-request": "some string that explains what went wrong"}
 ```
 
-If the request was processed succesfully, then a `RequestResponse` should be responded. The payload will depend on the request type.
+- If the request was processed succesfully, then a `RequestResponse` should be responded. The payload will depend on the request type.
 
 ```json
-{"request-response": "a valid JSON with the response of the request"}
+{"request-response": <JSON payload>}
 ```
 
 ### Test roundtrip serialization
@@ -115,22 +145,19 @@ This request allows to test that the client process serializes the different typ
 
 There are three possible responses:
 
-#### **Serialization success**
-If the client process was able to `decode` and re`encode` the value.
+- If the client process was able to `decode` and re`encode` the value.
 
 ```json
-{"serialization-success": "valid json"}
+{"serialization-success": <JSON payload>}
 ```
 
-#### **Unknown type**
-If the type is unknown
+- If the type is unknown
 
 ```json
 {"unknown-type": "the invalid type as a string"}
 ```
 
-#### **Serialization error**
-If the client process was unable to `decode` the value.
+- If the client process was unable to `decode` the value.
 
 ```json
 {"serialization-error": "A string with the error"}
@@ -155,23 +182,53 @@ The expected response is
 }
 ```
 
-The order of the fields or spaces do not matter as long as the tool is able to decode it.
+The order of the fields or spaces do not matter as long as its a valid json.
 
 ### Generate random value
 
-The Marlowe specification is agnostic of the blockchain that implements it, so some types that might be valid for the tool, might not be valid for the client process. For that reason we need a way to ask the client process to generate some values for some types (like `Token` or `Address`).
+The Marlowe specification is agnostic of the blockchain that implements it, so some types that might be valid for the driver, might not be valid for the client process. For that reason we need a way to ask the client process to generate some values for two types `Core.Token` and `Core.Party`.
 
 The Request is encoded as
 
 ```json
 {
     "request": "generate-random-value",
-    "typeId": "Core.Token",
+    "typeId": "Core.Token"
 }
 ```
 
-And the payload of the `request-response` should be the serialized type.
+And the payload of the `request-response` can be one of the following:
 
+- If the value was correctly generated
+
+```json
+{"value": <Valid json>}
+```
+
+- If the type is unknown
+
+```json
+{"unknown-type": "the invalid type as a string"}
+```
+
+#### Example
+For example, for this request
+
+```json
+{
+    "request": "generate-random-value",
+    "typeId": "Core.Token"
+}
+```
+a valid response could be
+
+```json
+{
+  "request-response": {
+    "value": { "token_name": "375ADmDK4", "currency_symbol": "51eb5D8D2d" }
+  }
+}
+```
 ### Compute transaction
 
 The request to compute a transaction should be encoded as

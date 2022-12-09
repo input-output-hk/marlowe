@@ -1,32 +1,104 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Marlowe.Spec.LocalInterpret where
 
 import Arith (Int(..))
 import qualified Data.Aeson as JSON
-import Test.Tasty (TestName)
-import Test.Tasty.Providers (TestTree)
-import Marlowe.Spec.Core.Serialization.Json (localJsonRoundtripSerialization)
-import Test.Tasty.HUnit (testCase, (@?=))
 import Marlowe.Spec.Interpret (Response(..), Request(..))
 import Semantics (playTrace, computeTransaction)
+import Marlowe.Spec.TypeId (TypeId (..), fromTypeName)
+import Marlowe.Spec.Core.Serialization.Json
+import Data.Data (Proxy)
+import Data.Aeson (Result (..),FromJSON,ToJSON)
+import SemanticsTypes (Token(Token), Party (..))
+import Test.QuickCheck (Gen, frequency, Arbitrary (arbitrary), generate)
+import qualified Marlowe.Spec.Core.Arbitrary as RandomResponse
 
 
-interpretLocal :: Request JSON.Value -> Response JSON.Value
+interpretLocal :: Request JSON.Value -> IO (Response JSON.Value)
 interpretLocal (TestRoundtripSerialization t v) =
-  RequestResponse
+  pure
+    $ RequestResponse
     $ JSON.toJSON
     $ localJsonRoundtripSerialization t v
 interpretLocal (PlayTrace t c is) =
-  RequestResponse
+  pure
+    $ RequestResponse
     $ JSON.toJSON
     $ playTrace (Int_of_integer t) c is
 interpretLocal (ComputeTransaction t s c) =
-  RequestResponse
+  pure
+    $ RequestResponse
     $ JSON.toJSON
     $ computeTransaction t s c
-interpretLocal _ = RequestNotImplemented
+interpretLocal (GenerateRandomValue t@(TypeId name _)) =
+  RequestResponse
+    <$> JSON.toJSON
+    <$> case name of
+      "Core.Token" -> RandomResponse.RandomValue <$> JSON.toJSON <$> generate arbitraryToken
+      "Core.Party" -> RandomResponse.RandomValue <$> JSON.toJSON <$> generate arbitraryParty
+      _ -> pure $ RandomResponse.UnknownType t
 
-testLocal :: TestName -> Request JSON.Value -> Response JSON.Value -> TestTree
-testLocal testName request expected = testCase testName
-    (interpretLocal request @?= expected)
+arbitraryToken :: Gen Token
+arbitraryToken =
+  frequency
+    [(50, pure $ Token "" "")
+    ,(50, Token <$> arbitrary <*> arbitrary)
+    ]
+
+
+-- | Some role names.
+randomRoleNames :: [String]
+randomRoleNames =
+  [
+    "Cy"
+  , "Noe"
+  , "Sten"
+  , "Cara"
+  , "Alene"
+  , "Hande"
+  , ""
+  , "I"
+  , "Zakkai"
+  , "Laurent"
+  , "Prosenjit"
+  , "Dafne Helge Mose"
+  , "Nonso Ernie Blanka"
+  , "Umukoro Alexander Columb"
+  , "Urbanus Roland Alison Ty Ryoichi"
+  , "Alcippe Alende Blanka Roland Dafne"  -- NB: Too long for Cardano ledger.
+  ]
+
+-- | Part of the Fibonacci sequence.
+fibonaccis :: Num a => [a]
+fibonaccis = [2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584]
+
+
+-- | Inverse-Fibanoncci frequencies.
+fibonacciFrequencies :: Integral a => [a]
+fibonacciFrequencies = (1000000 `div`) <$> fibonaccis
+
+
+-- | Select an element of a list with propability proportional to inverse-Fibonacci weights.
+arbitraryFibonacci :: [a] -> Gen a
+arbitraryFibonacci = frequency . zip fibonacciFrequencies . fmap pure
+
+
+arbitraryParty :: Gen Party
+arbitraryParty = do
+  isAddress <- frequency [(2, pure True), (8, pure False)]
+  if isAddress
+    then Address <$> arbitrary
+    else Role <$> arbitraryFibonacci randomRoleNames
+
+localJsonRoundtripSerialization :: TypeId -> JSON.Value -> SerializationResponse JSON.Value
+localJsonRoundtripSerialization t@(TypeId name proxy) v = case fromTypeName name of
+      Nothing -> UnknownType t
+      (Just _) -> roundtrip proxy
+    where
+    roundtrip :: forall a. ToJSON a => FromJSON a => Proxy a -> SerializationResponse JSON.Value
+    roundtrip _  = case JSON.fromJSON v :: Result a of
+            Error str -> SerializationError str
+            Success c ->  SerializationSuccess $ JSON.toJSON c
+

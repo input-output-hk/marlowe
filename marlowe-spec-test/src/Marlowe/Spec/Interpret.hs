@@ -21,6 +21,7 @@ import Test.Tasty (TestName)
 import Test.Tasty.Providers (TestTree)
 import Test.Tasty.HUnit (testCase, (@?=), Assertion)
 import MarloweCoreJson()
+import qualified Data.Text as T
 
 data Request transport
   = TestRoundtripSerialization TypeId transport
@@ -57,6 +58,8 @@ data Response transport
   | UnknownRequest
   | RequestResponse transport
   | RequestNotImplemented
+  | RequestTimeOut
+  | ResponseFailure String
     deriving (Show, Eq)
 
 instance FromJSON (Response JSON.Value) where
@@ -69,10 +72,30 @@ instance FromJSON (Response JSON.Value) where
     parseJSON _ = fail "Response must be either a string or an object"
 
 
+instance ToJSON (Response JSON.Value) where
+  toJSON UnknownRequest = JSON.String "UnknownRequest"
+  toJSON RequestNotImplemented = JSON.String "RequestNotImplemented"
+  toJSON RequestTimeOut = JSON.String "RequestTimeOut"
+
+  toJSON (InvalidRequest err) = object
+    [ "invalid-request" .= (JSON.String $ T.pack err)
+    ]
+  toJSON (RequestResponse res) = object
+    [ "request-response" .= res
+
+    ]
+  toJSON (ResponseFailure err) = object
+    [ "invalid-request" .= (JSON.String $ T.pack err)
+    ]
+
+
 parseValidResponse :: FromJSON a => Response JSON.Value -> Either String a
 parseValidResponse (InvalidRequest err) = Left $ "Invalid request: " ++ err
 parseValidResponse UnknownRequest = Left $ "Unknown request"
 parseValidResponse RequestNotImplemented = Left $ "Request not implemented"
+parseValidResponse RequestTimeOut = Left $ "Request timed out"
+parseValidResponse (ResponseFailure err) = Left $ "Problem processing the response: " ++ err
+
 parseValidResponse (RequestResponse v) = case fromJSON v of
   (Error err) -> Left $ "Invalid response: " ++ err
   (Success a) -> Right a

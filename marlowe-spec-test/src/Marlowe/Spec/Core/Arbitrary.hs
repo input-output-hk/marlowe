@@ -6,7 +6,7 @@
 module Marlowe.Spec.Core.Arbitrary where
 
 import SemanticsTypes (Token(..), Party)
-import QuickCheck.GenT (GenT, frequency)
+import QuickCheck.GenT (GenT)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), parseValidResponse)
 import Data.Data (Proxy(..))
 import Marlowe.Spec.TypeId (TypeId(..))

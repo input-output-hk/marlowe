@@ -182,7 +182,7 @@ The expected response is
 }
 ```
 
-The order of the fields or spaces do not matter as long as its a valid json.
+The order of the fields or spaces does not matter as long as it is a valid json.
 
 ### Generate random value
 

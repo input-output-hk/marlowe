@@ -10,7 +10,7 @@
 
     isabelle-nixpkgs.url = "nixpkgs/nixos-22.05";
 
-    tullia.url = "github:input-output-hk/tullia";
+    # tullia.url = "github:input-output-hk/tullia";
 
     nixLsp.url = "github:oxalica/nil";
 
@@ -19,7 +19,8 @@
   };
 
 
-  outputs = { self, flake-utils, nixpkgs, haskellNix, isabelle-nixpkgs, tullia, pre-commit-hooks, nixLsp }:
+  outputs = { self, flake-utils, nixpkgs, haskellNix, isabelle-nixpkgs, pre-commit-hooks, nixLsp }:
+    # outputs = { self, flake-utils, nixpkgs, haskellNix, isabelle-nixpkgs, tullia, pre-commit-hooks, nixLsp }:
     let
       inherit (flake-utils.lib) eachSystem system;
 
@@ -53,7 +54,7 @@
             inherit (pkgs.texlive) scheme-basic ulem collection-fontsrecommended mathpartir stmaryrd polytable lazylist;
           });
 
-          tulliaPackage = tullia.packages.${system}.default;
+          # tulliaPackage = tullia.packages.${system}.default;
 
           project = pkgs.haskell-nix.cabalProject' {
             src = ./.;
@@ -79,7 +80,8 @@
                 nil
                 haskellPackages.lhs2tex
               ]) ++
-              [ latex tulliaPackage formatting.fix-nix-fmt ];
+              [ latex formatting.fix-nix-fmt ];
+            # [ latex tulliaPackage formatting.fix-nix-fmt ];
           };
 
           flake = project.flake { };
@@ -102,8 +104,10 @@
         flake // {
           inherit packages;
           hydraJobs = packages;
-          ciJobs = packages;
-        } // tullia.fromSimple system (import ./nix/tullia.nix self system)
+          # Cicero jobs are commented until they pass the CI
+          # ciJobs = packages;
+        }
+        # // tullia.fromSimple system (import ./nix/tullia.nix self system)
       );
       hydraSystem = "x86_64-linux";
       pkgsHydra = nixpkgs.legacyPackages.${hydraSystem};

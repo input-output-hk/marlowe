@@ -1,6 +1,7 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module MList(empty, delete, insert, lookup, member, findWithDefault) where {
+module MList(empty, delete, insert, lookup, member, valid_map, findWithDefault)
+  where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -8,6 +9,8 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
+import qualified List;
+import qualified HOL;
 import qualified Option;
 import qualified Orderings;
 
@@ -34,6 +37,11 @@ lookup a ((x, y) : z) =
 
 member :: forall a b. (Eq a, Orderings.Linorder a) => a -> [(a, b)] -> Bool;
 member k d = not (Option.is_none (lookup k d));
+
+valid_map :: forall a b. (Eq a, Orderings.Linorder a) => [(a, b)] -> Bool;
+valid_map x = let {
+                y = map fst x;
+              } in List.distinct y && List.sorted_wrt Orderings.less_eq y;
 
 findWithDefault ::
   forall a b. (Eq b, Orderings.Linorder b) => a -> b -> [(b, a)] -> a;

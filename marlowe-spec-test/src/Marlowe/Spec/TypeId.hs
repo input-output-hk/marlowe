@@ -16,6 +16,9 @@ import qualified Data.Text as T
 
 data TypeId = forall a. (ToJSON a, FromJSON a) => TypeId String (Proxy a)
 
+instance Show TypeId where
+  show (TypeId name _) = name
+
 instance Eq TypeId where
   (TypeId t1 _) == (TypeId t2 _) = (t1 == t2)
 
@@ -37,6 +40,7 @@ fromTypeName name = case name of
   "Core.TransactionError" -> Just $ TypeId "Core.TransactionError" (Proxy :: Proxy C.TransactionError)
   "Core.TransactionOutput" -> Just $ TypeId "Core.TransactionOutput" (Proxy :: Proxy C.TransactionOutput)
   "Core.TransactionWarning" -> Just $ TypeId "Core.TransactionWarning" (Proxy :: Proxy C.TransactionWarning)
+  "Core.IntervalError" -> Just $ TypeId "Core.IntervalError" (Proxy :: Proxy C.IntervalError)
   "Core.Transaction" -> Just $ TypeId "Core.Transaction" (Proxy :: Proxy (C.Transaction_ext ()))
   _ -> Nothing
 
@@ -103,4 +107,8 @@ instance HasTypeId C.TransactionWarning where
 
 instance HasTypeId (C.Transaction_ext ()) where
   getTypeId _ = TypeId "Core.Transaction" (Proxy :: Proxy (C.Transaction_ext ()))
+
+instance HasTypeId C.IntervalError where
+  getTypeId _ = TypeId "Core.IntervalError" (Proxy :: Proxy C.IntervalError)
+
 

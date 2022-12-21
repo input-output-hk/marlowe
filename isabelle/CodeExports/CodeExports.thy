@@ -66,6 +66,7 @@ export_code
   getSignatures
   maxTimeContract
   calculateNonAmbiguousInterval
+  validAndPositive_state
 
   \<comment> \<open> Export examples to be used as oracle specificaiton tests\<close>
   swapExample

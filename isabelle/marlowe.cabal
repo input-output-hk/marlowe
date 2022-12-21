@@ -38,7 +38,6 @@ library
         OptBoundTimeInterval
         Product_Lexorder
         Product_Type
-        SemanticsGuarantees
         SList
         Stringa
     exposed-modules:
@@ -49,6 +48,7 @@ library
         MarloweCoreJson
         Semantics
         SemanticsTypes
+        SemanticsGuarantees
 
 test-suite marlowe-spec-test-suite
     default-language: Haskell2010

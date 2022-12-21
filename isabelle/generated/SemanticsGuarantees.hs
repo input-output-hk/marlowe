@@ -1,6 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module SemanticsGuarantees() where {
+module SemanticsGuarantees(valid_state) where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -9,6 +9,9 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
 import qualified ByteString;
+import qualified MList;
+import qualified Arith;
+import qualified Product_Lexorder;
 import qualified SemanticsTypes;
 import qualified Orderings;
 
@@ -122,5 +125,11 @@ instance Orderings.Order SemanticsTypes.ChoiceId where {
 
 instance Orderings.Linorder SemanticsTypes.ChoiceId where {
 };
+
+valid_state :: SemanticsTypes.State_ext () -> Bool;
+valid_state state =
+  MList.valid_map (SemanticsTypes.accounts state) &&
+    MList.valid_map (SemanticsTypes.choices state) &&
+      MList.valid_map (SemanticsTypes.boundValues state);
 
 }

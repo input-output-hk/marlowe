@@ -14,6 +14,7 @@ import Data.Aeson (Result (..),FromJSON,ToJSON)
 import SemanticsTypes (Token(Token), Party (..))
 import Test.QuickCheck (Gen, frequency, Arbitrary (arbitrary), generate)
 import qualified Marlowe.Spec.Core.Arbitrary as RandomResponse
+import Marlowe.Spec.Core.Arbitrary (arbitraryFibonacci)
 
 
 interpretLocal :: Request JSON.Value -> IO (Response JSON.Value)
@@ -69,20 +70,6 @@ randomRoleNames =
   , "Urbanus Roland Alison Ty Ryoichi"
   , "Alcippe Alende Blanka Roland Dafne"  -- NB: Too long for Cardano ledger.
   ]
-
--- | Part of the Fibonacci sequence.
-fibonaccis :: Num a => [a]
-fibonaccis = [2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584]
-
-
--- | Inverse-Fibanoncci frequencies.
-fibonacciFrequencies :: Integral a => [a]
-fibonacciFrequencies = (1000000 `div`) <$> fibonaccis
-
-
--- | Select an element of a list with propability proportional to inverse-Fibonacci weights.
-arbitraryFibonacci :: [a] -> Gen a
-arbitraryFibonacci = frequency . zip fibonacciFrequencies . fmap pure
 
 
 arbitraryParty :: Gen Party

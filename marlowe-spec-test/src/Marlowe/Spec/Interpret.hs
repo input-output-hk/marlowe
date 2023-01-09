@@ -13,7 +13,7 @@ module Marlowe.Spec.Interpret
 import qualified SemanticsTypes as C
 import qualified Semantics as C
 import Control.Applicative ((<|>))
-import Data.Aeson (object, (.=), (.:), Result (..), fromJSON)
+import Data.Aeson (object, (.=), (.:), Result (..), fromJSON, encode)
 import Data.Aeson.Types (ToJSON(..), FromJSON(..))
 import qualified Data.Aeson.Types as JSON
 import Marlowe.Spec.TypeId (TypeId (..))
@@ -22,12 +22,20 @@ import Test.Tasty.Providers (TestTree)
 import Test.Tasty.HUnit (testCase, (@?=), Assertion)
 import MarloweCoreJson()
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
+import Data.Text.Lazy.Encoding (decodeUtf8)
 
 data Request transport
   = TestRoundtripSerialization TypeId transport
   | GenerateRandomValue TypeId
   | ComputeTransaction (C.Transaction_ext ()) (C.State_ext ()) C.Contract
   | PlayTrace Integer C.Contract [C.Transaction_ext ()]
+
+instance Show (Request JSON.Value) where
+  show (TestRoundtripSerialization t j) = "(TestRoundtripSerialization " ++ show t ++ " " ++ showJson j ++ ")"
+  show (GenerateRandomValue t) = "(GenerateRandomValue " ++ show t ++ ")"
+  show (ComputeTransaction _ _ _) = "(ComputeTransaction _ _ _)"
+  show (PlayTrace _ _ _) = "(PlayTrace _ _ _)"
 
 instance ToJSON (Request JSON.Value) where
   toJSON (TestRoundtripSerialization t v) = object
@@ -52,6 +60,8 @@ instance ToJSON (Request JSON.Value) where
     , "initialTime" .= toJSON t
     ]
 
+showJson :: JSON.Value -> String
+showJson = LT.unpack . decodeUtf8 . encode
 
 data Response transport
   = InvalidRequest String
@@ -60,7 +70,15 @@ data Response transport
   | RequestNotImplemented
   | RequestTimeOut
   | ResponseFailure String
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show (Response JSON.Value) where
+  show (InvalidRequest err) = "(InvalidRequest " ++ err ++ ")"
+  show UnknownRequest = "UnknownRequest"
+  show (RequestResponse j) = "(RequestResponse " ++ showJson j ++ ")"
+  show RequestNotImplemented = "RequestNotImplemented"
+  show RequestTimeOut = "RequestTimeOut"
+  show (ResponseFailure err) = "(ResponseFailure " ++ err ++ ")"
 
 instance FromJSON (Response JSON.Value) where
     parseJSON (JSON.String "UnknownRequest") = return UnknownRequest

@@ -62,7 +62,6 @@
           '';
 
           build-marlowe-docs = writeShellScriptBinInRepoRoot "build-marlowe-docs" ''
-            #!/bin/bash
             echo "Generating Literate Haskell Tex"
             lhs2TeX isabelle/haskell/MarloweCoreJson.lhs | sed '1,/PATTERN FOR SED/d' > isabelle/Doc/Specification/document/marlowe-core-json.tex
 
@@ -72,8 +71,8 @@
           '';
 
           edit-marlowe-proofs = writeShellScriptBinInRepoRoot "edit-marlowe-proofs" ''
-            #!/bin/bash
-            isabelle jedit -d isabelle -u isabelle/Doc/Specification/Specification.thy
+            cd isabelle
+            isabelle jedit -d . -u Doc/Specification/Specification.thy
           '';
 
           latex = (pkgs.texlive.combine {
@@ -89,7 +88,7 @@
             shell.tools.cabal = { inherit evalSystem; };
             shell.tools.haskell-language-server = { inherit evalSystem; };
             shell.inputsFrom = [ packages.isabelle-test ];
-            shell.nativeBuildInputs = [build-marlowe-proofs edit-marlowe-proofs build-marlowe-docs latex pkgs.haskellPackages.lhs2tex tulliaPackage];
+            shell.nativeBuildInputs = [ build-marlowe-proofs edit-marlowe-proofs build-marlowe-docs latex pkgs.haskellPackages.lhs2tex tulliaPackage ];
           };
 
           flake = project.flake { };
@@ -126,7 +125,7 @@
       pkgsHydra = nixpkgs.legacyPackages.${hydraSystem};
       baseHydra = base { evalSystem = hydraSystem; };
     in
-    base {} // {
+    base { } // {
       hydraJobs = baseHydra.hydraJobs // {
         forceNewEval = pkgsHydra.writeText "forceNewEval" (self.rev or self.lastModified);
         required = pkgsHydra.releaseTools.aggregate {

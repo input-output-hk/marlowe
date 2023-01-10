@@ -1,7 +1,6 @@
 { pkgs, writeShellScriptBinInRepoRoot }:
 {
   build-marlowe-proofs = writeShellScriptBinInRepoRoot "build-marlowe-proofs" ''
-    #!/bin/bash
     echo "Building Marlowe proofs"
 
     # We build hold library (with -b) so that is available in
@@ -27,7 +26,6 @@
 
 
   build-marlowe-docs = writeShellScriptBinInRepoRoot "build-marlowe-docs" ''
-    #!/bin/bash
     echo "Generating Literate Haskell Tex"
     lhs2TeX isabelle/haskell/MarloweCoreJson.lhs | sed '1,/PATTERN FOR SED/d' > isabelle/Doc/Specification/document/marlowe-core-json.tex
 
@@ -36,7 +34,7 @@
     isabelle document -v -V -d isabelle -P papers Specification
   '';
   edit-marlowe-proofs = writeShellScriptBinInRepoRoot "edit-marlowe-proofs" ''
-    #!/bin/bash
-    isabelle jedit -d isabelle -u isabelle/Doc/Specification/Specification.thy
+    cd isabelle
+    isabelle jedit -d . -u Doc/Specification/Specification.thy
   '';
 }

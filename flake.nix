@@ -10,8 +10,6 @@
 
     isabelle-nixpkgs.url = "nixpkgs/nixos-22.05";
 
-    # tullia.url = "github:input-output-hk/tullia";
-
     nixLsp.url = "github:oxalica/nil";
 
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
@@ -20,7 +18,6 @@
 
 
   outputs = { self, flake-utils, nixpkgs, haskellNix, isabelle-nixpkgs, pre-commit-hooks, nixLsp }:
-    # outputs = { self, flake-utils, nixpkgs, haskellNix, isabelle-nixpkgs, tullia, pre-commit-hooks, nixLsp }:
     let
       inherit (flake-utils.lib) eachSystem system;
 
@@ -41,10 +38,8 @@
             cd `${pkgs.git}/bin/git rev-parse --show-toplevel`
             ${script}
           '';
-          build-marlowe-proofs = writeShellScriptBinInRepoRoot "build-marlowe-proofs" ''
-            echo "Building Marlowe proofs"
 
-          scripts = import ./nix/scripts.nix {inherit pkgs writeShellScriptBinInRepoRoot;};
+          scripts = import ./nix/scripts.nix { inherit pkgs writeShellScriptBinInRepoRoot; };
 
           formatting = import ./nix/formatting.nix {
             inherit writeShellScriptBinInRepoRoot pkgs;
@@ -53,8 +48,6 @@
           latex = (pkgs.texlive.combine {
             inherit (pkgs.texlive) scheme-basic ulem collection-fontsrecommended mathpartir stmaryrd polytable lazylist;
           });
-
-          # tulliaPackage = tullia.packages.${system}.default;
 
           project = pkgs.haskell-nix.cabalProject' {
             src = ./.;
@@ -81,7 +74,6 @@
                 haskellPackages.lhs2tex
               ]) ++
               [ latex formatting.fix-nix-fmt ];
-            # [ latex tulliaPackage formatting.fix-nix-fmt ];
           };
 
           flake = project.flake { };
@@ -104,10 +96,7 @@
         flake // {
           inherit packages;
           hydraJobs = packages;
-          # Cicero jobs are commented until they pass the CI
-          # ciJobs = packages;
         }
-        # // tullia.fromSimple system (import ./nix/tullia.nix self system)
       );
       hydraSystem = "x86_64-linux";
       pkgsHydra = nixpkgs.legacyPackages.${hydraSystem};

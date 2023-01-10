@@ -20,3 +20,6 @@ isabelle/**/output
 
 # Generated tex file from literate haskell
 isabelle/**/marlowe-core-json.tex
+
+# Hook configuration file
+.pre-commit-config.yaml

@@ -12,9 +12,11 @@ import Marlowe.Spec.Core.Serialization.Json
 import Data.Data (Proxy)
 import Data.Aeson (Result (..),FromJSON,ToJSON)
 import SemanticsTypes (Token(Token), Party (..))
-import Test.QuickCheck (Gen, frequency, Arbitrary (arbitrary), generate)
+import Test.QuickCheck (Gen, frequency, Arbitrary (arbitrary))
 import qualified Marlowe.Spec.Core.Arbitrary as RandomResponse
 import Marlowe.Spec.Core.Arbitrary (arbitraryFibonacci)
+import Test.QuickCheck.Gen (Gen(..))
+import Test.QuickCheck.Random (mkQCGen)
 
 
 interpretLocal :: Request JSON.Value -> IO (Response JSON.Value)
@@ -33,13 +35,17 @@ interpretLocal (ComputeTransaction t s c) =
     $ RequestResponse
     $ JSON.toJSON
     $ computeTransaction t s c
-interpretLocal (GenerateRandomValue t@(TypeId name _)) =
-  RequestResponse
-    <$> JSON.toJSON
-    <$> case name of
-      "Core.Token" -> RandomResponse.RandomValue <$> JSON.toJSON <$> generate arbitraryToken
-      "Core.Party" -> RandomResponse.RandomValue <$> JSON.toJSON <$> generate arbitraryParty
-      _ -> pure $ RandomResponse.UnknownType t
+interpretLocal (GenerateRandomValue t@(TypeId name _) size seed) =
+  pure
+    $ RequestResponse
+    $ JSON.toJSON
+    $ case name of
+      "Core.Token" -> RandomResponse.RandomValue $ JSON.toJSON $ generate' arbitraryToken
+      "Core.Party" -> RandomResponse.RandomValue $ JSON.toJSON $ generate' arbitraryParty
+      _ -> RandomResponse.UnknownType t
+  where
+  generate' (MkGen g) = g (mkQCGen seed) size
+
 
 arbitraryToken :: Gen Token
 arbitraryToken =

@@ -25,15 +25,17 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import Data.Text.Lazy.Encoding (decodeUtf8)
 
+type Seed = Int
+type Size = Int
 data Request transport
   = TestRoundtripSerialization TypeId transport
-  | GenerateRandomValue TypeId
+  | GenerateRandomValue TypeId Size Seed
   | ComputeTransaction (C.Transaction_ext ()) (C.State_ext ()) C.Contract
   | PlayTrace Integer C.Contract [C.Transaction_ext ()]
 
 instance Show (Request JSON.Value) where
   show (TestRoundtripSerialization t j) = "(TestRoundtripSerialization " ++ show t ++ " " ++ showJson j ++ ")"
-  show (GenerateRandomValue t) = "(GenerateRandomValue " ++ show t ++ ")"
+  show (GenerateRandomValue t _ _) = "(GenerateRandomValue " ++ show t ++ ")"
   show (ComputeTransaction _ _ _) = "(ComputeTransaction _ _ _)"
   show (PlayTrace _ _ _) = "(PlayTrace _ _ _)"
 
@@ -43,9 +45,11 @@ instance ToJSON (Request JSON.Value) where
     , "typeId" .= toJSON t
     , "json"  .= v
     ]
-  toJSON (GenerateRandomValue t) = object
+  toJSON (GenerateRandomValue t size seed) = object
     [ "request" .= JSON.String "generate-random-value"
     , "typeId" .= toJSON t
+    , "seed" .= (toJSON seed)
+    , "size" .= toJSON size
     ]
   toJSON (ComputeTransaction i s c) = object
     [ "request" .= JSON.String "compute-transaction"

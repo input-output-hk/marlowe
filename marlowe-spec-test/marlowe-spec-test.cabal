@@ -38,6 +38,7 @@ library
         Marlowe.Spec.Core.Serialization.Json
         Marlowe.Spec.Interpret
         Marlowe.Spec.LocalInterpret
+        Marlowe.Spec.Reproducible
         Marlowe.Spec.TypeId
     build-depends:
         aeson,
@@ -52,7 +53,9 @@ library
         QuickCheck-GenT,
         QuickCheck,
         tasty-quickcheck,
-        stm
+        stm,
+        random,
+        mtl
 
 executable marlowe-spec
     import: lang

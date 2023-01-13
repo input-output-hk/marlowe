@@ -50,3 +50,8 @@ To generate the specification and cheatsheet pdfs you can use the following comm
 ```
 
 the results will be available in the `papers` folder.
+
+
+## Restriction on Pull Requests
+
+If you are proposing a change to the Marlowe domain-specific language (DSL), pursue the [Marlowe Improvement Proposal (MIP)](https://github.com/input-output-hk/MIPs) process by starting a [MIP discussion](https://github.com/input-output-hk/MIPs/discussions) of the proposed change. **Pull requests for DSL changes will be rejected unless they have previously been approved via the MIP process.**

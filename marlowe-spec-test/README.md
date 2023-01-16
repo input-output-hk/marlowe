@@ -4,6 +4,8 @@ This documentation refers to the Marlowe Test Spec Driver, a test suite that che
 
 The driver receives as an argument the path to a program that we call "client process". The client process is called with no arguments, and it listens for requests over `stdin` and replies via `stdout`, any `stderr` message is treated as debug information.
 
+![Architecture diagram](https://docs.google.com/drawings/d/e/2PACX-1vSWg9lWSHGXEbEjjCEka9Vywz0nt1JaKxOycxOfsvNIv7UopNwSPoqLKx3mieNAzsceu4tb5ISs_yGY/pub?w=949&h=707)
+
 ## Usage
 
 **Important Note**

@@ -195,11 +195,17 @@ The Request is encoded as
 ```json
 {
     "request": "generate-random-value",
-    "typeId": "Core.Token"
+    "typeId": <Core.Token | Core.Party>,
+    "seed": <Optional Int>,
+    "size": <Optional Int>
 }
 ```
 
-And the payload of the `request-response` can be one of the following:
+The `seed` value is always sent but is optional to use. It allows tests to be reproducible, it is expected that for the same seed the same response is returned.
+
+The `size` value is always sent but is optional to use. It allows the tests to "shrink". When a property fails, the test framework will try a smaller value to try to see what is the minimum value for which it fails.
+
+The payload of the `request-response` can be one of the following:
 
 - If the value was correctly generated
 

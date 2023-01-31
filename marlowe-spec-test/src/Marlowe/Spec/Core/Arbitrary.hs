@@ -6,8 +6,6 @@
 
 module Marlowe.Spec.Core.Arbitrary where
 
-import SemanticsTypes (Token(..), Party, Payee(..), ChoiceId (ChoiceId), Bound(..), Value(..), ValueId(..), Observation(..), Action (..), Case(..), Contract (..), Input (..), State_ext(..), IntervalError (..))
-import QuickCheck.GenT (GenT, arbitrary', MonadGen (..), suchThat, frequency, sized, resize, scale)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), parseValidResponse)
 import Data.Data (Proxy(..))
 import Marlowe.Spec.TypeId (TypeId(..))
@@ -16,12 +14,14 @@ import Control.Exception (throwIO, Exception)
 import Data.Aeson (FromJSON(..), withObject, (.:), (.=))
 import Control.Applicative ((<|>))
 import Data.Aeson (ToJSON (..), object)
-import Test.QuickCheck (Gen, chooseInt)
-import QuickCheck.GenT (Arbitrary(..), vectorOf)
 import qualified Arith
-import Semantics (Transaction_ext(..), Payment(..), TransactionWarning (..), TransactionError (..), TransactionOutput(..), TransactionOutputRecord_ext (..))
 import Control.Monad (liftM2)
+import QuickCheck.GenT (vectorOf, GenT, MonadGen (..), suchThat, frequency, sized, resize, scale)
+import Semantics (Transaction_ext(..), Payment(..), TransactionWarning (..), TransactionError (..), TransactionOutput(..), TransactionOutputRecord_ext (..))
+import SemanticsTypes (Token(..), Party, Payee(..), ChoiceId (ChoiceId), Bound(..), Value(..), ValueId(..), Observation(..), Action (..), Case(..), Contract (..), Input (..), State_ext(..), IntervalError (..))
 import SemanticsGuarantees (valid_state)
+import Test.QuickCheck (Gen, chooseInt, getSize)
+import Test.QuickCheck.Arbitrary (Arbitrary(..))
 
 data RandomResponse a
   = RandomValue a
@@ -82,26 +82,34 @@ arbitraryNonnegativeInteger = Arith.Int_of_integer <$>
     , (30, arbitraryFibonacci fibonaccis)
     ]
 
-genToken :: InterpretJsonRequest -> GenT IO Token
-genToken interpret = liftIO do
-  res <- interpret (GenerateRandomValue $ TypeId "Core.Token" (Proxy :: Proxy Token))
-  case parseValidResponse res of
-    Left err -> throwIO $ GenerateRandomValueException err
-    Right (UnknownType _) -> throwIO $ GenerateRandomValueException "Client process doesn't know how to generate Core.Token"
-    Right (RandomValue t) -> pure t
+arbitrarySeed :: Gen Int
+arbitrarySeed = resize 10000 $ choose (1, 10000000)
 
+genToken :: InterpretJsonRequest -> GenT IO Token
+genToken interpret = do
+  size <- liftGen $ getSize
+  seed <- liftGen $ arbitrarySeed
+  liftIO do
+    res <- interpret (GenerateRandomValue (TypeId "Core.Token" (Proxy :: Proxy Token)) size seed)
+    case parseValidResponse res of
+      Left err -> throwIO $ GenerateRandomValueException err
+      Right (UnknownType _) -> throwIO $ GenerateRandomValueException "Client process doesn't know how to generate Core.Token"
+      Right (RandomValue t) -> pure t
 
 genParty :: InterpretJsonRequest -> GenT IO Party
-genParty interpret = liftIO do
-  res <- interpret (GenerateRandomValue $ TypeId "Core.Party" (Proxy :: Proxy Party))
-  case parseValidResponse res of
-    Left err -> throwIO $ GenerateRandomValueException err
-    Right (UnknownType _) -> throwIO $ GenerateRandomValueException "Client process doesn't know how to generate Core.Party"
-    Right (RandomValue t) -> pure t
+genParty interpret = do
+  size <- liftGen $ getSize
+  seed <- liftGen $ arbitrarySeed
+  liftIO do
+    res <- interpret (GenerateRandomValue (TypeId "Core.Party" (Proxy :: Proxy Party)) size seed)
+    case parseValidResponse res of
+      Left err -> throwIO $ GenerateRandomValueException err
+      Right (UnknownType _) -> throwIO $ GenerateRandomValueException "Client process doesn't know how to generate Core.Party"
+      Right (RandomValue t) -> pure t
 
 genPayee ::  InterpretJsonRequest -> GenT IO Payee
 genPayee i = do
-  isParty <- arbitrary'
+  isParty <- liftGen arbitrary
   if isParty
     then Party <$> genParty i
     else Account <$> genParty i

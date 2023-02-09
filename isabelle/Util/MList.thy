@@ -68,6 +68,54 @@ theorem insert_valid : "valid_map c \<Longrightarrow> valid_map (MList.insert a 
   apply simp
   by (metis insert_valid_aux3 old.prod.exhaust)
 
+lemma insert_replaces_value :
+  "valid_map m \<Longrightarrow> MList.insert k v1 (MList.insert k v2 m) = MList.insert k v1 m" 
+proof (induction m)
+  case Nil
+  then show ?case 
+    by simp
+next
+  case (Cons head rest)
+  then obtain hK hV where "head = (hK, hV)" 
+    by fastforce
+  then show ?case 
+    using Cons.IH Cons.prems by force
+qed
+
+lemma insert_swap :
+" 
+\<lbrakk> valid_map m
+; k1 \<noteq> k2
+\<rbrakk> \<Longrightarrow>
+MList.insert k1 v1 (MList.insert k2 v2 m) = MList.insert k2 v2 (MList.insert k1 v1 m)
+"
+proof (induction m)
+  case Nil
+  then show ?case 
+    by (simp add: not_less_iff_gr_or_eq)
+next
+  case (Cons head rest)
+  then obtain hK hV where pHead: "head = (hK, hV)" 
+    using prod.exhaust_sel by blast
+  then show ?case
+  proof (cases rule: linorder_cases[of k2 hK])
+    case less
+    then show ?thesis 
+      using Cons.prems(2) pHead by fastforce
+  next
+    case equal
+    then show ?thesis       
+      using Cons.prems(2) pHead by auto
+  next
+    case greater
+    then show ?thesis 
+      using Cons.IH Cons.prems(1) Cons.prems(2) pHead by auto
+  qed
+
+qed
+
+
+
 fun delete :: "'a::linorder \<Rightarrow> ('a \<times> 'b) list \<Rightarrow> ('a \<times> 'b) list" where
   "delete a Nil = Nil" |
   "delete a (Cons (x, y) z) =
@@ -295,5 +343,146 @@ lemma findWithDefault_step :
 
 fun member :: "'a \<Rightarrow> ((('a::linorder) \<times> 'b) list) \<Rightarrow> bool" where
 "member k d = (lookup k d \<noteq> None)"
+
+
+lemma deleteNotMember: "\<lbrakk> \<not> member k m \<rbrakk> \<Longrightarrow> delete k m = m"
+proof (induction m)
+  case Nil
+  then show ?case
+    by simp
+next
+  case (Cons headKeyVal rest)
+  obtain hK hV where "headKeyVal = (hK, hV)" 
+    by fastforce
+  with Cons show ?case 
+    using option.distinct(1) by force
+qed
+
+
+
+
+lemma equalMList: "\<lbrakk> valid_map m; valid_map n \<rbrakk> \<Longrightarrow> \<forall>x. lookup x m = lookup x n \<Longrightarrow> m = n"
+proof (induction m arbitrary: n)
+  case Nil
+  then show ?case
+    by (metis list.exhaust lookup.simps(1) lookup.simps(2) old.prod.exhaust option.distinct(1))
+next
+  case (Cons mHead mRest)
+  then show ?case 
+  proof (induction n )
+    case Nil
+    then show ?case
+      by (metis lookup.simps(1) lookup.simps(2) old.prod.exhaust option.distinct(1))
+  next
+    case (Cons nHead nRest)
+    then show ?case 
+      (* TODO: this takes a little long, simplify *)
+      by (metis delete.simps(2) delete_lookup_None_aux different_delete_lookup lookup.simps(2) not_None_eq option.inject order.asym prod.collapse sublist_valid)
+  qed
+qed
+
+lemma insertDeleted : "\<lbrakk> valid_map m; lookup k m = Some v \<rbrakk> \<Longrightarrow> insert k v (delete k m) = m"
+proof (induction m)
+  case Nil
+  then show ?case 
+    by simp
+next
+  case (Cons headKeyVal rest)
+  
+  obtain hK hV where headKeyVal: "headKeyVal = (hK, hV)" 
+    by fastforce
+  then have 0: "lookup hK rest = None" 
+    by (metis Cons.prems(1) delete_lookup_None_aux)
+    
+  show ?case
+  proof (cases rule: linorder_cases[of hK k])
+    case less
+    with Cons headKeyVal show ?thesis 
+      by (metis delete_step insert.simps(2) lookup.simps(2) order.asym sublist_valid)
+  next
+    case equal
+    with equal Cons headKeyVal 0  show ?thesis
+      by (smt (verit, best) delete_valid different_delete_lookup equalMList insert_lookup_Some insert_lookup_different insert_valid)
+  next
+    case greater
+    then show ?thesis   
+      by (metis Cons.prems(2) headKeyVal lookup.simps(2) not_less_iff_gr_or_eq option.discI)
+  qed
+
+qed
+
+
+lemma cons_eq_insert_rest :
+"valid_map ((k,v) # rest) \<Longrightarrow>
+(k,v) # rest = MList.insert k v rest
+"
+  by (metis delete.simps(2) MList.lookup.simps(2) insertDeleted)
+
+
+section "As Maps" 
+
+lemma insertAsMap : "valid_map mlist \<Longrightarrow> map_of(insert k v mlist) = (map_of mlist) (k\<mapsto>v)"
+proof (induction mlist)
+  case Nil
+  then show ?case 
+    by auto
+next
+  case (Cons head rest)
+  obtain hK hV where "head = (hK, hV)" 
+    by fastforce
+  then show ?case 
+    using Cons.IH Cons.prems prod.sel(2) by fastforce
+qed
+
+lemma deleteAsMap : "valid_map mlist \<Longrightarrow> map_of (delete k mlist) = (map_of mlist)(k := None)" 
+proof (induction mlist)
+  case Nil
+  then show ?case
+    by simp
+next
+  case (Cons head rest)
+  obtain hK hV where pHead: "head = (hK, hV)" 
+    by fastforce
+  then show ?case 
+  by (smt (z3) Cons.IH Cons.prems MList.member.simps delete.simps(2) deleteNotMember delete_lookup_None_aux delete_step fst_conv fun_upd_twist fun_upd_upd map_of.simps(2) sublist_valid)
+qed
+
+lemma lookupAsMap : "valid_map mlist \<Longrightarrow> lookup k mlist = (map_of mlist) k"
+proof (induction mlist)
+  case Nil
+  then show ?case 
+    by simp
+next
+  case (Cons head rest)
+  obtain hK hV where "head = (hK, hV)" 
+    by fastforce
+  then show ?case 
+    by (smt (verit, ccfv_threshold) Cons.IH Cons.prems deleteNotMember delete_lookup_None delete_step list.inject lookup.simps(2) map_of_Cons_code(2) member.elims(1) sublist_valid)
+qed
+
+
+lemma MList_induct[consumes 1, case_names empty update]:
+  assumes "valid_map m"
+  assumes "P []"
+  assumes "\<And>k v m. valid_map m \<Longrightarrow> \<not> member k m \<Longrightarrow> P m \<Longrightarrow> P (insert k v m)"
+  shows "P m"
+  using assms(1)
+proof(induction m)
+  case Nil
+  then show ?case by (simp add: assms(2))
+next
+  case (Cons head rest)
+
+  then obtain hK hV where "head = (hK, hV)"
+    by fastforce
+  moreover have "valid_map rest"
+    using Cons.prems by auto
+  moreover have "\<not> member hK rest" 
+    by (metis Cons.prems MList.member.simps calculation(1) delete_lookup_None_aux)
+  moreover have "P rest"
+    using Cons.IH calculation(2) by blast
+  ultimately  show ?case using assms(3)
+    by (metis Cons.prems delete.simps(2) insertDeleted lookup.simps(2))
+qed
 
 end

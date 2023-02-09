@@ -379,7 +379,6 @@ theorem accountsArePositive2 :
   by (meson accountsArePositive allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2))
 
 lemma valid_state_valid_accounts : "valid_state state \<Longrightarrow> valid_map (accounts state)"
-  apply (cases state)
   by simp
 
 theorem accountsArePositive2_trace :
@@ -449,4 +448,34 @@ lemma playTraceAux_preserves_validAndPositive_state :
 lemma validAndPositive_initial_state : "validAndPositive_state (emptyState sl)"
   using emptyState_gtZero empty_state_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive by auto
 
+
+
+
+
+lemma allAccountsPositive_implies_every_account_positive : 
+  fixes accId tok val
+  assumes "((accId, tok), val) \<in> set m" (is " ?entry \<in> _")
+  assumes "allAccountsPositive m" and "valid_map m"
+  shows "val > 0" 
+  
+proof (rule ccontr)
+  assume valIsNeg: "\<not> (val > 0)"
+  
+  obtain headM restM where pList: "m = headM @ [?entry] @ restM"
+    by (metis append_Cons append_Nil assms(1) in_set_conv_decomp_first)
+ 
+  with assms(1) allAccountsPositive.simps have "allAccountsPositive m = False"
+    by (smt (z3) valIsNeg allAccountsPositiveMeansFirstIsPositive foldl_Cons foldl_append)
+  
+  with assms show False 
+    by blast
+qed
+
+
+lemma allAccountsPositive_implies_lookup_is_positive :
+"\<lbrakk> valid_map m
+ ; allAccountsPositive m 
+ ; lookup (accId, tok) m = Some v
+\<rbrakk> \<Longrightarrow> v > 0"
+  by (metis allAccountsPositive_implies_every_account_positive lookupAsMap map_of_SomeD)
 end

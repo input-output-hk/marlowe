@@ -24,11 +24,9 @@ import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@=?))
 import qualified SemanticsTypes as C
 import Marlowe.Spec.Core.Arbitrary (genToken, genParty, genPayee, genChoiceId, genBound, genValue, genObservation, genAction, genContract, genInput, genTransaction, genPayment, genState, genTransactionWarning, genIntervalError, genTransactionError, genTransactionOutput)
 import Control.Monad.IO.Class (MonadIO)
-import Control.Monad.IO.Class (MonadIO(..))
-import Marlowe.Spec.Reproducible (generate, generateT, reproducibleProperty)
+import Marlowe.Spec.Reproducible (generate, generateT, reproducibleProperty, assertResponse)
 import QuickCheck.GenT (MonadGen (resize))
-import Test.QuickCheck (counterexample)
-import Test.QuickCheck.Monadic (run, PropertyM, assert, monitor)
+import Test.QuickCheck.Monadic (run, PropertyM)
 
 data SerializationResponse transport
   = SerializationSuccess transport
@@ -143,14 +141,7 @@ unitRoundtripTest interpret a = do
 
 propertyRoundtripTest :: (HasTypeId a, ToJSON a, MonadIO m) => InterpretJsonRequest -> a -> PropertyM m ()
 propertyRoundtripTest interpret a = do
-  res <- run $ liftIO $ interpret serializationRequest
-  monitor (
-    counterexample $
-      "Request: " ++ show serializationRequest ++ "\n" ++
-      "Expected: " ++ show successResponse ++ "\n" ++
-      "Actual: " ++ show res
-    )
-  assert $ successResponse == res
+  assertResponse interpret serializationRequest successResponse
   where
   serializationRequest = TestRoundtripSerialization (getTypeId a) $ toJSON a
   successResponse = RequestResponse $ toJSON $ SerializationSuccess $ toJSON a

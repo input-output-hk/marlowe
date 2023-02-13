@@ -9,11 +9,15 @@ import Control.Monad.IO.Class (MonadIO(..))
 import qualified System.Random as Gen
 import Control.Monad.State (MonadState (get, put))
 import QuickCheck.GenT (GenT, runGenT)
-import Test.QuickCheck (Testable, Property, arbitrarySizedBoundedIntegral, resize, ioProperty)
+import Test.QuickCheck (Testable, Property, arbitrarySizedBoundedIntegral, resize, ioProperty, counterexample)
 import Test.QuickCheck.Gen (Gen(..))
 import Test.Tasty (TestName, TestTree)
-import Test.QuickCheck.Monadic (PropertyM, monadic')
+import Test.QuickCheck.Monadic (PropertyM, monadic', run, assert, monitor)
 import Test.Tasty.QuickCheck (testProperty)
+import Test.QuickCheck (Testable(..))
+import Marlowe.Spec.Interpret (InterpretJsonRequest, Request, Response)
+import qualified Data.Aeson as JSON
+import Marlowe.Utils (showAsJson)
 
 
 newtype ReproducibleTest a = ReproducibleTest (StateT QCGen IO a)
@@ -41,12 +45,30 @@ generateT gt = do
   liftIO $ iog oldGen 30
 
 
-reproducibleProperty :: Testable a => TestName -> PropertyM ReproducibleTest a -> TestTree
-reproducibleProperty testName prop =
+assertResponse :: MonadIO m => InterpretJsonRequest -> Request JSON.Value -> Response JSON.Value -> PropertyM m ()
+assertResponse interpret req successResponse = do
+    res <- run $ liftIO $ interpret req
+    monitor (
+        counterexample $
+            "Request: " ++ showAsJson req ++ "\n" ++
+            "Expected: " ++ show successResponse ++ "\n" ++
+            "Actual: " ++ show res
+        )
+    assert $ successResponse == res
+
+reproducibleProperty' :: TestName -> (a -> Property) -> PropertyM ReproducibleTest a -> TestTree
+reproducibleProperty' testName tx prop =
   testProperty testName $ runProperty <$> arbitrarySeed
   where
   arbitrarySeed :: Gen Int
   arbitrarySeed = resize 10000 arbitrarySizedBoundedIntegral
 
+  prop' :: PropertyM ReproducibleTest Property
+  prop' = tx <$> prop
+
   runProperty ::  Int -> Gen Property
-  runProperty seed = ioProperty <$> runReproducibleTest seed <$> monadic' prop
+  runProperty seed = ioProperty <$> runReproducibleTest seed <$> monadic' prop'
+
+
+reproducibleProperty :: Testable a => TestName -> PropertyM ReproducibleTest a -> TestTree
+reproducibleProperty testName prop = reproducibleProperty' testName property prop

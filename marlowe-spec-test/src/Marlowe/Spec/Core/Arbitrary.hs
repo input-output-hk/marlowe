@@ -18,7 +18,7 @@ import qualified Arith
 import Control.Monad (liftM2)
 import QuickCheck.GenT (vectorOf, GenT, MonadGen (..), suchThat, frequency, sized, resize, scale)
 import Semantics (Transaction_ext(..), Payment(..), TransactionWarning (..), TransactionError (..), TransactionOutput(..), TransactionOutputRecord_ext (..))
-import SemanticsTypes (Token(..), Party, Payee(..), ChoiceId (ChoiceId), Bound(..), Value(..), ValueId(..), Observation(..), Action (..), Case(..), Contract (..), Input (..), State_ext(..), IntervalError (..))
+import SemanticsTypes (Token(..), Party, Payee(..), ChoiceId (ChoiceId), Bound(..), Value(..), ValueId(..), Observation(..), Action (..), Case(..), Contract (..), Input (..), State_ext(..), IntervalError (..), Environment_ext (..))
 import SemanticsGuarantees (valid_state)
 import Test.QuickCheck (Gen, chooseInt, getSize)
 import Test.QuickCheck.Arbitrary (Arbitrary(..))
@@ -173,6 +173,12 @@ genBound = do
   lower <- arbitraryInteger
   extent <- arbitraryNonnegativeInteger
   pure $ Bound lower (lower + extent)
+
+genInterval :: Gen (Arith.Int, Arith.Int)
+genInterval = do
+  lower <- arbitraryNonnegativeInteger
+  extent <- arbitraryNonnegativeInteger
+  pure (lower, lower + extent)
 
 genValue :: InterpretJsonRequest -> GenT IO Value
 genValue i = sized (
@@ -369,3 +375,6 @@ genTransactionOutput i =
               pure $ TransactionOutput $ TransactionOutputRecord_ext warnings payments state contract ()
       )
     ]
+
+genEnvironment :: Gen (Environment_ext ())
+genEnvironment = Environment_ext <$> genInterval <*> pure ()

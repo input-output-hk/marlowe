@@ -412,6 +412,7 @@ next
 qed
 
 
+
 lemma cons_eq_insert_rest :
 "valid_map ((k,v) # rest) \<Longrightarrow>
 (k,v) # rest = MList.insert k v rest
@@ -485,4 +486,180 @@ next
     by (metis Cons.prems delete.simps(2) insertDeleted lookup.simps(2))
 qed
 
+
+lemma insertOverDeleted : 
+  assumes "valid_map m" 
+  shows "insert k v m = insert k v (delete k m)"
+using assms proof (induction m rule: MList_induct)
+  case empty
+  then show ?case 
+    by simp
+next
+  case (update uK uV m)
+  then show ?case
+    by (smt (verit) delete_valid different_delete_lookup equalMList insert_lookup_Some insert_lookup_different insert_valid)
+qed
+
+subsection "keys"
+fun keys :: "('k \<times> 'v) list \<Rightarrow> 'k set" where 
+  "keys m = set (map fst m)" 
+
+lemma keys_member_r: "valid_map m \<Longrightarrow> member k m \<longleftrightarrow> k \<in> keys m" 
+proof (induction m)
+  case Nil
+  then show ?case 
+    by simp
+next
+  case (Cons head rest)
+  moreover obtain hK hV where "head = (hK, hV)" 
+    by fastforce
+ 
+  moreover have "valid_map rest"
+    using calculation by (metis local.Cons.prems sublist_valid)
+ 
+  moreover have "hK < k \<Longrightarrow> member k rest \<Longrightarrow> k \<in> keys rest"
+    using calculation local.Cons.IH by blast
+
+  moreover have "hK < k \<Longrightarrow> k \<in> keys rest \<Longrightarrow> member k rest"
+    using calculation local.Cons.IH by blast
+
+  ultimately show ?case
+    by (metis keys.elims list.set_map member.simps local.Cons.prems lookupAsMap map_of_eq_None_iff)
+qed
+
+section "MList with folds"
+
+text "
+The following lemma is similar to the second case of the foldr definition, which states 
+
+\<^term>\<open>foldr f (x # xs) = f x \<circ> foldr f xs\<close>
+
+Instead of working with Cons this lemma is expressed around MList.insert
+"
+
+lemma foldr_insert:
+  assumes "valid_map m" 
+  (* We require not having the key in the rest of the list, because otherwise the 
+     insert would overwrite the value and the lemma would not hold 
+  *)
+  assumes "\<not> MList.member k m"
+  (* We require the function to be commutative over composition because the insert function
+    can add the element in any order *) 
+  assumes "\<forall>a b. f a \<circ> f b = f b \<circ> f a" 
+  shows "foldr f (MList.insert k v m) = f (k, v) \<circ> foldr f m " 
+  using assms(1) assms(2) proof (induction m)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons head rest)
+  then obtain hK hV where pHead: "head = (hK, hV)"
+    by force
+  then have "hK \<noteq> k"
+    using local.Cons.prems(2) by force
+  then show ?case 
+    by (smt (verit, best) Cons.IH Cons.prems(1) Cons.prems(2) MList.member.simps assms(3) foldr_Cons fun.map_comp insert.simps(2) lookup.simps(2) not_less_iff_gr_or_eq pHead sublist_valid)
+qed
+
+
+text "Similary, \<^term>\<open>foldl_insert\<close> is defined to relate to the foldl second case definition 
+\<^term>\<open>foldl f a (x # xs) = foldl f (f a x) xs\<close>
+"
+lemma foldl_insert: 
+  assumes "valid_map m" 
+  assumes "\<not> MList.member k m"
+  assumes "\<forall> a b z'. f (f z' a) b = f (f z' b) a"
+  shows "foldl f z (MList.insert k v m) = foldl f (f z (k, v)) m" 
+
+using assms(1) assms(2) proof (induction m  arbitrary: z  )
+  case Nil
+  then show ?case 
+    by simp
+next
+  case (Cons head rest)
+  moreover obtain hK hV where "head = (hK, hV)" 
+    by (meson Product_Type.prod.exhaust_sel)
+  moreover have "hK \<noteq> k"
+    using calculation  by force
+  ultimately show ?case 
+    using assms(3) by auto 
+qed
+
+section "MList with filter"
+
+lemma filterOnInsertNotP : 
+  assumes "valid_map m" 
+      and "\<forall> v. \<not> P (k, v)" 
+  shows "filter P (insert k v m) = filter P m" 
+using assms proof (induction m)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons head rest)
+  then obtain hK hV where "head = (hK, hV)" 
+    by (meson surj_pair)
+  then show ?case 
+    using local.Cons.IH local.Cons.prems(1) local.Cons.prems(2) by auto
+qed
+
+lemma filterOnInsertP : 
+  assumes "valid_map m" 
+      and "\<forall> v. P (k, v)" 
+    shows "filter P (insert k v m) = insert k v (filter P m)"
+using assms proof (induction m)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons head rest)
+  then obtain hK hV where pHead: "head = (hK, hV)" 
+    by (meson surj_pair)
+
+  then show ?case 
+  proof (cases rule: linorder_cases [of k hK])
+    case less
+    have "(k, v) # filter P rest = insert k v (filter P rest)" 
+      by (smt (verit) filter.simps(2) insert.elims assms(2) less local.Cons.IH local.Cons.prems(1) order_less_trans pHead remove_from_middle sublist_valid)
+    then show ?thesis 
+      by (simp add: assms(2) less pHead)
+  next
+    case equal
+    with Cons pHead show ?thesis by simp
+      
+  next
+    case greater
+    with Cons pHead show ?thesis by auto
+   qed
+ qed
+
+lemma lookupAsFilter : 
+  assumes "valid_map m" and "lookup k m = Some v" 
+  shows "filter (\<lambda>e. fst e = k) m = [(k, v)]"
+        (is "?f m = _")
+  using assms proof (induction m rule: MList_induct)
+  case empty
+  then show ?case 
+    by simp
+next
+  case (update uK uV m)
+
+  then show ?case 
+  proof (cases "uK = k")
+    assume "uK = k"
+    moreover have "uV = v" 
+      by (metis calculation Option.option.sel insert_lookup_Some local.update.prems)
+    moreover have "lookup k m = None" 
+      using calculation local.update.hyps(2) by auto
+    moreover have "?f m = []" 
+      by (smt (verit) Option.option.distinct(1) Product_Type.prod.exhaust_sel calculation(3) empty_filter_conv local.update.hyps(1) lookupAsMap weak_map_of_SomeI)
+    moreover have "?f (insert uK uV m) = [(uK, uV)]" 
+      using calculation filterOnInsertP local.update.hyps(1) by fastforce
+    ultimately show ?thesis
+      by force      
+  next
+    assume "uK \<noteq> k"
+    moreover have "?f (insert uK uV m) = ?f m" 
+      using calculation filterOnInsertNotP local.update.hyps(1) by fastforce
+    ultimately show ?thesis 
+      by (metis insert_lookup_different local.update.IH local.update.prems)
+  qed
+qed
 end

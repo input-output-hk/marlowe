@@ -113,6 +113,7 @@ The possible requests are:
 * Generate random value
 * Compute transaction
 * Play trace
+* Eval value
 
 All responses are wrapped to provide some common cases
 
@@ -267,4 +268,37 @@ The request is encoded as
 
 The payload of the `request-response` is a serialized `TransactionOutput`
 
+### Eval Value
 
+The request is encoded as
+
+```json
+{
+    "request": "eval-value",
+    "environment": <Environment serialized>,
+    "state": <State serialized>,
+    "value": <Value serialized>
+}
+```
+
+The payload of the `request-response` is an integer
+
+
+#### Example
+For example, for this request
+
+```json
+{
+    "request": "evalValue",
+    "environment": {"timeInterval": [10, 20] },
+    "state": { "accounts": [], "boundValues": [], "choices": [], "minTime": 5},
+    "value": "time_interval_start"
+}
+```
+a valid response could be
+
+```json
+{
+  "request-response": 10
+}
+```

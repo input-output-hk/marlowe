@@ -35,11 +35,13 @@ library
         Marlowe.Spec.Core.Arbitrary
         Marlowe.Spec.Core.Examples
         Marlowe.Spec.Core.Examples.Swap
+        Marlowe.Spec.Core.Semantics
         Marlowe.Spec.Core.Serialization.Json
         Marlowe.Spec.Interpret
         Marlowe.Spec.LocalInterpret
         Marlowe.Spec.Reproducible
         Marlowe.Spec.TypeId
+        Marlowe.Utils
     build-depends:
         aeson,
         base >=4.9 && <5,

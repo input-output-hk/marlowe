@@ -45,7 +45,7 @@ import qualified Data.Foldable as F
 import qualified Data.Text as T
 import Data.Scientific (Scientific, floatingOrInteger)
 import qualified Examples.Swap
-import SemanticsTypes (Action(..), Case(..), Contract(..), Input(..), Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..), State_ext(..), IntervalError(..))
+import SemanticsTypes (Action(..), Case(..), Contract(..), Input(..), Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..), State_ext(..), IntervalError(..), Environment_ext(..))
 import Semantics (Transaction_ext(..), Payment(..), TransactionWarning(..), TransactionError(..), TransactionOutput(..), TransactionOutputRecord_ext(..), txOutWarnings, txOutPayments, txOutState, txOutContract, playTrace )
 
 
@@ -1171,6 +1171,20 @@ transactionAssertionFailedExample = TransactionAssertionFailed
 
 is serialized as \eval{encodeExample transactionAssertionFailedExample}
 
+\isamarkupsection{TimeInterval}
+
+The \emph{TimeInterval} type is serialized as an object with two properties "to" and "from".
+
+In Haskell the type is defined as a type alias for a Tuple of times, so we don't provide a ToJSON/FromJSON
+instance, instead we provide the following functions:
+
+\begin{code}
+intervalToJSON :: (Arith.Int, Arith.Int) -> JSON.Value
+intervalToJSON (from, to) = object [ "from" .= from, "to" .= to]
+
+intervalFromJSON :: JSON.Value -> Parser (Arith.Int, Arith.Int)
+intervalFromJSON = withObject "Interval" (\o -> (,) <$> (o .: "from") <*> (o .: "to"))
+\end{code}
 
 \isamarkupsection{IntervalError}
 
@@ -1178,12 +1192,8 @@ The \emph{IntervalError} type is serialized as an object with a single property 
 the error as a sub-object.
 \begin{code}
 instance ToJSON IntervalError where
-  toJSON (InvalidInterval (s, e)) = object
-    [ "invalidInterval" .=
-       object
-         [ "from" .= toJSON s
-         , "to"  .= toJSON e
-         ]
+  toJSON (InvalidInterval iv) = object
+    [ "invalidInterval" .= intervalToJSON iv
     ]
   toJSON (IntervalInPastError t (s, e)) = object
     [ "intervalInPastError" .=
@@ -1399,3 +1409,25 @@ instance FromJSON Arith.Int where
   parseJSON (JSON.Number x) = getInteger "Int" x
   parseJSON _ = fail "expecting integer"
 \end{code}
+
+\isamarkupsection{Environment}
+
+The \emph{Environment} type is serialized as a single object with one property.
+
+\begin{code}
+instance ToJSON (Environment_ext ()) where
+  toJSON (Environment_ext iv _) = object
+        [ "timeInterval" .= intervalToJSON iv
+        ]
+
+
+instance FromJSON (Environment_ext ()) where
+    parseJSON = withObject "Environment"
+      (\v ->
+        Environment_ext
+          <$> (intervalFromJSON =<< v .: "timeInterval")
+          <*> pure ()
+      )
+\end{code}
+
+

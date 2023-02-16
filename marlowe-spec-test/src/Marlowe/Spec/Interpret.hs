@@ -13,7 +13,7 @@ module Marlowe.Spec.Interpret
 import qualified SemanticsTypes as C
 import qualified Semantics as C
 import Control.Applicative ((<|>))
-import Data.Aeson (object, (.=), (.:), Result (..), fromJSON, encode)
+import Data.Aeson (object, (.=), (.:), Result (..), fromJSON)
 import Data.Aeson.Types (ToJSON(..), FromJSON(..))
 import qualified Data.Aeson.Types as JSON
 import Marlowe.Spec.TypeId (TypeId (..))
@@ -22,8 +22,7 @@ import Test.Tasty.Providers (TestTree)
 import Test.Tasty.HUnit (testCase, (@?=), Assertion)
 import MarloweCoreJson()
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
-import Data.Text.Lazy.Encoding (decodeUtf8)
+import Marlowe.Utils (showJson)
 
 type Seed = Int
 type Size = Int
@@ -32,12 +31,7 @@ data Request transport
   | GenerateRandomValue TypeId Size Seed
   | ComputeTransaction (C.Transaction_ext ()) (C.State_ext ()) C.Contract
   | PlayTrace Integer C.Contract [C.Transaction_ext ()]
-
-instance Show (Request JSON.Value) where
-  show (TestRoundtripSerialization t j) = "(TestRoundtripSerialization " ++ show t ++ " " ++ showJson j ++ ")"
-  show (GenerateRandomValue t _ _) = "(GenerateRandomValue " ++ show t ++ ")"
-  show (ComputeTransaction _ _ _) = "(ComputeTransaction _ _ _)"
-  show (PlayTrace _ _ _) = "(PlayTrace _ _ _)"
+  | EvalValue (C.Environment_ext ()) (C.State_ext ()) C.Value
 
 instance ToJSON (Request JSON.Value) where
   toJSON (TestRoundtripSerialization t v) = object
@@ -48,7 +42,7 @@ instance ToJSON (Request JSON.Value) where
   toJSON (GenerateRandomValue t size seed) = object
     [ "request" .= JSON.String "generate-random-value"
     , "typeId" .= toJSON t
-    , "seed" .= (toJSON seed)
+    , "seed" .= toJSON seed
     , "size" .= toJSON size
     ]
   toJSON (ComputeTransaction i s c) = object
@@ -63,9 +57,12 @@ instance ToJSON (Request JSON.Value) where
     , "coreContract" .= toJSON c
     , "initialTime" .= toJSON t
     ]
-
-showJson :: JSON.Value -> String
-showJson = LT.unpack . decodeUtf8 . encode
+  toJSON (EvalValue env state val) = object
+    [ "request" .= JSON.String "eval-value"
+    , "environment" .= toJSON env
+    , "state" .= toJSON state
+    , "value" .= toJSON val
+    ]
 
 data Response transport
   = InvalidRequest String
@@ -100,14 +97,14 @@ instance ToJSON (Response JSON.Value) where
   toJSON RequestTimeOut = JSON.String "RequestTimeOut"
 
   toJSON (InvalidRequest err) = object
-    [ "invalid-request" .= (JSON.String $ T.pack err)
+    [ "invalid-request" .= JSON.String (T.pack err)
     ]
   toJSON (RequestResponse res) = object
     [ "request-response" .= res
 
     ]
   toJSON (ResponseFailure err) = object
-    [ "invalid-request" .= (JSON.String $ T.pack err)
+    [ "invalid-request" .= JSON.String (T.pack err)
     ]
 
 

@@ -45,6 +45,7 @@ lemma assetValueOfDifferentToken : "tok1 \<noteq> tok2 \<Longrightarrow> assetVa
 lemma assetsEqByValue: "a = b \<longleftrightarrow> (\<forall> tok. assetValue tok a = assetValue tok b)"
   by transfer auto
 
+
 subsection "Ordering"
 text "
 We define partial order for assets instead of total order because we cannot compare values of different tokens.
@@ -139,6 +140,9 @@ lemma assetsDistributesPlus : "asset tok (a + b) = asset tok a + asset tok b"
 
 lemma assetsJoinPlus : "asset tok a + asset tok b = asset tok (a + b)" 
   by (simp add: assetsDistributesPlus)
+
+lemma assetValue_distrib : "assetValue tok (a + b) = assetValue tok a + assetValue tok b" 
+  by transfer auto 
 
 instantiation Assets :: minus
 begin
@@ -258,502 +262,232 @@ end
 
 
 
-section "Accounts"
+section "Assets in Accounts"
 
-text \<open>In the SemanticTypes theory, the Accounts is defined as an associative list, which is good 
-to represent executable code. In this theory, we define Accounts as a logical Map which is better
-for reasoning \<close>
-(* TODO: the previous text is what I intended when I defined Account as a Map, and 
-   for some lemma this is true, but I found myself having to define lemmas around the list representation
-   instead of the Map representation for the important parts, for example assetsInAccounts_distrib_on_update
-*)
-(* TODO: most proves regarding this representation requires Accounts to be finite, 
-          should I define a typedef with lifting and the finite precondition? I'm worried that this
-          would imply to lift a lot of Map lemmas.
-*)
-type_synonym Accounts = "AccountId \<rightharpoonup> Assets"
+text "Given a function that adds an entry of the account map to some accumulator"
+fun addAccountEntry :: " ((AccountId \<times> Token) \<times> int) \<Rightarrow> Assets \<Rightarrow> Assets" where 
+"addAccountEntry ((_, t), v) b = b + asset t (nat v)"
 
+text "We can express the \<^bold>\<open>assets in the account\<close> as a simple foldr over the accounts array"
+fun assetsInAccounts :: "Accounts \<Rightarrow> Assets " where
+"assetsInAccounts accs = foldr addAccountEntry accs 0"
+
+text "The \<^emph>\<open>addAccountEntry\<close> function is commutative over composition, which allows to operate
+with the fold in different ways."
+lemma addAccountEntryCommutesComposition : 
+  "addAccountEntry a \<circ> addAccountEntry b = addAccountEntry b \<circ> addAccountEntry a"
+proof -
+  have "\<forall> c. addAccountEntry a (addAccountEntry b c) = addAccountEntry b (addAccountEntry a c)" 
+    by (metis addAccountEntry.simps ab_semigroup_add_class.add.commute semigroup_add_class.add.assoc Product_Type.prod.exhaust)
+
+  then show ?thesis   
+    by fastforce
+qed 
+
+text "And to be able to express it as a normal \<^emph>\<open>fold\<close> enables more lemmas to work with."
+lemma assetsInAccountFold : "assetsInAccounts accs = fold addAccountEntry accs 0" 
+  by (simp add: addAccountEntryCommutesComposition foldr_fold)
+
+subsection "Ordering of assets in account"
+text "Because we are adding positive numbers, adding an account entry to some accumulator is always
+going to be the same size or bigger" 
+
+lemma addAccountEntry_AlwaysIncreases : "accu \<le> addAccountEntry entry accu" 
+  by (metis AssetsPreservation.addAccountEntry.elims add_increasing2 order_le_less zero_le)
+
+text "Moreover, filtering an account list is always lower or equal to the unfiltered version"
+lemma filtered_as_leq_as : "assetsInAccounts (filter P accs) \<le> assetsInAccounts accs"
+proof (induction accs)
+  case Nil
+  then show ?case 
+    by simp
+next
+  case (Cons head rest)
+
+  then show ?case 
+  proof (cases "P head")
+    case True
+    then show ?thesis 
+      by auto (metis addAccountEntry.elims addAccountEntry.simps assetsInAccounts.simps Cons add_le_cancel_right)
+  next
+    case False
+    then show ?thesis 
+      by auto (metis assetsInAccounts.simps Cons addAccountEntry_AlwaysIncreases order_trans) 
+  qed
+qed
+
+subsection "Assets in account distributes over insert"
+text "The main theorem of this section \<^emph>\<open>assetsInAccounts_distrib_insert\<close> describes how assets
+are distributed when we insert a new entry. To build up to that theorem, we start by analysing 
+how it distributes when there wasn't a previous entry for that pair. "
+lemma assetsInAccounts_distrib_insert_not_member : 
+  assumes "valid_map accs"
+  assumes "(accId, tok) \<notin> keys accs"
+  shows "assetsInAccounts (insert (accId, tok) val accs) = assetsInAccounts accs + asset tok (nat val)"
+proof - 
+  have "foldr addAccountEntry (insert (accId, tok) val accs) = addAccountEntry ((accId, tok), val) \<circ> (foldr addAccountEntry accs)" (is "?l = ?r")
+    by (meson foldr_insert keys_member_r assms addAccountEntryCommutesComposition)
+  then have "?l 0 = ?r 0" 
+    by fastforce
+  then show ?thesis 
+    by simp
+qed
+
+text "Following the simple case, we provide two lemma's around what happens if there was an existing
+entry"
+ 
+lemma assetsInAccounts_distrib_insert_deleted : 
+  assumes "valid_map accs" 
+  shows "assetsInAccounts (insert (accId, tok) val accs) = assetsInAccounts (delete (accId, tok) accs) + asset tok (nat val)"
+  by auto (metis AssetsPreservation.assetsInAccounts.simps MList.member.elims(2) assetsInAccounts_distrib_insert_not_member assms delete_lookup_None delete_valid insertOverDeleted keys_member_r)
+
+lemma assetsInAccounts_of_deleted :
+  assumes "valid_map accs" 
+  shows "assetsInAccounts (delete (accId, tok) accs) 
+       = assetsInAccounts accs - asset tok (nat (moneyInAccount accId tok accs))"
+proof (cases "(accId, tok) \<in> keys accs")
+  case True
+  then obtain v where "lookup (accId, tok) accs = Some v"
+    by (meson MList.member.simps assms keys_member_r not_None_eq)
+  
+  then show ?thesis
+    by auto (metis AssetsPreservation.assetsInAccounts.elims MList.member.elims(2) add_implies_diff assetsInAccounts_distrib_insert_not_member assms delete_lookup_None delete_valid insertDeleted keys_member_r)
+
+next
+  case False
+  then have "moneyInAccount accId tok accs = 0"     
+    by auto (metis False MList.member.elims(3) Option.option.simps(4) assms keys_member_r)
+  then show ?thesis
+    by auto (metis False assetZero assms deleteNotMember diff_zero keys_member_r)
+qed
+
+text "And finally the general case"
+theorem assetsInAccounts_distrib_insert : 
+  assumes "valid_map accs" 
+  shows 
+    " assetsInAccounts (insert (accId, tok) val accs) 
+    = assetsInAccounts accs - asset tok (nat (moneyInAccount accId tok accs)) + asset tok (nat val)"
+  using assetsInAccounts_distrib_insert_deleted assetsInAccounts_of_deleted assms by auto
+
+corollary AssetsInAccount_distrib_on_cons : 
+  "valid_map rest \<Longrightarrow>
+  assetsInAccounts (((accId, tok), val) # rest) =  assetsInAccounts rest + asset tok (nat val)"
+  by auto
+
+
+subsection "Account assets"
+(* These helpers were translated from an older representation, they doesn't help prove that 
+the assets are preserved, but they help understand the assets of different Parties, so I leave
+them around for future usage *)
+
+text "These definitions allows to filter only the assets for a particular accountId"
+fun entryInAccount :: "AccountId \<Rightarrow> ((AccountId \<times> Token) \<times> int) \<Rightarrow> bool" where 
+"entryInAccount accId entry = (fst (fst entry) = accId)"
 
 fun accountAssets :: "AccountId \<Rightarrow> Accounts \<Rightarrow> Assets" where 
-"accountAssets accId m = (case m accId of None \<Rightarrow> 0 | Some a \<Rightarrow> a)"
+"accountAssets accId accs = assetsInAccounts (filter (entryInAccount accId) accs)"
 
 lemma accountAssetsOfEmpty : 
-  "accountAssets accId Map.empty = 0" 
-  by simp
+  "accountAssets accId [] = 0" 
+  by simp 
 
-subsection "Assets in Accounts"
-
-text \<open>We define assetsInAccounts as the sum of Assets for every accId \<close>
-definition sum_accs_graph :: "(AccountId \<times> Assets) \<Rightarrow> Assets \<Rightarrow> Assets"
-  where "sum_accs_graph t a = snd t + a"
-
-text "The comp_fun_commute_on locale interpretation allows us to better reason
-about assetsInAccounts when the Account is finite"
-interpretation sum_accs_graph: comp_fun_commute_on  "UNIV" sum_accs_graph
-  by unfold_locales (simp add: comp_def add_ac(3) sum_accs_graph_def)
-
-fun assetsInAccounts :: "Accounts \<Rightarrow> Assets" where 
-"assetsInAccounts accs = Finite_Set.fold sum_accs_graph 0 (Map.graph accs)" 
-
-
-lemma assetsInAccounts_distrib: 
-  assumes "finite (dom m)" 
-  shows "assetsInAccounts (m (accId \<mapsto> a)) = assetsInAccounts (m (accId := None)) + a" 
+lemma accountAssets_without_accId_isZero : 
+  fixes accId  
+  assumes "\<And> tok val. ((accId, tok), val) \<notin> set accs"  
+  shows "accountAssets accId accs = 0"   
 proof -
-  note assms
-  moreover obtain entry AccountWOEntry where  
-    "entry = (accId, a)"
-    "AccountWOEntry = Map.graph (m (accId := None))" 
+  have "filter (entryInAccount accId) accs = []"
+    by (metis (full_types) AssetsPreservation.entryInAccount.simps Product_Type.prod.exhaust_sel assms empty_filter_conv)
+  
+  then show ?thesis 
     by simp
-
-  moreover have "finite AccountWOEntry" 
-    using calculation by simp
-
-  moreover have "entry \<notin> AccountWOEntry" 
-    using in_graphD calculation by force
-
-  moreover have "Finite_Set.fold sum_accs_graph 0 (Set.insert entry AccountWOEntry) = sum_accs_graph entry (Finite_Set.fold sum_accs_graph 0 AccountWOEntry)"
-    using calculation by simp
-
-  ultimately show ?thesis     
-    by (simp add: Groups.ab_semigroup_add_class.add.commute sum_accs_graph_def)
 qed
-
-
-corollary assetsInAccountsOfNotMember: 
-  assumes "finite (dom m)" and "m accId = None" 
-  shows  "assetsInAccounts (m (accId \<mapsto> a)) = assetsInAccounts m + a"
-  using assms by (metis assetsInAccounts_distrib fun_upd_triv)
-
-lemma assetsInAccountWithoutAccId : 
-"finite (dom m) 
- \<Longrightarrow>
-  assetsInAccounts (m (accId := None)) = assetsInAccounts m - accountAssets accId m
-" 
-  by (smt (verit, best) AssetsPreservation.accountAssets.elims Groups.comm_monoid_add_class.add.comm_neutral Option.option.case_eq_if Option.option.sel add_diff_cancel_right' assetsInAccounts_distrib domD domIff fun_upd_triv)
-
 
 lemma accountAssets_leq_assetsInAccount:
-  assumes "finite (dom accs)"
-  shows "accountAssets accId accs \<le> assetsInAccounts accs" 
-proof (cases "accs accId")
-  case None
-  then show ?thesis 
-    by (simp add: domIff)
-next
-  case (Some accIdAsset)
-
-  then obtain restAccount where "accs = restAccount (accId \<mapsto> accIdAsset) \<and> accId \<notin> (dom restAccount)" 
-    by (metis Some domIff fun_upd_same fun_upd_triv fun_upd_upd)
-
-  then have "assetsInAccounts accs = assetsInAccounts restAccount + accIdAsset"
-    by (metis assetsInAccounts_distrib assms dom_fun_upd finite_insert fun_upd_None_if_notin_dom)
-  
-  then show ?thesis     
-    using Some Groups.ab_semigroup_add_class.add.commute le_iff_add by fastforce
-qed
-
-
-subsection "Merge accounts"
-
-fun mergeAccounts :: "Accounts \<Rightarrow> Accounts \<Rightarrow> Accounts" where 
-"mergeAccounts acc1 acc2 = (\<lambda>accId. combine_options (+) (acc1 accId) (acc2 accId))"
-
-lemma mergeAccountsDom: "dom (mergeAccounts acc1 acc2) = dom (acc1) \<union> dom (acc2)" (is "?domM = _")
-proof - 
-  have belongsAcc1: "\<And>x. x \<in> dom acc1 \<Longrightarrow> x \<in> ?domM" 
-    by (smt (verit, del_insts) AssetsPreservation.mergeAccounts.elims combine_options_simps(2) combine_options_simps(3) domD domI domIff)
-  have belongsAcc2: "\<And>x. x \<in> dom acc2 \<Longrightarrow> x \<in> ?domM" 
-    by (metis AssetsPreservation.mergeAccounts.simps belongsAcc1 combine_options_simps(1) domIff)
-  have "\<And>x. x \<notin> dom acc1 \<and> x \<notin> dom acc2 \<Longrightarrow> x \<notin> ?domM" 
-    by auto
-  then show ?thesis
-    by (meson Un_iff belongsAcc1 belongsAcc2 subsetI subset_antisym)
-qed
-
-lemma mergeWithEmptyL : "mergeAccounts Map.empty a = a" 
-  by auto
-
-lemma mergeWithEmptyR : "mergeAccounts a Map.empty = a" 
-  by auto
-
-lemma mergeSingletonWithoutKey : "k \<notin> dom a \<Longrightarrow> mergeAccounts a [k \<mapsto> v] = a (k \<mapsto> v)" 
-  by auto 
-
-lemma mergeSingletonWithKey : "a k = Some va \<Longrightarrow> mergeAccounts a [k \<mapsto> v] = a (k \<mapsto> v + va)"
-  using Groups.ab_semigroup_add_class.add.commute by fastforce
-
-lemma mergeAccountsAssoc : "mergeAccounts (mergeAccounts a b) c = mergeAccounts a (mergeAccounts b c)" 
-  by (simp add: Groups.semigroup_add_class.add.assoc combine_options_assoc)
-
-lemma mergeAccountsComm : "mergeAccounts a b = mergeAccounts b a" 
-  by (simp add: Groups.ab_semigroup_add_class.add.commute combine_options_commute)
-
-lemma singleMapFinite : "finite (dom ([k \<mapsto> v]))" 
-  by (simp)
-
-lemma assetsInAccounts_distrib_single_asset_merge: 
-" finite (dom a1)
-  \<Longrightarrow> 
-  assetsInAccounts (mergeAccounts a1 [k \<mapsto> v]) = assetsInAccounts a1 + v 
-" 
-proof (cases "k \<in> dom a1")
-  case True
-  then obtain va1 where va1: "a1 k = Some va1" 
-    by blast
-  assume assm1: "finite (dom a1)"
-  then show ?thesis 
-    by (smt (verit, ccfv_threshold) Groups.ab_semigroup_add_class.add.commute Groups.ab_semigroup_add_class.add.left_commute assetsInAccounts_distrib fun_upd_triv mergeSingletonWithKey va1)
-  
-next
-  case False
-  assume assm1: "finite (dom a1)"
-  then have "a1(k := None) = a1" 
-    by (simp add: False)
-  with assm1 False show ?thesis 
-    by (metis Groups.ab_semigroup_add_class.add.commute assetsInAccounts_distrib mergeSingletonWithoutKey)
-qed
-
-lemma assetsInAccount_distrib_merge :
-"\<lbrakk> finite (dom a1)
- ; finite (dom a2) 
- \<rbrakk> \<Longrightarrow>
-  assetsInAccounts (mergeAccounts a1 a2) = assetsInAccounts a1 + assetsInAccounts a2"
-proof (induction "a1" arbitrary: a2 rule: finite_Map_induct )
-  case empty
-  then show ?case 
-    by simp
-next
-  case (update a1Id a1Asset a1Rest)
-  then show ?case
-    by (smt (verit) Groups.ab_semigroup_add_class.add.commute Groups.semigroup_add_class.add.assoc assetsInAccounts_distrib_single_asset_merge finite_Un mergeAccountsAssoc mergeAccountsComm mergeAccountsDom mergeSingletonWithoutKey)      
-qed
-
-
-lemma accountAssets_distrib_merge : "
-  \<lbrakk> finite (dom a)
-  ; finite (dom b) 
-  \<rbrakk> \<Longrightarrow> 
-  accountAssets accId (mergeAccounts a b) = accountAssets accId a + accountAssets accId b" 
-proof (induction a rule: finite_Map_induct)
-  case empty
-  then show ?case by simp
-next
-  case (update k v m)
-  then show ?case 
-    by (simp add: Option.option.case_eq_if combine_options_def) 
-qed
-
-
-
-subsection "From Semantic Accounts"
-
-text \<open>The following function converts the list representation of Accounts to the Map representation\<close>
-
-fun fromSemanticAccounts  :: "SemanticsTypes.Accounts \<Rightarrow> Accounts" where 
-"fromSemanticAccounts Nil = Map.empty " |
-"fromSemanticAccounts (((accId, tok), val) # rest) =
-   mergeAccounts 
-    [accId \<mapsto> asset tok (nat val)]
-    (fromSemanticAccounts rest)
-"
-
-text \<open>Maps could theoretically be infinite, but if we create an Accounts using fromSemanticAccounts, then we know
-it is finite (which is a handy property for other proofs)\<close>
-lemma fromSemanticAccountsIsFinite : "finite (dom (fromSemanticAccounts accs))"
-proof (induction accs)
-  case Nil
-  then show ?case 
-    by simp
-next
-  case (Cons head rest)
-  also obtain hAccId hTok hVal where "head = ((hAccId, hTok), hVal)" 
-    by (metis surj_pair)
-  then show ?case    
-    by (metis AssetsPreservation.fromSemanticAccounts.simps(2) calculation finite_Un mergeAccountsDom singleMapFinite)
-qed
-
-
-lemma fromSemanticAccountsOfNotMemberInsert: 
-"
-\<lbrakk> valid_map accs
-; \<not> MList.member (accId, tok) accs 
-\<rbrakk> \<Longrightarrow> 
-    fromSemanticAccounts (MList.insert (accId, tok) val accs) 
-  = mergeAccounts 
-      [accId \<mapsto> (asset tok (nat val))] 
-      (fromSemanticAccounts accs)"
-proof (induction accs)
-  case Nil
-  then show ?case 
-    by simp
-next
-  case (Cons head rest)
-
-  then have "valid_map rest"
-    by simp
-
-  moreover obtain hAccId hTok hVal where pHead: "head = ((hAccId, hTok), hVal)"
-    by (metis Product_Type.prod.exhaust_sel)
-
-  ultimately show ?case using Cons  
-    by (smt (verit) AssetsPreservation.fromSemanticAccounts.simps(2) MList.insert.simps(2) MList.lookup.simps(2) MList.member.simps mergeAccountsAssoc mergeAccountsComm not_None_eq not_less_iff_gr_or_eq pHead)
-
-qed
-
-fun assetsInSemanticAccounts :: "SemanticsTypes.Accounts \<Rightarrow> Assets" where
-"assetsInSemanticAccounts Nil = 0" |
-"assetsInSemanticAccounts (Cons ((_, tok), val) rest)  = asset tok (nat val) + assetsInSemanticAccounts rest"
-
-fun assetsInAccounts' :: "SemanticsTypes.Accounts \<Rightarrow> Assets" where 
-"assetsInAccounts' accs = assetsInAccounts (fromSemanticAccounts accs)"
-
-lemma assetsInAccount_eq_assetsInSemantic:
- "assetsInAccounts' accs = assetsInSemanticAccounts accs"
-proof (induction accs)
-  case Nil
-  then show ?case using zero_Assets_inst.zero_Assets
-    by auto
-next
-  case (Cons head rest )
-  obtain hAccId hTok hVal where hPattern: "head = ((hAccId, hTok), hVal)"
-    by (metis eq_fst_iff)
-  then show ?case
-    using Cons assetsInAccounts_distrib_single_asset_merge fromSemanticAccountsIsFinite mergeAccountsComm Groups.ab_semigroup_add_class.add.commute
-    by simp
-qed
-
-
-lemma assetsInAccountCons : 
-  "assetsInAccounts' (((accId, tok), val) # rest) =  assetsInAccounts' rest + asset tok (nat val)"
-  by (metis assetsInSemanticAccounts.simps(2) ab_semigroup_add_class.add.commute assetsInAccount_eq_assetsInSemantic)
-  
+  assumes "valid_map accs"
+  shows "accountAssets accId accs \<le> assetsInAccounts accs"   
+  using filtered_as_leq_as by auto 
+ 
 
 subsection "Money in account" 
-(* TODO: Haven't proved this yet, but I think it could be useful to start thinking the rest of the code in terms
-of Map accounts instead of List accounts *)
-lemma moneyInAccountFromSemantic :
-"\<lbrakk> valid_map accs
- ; accs' = fromSemanticAccounts accs
- \<rbrakk> \<Longrightarrow>
-   moneyInAccount accId tok accs = int (assetValue tok (accountAssets accId accs'))"
-proof (induction accs arbitrary: accs')
-  case Nil
-  
-  then have "accountAssets accId accs' = 0"   
-     by (simp add: accountAssetsOfEmpty)
-  moreover have "moneyInAccount accId tok [] = 0" 
-     by simp
- 
-  ultimately show ?case
-    using assetValueOfZero by presburger
-  
-next
-  case (Cons head rest)
-  then obtain hAccId hTok hVal where pHead: "head = ((hAccId, hTok), hVal)"
-    by (metis Product_Type.prod.exhaust_sel)
-  then obtain rest' where pRest: "fromSemanticAccounts rest = rest'"
-    by force
-  then have 0:"accs' = mergeAccounts [hAccId \<mapsto> asset hTok (nat hVal)] rest'"
-    using AssetsPreservation.fromSemanticAccounts.simps(2) local.Cons.prems(2) pHead by presburger
-  then show ?case
-    apply (subst 0)
-    oops
-
-lemma moneyInAccount_leq_accountAssets:
- "
- valid_map accs
-   \<Longrightarrow> asset token (nat (moneyInAccount accId token accs))
-     \<le> accountAssets accId (fromSemanticAccounts accs)
-"
-proof (induction accs)
-  case Nil
-  then show ?case
-    by (simp add: assetZero)
-next
-  case (Cons head rest)
-  then obtain hAccId hTok hVal where pHead: "head = ((hAccId, hTok), hVal)" 
-    by (metis surj_pair)
-  show ?case
-  proof (cases "(hAccId, hTok) = (accId, token)")
-    case True
-    with pHead Cons fromSemanticAccountsIsFinite  show ?thesis      
-      apply (subst (2) pHead)
-      apply (subst fromSemanticAccounts.simps)
-      apply (subst accountAssets_distrib_merge)
-        apply auto[2]
-      apply simp
-      using le_iff_add by blast
-  next
-    case False
-    with pHead Cons fromSemanticAccountsIsFinite show ?thesis    
-      by (smt (verit, ccfv_threshold) AssetsPreservation.fromSemanticAccounts.simps(2) Groups.ab_semigroup_add_class.add.commute Groups.ab_semigroup_add_class.add_ac(1) Semantics.moneyInAccount.simps accountAssets_distrib_merge findWithDefault_step le_iff_add singleMapFinite sublist_valid)  
-  qed
-qed
-
-subsection "Update money in account"
-
-
-lemma assetsInAccounts_distrib_insert_not_member: "
-\<lbrakk> valid_map accs 
-; \<not> MList.member (accId, tok) accs 
-\<rbrakk> \<Longrightarrow>
-  assetsInAccounts' (MList.insert (accId, tok) val accs)
-  = assetsInAccounts' accs + asset tok (nat val)
-"
-  by (metis AssetsPreservation.assetsInAccounts'.simps AssetsPreservation.assetsInSemanticAccounts.simps(2) AssetsPreservation.fromSemanticAccounts.simps(2) Groups.ab_semigroup_add_class.add.commute fromSemanticAccountsOfNotMemberInsert assetsInAccount_eq_assetsInSemantic)
-
-lemma assetsInAccounts_distrib_insert :
- "valid_map accs
- \<Longrightarrow> 
-  assetsInAccounts' (MList.insert (accId, tok) val accs)
-  = assetsInAccounts' accs - asset tok (nat (moneyInAccount accId tok accs)) + asset tok (nat val)"
-(* TODO: simplify proof *)
-proof (induction accs rule: MList_induct)
-  case empty
-  moreover have "MList.insert (accId, tok) val [] = [((accId, tok), val)]" (is "_ = ?m")
-    by simp
-  moreover have "assetsInAccounts' ?m = asset tok (nat val)" 
-    by (metis AssetsPreservation.assetsInAccounts'.elims AssetsPreservation.assetsInSemanticAccounts.simps(1) AssetsPreservation.assetsInSemanticAccounts.simps(2) add_cancel_left_right assetsInAccount_eq_assetsInSemantic)
-  ultimately show ?case 
-    by (simp add: assetZero)
-next
-  case (update uKey uVal rest)
-
-  then obtain uAccId uTok where pUpdate: "uKey = (uAccId, uTok)" 
-    using Product_Type.old.prod.exhaust by blast
-  then have lookupUKeyNone: "lookup (uAccId, uTok) rest = None"
-    using local.update.hyps(2) by force
-  then show ?case
-  proof (cases "(accId, tok) = (uAccId, uTok)")
-    case True
-    then have 0: "insert (accId, tok) val (insert uKey uVal rest) = insert (accId, tok) val rest"
-      using pUpdate insert_replaces_value local.update.hyps(1) by fastforce
-    then have 1: "uTok = tok \<and> uAccId = accId" 
-      using True by force
-    then have 2: "lookup (accId, tok) (insert (uAccId, uTok) uVal rest) = Some uVal"
-      by (simp add: insert_lookup_Some)
-    then have 3: "moneyInAccount accId tok (insert (uAccId, uTok) uVal rest) = uVal"      
-      using 1 2 by simp
-    then have 5: "moneyInAccount accId tok rest = 0"
-      using 1 lookupUKeyNone 
-      by force
-    then have 6: "assetsInAccounts' (insert (uAccId, uTok) uVal rest) = assetsInAccounts' rest + asset uTok (nat uVal)"
-      using assetsInAccounts_distrib_insert_not_member local.update.hyps(1) local.update.hyps(2) pUpdate by blast
-    
-    then show ?thesis
-      using "0" "1" "3" "5" assetZero local.update.IH pUpdate by fastforce
-    
-  next
-    case False
-    then have 0: "lookup (accId, tok) (insert uKey uVal rest) = lookup (accId, tok) rest"
-      by (simp add: insert_lookup_different pUpdate)
-    then have 1: "moneyInAccount accId tok (insert uKey uVal rest) = moneyInAccount accId tok rest" 
-      by simp
-    then have 2: "insert (accId, tok) val (insert uKey uVal rest) = insert uKey uVal (insert (accId, tok) val rest)"      
-      by (metis False local.update.hyps(1) pUpdate insert_swap)      
-    then have 3: "assetsInAccounts' (insert uKey uVal (insert (accId, tok) val rest)) =  assetsInAccounts' (insert (accId, tok) val rest) +  asset uTok (nat uVal) "
-      by (metis False MList.member.elims(2) assetsInAccounts_distrib_insert_not_member insert_lookup_different insert_valid local.update.hyps(1) lookupUKeyNone pUpdate)
-    then have 4: "assetsInAccounts' (insert uKey uVal rest) =  asset uTok (nat uVal) +  assetsInAccounts' rest  "
-      using Groups.ab_semigroup_add_class.add.commute assetsInAccounts_distrib_insert_not_member local.update.hyps(1) local.update.hyps(2) pUpdate by auto
-    then have 5: "asset tok (nat (moneyInAccount accId tok rest)) \<le> assetsInAccounts' rest"    
-      by (metis AssetsPreservation.assetsInAccounts'.simps Orderings.preorder_class.order.trans accountAssets_leq_assetsInAccount fromSemanticAccountsIsFinite local.update.hyps(1) moneyInAccount_leq_accountAssets)    
-    then show ?thesis      
-      by (metis "1" "2" "3" "4" Groups.ab_semigroup_add_class.add.commute Groups.ab_semigroup_add_class.add_ac(1) Groups.ordered_cancel_comm_monoid_diff_class.diff_add_assoc local.update.IH)
-  qed
-qed
-
-
-lemma assetsInAccounts_distrib_on_update: "
- valid_map accs
- \<Longrightarrow>  assetsInAccounts'(updateMoneyInAccount accId tok val accs)
-  =   assetsInAccounts' accs - asset tok (nat (moneyInAccount accId tok accs)) + asset tok (nat val)"
-proof (cases "val \<le> 0")
-  assume accIsValid: "valid_map accs"
-  case True
-
-  then show ?thesis 
-  proof (cases "MList.lookup (accId, tok) accs")
-    case None   
-    with accIsValid have deleteSimp: "delete (accId, tok) accs = accs" 
-      by (simp add: None deleteNotMember)
-    from None have "moneyInAccount accId tok accs = 0"
-      by simp  
-    with deleteSimp  show ?thesis using True
-      by (simp add: assetZero)
-  next
-    case (Some existingVal)
-    with Some have existingMoneyInAcc: "moneyInAccount accId tok accs = existingVal"
-      by simp    
-
-    obtain accsWOKey where accsWOKey: "accsWOKey = MList.delete (accId, tok) accs"
-      by blast
-
-    with accIsValid delete_lookup_None 
-      have accsWOKey_notMember: "\<not> MList.member (accId, tok) accsWOKey"
-      by auto
-
-    from Some accsWOKey have "accs = MList.insert  (accId, tok) existingVal accsWOKey"
-      by (metis accIsValid insertDeleted)
-
-    with existingMoneyInAcc accsWOKey_notMember True show ?thesis 
-      by (metis Semantics.updateMoneyInAccount.elims accIsValid accsWOKey add_cancel_right_right add_implies_diff assetOfNegInt assetsInAccounts_distrib_insert_not_member delete_valid)
-  qed
-     
-next
-  assume accIsValid: "valid_map accs"
-  case False
-  with accIsValid show ?thesis 
-  proof (cases "MList.lookup (accId, tok) accs")
-    case None
-
-    hence "moneyInAccount accId tok accs = 0"
-      by auto
-
-    with False accIsValid None show ?thesis   
-      using assetsInAccounts_distrib_insert by force
-
-  next
-    case (Some existingVal)
-    
-    hence "moneyInAccount accId tok accs = existingVal"
-      by auto
-
-    with False accIsValid Some  show ?thesis    
-  
-    using assetsInAccounts_distrib_insert 
-      by simp
-
-  qed
-qed
-
-
-subsection "Add money to account" 
-
 
 lemma positiveAccounts_implies_positiveMoneyInAccount :
-"
-\<lbrakk> valid_map accs
-; allAccountsPositive accs 
-\<rbrakk> \<Longrightarrow>
-  moneyInAccount accId tok accs \<ge> 0" 
+  assumes "valid_map accs" 
+      and "allAccountsPositive accs"
+    shows "moneyInAccount accId tok accs \<ge> 0" 
 proof (cases "lookup (accId, tok) accs")
   case None
   then show ?thesis 
     by simp
 next
-  assume assm: "allAccountsPositive accs" "valid_map accs"
   case (Some val)
-  then have "moneyInAccount accId tok accs = val" 
-    by force
-  with assm Some show ?thesis 
+  moreover note assms
+
+  moreover have "moneyInAccount accId tok accs = val" 
+    using calculation by force
+
+  ultimately show ?thesis
     using allAccountsPositive_implies_lookup_is_positive by fastforce
 qed
 
-lemma addMoneyToAccount_distrib:
-  assumes "allAccountsPositive accs" and "valid_map accs" 
-  shows "assetsInAccounts' (addMoneyToAccount accId tok val accs) = assetsInAccounts' accs + asset tok (nat val)"
+text "In order to do assets arithmetic and be able to cancel substractions
+we need to know that the assets obtained from \<^term>\<open>moneyInAccount\<close> are always
+lower or equal to the total assets. We prove that by expressing the assets
+from \<^term>\<open>moneyInAccount\<close> as a filter."
+lemma assetsOfMoneyInAccountAsFilter : 
+  assumes "valid_map accs"
+  shows 
+    "asset token (nat (moneyInAccount accId token accs))
+     = assetsInAccounts (filter (\<lambda>e. fst e = (accId, token)) accs)"
+    (is "_ = assetsInAccounts ?filtered")
+proof (cases "(accId, token) \<in> keys accs")
+  assume "(accId, token) \<in> keys accs"
+  moreover obtain v1 where "lookup (accId, token) accs = Some v1"     
+    by (meson MList.member.elims(1) calculation assms keys_member_r not_None_eq)
+  moreover have "?filtered =  [((accId, token), v1)]"     
+    by (metis calculation(2) assms lookupAsFilter)
+  ultimately show ?thesis 
+    by auto
+next
+  assume "(accId, token) \<notin> keys accs"
+  moreover have "?filtered = []"     
+    using calculation
+    by auto (metis (mono_tags, lifting) filter_False imageI)
+  ultimately show ?thesis 
+    using assetOfNegInt assms keys_member_r by fastforce
+qed
 
+lemma moneyInAccount_leq_assetsInAccount :
+   "valid_map accs
+   \<Longrightarrow> asset token (nat (moneyInAccount accId token accs))
+     \<le> assetsInAccounts accs
+    "
+  using assetsOfMoneyInAccountAsFilter filtered_as_leq_as by presburger
+
+subsection "Update money in account"
+
+lemma assetsInAccounts_distrib_on_update: 
+  assumes "valid_map accs"
+  shows "assetsInAccounts (updateMoneyInAccount accId tok val accs)
+       = assetsInAccounts accs - asset tok (nat (moneyInAccount accId tok accs)) + asset tok (nat val)"
+proof (cases "val \<le> 0")
+  case True
+  then show ?thesis 
+    using assms assetZero assetsInAccounts_of_deleted by force     
+next
+  case False
+  then show ?thesis 
+    using assms assetsInAccounts_distrib_insert by force
+qed
+
+
+subsection "Add money to account" 
+
+lemma addMoneyToAccount_distrib:
+  assumes "allAccountsPositive accs" 
+      and "valid_map accs" 
+    shows "assetsInAccounts (addMoneyToAccount accId tok val accs) 
+         = assetsInAccounts accs + asset tok (nat val)"
 proof (cases "val \<le> 0")
   assume "val \<le> 0"
   with assetOfNegInt show ?thesis
@@ -762,23 +496,21 @@ next
   note assms
   moreover assume "\<not> val \<le> 0"
 
-  moreover have "moneyInAccount accId tok accs \<ge> 0" 
+  moreover have "moneyInAccount accId tok accs \<ge> 0"
     using assms positiveAccounts_implies_positiveMoneyInAccount by blast
 
   moreover have "nat (moneyInAccount accId tok accs + val) = nat (moneyInAccount accId tok accs) + nat val"
     by (meson calculation nat_add_distrib nle_le)
 
   ultimately show ?thesis
-    by (smt (verit, ccfv_SIG) AssetsPreservation.assetsInAccounts'.elims Groups.group_cancel.add1 Groups.ordered_cancel_comm_monoid_diff_class.le_imp_diff_is_add Orderings.preorder_class.order.trans Semantics.addMoneyToAccount.simps accountAssets_leq_assetsInAccount assetsDistributesPlus assetsInAccounts_distrib_on_update fromSemanticAccountsIsFinite moneyInAccount_leq_accountAssets)
+    by (smt (verit, best) Groups.group_cancel.add1 Orderings.preorder_class.dual_order.trans Semantics.addMoneyToAccount.simps moneyInAccount_leq_assetsInAccount assetsDistributesPlus assetsInAccounts_distrib_on_update diff_add )
 qed
   
 
-
 section "Assets in state"
 
-
 fun assetsInState :: "State \<Rightarrow> Assets" where
-"assetsInState state = assetsInAccounts' (accounts state)"
+"assetsInState state = assetsInAccounts (accounts state)"
 
 
 lemma state_account_red : "accounts (state\<lparr> accounts := a\<rparr>) = a"
@@ -809,17 +541,18 @@ subsection "Refund one"
 text "In order to prove that refundOne preserves assets we first show that for a valid account, the
 only way to have 0 assets is to have an empty account."
 
-lemma assetsInAccountIsZero_iff_AccsIsNil: "(assetsInAccounts' accs = 0 \<and> allAccountsPositive accs) \<longleftrightarrow> (accs = Nil) "
+lemma assetsInAccountIsZero_iff_AccsIsNil :
+  "(assetsInAccounts accs = 0 \<and> allAccountsPositive accs) \<longleftrightarrow> (accs = Nil)"
 proof - 
   have "accs = Nil \<Longrightarrow> allAccountsPositive accs"
     by simp
 
-  moreover have "accs = Nil \<Longrightarrow> assetsInAccounts' accs = 0" 
+  moreover have "accs = Nil \<Longrightarrow> assetsInAccounts accs = 0" 
     by simp
 
-  moreover have "assetsInAccounts' accs = 0 \<and> allAccountsPositive accs \<Longrightarrow> accs = Nil"
+  moreover have "assetsInAccounts accs = 0 \<and> allAccountsPositive accs \<Longrightarrow> accs = Nil"
     proof (rule ccontr)
-      assume "assetsInAccounts' accs = 0 \<and> allAccountsPositive accs" 
+      assume "assetsInAccounts accs = 0 \<and> allAccountsPositive accs" 
 
       moreover assume "\<not> accs = Nil"
     
@@ -829,8 +562,8 @@ proof -
       moreover have "hVal > 0" 
         using calculation allAccountsPositiveMeansFirstIsPositive by blast
 
-      moreover have "assetsInAccounts' accs = assetsInAccounts' rest + asset hTok (nat hVal)"     
-        using assetsInAccountCons calculation by presburger
+      moreover have "assetsInAccounts accs = assetsInAccounts rest + asset hTok (nat hVal)"    
+        using AssetsInAccount_distrib_on_cons calculation by auto
 
       ultimately show False
         by (metis assetValueOfSingleAsset assetValueOfZero linorder_not_le nat_0_iff zero_eq_add_iff_both_eq_0)
@@ -843,9 +576,9 @@ qed
 theorem refundOnePreservesAssets : 
   assumes "allAccountsPositive accs"
   shows "
-    assetsInAccounts' accs = (
+    assetsInAccounts accs = (
       case (refundOne accs) of
-        Some ((accId, tok, val), rest) \<Rightarrow> assetsInAccounts' rest + asset tok (nat val)
+        Some ((accId, tok, val), rest) \<Rightarrow> assetsInAccounts rest + asset tok (nat val)
       | None \<Rightarrow> 0
     )
   "
@@ -864,9 +597,11 @@ next
   moreover obtain accId tok val rest where "refund = ((accId, tok, val), rest)" 
     by (metis surj_pair)
 
-  ultimately show ?thesis 
-    by (smt (verit, ccfv_threshold) option.discI option.simps(5) refundOne.elims allAccountsPositiveMeansFirstIsPositive assetsInAccountCons assms case_prod_conv)
+  moreover have "accs = ((accId, tok), val) # rest"
+    by (smt (verit, ccfv_threshold) Option.option.inject Option.option.simps(3) Pair_inject Semantics.refundOne.elims allAccountsPositiveMeansFirstIsPositive assms calculation(1) calculation(2))
 
+  ultimately show ?thesis
+    by auto
 qed
 
 
@@ -876,9 +611,9 @@ subsection "Reduce contract step"
 TODO: simplify and move to accounts positive *)
 lemma updateMoneyIsPositive :
   assumes "allAccountsPositive accs" 
-    and "valid_map accs" 
-    and "val \<ge> 0"
-  shows "allAccountsPositive (updateMoneyInAccount accId token val accs)"
+      and "valid_map accs" 
+      and "val \<ge> 0"
+    shows "allAccountsPositive (updateMoneyInAccount accId token val accs)"
 proof (cases "val = 0")
   note assms
   moreover assume "val = 0"
@@ -904,12 +639,12 @@ qed
 
 lemma transferBetweenAccountsPreservesMoney : 
   assumes "balance = moneyInAccount payFrom token accs"
-    and "paidMoney \<ge> 0"
-    and "paidMoney \<le> balance" 
-    and "valid_map accs" 
-    and "allAccountsPositive accs"
-  shows "assetsInAccounts' accs 
-         = assetsInAccounts'
+      and "paidMoney \<ge> 0"
+      and "paidMoney \<le> balance" 
+      and "valid_map accs" 
+      and "allAccountsPositive accs"
+    shows "assetsInAccounts accs 
+         = assetsInAccounts
             (addMoneyToAccount payTo token paidMoney
               (updateMoneyInAccount payFrom token (balance - paidMoney) accs
               )
@@ -922,9 +657,8 @@ proof -
   moreover have "nat balance - nat paidMoney + nat paidMoney = nat balance"
     using assms by force
 
-  moreover have "asset token (nat balance) \<le> assetsInAccounts' accs"   
-    using calculation assms 
-    by (metis assetsInAccounts'.simps accountAssets_leq_assetsInAccount fromSemanticAccountsIsFinite moneyInAccount_leq_accountAssets order_trans)
+  moreover have "asset token (nat balance) \<le> assetsInAccounts accs"   
+    using moneyInAccount_leq_assetsInAccount assms by presburger
 
   moreover have "allAccountsPositive (updateMoneyInAccount payFrom token (balance - paidMoney) accs)"
     using assms
@@ -1047,7 +781,7 @@ next
       case (Account payToInternal)
       moreover have "assetsInReduceEffect effect = 0" 
         by (simp add: calculation  reducedEffect)
-      moreover have "assetsInState newState = assetsInAccounts' ( addMoneyToAccount payToInternal payTok paidMoney accsWOFrom)"
+      moreover have "assetsInState newState = assetsInAccounts ( addMoneyToAccount payToInternal payTok paidMoney accsWOFrom)"
         by (metis letBindings(5) reducedState  Account AssetsPreservation.assetsInState.simps Product_Type.prod.inject Semantics.giveMoney.elims SemanticsTypes.Payee.simps(5) state_account_red)
       ultimately show ?thesis       
         by (smt (verit, best) AssetsPreservation.assetsInState.elims PositiveAccounts.allAccountsPositiveState.elims(2) PositiveAccounts.validAndPositive_state.simps add_cancel_right_left assms(1) balanceNatSplit diff_le_self letBindings(1) letBindings(3) letBindings(4) nat_le_eq_zle paidMoney_leq_balance positiveAccounts_implies_positiveMoneyInAccount transferBetweenAccountsPreservesMoney validAccountMap)      
@@ -1059,10 +793,10 @@ next
         using AssetsPreservation.assetsInPayment.simps(1) AssetsPreservation.assetsInReduceEffect.simps(1) calculation reducedEffect by presburger
       moreover have  "finalAccs = accsWOFrom"
         using letBindings calculation by simp
-      moreover have "assetsInState newState = assetsInAccounts' accsWOFrom"        
+      moreover have "assetsInState newState = assetsInAccounts accsWOFrom"        
         by (metis state_account_red reducedState  AssetsPreservation.assetsInState.simps calculation(3))    
       ultimately show ?thesis 
-        by (smt (verit, best) AssetsPreservation.assetsInAccounts'.elims AssetsPreservation.assetsInState.elims Groups.ab_semigroup_add_class.add.commute Groups.ab_semigroup_add_class.add.left_commute Groups.ordered_cancel_comm_monoid_diff_class.add_diff_inverse accountAssets_leq_assetsInAccount assetsDistributesPlus assetsInAccounts_distrib_on_update balanceNatSplit fromSemanticAccountsIsFinite letBindings(1) letBindings(3) letBindings(4) moneyInAccount_leq_accountAssets nat_mono order_trans paidMoney_leq_balance validAccountMap)
+        by simp (smt (verit, best) AssetsPreservation.assetsInAccounts.simps Groups.ab_semigroup_add_class.add.commute Groups.semigroup_add_class.add.assoc assetsDistributesPlus assetsInAccounts_distrib_on_update balanceNatSplit diff_add diff_is_0_eq eq_nat_nat_iff letBindings(1) letBindings(3) letBindings(4) moneyInAccount_leq_assetsInAccount nat_le_linear nat_zero_as_int paidMoney_leq_balance validAccountMap)
     qed
     
   qed
@@ -1122,7 +856,6 @@ next
 qed
   
 
-
 section "DELETE"
 
 
@@ -1152,9 +885,9 @@ definition "acc2 = Role (BS ''b'')"
 
 definition "sAccounts1 = [((acc1, t1), 2)]"
 
-definition "assets1 = assetsInAccounts (fromSemanticAccounts sAccounts1)"
+definition "assets1 = assetsInAccounts sAccounts1"
 
-(*value "assetValue t1 assets1"*)
+value "assetValue t1 assets1"
 
 
 (*

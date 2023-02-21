@@ -36,10 +36,10 @@ are in the Assets
 lift_definition assetValue :: "Token \<Rightarrow> Assets \<Rightarrow> nat" is 
   "\<lambda>t a. a t" .
 
-lemma assetValueOfSingleAsset : "assetValue tok (asset tok b) = b"
+lemma assetValueOfSingleAsset [simp] : "assetValue tok (asset tok b) = b"
   by transfer simp
 
-lemma assetValueOfDifferentToken : "tok1 \<noteq> tok2 \<Longrightarrow> assetValue tok1 (asset tok2 b) = 0"
+lemma assetValueOfDifferentToken [simp] : "tok1 \<noteq> tok2 \<Longrightarrow> assetValue tok1 (asset tok2 b) = 0"
   by transfer simp
 
 lemma assetsEqByValue: "a = b \<longleftrightarrow> (\<forall> tok. assetValue tok a = assetValue tok b)"
@@ -112,16 +112,16 @@ instance ..
 end
 
 text "Creating a single asset with 0 tokens is the same as creating the zero_Assets"
-lemma assetZero : "asset tok 0 = 0"
+lemma assetZero [simp] : "asset tok 0 = 0"
   by transfer auto
 
 
 text "If we try to create a single asset from a negative integer is also the same as creating the zero_Assets"
-corollary assetOfNegInt : "(i :: int) \<le> 0 \<Longrightarrow> asset t (nat i) = 0 "
-  by (simp add: assetZero)
+corollary assetOfNegInt [simp] : "(i :: int) \<le> 0 \<Longrightarrow> asset t (nat i) = 0 "
+  by simp
 
 text "Trying to count the amount of tokens of the zero_Assets is 0"
-lemma assetValueOfZero : "assetValue t 0 = 0"
+lemma assetValueOfZero [simp] : "assetValue t 0 = 0"
   by transfer simp
 
 
@@ -358,7 +358,7 @@ next
   then have "moneyInAccount accId tok accs = 0"     
     by auto (metis False MList.member.elims(3) Option.option.simps(4) assms keys_member_r)
   then show ?thesis
-    by auto (metis False assetZero assms deleteNotMember diff_zero keys_member_r)
+    by auto (metis False assms deleteNotMember keys_member_r)
 qed
 
 text "And finally the general case"
@@ -454,7 +454,7 @@ next
     using calculation
     by auto (metis (mono_tags, lifting) filter_False imageI)
   ultimately show ?thesis 
-    using assetOfNegInt assms keys_member_r by fastforce
+    using assms keys_member_r by fastforce
 qed
 
 lemma moneyInAccount_leq_assetsInAccount :
@@ -473,7 +473,7 @@ lemma assetsInAccounts_distrib_on_update:
 proof (cases "val \<le> 0")
   case True
   then show ?thesis 
-    using assms assetZero assetsInAccounts_of_deleted by force     
+    using assms assetsInAccounts_of_deleted by force     
 next
   case False
   then show ?thesis 
@@ -490,7 +490,7 @@ lemma addMoneyToAccount_distrib:
          = assetsInAccounts accs + asset tok (nat val)"
 proof (cases "val \<le> 0")
   assume "val \<le> 0"
-  with assetOfNegInt show ?thesis
+  then show ?thesis
     by auto    
 next 
   note assms
@@ -564,9 +564,9 @@ proof -
 
       moreover have "assetsInAccounts accs = assetsInAccounts rest + asset hTok (nat hVal)"    
         using AssetsInAccount_distrib_on_cons calculation by auto
-
+      
       ultimately show False
-        by (metis assetValueOfSingleAsset assetValueOfZero linorder_not_le nat_0_iff zero_eq_add_iff_both_eq_0)
+        by auto (metis assetValueOfSingleAsset assetValueOfZero linorder_not_le nat_0_iff)
     qed
 
   ultimately show ?thesis 

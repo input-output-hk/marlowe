@@ -1,6 +1,6 @@
 (*<*)
 theory Specification
-  imports Main CodeExports.CodeExports
+  imports Main CodeExports.CodeExports Core.BigStep Core.SmallStep
 
 begin
 (*>*)

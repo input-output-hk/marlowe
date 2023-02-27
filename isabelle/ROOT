@@ -21,6 +21,8 @@ session Core in "Core" = HOL +
     "HOL-Library"
     "Util"
   theories
+    BigStep
+    SmallStep
     CloseSafe
     AssetsPreservation
     PositiveAccounts
@@ -99,6 +101,8 @@ session Specification in "Doc/Specification" = HOL +
     "Core.Semantics"
     "Core.BlockchainTypes"
     "Core.OptBoundTimeInterval"
+    "Core.BigStep"
+    "Core.SmallStep"
     "CodeExports.CodeExports"
     "Util.ByteString"
     "Examples.Escrow"

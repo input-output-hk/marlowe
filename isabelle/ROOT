@@ -20,6 +20,8 @@ session Core in "Core" = HOL +
     "HOL-Library"
     "Util"
   theories
+    BigStep
+    SmallStep
     CloseSafe
     ListTools
     MoneyPreservation
@@ -98,6 +100,8 @@ session Specification in "Doc/Specification" = HOL +
     "Core.SemanticsTypes"
     "Core.BlockchainTypes"
     "Core.OptBoundTimeInterval"
+    "Core.BigStep"
+    "Core.SmallStep"
     "CodeExports.CodeExports"
     "Util.ByteString"
     "Examples.Swap"

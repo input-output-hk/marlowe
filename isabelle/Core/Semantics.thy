@@ -741,4 +741,51 @@ where
 "calculateNonAmbiguousInterval n t (Assert _ c) = calculateNonAmbiguousInterval n t c"
 
 
+
+section "Interpreter helpers" 
+(*TODO: these are placed here for rapid prototyping between the 
+        BigStep and small step semantics, once we figure how we 
+        want to represent the basic types these should be refactored
+        accordingly.
+*)
+
+subsection "Transaction"
+
+fun fixedTransaction :: "Transaction \<Rightarrow> State \<Rightarrow> bool" where 
+"fixedTransaction tx s = 
+  (let curMinTime = minTime s; 
+      (low, high) = interval tx 
+   in 
+     low \<le> high \<and> curMinTime \<le> high
+   )
+"
+
+lemma fixedTransaction_implies_IntervalTrimmed :
+  assumes "fixedTransaction tx s"
+  shows "\<exists> env newState. fixInterval (interval tx) s = IntervalTrimmed env newState" 
+proof -
+  note assms
+  moreover obtain low high where "interval tx = (low, high)" 
+    by fastforce
+
+  moreover obtain curMinTime where "minTime s = curMinTime" 
+    by simp
+
+  ultimately show ?thesis
+    by auto metis
+qed
+
+subsection "Accounts and payments"
+
+fun accountsAsPayment :: "((AccountId \<times> Token) \<times> int) \<Rightarrow> Payment" where
+  "accountsAsPayment ((accId, tok), val) = Payment accId (Party accId) tok val"
+
+fun accountsAsPayments :: "Accounts \<Rightarrow> Payment set" where
+ "accountsAsPayments accs = set (map accountsAsPayment accs)" 
+
+
+subsection "State"
+
+(*typedef ValidState = "{ st :: State. validAndPositive_state st }"*)
+
 end

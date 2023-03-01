@@ -1,6 +1,6 @@
 (*<*)
 theory Examples
-imports Examples.Swap
+imports Examples.Escrow Examples.Swap
 begin
 (*>*)
 

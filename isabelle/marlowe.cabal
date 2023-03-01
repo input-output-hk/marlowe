@@ -41,6 +41,7 @@ library
         Arith
         ArithNumInstance
         CoreOrphanEq
+        Examples.Escrow
         Examples.Swap
         MarloweCoreJson
         Semantics

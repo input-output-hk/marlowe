@@ -33,7 +33,7 @@ for both the intended and not intended behaviour (in the form of bugs or exploit
 text \<open>To reduce the probability of not intended behaviour, the Marlowe DSL is designed with simplicity
 in mind. Without loops, recursion, or other features that general purposes smart-contract languages
 (E.g: Plutus, Solidity) have, it is easier to make certain claims. Each Marlowe contract can be
-reasoned with a static analizer to avoid common pitfalls such as trying to Pay more money than the
+reasoned with a static analyzer to avoid common pitfalls such as trying to Pay more money than the
 available. And the \<^emph>\<open>executable semantics\<close> that dictates the logic of \<^bold>\<open>all\<close> Marlowe contracts is
 formalized with the proof-assistant Isabelle.
 \<close>

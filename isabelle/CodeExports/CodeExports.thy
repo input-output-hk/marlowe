@@ -11,6 +11,7 @@ theory CodeExports
 
 imports
   Core.Semantics
+  Examples.Escrow
   Examples.Swap
   "HOL-Library.Code_Target_Numeral"
   HOL.String
@@ -45,6 +46,8 @@ text \<open>With a \<^bold>\<open>code\_identifier\<close> we hint what the name
 code_identifier
   code_module Swap \<rightharpoonup> (Haskell) Examples.Swap
 
+code_identifier
+  code_module Escrow \<rightharpoonup> (Haskell) Examples.Escrow
 
 text \<open>We export all the constants in one statement, because they don't add up, if you export two times,
 the second export will overwrite the first one.\<close>
@@ -69,6 +72,15 @@ export_code
   validAndPositive_state
 
   \<comment> \<open> Export examples to be used as oracle specificaiton tests\<close>
+  escrowExample
+  everythingIsAlrightTransactions
+  everythingIsAlrightPayments
+  confirmProblemTransactions
+  confirmProblemPayments
+  dismissClaimTransactions
+  dismissClaimPayments
+  confirmClaimTransactions
+  confirmClaimPayments
   swapExample
   happyPathTransactions
   happyPathPayments

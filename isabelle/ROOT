@@ -53,6 +53,7 @@ session Examples in "Examples" = HOL +
     "HOL-Library"
     "Core"
   theories
+    Escrow
     Swap
 
 session CodeExports in "CodeExports" = HOL +
@@ -100,6 +101,7 @@ session Specification in "Doc/Specification" = HOL +
     "Core.OptBoundTimeInterval"
     "CodeExports.CodeExports"
     "Util.ByteString"
+    "Examples.Escrow"
     "Examples.Swap"
   document_files
     "root.tex"

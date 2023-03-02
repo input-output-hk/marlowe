@@ -3,95 +3,75 @@ theory Escrow
   imports Core.Semantics Core.TransactionBound Core.Timeout
 begin
 (*>*)
-
 section \<open>Escrow contract\<close>
-
+text \<open>An escrow contract is for the purchase of an item at a price.
+The buyer may complain that there is a problem, asking for a refund.
+If the seller disputes that complaint, then a mediator decides.
+\<close>
 subsection \<open>Contract definition\<close>
-
 record EscrowArgs =
   price             :: Value
   token             :: Token
-  seller            :: Party
-  buyer             :: Party
-  mediator          :: Party
   paymentDeadline   :: Timeout
   complaintDeadline :: Timeout
   disputeDeadline   :: Timeout
   mediationDeadline :: Timeout
-
-definition "adaToken = Token (BS '''') (BS '''')"
-
+definition "seller = Role (BS ''Seller'')"
+definition "buyer = Role (BS ''Buyer'')"
+definition "mediator = Role (BS ''Mediator'')"
 fun mediation :: "EscrowArgs \<Rightarrow> Contract" where
   "mediation args =
     When
-      [ Case (Choice (ChoiceId (BS ''Dismiss claim'') (mediator args)) [Bound 0 0])
-          (Pay (buyer args) (Account (seller args)) adaToken (price args) Close)
-      , Case (Choice (ChoiceId (BS ''Confirm claim'') (mediator args)) [Bound 1 1]) Close
+      [ Case (Choice (ChoiceId (BS ''Dismiss claim'') mediator) [Bound 0 0])
+          (Pay buyer (Account seller) (token args) (price args) Close)
+      , Case (Choice (ChoiceId (BS ''Confirm claim'') mediator) [Bound 1 1]) Close
       ] (mediationDeadline args) Close"
-
 fun dispute :: "EscrowArgs \<Rightarrow> Contract" where
   "dispute args =
     When
-      [ Case (Choice (ChoiceId (BS ''Confirm problem'') (seller args)) [Bound 1 1]) Close
-      , Case (Choice (ChoiceId (BS ''Dispute problem'') (seller args)) [Bound 0 0]) (mediation args)
+      [ Case (Choice (ChoiceId (BS ''Confirm problem'') seller) [Bound 1 1]) Close
+      , Case (Choice (ChoiceId (BS ''Dispute problem'') seller) [Bound 0 0]) (mediation args)
       ] (disputeDeadline args) Close"
-
 fun report :: "EscrowArgs \<Rightarrow> Contract" where
   "report args =
     When
-      [ Case (Choice (ChoiceId (BS ''Everything is alright'') (buyer args)) [Bound 0 0]) Close
-      , Case (Choice (ChoiceId (BS ''Report problem'') (buyer args)) [Bound 1 1])
-          (Pay (seller args) (Account (buyer args)) adaToken (price args) (dispute args))
+      [ Case (Choice (ChoiceId (BS ''Everything is alright'') buyer) [Bound 0 0]) Close
+      , Case (Choice (ChoiceId (BS ''Report problem'') buyer) [Bound 1 1])
+          (Pay (seller) (Account buyer) (token args) (price args) (dispute args))
       ] (complaintDeadline args) Close"
-
 fun escrow :: "EscrowArgs \<Rightarrow> Contract" where
   "escrow args =
     When
-      [ Case (Deposit (seller args) (buyer args) adaToken (price args)) (report args) ]
+      [ Case (Deposit seller buyer (token args) (price args)) (report args) ]
       (paymentDeadline args) Close"
-
-definition "escrowArgs =
+subsection \<open>Example Escrow Contract\<close>
+definition "exampleArgs =
   \<lparr> price = Constant 10
-  , token = adaToken
-  , seller = Role (BS ''Seller'')
-  , buyer = Role (BS ''Buyer'')
-  , mediator = Role (BS ''Mediator'')
+  , token = Token (BS '''') (BS '''')
   , paymentDeadline = 1664812800000
   , complaintDeadline = 1664816400000
   , disputeDeadline = 1664820420000
   , mediationDeadline = 1664824440000
   \<rparr>"
-
-definition "escrowExample = escrow escrowArgs"
-
-subsection \<open>Everything is alright.\<close>
-
+definition "escrowExample = escrow exampleArgs"
+subsection \<open>Possible Outcomes\<close>
+subsubsection \<open>Everything is alright.\<close>
 definition
   "everythingIsAlrightTransactions =
     [
       \<comment> \<open>First party deposit\<close>
       \<lparr> interval = (1664812600000, 1664812700000)
-      , inputs = [
-                  IDeposit
-                    (seller escrowArgs)
-                    (buyer escrowArgs)
-                    (token escrowArgs)
-                    10
-                 ]
+      , inputs = [ IDeposit seller buyer (token exampleArgs) 10 ]
       \<rparr>
    ,  \<lparr> interval = (1664812900000, 1664813100000)
-      , inputs = [ IChoice (ChoiceId (BS ''Everything is alright'') (buyer escrowArgs)) 0
-                 ]
+      , inputs = [ IChoice (ChoiceId (BS ''Everything is alright'') buyer) 0 ]
       \<rparr>
     ]
   "
-
 definition
   "everythingIsAlrightPayments =
-    [ Payment (seller escrowArgs) (Party (seller escrowArgs)) (token escrowArgs) 10
-    ]
+    [ Payment seller (Party seller) (token exampleArgs) 10 ]
   "
-
 proposition
  "playTrace 0 escrowExample everythingIsAlrightTransactions = TransactionOutput txOut
   \<Longrightarrow>
@@ -99,42 +79,31 @@ proposition
      \<and> txOutPayments txOut = everythingIsAlrightPayments
      \<and> txOutWarnings txOut = []"
 (*<*)apply (code_simp)
-     apply (auto simp add: everythingIsAlrightPayments_def escrowArgs_def adaToken_def)
+     apply (auto simp add: everythingIsAlrightPayments_def
+              seller_def buyer_def exampleArgs_def)
      done(*>*)
-
-subsection \<open>Confirm problem.\<close>
-
+subsubsection \<open>Confirm problem.\<close>
 definition
   "confirmProblemTransactions =
     [
       \<comment> \<open>First party deposit\<close>
       \<lparr> interval = (1664812600000, 1664812700000)
-      , inputs = [
-                  IDeposit
-                    (seller escrowArgs)
-                    (buyer escrowArgs)
-                    (token escrowArgs)
-                    10
-                 ]
+      , inputs = [ IDeposit seller buyer (token exampleArgs) 10 ]
       \<rparr>
    ,  \<lparr> interval = (1664812900000, 1664813100000)
-      , inputs = [ IChoice (ChoiceId (BS ''Report problem'') (buyer escrowArgs)) 1
-                 ]
+      , inputs = [ IChoice (ChoiceId (BS ''Report problem'') buyer) 1 ]
       \<rparr>
    ,  \<lparr> interval = (1664817400000, 1664817400000)
-      , inputs = [ IChoice (ChoiceId (BS ''Confirm problem'') (seller escrowArgs)) 1
-                 ]
+      , inputs = [ IChoice (ChoiceId (BS ''Confirm problem'') seller) 1 ]
       \<rparr>
     ]
   "
-
 definition
   "confirmProblemPayments =
-    [ Payment (seller escrowArgs) (Account (buyer escrowArgs)) (token escrowArgs) 10
-    , Payment (buyer escrowArgs) (Party (buyer escrowArgs)) (token escrowArgs) 10
+    [ Payment seller (Account buyer) (token exampleArgs) 10
+    , Payment buyer (Party buyer) (token exampleArgs) 10
     ]
   "
-
 proposition
  "playTrace 0 escrowExample confirmProblemTransactions = TransactionOutput txOut
   \<Longrightarrow>
@@ -142,47 +111,35 @@ proposition
      \<and> txOutPayments txOut = confirmProblemPayments
      \<and> txOutWarnings txOut = []"
 (*<*)apply (code_simp)
-     apply (auto simp add: confirmProblemPayments_def escrowArgs_def adaToken_def)
+     apply (auto simp add: confirmProblemPayments_def
+              seller_def buyer_def mediator_def exampleArgs_def)
      done(*>*)
-
-subsection \<open>Dismiss claim.\<close>
-
+subsubsection \<open>Dismiss claim.\<close>
 definition
   "dismissClaimTransactions =
     [
       \<comment> \<open>First party deposit\<close>
       \<lparr> interval = (1664812600000, 1664812700000)
-      , inputs = [
-                  IDeposit
-                    (seller escrowArgs)
-                    (buyer escrowArgs)
-                    (token escrowArgs)
-                    10
-                 ]
+      , inputs = [ IDeposit seller buyer (token exampleArgs) 10 ]
       \<rparr>
    ,  \<lparr> interval = (1664812900000, 1664813100000)
-      , inputs = [ IChoice (ChoiceId (BS ''Report problem'') (buyer escrowArgs)) 1
-                 ]
+      , inputs = [ IChoice (ChoiceId (BS ''Report problem'') buyer) 1 ]
       \<rparr>
    ,  \<lparr> interval = (1664817400000, 1664817400000)
-      , inputs = [ IChoice (ChoiceId (BS ''Dispute problem'') (seller escrowArgs)) 0
-                 ]
+      , inputs = [ IChoice (ChoiceId (BS ''Dispute problem'') seller) 0 ]
       \<rparr>
    ,  \<lparr> interval = (1664821400000, 1664822400000)
-      , inputs = [ IChoice (ChoiceId (BS ''Dismiss claim'') (mediator escrowArgs)) 0
-                 ]
+      , inputs = [ IChoice (ChoiceId (BS ''Dismiss claim'') mediator) 0 ]
       \<rparr>
     ]
   "
-
 definition
   "dismissClaimPayments =
-    [ Payment (seller escrowArgs) (Account (buyer escrowArgs)) (token escrowArgs) 10
-    , Payment (buyer escrowArgs) (Account (seller escrowArgs)) (token escrowArgs) 10
-    , Payment (seller escrowArgs) (Party (seller escrowArgs)) (token escrowArgs) 10
+    [ Payment seller (Account buyer) (token exampleArgs) 10
+    , Payment buyer (Account seller) (token exampleArgs) 10
+    , Payment seller (Party seller) (token exampleArgs) 10
     ]
   "
-
 proposition
  "playTrace 0 escrowExample dismissClaimTransactions = TransactionOutput txOut
   \<Longrightarrow>
@@ -190,46 +147,34 @@ proposition
      \<and> txOutPayments txOut = dismissClaimPayments
      \<and> txOutWarnings txOut = []"
 (*<*)apply (code_simp)
-     apply (auto simp add: dismissClaimPayments_def escrowArgs_def adaToken_def)
+     apply (auto simp add: dismissClaimPayments_def
+              seller_def buyer_def mediator_def exampleArgs_def)
      done(*>*)
-
-subsection \<open>Confirm claim.\<close>
-
+subsubsection \<open>Confirm claim.\<close>
 definition
   "confirmClaimTransactions =
     [
       \<comment> \<open>First party deposit\<close>
       \<lparr> interval = (1664812600000, 1664812700000)
-      , inputs = [
-                  IDeposit
-                    (seller escrowArgs)
-                    (buyer escrowArgs)
-                    (token escrowArgs)
-                    10
-                 ]
+      , inputs = [ IDeposit seller buyer (token exampleArgs) 10 ]
       \<rparr>
    ,  \<lparr> interval = (1664812900000, 1664813100000)
-      , inputs = [ IChoice (ChoiceId (BS ''Report problem'') (buyer escrowArgs)) 1
-                 ]
+      , inputs = [ IChoice (ChoiceId (BS ''Report problem'') buyer) 1 ]
       \<rparr>
    ,  \<lparr> interval = (1664817400000, 1664817400000)
-      , inputs = [ IChoice (ChoiceId (BS ''Dispute problem'') (seller escrowArgs)) 0
-                 ]
+      , inputs = [ IChoice (ChoiceId (BS ''Dispute problem'') seller) 0 ]
       \<rparr>
    ,  \<lparr> interval = (1664821400000, 1664822400000)
-      , inputs = [ IChoice (ChoiceId (BS ''Confirm claim'') (mediator escrowArgs)) 1
-                 ]
+      , inputs = [ IChoice (ChoiceId (BS ''Confirm claim'') mediator) 1 ]
       \<rparr>
     ]
   "
-
 definition
   "confirmClaimPayments =
-    [ Payment (seller escrowArgs) (Account (buyer escrowArgs)) (token escrowArgs) 10
-    , Payment (buyer escrowArgs) (Party (buyer escrowArgs)) (token escrowArgs) 10
+    [ Payment seller (Account buyer) (token exampleArgs) 10
+    , Payment buyer (Party buyer) (token exampleArgs) 10
     ]
   "
-
 proposition
  "playTrace 0 escrowExample confirmClaimTransactions = TransactionOutput txOut
   \<Longrightarrow>
@@ -237,7 +182,7 @@ proposition
      \<and> txOutPayments txOut = confirmClaimPayments
      \<and> txOutWarnings txOut = []"
 (*<*)apply (code_simp)
-     apply (auto simp add: confirmClaimPayments_def escrowArgs_def adaToken_def)
+     apply (auto simp add: confirmClaimPayments_def
+              seller_def buyer_def mediator_def exampleArgs_def)
      done(*>*)
-
 end

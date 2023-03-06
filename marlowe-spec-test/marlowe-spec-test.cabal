@@ -33,6 +33,7 @@ library
         Marlowe.Spec.ClientProcess
         Marlowe.Spec.Core
         Marlowe.Spec.Core.Arbitrary
+        Marlowe.Spec.Core.CloseSafe
         Marlowe.Spec.Core.Examples
         Marlowe.Spec.Core.Examples.Swap
         Marlowe.Spec.Core.Semantics

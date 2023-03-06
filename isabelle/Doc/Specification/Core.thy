@@ -143,11 +143,6 @@ text \<open>For the \<^emph>\<open>AddValue\<close> case, @{const evalValue} wil
 
 text \<open>@{thm evalValue_AddValue}\<close>
 
-text \<open>Addition is associative and commutative:\<close>
-
-text \<open>@{thm evalAddAssoc}\<close>
-
-text \<open>@{thm evalAddCommutative}\<close>
 
 subsubsection \<open>Subtraction\<close>
 
@@ -176,13 +171,8 @@ text \<open>Division is a special case because we only evaluate to natural numbe
 
 text \<open>@{thm [display,names_short, margin=40] evalValue_DivValue}\<close>
 
-(* \<open>TODO: lemmas around division? maybe extend the following to proof evalValue and not just div\<close>*)
-text \<open>@{thm divMultiply}\<close>
-text \<open>@{thm divAbsMultiply}\<close>
-(*text \<open>COMMENT(BWB): I suggest that the lemmas be (i) exact multiples divide with no remainder, (ii)
-      the remainder equals the excess above an exact multiple, and (iii) negation commutues with
-      division.\<close>
-*)
+text \<open>@{thm evalDivRoundToZero}\<close>
+
 subsubsection \<open>Choice Value\<close>
 
 text \<open>For the \<^emph>\<open>ChoiceValue\<close> case, @{const evalValue} will look in its state if a @{typ Party} has

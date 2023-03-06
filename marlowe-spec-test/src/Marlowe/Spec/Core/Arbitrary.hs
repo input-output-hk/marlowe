@@ -332,7 +332,7 @@ genState i = rawGen `suchThat` valid_state
       accounts <- vectorOf accountSize ((genParty i >*< genToken i) >*< liftGen arbitraryNonnegativeInteger)
       choices <- vectorOf choiceSize (genChoiceId i >*< liftGen arbitraryInteger)
       bounds <- vectorOf boundSize (liftGen genValueId >*< liftGen arbitraryInteger)
-      minTime <- liftGen arbitraryInteger
+      minTime <- liftGen arbitraryNonnegativeInteger
       pure $ State_ext accounts choices bounds minTime ()
     )
 genTransactionWarning :: InterpretJsonRequest -> GenT IO TransactionWarning

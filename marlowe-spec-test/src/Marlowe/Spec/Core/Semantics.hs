@@ -2,19 +2,24 @@
 {-# LANGUAGE BlockArguments #-}
 
 module Marlowe.Spec.Core.Semantics where
-import Test.Tasty (TestTree, testGroup)
-import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
-import Test.QuickCheck.Monadic (run)
-import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment)
-import Semantics (evalValue)
+
+import Arith (less_int, abs_int)
 import Data.Aeson (ToJSON(..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Reproducible (reproducibleProperty', generate, generateT, assertResponse)
+import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment)
+import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
+import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
+import Test.Tasty (TestTree, testGroup)
 import Test.QuickCheck (withMaxSuccess)
+import Test.QuickCheck.Monadic (run)
+import Semantics (evalValue)
+import SemanticsTypes (Value(..))
+import QuickCheck.GenT (suchThat)
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics"
     [ evalValueTest i
+    , divisionRoundsTowardsZeroTest i
     ]
 
 -- The default maxSuccess is 100 and this tests modifies that to 500 as it was empirically found that 10 out of 10 times
@@ -33,4 +38,17 @@ evalValueTest interpret = reproducibleProperty' "Eval Value" (withMaxSuccess 500
         successResponse = RequestResponse $ toJSON $ evalValue env state value
     assertResponse interpret req successResponse
 
-
+divisionRoundsTowardsZeroTest :: InterpretJsonRequest -> TestTree
+divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division rounding"  do
+    env <- run $ generate $ genEnvironment
+    state <- run $ generateT $ genState interpret
+    numerator <- run $ generateT $ genValue interpret
+    denominator <- run $ generateT
+        (genValue interpret
+          `suchThat` (\d -> (abs_int $ evalValue env state numerator) `less_int` (abs_int $ evalValue env state d))
+        )
+    let
+        req :: Request JSON.Value
+        req = EvalValue env state (DivValue numerator denominator)
+        successResponse = RequestResponse $ toJSON (0 :: Int)
+    assertResponse interpret req successResponse

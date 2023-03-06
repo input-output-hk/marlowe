@@ -490,6 +490,10 @@ termination reductionLoop
   apply blast
   using reduceContractStepReducesSize by auto
 
+(* This lemma allows to work with the reductionLoop.induct theorem with a new name for the induction
+   case.*)
+lemmas reductionLoop_induct = reductionLoop.induct[case_names "reductionLoopInduction"]
+
 fun reduceContractUntilQuiescent :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceResult" where
 "reduceContractUntilQuiescent env state contract = reductionLoop False env state contract [] []"
 

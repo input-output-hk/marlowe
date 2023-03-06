@@ -522,9 +522,30 @@ fun assetsInPayment :: "Payment \<Rightarrow> Assets" where
 "assetsInPayment (Payment _ (Party _) tok val) = asset tok (nat val)" |
 "assetsInPayment (Payment _ (Account _) _ _) = 0"
 
+fun addPayment :: "Payment \<Rightarrow> Assets \<Rightarrow> Assets" where 
+"addPayment p a = assetsInPayment p + a" 
+
+lemma addPaymentCommutesComposition : 
+  "addPayment a \<circ> addPayment b = addPayment b \<circ> addPayment a" 
+proof -
+  have "\<forall> c. addPayment a (addPayment b c) = addPayment b (addPayment a c)" 
+    using Groups.group_cancel.add2 by auto
+  then show ?thesis   
+    by fastforce
+qed 
+
 fun assetsInPayments :: "Payment list \<Rightarrow> Assets" where
-"assetsInPayments (Cons h t) = assetsInPayment h + assetsInPayments t" |
-"assetsInPayments Nil = 0"
+"assetsInPayments ps = foldr addPayment ps 0"
+
+lemma assetsInPayments_rev :  "assetsInPayments payments = assetsInPayments (rev payments)"
+proof (induction payments)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons head tail)
+  then show ?case 
+    by (metis AssetsPreservation.assetsInPayments.elims fold_rev foldr_conv_fold addPaymentCommutesComposition)
+qed
 
 section "Asset preservation"
 
@@ -854,7 +875,64 @@ next
   ultimately  show ?thesis
     by simp
 qed
+
+subsection "Reduce contract until quiescent" 
+
+
+lemma reductionLoop_preserves_assets :
+  assumes  "validAndPositive_state inState" 
+      and  "reductionLoop inReduced inEnv inState inContract inWarnings inPayments 
+            = ContractQuiescent outReduced outWarnings outPayments outState outContract"
+    shows "assetsInState inState + assetsInPayments inPayments 
+           = assetsInState outState + assetsInPayments outPayments "
+using assms proof (induction inReduced inEnv inState inContract inWarnings inPayments rule:reductionLoop_induct)
+  case (reductionLoopInduction reduced env state contract warnings payments)
   
+  then show ?case 
+  proof (cases "reduceContractStep env state contract")
+    case (Reduced rWarn rEff rState rCont)
+    (* This variable corresponds to the `let newPayments` inside the reductionLoop function *)
+    let ?newPayments = "(case rEff of ReduceNoPayment \<Rightarrow> payments | ReduceWithPayment payment \<Rightarrow> payment # payments)"
+    have "validAndPositive_state rState" 
+      using reductionLoopInduction.prems Reduced reduceContractStep_preserves_validAndPositive_state by blast
+    with reductionLoopInduction Reduced have newPaymentAssets:
+      "assetsInState rState + assetsInPayments ?newPayments = assetsInState outState + assetsInPayments outPayments"
+      by simp metis
+    with reductionLoopInduction.prems Reduced reduceContractStep_preserves_assets 
+      have induction_reduceContractStep_preserves_assets: 
+      "assetsInState state = assetsInReduceEffect rEff + assetsInState rState"
+      by blast
+    show ?thesis
+    proof (cases rEff)
+      case ReduceNoPayment
+      with newPaymentAssets induction_reduceContractStep_preserves_assets show ?thesis
+        by simp
+    next
+      case (ReduceWithPayment reducePayment)
+      with newPaymentAssets induction_reduceContractStep_preserves_assets show ?thesis 
+         by (simp add: Groups.ab_semigroup_add_class.add.left_commute Groups.semigroup_add_class.add.assoc)
+    qed
+  next
+    case NotReduced
+    with reductionLoopInduction assetsInPayments_rev show ?thesis by auto
+  next
+    case AmbiguousTimeIntervalReductionError
+    with reductionLoopInduction show ?thesis by simp 
+  qed
+qed
+
+
+theorem reduceContractUntilQuiescent_preserves_assets :
+  assumes "validAndPositive_state state"
+      and "reduceContractUntilQuiescent env state contract 
+           = ContractQuiescent reduced warnings payments newState cont" 
+    shows "assetsInState state = assetsInState newState + assetsInPayments payments" 
+proof -
+  have "assetsInState state + assetsInPayments []  =  assetsInState newState + assetsInPayments payments"
+    by (metis reduceContractUntilQuiescent.simps assms reductionLoop_preserves_assets)
+  with assms show ?thesis 
+    by simp
+qed
 
 section "DELETE"
 

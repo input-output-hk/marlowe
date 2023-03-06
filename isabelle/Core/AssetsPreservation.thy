@@ -547,6 +547,13 @@ next
     by (metis AssetsPreservation.assetsInPayments.elims fold_rev foldr_conv_fold addPaymentCommutesComposition)
 qed
 
+section "Assets in input" 
+
+fun assetsInInput :: "Input \<Rightarrow> Assets" where
+"assetsInInput (IDeposit _ _ tok money) = asset tok (nat money)" |
+"assetsInInput (IChoice _ _) = 0" |
+"assetsInInput INotify = 0"
+
 section "Asset preservation"
 
 subsection "Fix Interval"
@@ -933,6 +940,44 @@ proof -
   with assms show ?thesis 
     by simp
 qed
+
+subsection "Apply input" 
+
+(* Custom induction rule for better readability of the proof *)
+lemmas applyCases_preserves_assets_induct =  applyCases.induct[case_names CaseDeposit CaseChoice CaseNotify a b c d]
+
+lemma applyCases_preserves_assets : 
+  assumes "validAndPositive_state inState"
+      and "applyCases env inState input cases 
+           = Applied warnings outState cont"
+    shows "assetsInState inState + assetsInInput input = assetsInState outState"
+using assms proof (induction env inState input cases rule: applyCases_preserves_assets_induct )
+  case (CaseDeposit env state inputAccId inputParty inputTok inputAmount caseAccId caseParty caseTok caseAmount caseCont rest)
+  have validAccount: "valid_map (accounts state)" 
+    using "CaseDeposit.prems" validAndPositiveImpliesValid valid_state_valid_accounts by blast
+  with CaseDeposit show ?case    
+    by simp (metis assetsInAccounts.elims allAccountsPositive.elims(3) ApplyResult.inject validAccount addMoneyToAccount_distrib state_account_red)  
+next
+  case (CaseChoice env state inputChoId inputChoice caseChoId caseBounds caseCont rest)
+
+  then show ?case
+    by (cases "inputChoId = caseChoId \<and> inBounds inputChoice caseBounds")
+       auto
+next
+  case (CaseNotify env state obs cont rest)
+  then show ?case
+    by simp (metis ApplyResult.inject)
+qed simp_all
+
+theorem applyInput_preserves_assets : 
+  assumes "validAndPositive_state inState"
+      and "applyInput env inState input contract = Applied warnings outState cont" 
+    shows "assetsInState inState + assetsInInput input = assetsInState outState"
+using assms proof (cases contract)
+  case (When cs timeout timeoutCont)
+  with assms applyCases_preserves_assets show ?thesis
+    by simp
+qed auto
 
 section "DELETE"
 

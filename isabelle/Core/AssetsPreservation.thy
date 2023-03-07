@@ -537,7 +537,7 @@ qed
 fun assetsInPayments :: "Payment list \<Rightarrow> Assets" where
 "assetsInPayments ps = foldr addPayment ps 0"
 
-lemma assetsInPayments_rev :  "assetsInPayments payments = assetsInPayments (rev payments)"
+lemma assetsInPayments_rev : "assetsInPayments payments = assetsInPayments (rev payments)"
 proof (induction payments)
   case Nil
   then show ?case by simp
@@ -547,12 +547,38 @@ next
     by (metis AssetsPreservation.assetsInPayments.elims fold_rev foldr_conv_fold addPaymentCommutesComposition)
 qed
 
+lemma assetsInPayments_append : "assetsInPayments (xs @ ys) = assetsInPayments xs + assetsInPayments ys"
+proof (induction xs)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons x xs)
+  then show ?case
+    by (simp add: Groups.semigroup_add_class.add.assoc)
+qed
+ 
 section "Assets in input" 
 
 fun assetsInInput :: "Input \<Rightarrow> Assets" where
-"assetsInInput (IDeposit _ _ tok money) = asset tok (nat money)" |
-"assetsInInput (IChoice _ _) = 0" |
-"assetsInInput INotify = 0"
+  "assetsInInput (IDeposit _ _ tok money) = asset tok (nat money)" |
+  "assetsInInput (IChoice _ _) = 0" |
+  "assetsInInput INotify = 0"
+
+fun addInput :: "Input \<Rightarrow> Assets \<Rightarrow> Assets" where 
+  "addInput i a = assetsInInput i + a" 
+
+lemma addInputCommutesComposition : 
+  "addInput a \<circ> addInput b = addInput b \<circ> addInput a" 
+proof -
+  have "\<forall> c. addInput a (addInput b c) = addInput b (addInput a c)" 
+    using Groups.group_cancel.add2 by auto
+  then show ?thesis   
+    by fastforce
+qed 
+
+
+fun assetsInInputs :: "Input list \<Rightarrow> Assets" where
+  "assetsInInputs inps = foldr addInput inps 0"
 
 section "Asset preservation"
 
@@ -978,6 +1004,98 @@ using assms proof (cases contract)
   with assms applyCases_preserves_assets show ?thesis
     by simp
 qed auto
+
+subsection "Apply all input"
+
+lemma applyAllLoop_preserves_assets : 
+  assumes "validAndPositive_state inState"
+      and "applyAllLoop inContractChanged env inState inContract inputs' inWarnings inPayments
+          = ApplyAllSuccess outContractChanged outWarnings outPayments outState cont"
+    shows "assetsInState inState + assetsInInputs inputs' + assetsInPayments inPayments
+          = assetsInState outState + assetsInPayments outPayments"
+using assms proof (induction  inContractChanged env inState inContract inputs' inWarnings inPayments rule: applyAllLoop_induct)
+  case (applyAllLoopInduction contractChanged env state contract inputs warnings payments)
+
+  have "reduceContractUntilQuiescent env state contract \<noteq> RRAmbiguousTimeIntervalError"
+    using local.applyAllLoopInduction.prems(2) by force
+  
+  then obtain reduced rWarns rPayments rState rCont 
+    where contractIsReduced:
+      "reduceContractUntilQuiescent env state contract 
+       = ContractQuiescent reduced rWarns rPayments rState rCont"
+    using Semantics.ReduceResult.exhaust by simp blast
+
+  hence preservedReducedAssets: 
+    "assetsInState state = assetsInState rState + assetsInPayments rPayments"
+    using local.applyAllLoopInduction.prems(1) reduceContractUntilQuiescent_preserves_assets by blast
+
+  show ?case
+  proof (cases inputs)
+    case Nil
+    moreover note contractIsReduced preservedReducedAssets applyAllLoopInduction
+
+    moreover have "assetsInInputs inputs = 0" 
+      using calculation by simp
+
+    moreover have "outPayments = payments @ rPayments"  
+                  "outState = rState" 
+      using calculation by auto
+
+    ultimately show ?thesis
+      by (metis Groups.group_cancel.add2 add_cancel_left_right assetsInPayments_append)
+   
+  next
+    case (Cons inputHead inputTail)
+    
+    show ?thesis 
+    proof (cases "applyInput env rState inputHead rCont")
+      case (Applied applyWarn applyState applyCont)
+      moreover note contractIsReduced preservedReducedAssets applyAllLoopInduction Cons
+
+      moreover have "validAndPositive_state rState"
+        using calculation reduceContractUntilQuiescent_preserves_validAndPositive_state
+        by meson 
+
+      moreover have "validAndPositive_state applyState"
+        using calculation applyInput_preserves_preserves_validAndPositive_state  
+        by meson
+
+      moreover have "applyAllLoop 
+                  True env applyState applyCont inputTail 
+                  (warnings @ (convertReduceWarnings rWarns) 
+                            @ (convertApplyWarning applyWarn)) 
+                  (payments @ rPayments)
+              = ApplyAllSuccess outContractChanged outWarnings outPayments outState cont"
+        using calculation by auto        
+      
+      moreover have  
+         "assetsInState applyState + assetsInInputs inputTail + assetsInPayments (payments @ rPayments) 
+          = assetsInState outState + assetsInPayments outPayments"
+        using calculation by blast
+
+      moreover have "assetsInState rState + assetsInInput inputHead = assetsInState applyState" 
+        using calculation by (meson applyInput_preserves_assets)        
+
+      moreover have "assetsInInputs inputs = assetsInInput inputHead + assetsInInputs inputTail"
+        using Cons by auto
+
+      ultimately show ?thesis   
+        by (metis Groups.ab_semigroup_add_class.add.commute Groups.group_cancel.add2 assetsInPayments_append)
+  
+    next
+      case ApplyNoMatchError
+      with contractIsReduced Cons applyAllLoopInduction show ?thesis by simp
+    qed    
+  qed
+qed
+
+theorem applyAllInputs_preserves_assets : 
+  assumes "validAndPositive_state inState"
+      and "applyAllInputs env inState inContract inputs' 
+          = ApplyAllSuccess outContractChanged outWarnings outPayments outState cont"
+    shows "assetsInState inState + assetsInInputs inputs' 
+          = assetsInState outState + assetsInPayments outPayments"
+  using assms applyAllLoop_preserves_assets by fastforce
 
 section "DELETE"
 

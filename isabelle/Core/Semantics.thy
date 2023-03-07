@@ -590,6 +590,12 @@ fun applyAllLoop :: "bool \<Rightarrow> Environment \<Rightarrow> State \<Righta
                                (payments @ pays)
             | ApplyNoMatchError \<Rightarrow> ApplyAllNoMatchError)))"
 
+
+(* This lemma allows to work with the applyAllLoop.induct theorem with a new name for the induction
+   case.*)
+lemmas applyAllLoop_induct = applyAllLoop.induct[case_names applyAllLoopInduction]
+
+
 fun applyAllInputs :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
                  ApplyAllResult" where
 "applyAllInputs env state contract inputs = applyAllLoop False env state contract inputs Nil Nil"

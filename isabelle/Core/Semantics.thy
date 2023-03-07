@@ -109,6 +109,13 @@ lemma evalDivByItSelf : "a \<noteq> 0 \<Longrightarrow> evalValue env sta x = a 
 lemma evalDivByOneIsX : "evalValue env sta y = 1 \<Longrightarrow> evalValue env sta (DivValue x y) = evalValue env sta x"
   by (simp add:Let_def)
 
+
+lemma evalDivRoundToZero :
+  assumes "\<bar>(evalValue env sta n)\<bar> < \<bar>(evalValue env sta d)\<bar>"
+  shows "evalValue env sta (DivValue n d) = 0" 
+  using assms 
+  by (auto simp add: Let_def)
+
 lemma quotMultiplyEquivalence : "c \<noteq> 0 \<Longrightarrow> (c * a) quot (c * b) = a quot b"
   apply auto
   apply (simp_all add: mult_less_0_iff)

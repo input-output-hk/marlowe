@@ -161,6 +161,43 @@ proposition
      apply (auto simp add: happyPathPayments_def  adaProvider_def adaToken_def dollarProvider_def  dollarToken_def)
      done(*>*)
 
+subsubsection \<open>Swap does not take place\<close>
+
+text \<open>If only the first party deposits before the deadline,\<close>
+
+definition
+  "unhappyPathTransactions =
+    [
+      \<comment> \<open>First party deposit\<close>
+      \<lparr> interval = (1664812600000, 1664812700000)
+      , inputs = [
+                  IDeposit
+                    adaProvider
+                    adaProvider
+                    adaToken
+                    10
+                 ]
+      \<rparr>
+    , \<lparr> interval = (1664816400000, 1664816600000 )
+      , inputs = []
+      \<rparr>
+    ]
+  "
+
+text  \<open>payments are made to swap the tokens\<close>
+definition
+  "unhappyPathPayments = [ Payment adaProvider (Party adaProvider) adaToken 10
+  ] "
+
+proposition
+ "playTrace 0 swapExample unhappyPathTransactions = TransactionOutput txOut
+  \<Longrightarrow>
+     txOutContract txOut = Close
+     \<and> txOutPayments txOut = unhappyPathPayments
+     \<and> txOutWarnings txOut = []"
+(*<*)apply (code_simp)
+     apply (auto simp add: unhappyPathPayments_def adaProvider_def adaToken_def dollarProvider_def  dollarToken_def)
+     done(*>*)
 
 subsection \<open>Contract guarantees\<close>
 
@@ -208,7 +245,7 @@ proposition
   (*<*)by simp(*>*)
 
 (*<*)
-\<comment> \<open>Section ommited for the moment\<close>
+\<comment> \<open>Section omitted for the moment\<close>
 text \<open>Expressed in another way, by using the lemma defined in \secref{sec:max-time-guarantee} we can
 guarantee that if we apply an empty transaction after the contract deadline, the contract will close.\<close>
 

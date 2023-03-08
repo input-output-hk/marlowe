@@ -95,6 +95,8 @@ export_code
   swapExample
   happyPathTransactions
   happyPathPayments
+  unhappyPathTransactions
+  unhappyPathPayments
 
   \<comment> \<open>Force the export of string implode (works together with the BS code\_printing hint) \<close>
   String.implode

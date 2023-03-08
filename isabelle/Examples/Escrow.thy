@@ -2,12 +2,16 @@
 theory Escrow
   imports Core.Semantics Core.TransactionBound Core.Timeout
 begin
+
 (*>*)
 section \<open>Escrow contract\<close>
+
 text \<open>An escrow contract allows a \<^bold>\<open>Buyer\<close> to purchase an item for a price.
 The money is deposited in an escrow, waiting for some feedback from the  \<^bold>\<open>Buyer\<close>. If the  \<^bold>\<open>Buyer\<close> and  \<^bold>\<open>Seller\<close> don't agree, a  \<^bold>\<open>Mediator\<close> will resolve the conflict.
 \<close>
+
 subsection \<open>Contract definition\<close>
+
 text \<open>The participants of the contract are:\<close>
 definition "seller = Role (BS ''Seller'')"
 definition "buyer = Role (BS ''Buyer'')"
@@ -16,6 +20,7 @@ text \<open>An escrow contract takes as arguments the price, token
 and the deadlines that apply for the payment, the complaint, the dispute and
 the mediation.
 \<close>
+
 record EscrowArgs =
   price             :: Value
   token             :: Token
@@ -23,12 +28,14 @@ record EscrowArgs =
   complaintDeadline :: Timeout
   disputeDeadline   :: Timeout
   mediationDeadline :: Timeout
+
 text \<open>The contract is built in multiple steps. The innermost step is the
 mediation step, where the mediator either confirms or dismisses a claim about
 a problem with the transaction. In case the mediator dismisses the claim the
 seller is paid, in case the mediator confirms the claim, the contract is closed
 and the buyer refunded implicitly:
 \<close>
+
 fun mediation :: "EscrowArgs \<Rightarrow> Contract" where
   "mediation args =
     When
@@ -36,18 +43,22 @@ fun mediation :: "EscrowArgs \<Rightarrow> Contract" where
           (Pay buyer (Account seller) (token args) (price args) Close)
       , Case (Choice (ChoiceId (BS ''Confirm claim'') mediator) [Bound 1 1]) Close
       ] (mediationDeadline args) Close"
+
 text \<open>In case a problem is reported by the buyer, the seller has to either confirm or dispute the
 problem. In case the seller confirms the problem, the buyer is refunded implicitly.
 Disputing the problem leads to the mediation step defined above.\<close>
+
 fun dispute :: "EscrowArgs \<Rightarrow> Contract" where
   "dispute args =
     When
       [ Case (Choice (ChoiceId (BS ''Confirm problem'') seller) [Bound 1 1]) Close
       , Case (Choice (ChoiceId (BS ''Dispute problem'') seller) [Bound 0 0]) (mediation args)
       ] (disputeDeadline args) Close"
+
 text \<open>The buyer can either report that everything is alright with transaction or a problem. When
 a problem is reported the funds are placed in the buyer's account and the contract continues with the
 dispute step defined above.\<close>
+
 fun report :: "EscrowArgs \<Rightarrow> Contract" where
   "report args =
     When
@@ -55,13 +66,16 @@ fun report :: "EscrowArgs \<Rightarrow> Contract" where
       , Case (Choice (ChoiceId (BS ''Report problem'') buyer) [Bound 1 1])
           (Pay (seller) (Account buyer) (token args) (price args) (dispute args))
       ] (complaintDeadline args) Close"
+
 text \<open>The escrow contract waits for the buyer to deposit and then continues with the report step
 defined above.\<close>
+
 fun escrow :: "EscrowArgs \<Rightarrow> Contract" where
   "escrow args =
     When
       [ Case (Deposit seller buyer (token args) (price args)) (report args) ]
       (paymentDeadline args) Close"
+
 (*<*)
 definition "exampleArgs =
   \<lparr> price = Constant 10
@@ -71,11 +85,16 @@ definition "exampleArgs =
   , disputeDeadline = 1664820420000
   , mediationDeadline = 1664824440000
   \<rparr>"
+
 definition "escrowExample = escrow exampleArgs"
+
 (*>*)
 subsection \<open>Possible Outcomes\<close>
+
 text \<open>There are four possible outcomes for the escrow contract.\<close>
+
 subsubsection \<open>Everything is alright\<close>
+
 text \<open>
 Steps:
 \begin{enumerate}
@@ -84,6 +103,7 @@ Steps:
 \end{enumerate}
 Outcome: Seller receives purchase price.
 \<close>
+
 (*<*)
 definition
   "everythingIsAlrightTransactions =
@@ -97,10 +117,12 @@ definition
       \<rparr>
     ]
   "
+
 definition
   "everythingIsAlrightPayments =
     [ Payment seller (Party seller) (token exampleArgs) 10 ]
   "
+
 proposition
  "playTrace 0 escrowExample everythingIsAlrightTransactions = TransactionOutput txOut
   \<Longrightarrow>
@@ -111,6 +133,7 @@ proposition
      apply (auto simp add: everythingIsAlrightPayments_def
               seller_def buyer_def exampleArgs_def)
      done
+
 (*>*)
 subsubsection \<open>Confirm problem\<close>
 text \<open>
@@ -122,6 +145,7 @@ Steps:
 \end{enumerate}
 Outcome: Buyer receives refund.
 \<close>
+
 (*<*)
 definition
   "confirmProblemTransactions =
@@ -138,12 +162,14 @@ definition
       \<rparr>
     ]
   "
+
 definition
   "confirmProblemPayments =
     [ Payment seller (Account buyer) (token exampleArgs) 10
     , Payment buyer (Party buyer) (token exampleArgs) 10
     ]
   "
+
 proposition
  "playTrace 0 escrowExample confirmProblemTransactions = TransactionOutput txOut
   \<Longrightarrow>
@@ -154,6 +180,7 @@ proposition
      apply (auto simp add: confirmProblemPayments_def
               seller_def buyer_def mediator_def exampleArgs_def)
      done
+
 (*>*)
 subsubsection \<open>Dismiss claim\<close>
 text \<open>
@@ -165,6 +192,7 @@ text \<open>
 \end{enumerate}
 Outcome: Seller receives purchase price.
 \<close>
+
 (*<*)
 definition
   "dismissClaimTransactions =
@@ -184,6 +212,7 @@ definition
       \<rparr>
     ]
   "
+
 definition
   "dismissClaimPayments =
     [ Payment seller (Account buyer) (token exampleArgs) 10
@@ -191,6 +220,7 @@ definition
     , Payment seller (Party seller) (token exampleArgs) 10
     ]
   "
+
 proposition
  "playTrace 0 escrowExample dismissClaimTransactions = TransactionOutput txOut
   \<Longrightarrow>
@@ -201,6 +231,7 @@ proposition
      apply (auto simp add: dismissClaimPayments_def
               seller_def buyer_def mediator_def exampleArgs_def)
      done
+
 (*>*)
 subsubsection \<open>Confirm claim\<close>
 text \<open>
@@ -212,6 +243,7 @@ text \<open>
 \end{enumerate}
 Outcome: Buyer receives refund.
 \<close>
+
 (*<*)
 definition
   "confirmClaimTransactions =
@@ -231,12 +263,14 @@ definition
       \<rparr>
     ]
   "
+
 definition
   "confirmClaimPayments =
     [ Payment seller (Account buyer) (token exampleArgs) 10
     , Payment buyer (Party buyer) (token exampleArgs) 10
     ]
   "
+
 proposition
  "playTrace 0 escrowExample confirmClaimTransactions = TransactionOutput txOut
   \<Longrightarrow>

@@ -111,12 +111,12 @@ definition
       \<rparr>
   "
 
-subsubsection \<open>Happy path\<close>
+subsubsection \<open>Successful execution\<close>
 
 text \<open>If both parties deposit before their deadline,\<close>
 
 definition
-  "happyPathTransactions = 
+  "successfulExecutionPathTransactions = 
     [ 
       \<comment> \<open>First party deposit\<close>
       \<lparr> interval = (1664812600000, 1664812700000)
@@ -143,7 +143,7 @@ definition
 
 text  \<open>payments are made to swap the tokens\<close>
 definition 
-  "happyPathPayments = 
+  "successfulExecutionPathPayments = 
     [ Payment adaProvider (Party dollarProvider) adaToken 10
     , Payment dollarProvider (Party adaProvider) dollarToken 20
     ]
@@ -152,13 +152,13 @@ definition
 text \<open>and the contract is closed without emitting a warning\<close>
 
 proposition
- "playTrace 0 swapExample happyPathTransactions = TransactionOutput txOut
+ "playTrace 0 swapExample successfulExecutionPathTransactions = TransactionOutput txOut
   \<Longrightarrow> 
      txOutContract txOut = Close
-     \<and> txOutPayments txOut = happyPathPayments
+     \<and> txOutPayments txOut = successfulExecutionPathPayments
      \<and> txOutWarnings txOut = []"
 (*<*)apply (code_simp)
-     apply (auto simp add: happyPathPayments_def  adaProvider_def adaToken_def dollarProvider_def  dollarToken_def)
+     apply (auto simp add: successfulExecutionPathPayments_def  adaProvider_def adaToken_def dollarProvider_def  dollarToken_def)
      done(*>*)
 
 subsubsection \<open>Swap does not take place\<close>
@@ -166,7 +166,7 @@ subsubsection \<open>Swap does not take place\<close>
 text \<open>If only the first party deposits before the deadline,\<close>
 
 definition
-  "unhappyPathTransactions =
+  "partialExecutionPathTransactions =
     [
       \<comment> \<open>First party deposit\<close>
       \<lparr> interval = (1664812600000, 1664812700000)
@@ -186,30 +186,30 @@ definition
 
 text  \<open>payments are made to swap the tokens\<close>
 definition
-  "unhappyPathPayments = [ Payment adaProvider (Party adaProvider) adaToken 10
+  "partialExecutionPathPayments = [ Payment adaProvider (Party adaProvider) adaToken 10
   ] "
 
 proposition
- "playTrace 0 swapExample unhappyPathTransactions = TransactionOutput txOut
+ "playTrace 0 swapExample partialExecutionPathTransactions = TransactionOutput txOut
   \<Longrightarrow>
      txOutContract txOut = Close
-     \<and> txOutPayments txOut = unhappyPathPayments
+     \<and> txOutPayments txOut = partialExecutionPathPayments
      \<and> txOutWarnings txOut = []"
 (*<*)apply (code_simp)
-     apply (auto simp add: unhappyPathPayments_def adaProvider_def adaToken_def dollarProvider_def  dollarToken_def)
+     apply (auto simp add: partialExecutionPathPayments_def adaProvider_def adaToken_def dollarProvider_def  dollarToken_def)
      done(*>*)
 
 subsection \<open>Contract guarantees\<close>
 
 subsubsection \<open>Number of transactions\<close>
-text \<open>Counting the amount of When's, it is easy to notice that there can be at most two transactions\<close>
+text \<open>Counting the amount of \<open>When\<close>s, it is easy to notice that there can be at most two transactions\<close>
 
 proposition (*<*)maxSwapTransactions:(*>*)
   "maxTransactionsInitialState (swap a b) = 2" 
 (*<*)by simp(*>*)
 
 text \<open>Expressed in a different way, if we use the lemma defined in \secref{sec:transaction-bound} we can
-state that, if the execution of the contract yields a succesful \<^term>\<open>TransactionOutput\<close>, then the number
+state that, if the execution of the contract yields a successful \<^term>\<open>TransactionOutput\<close>, then the number
 of transactions must be lower or equal than @{value "maxTransactionsInitialState (swap a b)"}\<close>
 
 lemma
@@ -263,7 +263,7 @@ lemma
    \<Longrightarrow> isClosedAndEmpty (computeTransaction \<lparr> interval = (iniTime, endTime)
                                             , inputs = [] \<rparr> sta contract)
   "
-  using  swapExample_def happyPathTransactions_def dollarProvider_def dollarToken_def adaProvider_def adaToken_def
+  using  swapExample_def successfulExecutionPathTransactions_def dollarProvider_def dollarToken_def adaProvider_def adaToken_def
   apply (simp_all)
   oops
 

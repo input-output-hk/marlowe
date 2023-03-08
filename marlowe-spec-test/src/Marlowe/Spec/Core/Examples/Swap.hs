@@ -3,28 +3,28 @@
 module Marlowe.Spec.Core.Examples.Swap (tests) where
 
 import Test.Tasty (TestTree, testGroup)
-import Examples.Swap (swapExample, happyPathTransactions, happyPathPayments, unhappyPathPayments, unhappyPathTransactions)
+import Examples.Swap (swapExample, successfulExecutionPathTransactions, successfulExecutionPathPayments, partialExecutionPathPayments, partialExecutionPathTransactions)
 import Marlowe.Spec.Core.Examples.Common (runScenario)
 import Marlowe.Spec.Interpret (InterpretJsonRequest)
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Swap"
-    [ testHappyPath i
-    , testUnhappyPath i
+    [ testsuccessfulExecutionPath i
+    , testpartialExecutionPath i
     ]
 
-testHappyPath :: InterpretJsonRequest -> TestTree
-testHappyPath =
+testsuccessfulExecutionPath :: InterpretJsonRequest -> TestTree
+testsuccessfulExecutionPath =
   runScenario
-    "Happy path"
+    "Successful execution"
     swapExample
-    happyPathTransactions
-    happyPathPayments
+    successfulExecutionPathTransactions
+    successfulExecutionPathPayments
 
-testUnhappyPath :: InterpretJsonRequest -> TestTree
-testUnhappyPath =
+testpartialExecutionPath :: InterpretJsonRequest -> TestTree
+testpartialExecutionPath =
   runScenario
-    "Unhappy path"
+    "Partial execution"
     swapExample
-    unhappyPathTransactions
-    unhappyPathPayments
+    partialExecutionPathTransactions
+    partialExecutionPathPayments

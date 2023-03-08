@@ -93,10 +93,10 @@ testHappyPath = do
 
 testGeneratedHappyPath :: IO ()
 testGeneratedHappyPath =
-   case playTrace 0 (Examples.Swap.swapExample) Examples.Swap.happyPathTransactions of
+   case playTrace 0 (Examples.Swap.swapExample) Examples.Swap.successfulExecutionPathTransactions of
     TransactionError _ -> assertFailure "playTrace failed its execution"
     TransactionOutput o -> do
       txOutContract o @?= Close
       txOutWarnings o @?= []
-      txOutPayments o @?= Examples.Swap.happyPathPayments
+      txOutPayments o @?= Examples.Swap.successfulExecutionPathPayments
 

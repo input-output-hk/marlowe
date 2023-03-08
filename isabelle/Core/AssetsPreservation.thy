@@ -580,6 +580,10 @@ qed
 fun assetsInInputs :: "Input list \<Rightarrow> Assets" where
   "assetsInInputs inps = foldr addInput inps 0"
 
+section "Assets in transaction" 
+fun assetsInTransaction :: "Transaction \<Rightarrow> Assets" where
+  "assetsInTransaction tx = assetsInInputs (inputs tx)"
+
 section "Asset preservation"
 
 subsection "Fix Interval"
@@ -1005,7 +1009,7 @@ using assms proof (cases contract)
     by simp
 qed auto
 
-subsection "Apply all input"
+subsection "Apply all inputs"
 
 lemma applyAllLoop_preserves_assets : 
   assumes "validAndPositive_state inState"
@@ -1096,6 +1100,55 @@ theorem applyAllInputs_preserves_assets :
     shows "assetsInState inState + assetsInInputs inputs' 
           = assetsInState outState + assetsInPayments outPayments"
   using assms applyAllLoop_preserves_assets by fastforce
+
+subsection "Compute transaction"
+
+
+theorem computeTransaction_preserves_assets :
+  assumes "validAndPositive_state state"
+      and "computeTransaction tx state contract = TransactionOutput out"
+    shows "assetsInState state + assetsInTransaction tx 
+          = assetsInState (txOutState out) + assetsInPayments (txOutPayments out)" 
+proof -
+  obtain env fixSta 
+    where fixedTx: "fixInterval (interval tx) state = IntervalTrimmed env fixSta" 
+    by (smt (verit, best) assms TransactionOutput.distinct(1) computeTransaction.elims IntervalResult.exhaust IntervalResult.simps(6))
+
+  then obtain reduced warnings payments newState cont 
+    where applyAllInputsSuccess: "applyAllInputs env fixSta contract (inputs tx) = ApplyAllSuccess reduced warnings payments newState cont"
+    by (metis (no_types, lifting) ApplyAllResult.exhaust ApplyAllResult.simps(10) ApplyAllResult.simps(9) TransactionOutput.distinct(1) computeTransaction.simps IntervalResult.simps(5) assms(2))
+
+  show ?thesis 
+  proof (cases "(\<not> reduced) \<and> ((contract \<noteq> Close) \<or> (accounts state = []))")
+    case True
+    with assms fixedTx applyAllInputsSuccess show ?thesis by simp
+  next
+    case False
+    moreover note assms fixedTx applyAllInputsSuccess
+
+    moreover have "validAndPositive_state fixSta" 
+      using calculation fixInterval_preserves_preserves_validAndPositive_state validAndPositiveImpliesValid 
+      by blast
+
+    moreover have "validAndPositive_state newState"
+      using calculation applyAllInputs_preserves_preserves_validAndPositive_state
+      by blast
+
+    moreover have "assetsInState fixSta + assetsInInputs (inputs tx)
+          = assetsInState newState + assetsInPayments payments"
+      using calculation applyAllInputs_preserves_assets
+      by blast
+
+    moreover have "newState = txOutState out"
+                  "payments = txOutPayments out"
+      using calculation by auto
+
+    ultimately show ?thesis
+      by (metis AssetsPreservation.assetsInTransaction.simps fixInterval_preserves_assets)      
+  qed
+qed
+
+  
 
 section "DELETE"
 

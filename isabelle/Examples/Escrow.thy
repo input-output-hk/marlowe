@@ -4,9 +4,8 @@ theory Escrow
 begin
 (*>*)
 section \<open>Escrow contract\<close>
-text \<open>An escrow contract is for the purchase of an item at a price.
-The buyer may complain that there is a problem, asking for a refund.
-If the seller disputes that complaint, then a mediator decides.
+text \<open>An escrow contract allows a \<^bold>\<open>Buyer\<close> to purchase an item for a price.
+The money is deposited in an escrow, waiting for some feedback from the  \<^bold>\<open>Buyer\<close>. If the  \<^bold>\<open>Buyer\<close> and  \<^bold>\<open>Seller\<close> don't agree, a  \<^bold>\<open>Mediator\<close> will resolve the conflict.
 \<close>
 subsection \<open>Contract definition\<close>
 text \<open>The participants of the contract are:\<close>

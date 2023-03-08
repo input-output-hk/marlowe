@@ -184,7 +184,7 @@ definition
     ]
   "
 
-text  \<open>we expect the repayment of the of the deposit\<close>
+text  \<open>we expect the repayment of the deposit\<close>
 definition
   "partialExecutionPathPayments = [ Payment adaProvider (Party adaProvider) adaToken 10
   ] "

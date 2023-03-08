@@ -9,7 +9,7 @@ The buyer may complain that there is a problem, asking for a refund.
 If the seller disputes that complaint, then a mediator decides.
 \<close>
 subsection \<open>Contract definition\<close>
-text \<open>In the escrow contract there are the following roles:\<close>
+text \<open>The participants of the contract are:\<close>
 definition "seller = Role (BS ''Seller'')"
 definition "buyer = Role (BS ''Buyer'')"
 definition "mediator = Role (BS ''Mediator'')"

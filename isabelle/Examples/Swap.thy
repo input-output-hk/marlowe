@@ -184,7 +184,7 @@ definition
     ]
   "
 
-text  \<open>payments are made to swap the tokens\<close>
+text  \<open>we expect the repayment of the of the deposit\<close>
 definition
   "partialExecutionPathPayments = [ Payment adaProvider (Party adaProvider) adaToken 10
   ] "

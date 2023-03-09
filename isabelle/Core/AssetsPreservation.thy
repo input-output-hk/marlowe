@@ -581,8 +581,25 @@ fun assetsInInputs :: "Input list \<Rightarrow> Assets" where
   "assetsInInputs inps = foldr addInput inps 0"
 
 section "Assets in transaction" 
+
 fun assetsInTransaction :: "Transaction \<Rightarrow> Assets" where
   "assetsInTransaction tx = assetsInInputs (inputs tx)"
+
+fun addTransactionAssets :: "Transaction \<Rightarrow> Assets \<Rightarrow> Assets" where 
+  "addTransactionAssets tx a = assetsInTransaction tx + a" 
+
+lemma addTransactionAssetsCommutesComposition : 
+  "addTransactionAssets a \<circ> addTransactionAssets b = addTransactionAssets b \<circ> addTransactionAssets a" 
+proof -
+  have "\<forall> c. addTransactionAssets a (addTransactionAssets b c) = addTransactionAssets b (addTransactionAssets a c)" 
+    using Groups.group_cancel.add2 by auto
+  then show ?thesis   
+    by fastforce
+qed 
+
+
+fun assetsInTransactions :: "Transaction list \<Rightarrow> Assets" where
+  "assetsInTransactions txs = foldr addTransactionAssets txs 0"
 
 section "Asset preservation"
 
@@ -1148,7 +1165,95 @@ proof -
   qed
 qed
 
+subsection "Play Trace"
+
+lemma playTraceAux_preserves_assets : 
+  assumes "validAndPositive_state (txOutState prevOut)"
+      and "playTraceAux prevOut txs = TransactionOutput nextOut"
+    shows "assetsInState (txOutState prevOut) 
+             + assetsInPayments (txOutPayments prevOut) 
+             + assetsInTransactions txs
+          = assetsInState (txOutState nextOut) 
+             + assetsInPayments (txOutPayments nextOut)" 
+using assms proof (induction txs arbitrary: prevOut)
+  case Nil
+  then show ?case by simp
+
+next
+  case (Cons h t)
+  obtain prevWarn prevPays prevState prevCont where prevOutPattern: 
+    "prevOut = \<lparr> txOutWarnings = prevWarn
+               , txOutPayments = prevPays
+               , txOutState = prevState
+               , txOutContract = prevCont
+               \<rparr>"
+    using Semantics.TransactionOutputRecord.cases by blast
+
+  show ?case 
+  proof (cases "computeTransaction h prevState prevCont")
+    case (TransactionOutput transRes)
+
+    let ?updTransRes = "transRes  \<lparr> txOutPayments := prevPays @ (txOutPayments transRes)
+                                  , txOutWarnings := prevWarn @ (txOutWarnings transRes)\<rparr>"
+    note prevOutPattern TransactionOutput Cons
+    moreover have "validAndPositive_state prevState"
+                  "validAndPositive_state (txOutState transRes)"
+                  "validAndPositive_state (txOutState ?updTransRes)"
+      using calculation computeTransaction_preserves_validAndPositive_state by auto
+
+    moreover have "assetsInState prevState + assetsInTransaction h 
+                  = assetsInState (txOutState transRes) + assetsInPayments (txOutPayments transRes)"
+      using calculation computeTransaction_preserves_assets by presburger
+
+
+    moreover have "playTraceAux ?updTransRes t = TransactionOutput nextOut"
+      using calculation by simp 
+
+    moreover have 
+      "assetsInState (txOutState ?updTransRes) 
+        + assetsInPayments (txOutPayments ?updTransRes) 
+        + assetsInTransactions t 
+      =
+       assetsInState (txOutState nextOut) 
+        + assetsInPayments (txOutPayments nextOut)"
+      using calculation by blast
+   
+    ultimately show ?thesis       
+      using assetsInPayments_append 
+      by (simp add: ab_semigroup_add_class.add.commute ab_semigroup_add_class.add.left_commute)       
+  next
+    case (TransactionError err)
+    with Cons prevOutPattern show ?thesis 
+      by simp
+  qed 
+qed
+
+theorem playTrace_preserves_assets : 
+  assumes "playTrace slot contract txs = TransactionOutput out" 
+    shows "assetsInTransactions txs 
+         = assetsInState (txOutState out) + assetsInPayments (txOutPayments out)"
+proof -
+  let ?iniState = "\<lparr> txOutWarnings = []
+                   , txOutPayments = []
+                   , txOutState = emptyState slot
+                   , txOutContract = contract
+                   \<rparr>"
+
+  have  "validAndPositive_state (txOutState ?iniState)"
+    and "playTraceAux ?iniState txs = TransactionOutput out"
+    using assms validAndPositive_initial_state by auto
+
+  moreover
   
+  have "assetsInState (txOutState ?iniState) 
+         + assetsInPayments (txOutPayments ?iniState) 
+         + assetsInTransactions txs
+       = assetsInState (txOutState out) + assetsInPayments (txOutPayments out)"
+    using calculation playTraceAux_preserves_assets by blast
+ 
+  ultimately show ?thesis
+     by (auto simp add: empty_def)
+qed 
 
 section "DELETE"
 

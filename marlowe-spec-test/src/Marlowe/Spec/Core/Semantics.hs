@@ -3,23 +3,26 @@
 
 module Marlowe.Spec.Core.Semantics where
 
-import Arith (less_int, abs_int)
+import qualified Arith as Arith
 import Data.Aeson (ToJSON(..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment)
+import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
 import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
 import Test.Tasty (TestTree, testGroup)
 import Test.QuickCheck (withMaxSuccess)
-import Test.QuickCheck.Monadic (run)
-import Semantics (evalValue)
+import Test.QuickCheck.Monadic (assert, run)
+import Semantics (evalValue, playTrace)
 import SemanticsTypes (Value(..))
+import SingleInputTransactions (traceListToSingleInput)
 import QuickCheck.GenT (suchThat)
+import QuickCheck.GenT (listOf)
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics"
     [ evalValueTest i
     , divisionRoundsTowardsZeroTest i
+    , singleInput i
     ]
 
 -- The default maxSuccess is 100 and this tests modifies that to 500 as it was empirically found that 10 out of 10 times
@@ -45,10 +48,33 @@ divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division roundin
     numerator <- run $ generateT $ genValue interpret
     denominator <- run $ generateT
         (genValue interpret
-          `suchThat` (\d -> (abs_int $ evalValue env state numerator) `less_int` (abs_int $ evalValue env state d))
+          `suchThat` (\d -> (Arith.abs_int $ evalValue env state numerator) `Arith.less_int` (Arith.abs_int $ evalValue env state d))
         )
     let
         req :: Request JSON.Value
         req = EvalValue env state (DivValue numerator denominator)
         successResponse = RequestResponse $ toJSON (0 :: Int)
     assertResponse interpret req successResponse
+
+-- theorem traceToSingleInputIsEquivalent:
+--    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
+singleInput :: InterpretJsonRequest -> TestTree
+singleInput interpret = reproducibleProperty "Single input"  do
+    contract <- run $ generateT $ genContract interpret
+    transactions <- run $ generateT $ listOf $ genTransaction interpret
+    startTime <- run $ generate $ arbitraryNonnegativeInteger
+
+    let
+        multipleInputs = PlayTrace (integer_of_int startTime) contract transactions
+        singletonInput = PlayTrace (integer_of_int startTime) contract (traceListToSingleInput transactions)
+
+        multipleInputsResponse = RequestResponse $ toJSON $ playTrace startTime contract transactions
+        singletonInputResponse = RequestResponse $ toJSON $ playTrace startTime contract (traceListToSingleInput transactions)
+
+    assertResponse interpret multipleInputs multipleInputsResponse
+    assertResponse interpret singletonInput singletonInputResponse
+
+    assert $ multipleInputsResponse == singletonInputResponse
+
+integer_of_int :: Arith.Int -> Integer
+integer_of_int (Arith.Int_of_integer k) = k

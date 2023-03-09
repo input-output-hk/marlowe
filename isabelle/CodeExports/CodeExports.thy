@@ -11,6 +11,7 @@ theory CodeExports
 
 imports
   Core.Semantics
+  Core.SingleInputTransactions
   Examples.Escrow
   Examples.Swap
   "HOL-Library.Code_Target_Numeral"
@@ -60,6 +61,7 @@ export_code
   evalObservation
   reductionLoop
   reduceContractUntilQuiescent
+  traceListToSingleInput
   applyAllInputs
   playTrace
   computeTransaction
@@ -71,7 +73,7 @@ export_code
   calculateNonAmbiguousInterval
   validAndPositive_state
 
-  \<comment> \<open> Export examples to be used as oracle specificaiton tests\<close>
+  \<comment> \<open> Export examples to be used as oracle specification tests\<close>
   escrowExample
   everythingIsAlrightTransactions
   everythingIsAlrightPayments

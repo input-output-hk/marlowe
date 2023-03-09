@@ -47,6 +47,7 @@ library
         Semantics
         SemanticsTypes
         SemanticsGuarantees
+        SingleInputTransactions
 
 test-suite marlowe-spec-test-suite
     default-language: Haskell2010

@@ -371,8 +371,8 @@ theorem assetsInAccounts_distrib_insert :
 
 corollary AssetsInAccount_distrib_on_cons : 
   "valid_map rest \<Longrightarrow>
-  assetsInAccounts (((accId, tok), val) # rest) =  assetsInAccounts rest + asset tok (nat val)"
-  by auto
+  assetsInAccounts (((accId, tok), val) # rest) =  asset tok (nat val) +  assetsInAccounts rest"
+  by (simp add: Groups.ab_semigroup_add_class.add.commute)
 
 
 subsection "Account assets"
@@ -382,7 +382,7 @@ them around for future usage *)
 
 text "These definitions allows to filter only the assets for a particular accountId"
 fun entryInAccount :: "AccountId \<Rightarrow> ((AccountId \<times> Token) \<times> int) \<Rightarrow> bool" where 
-"entryInAccount accId entry = (fst (fst entry) = accId)"
+"entryInAccount accId ((entryAccId, _), _) = (entryAccId = accId)"
 
 fun accountAssets :: "AccountId \<Rightarrow> Accounts \<Rightarrow> Assets" where 
 "accountAssets accId accs = assetsInAccounts (filter (entryInAccount accId) accs)"
@@ -438,21 +438,24 @@ lemma assetsOfMoneyInAccountAsFilter :
   assumes "valid_map accs"
   shows 
     "asset token (nat (moneyInAccount accId token accs))
-     = assetsInAccounts (filter (\<lambda>e. fst e = (accId, token)) accs)"
+     = assetsInAccounts (filter (\<lambda>(k,_). k = (accId, token)) accs)"
     (is "_ = assetsInAccounts ?filtered")
 proof (cases "(accId, token) \<in> keys accs")
   assume "(accId, token) \<in> keys accs"
+  moreover note assms
   moreover obtain v1 where "lookup (accId, token) accs = Some v1"     
     by (meson MList.member.elims(1) calculation assms keys_member_r not_None_eq)
-  moreover have "?filtered =  [((accId, token), v1)]"     
-    by (metis calculation(2) assms lookupAsFilter)
+  moreover have "?filtered =  [((accId, token), v1)]"  
+    using calculation
+    by (simp add: lookupAsFilter)
   ultimately show ?thesis 
     by auto
 next
   assume "(accId, token) \<notin> keys accs"
   moreover have "?filtered = []"     
-    using calculation
-    by auto (metis (mono_tags, lifting) filter_False imageI)
+    using calculation filter_empty_conv image_iff
+    by auto fastforce
+
   ultimately show ?thesis 
     using assms keys_member_r by fastforce
 qed

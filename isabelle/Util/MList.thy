@@ -632,7 +632,7 @@ next
 
 lemma lookupAsFilter : 
   assumes "valid_map m" and "lookup k m = Some v" 
-  shows "filter (\<lambda>e. fst e = k) m = [(k, v)]"
+  shows "filter (\<lambda>(eK, _). eK = k) m = [(k, v)]"
         (is "?f m = _")
   using assms proof (induction m rule: MList_induct)
   case empty
@@ -649,7 +649,7 @@ next
     moreover have "lookup k m = None" 
       using calculation local.update.hyps(2) by auto
     moreover have "?f m = []" 
-      by (smt (verit) Option.option.distinct(1) Product_Type.prod.exhaust_sel calculation(3) empty_filter_conv local.update.hyps(1) lookupAsMap weak_map_of_SomeI)
+      by (smt (verit, del_insts) calculation(3) case_prodE filter_False lookupAsMap map_of_eq_Some_iff option.simps(3) update.hyps(1) valid_map.elims(2))
     moreover have "?f (insert uK uV m) = [(uK, uV)]" 
       using calculation filterOnInsertP local.update.hyps(1) by fastforce
     ultimately show ?thesis

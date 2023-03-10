@@ -1027,6 +1027,12 @@ section "Interpreter helpers"
 
 subsection "Transaction"
 
+(*
+type_synonym ExecutionPath = "Transaction list" 
+  
+fun superHelper ::"Contract \<Rightarrow> ExecutionPath set" 
+*)
+
 fun fixedTransaction :: "Transaction \<Rightarrow> State \<Rightarrow> bool" where 
 "fixedTransaction tx s = 
   (let curMinTime = minTime s; 
@@ -1050,6 +1056,14 @@ proof -
   ultimately show ?thesis
     by auto metis
 qed
+
+
+(*
+type_synonym ValidTransaction = Transaction
+*)
+typedef ValidTransaction = "{(tx, st). fixedTransaction tx st}"
+ apply (rule_tac x = "(\<lparr> interval = (0, 0), inputs = Nil\<rparr> ,emptyState 0)" in exI)
+ by simp
 
 subsection "Accounts and payments"
 

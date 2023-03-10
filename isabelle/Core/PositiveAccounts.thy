@@ -478,4 +478,12 @@ lemma allAccountsPositive_implies_lookup_is_positive :
  ; lookup (accId, tok) m = Some v
 \<rbrakk> \<Longrightarrow> v > 0"
   by (metis allAccountsPositive_implies_every_account_positive lookupAsMap map_of_SomeD)
+
+
+
+typedef ValidState = "{st. validAndPositive_state st}"
+proof 
+  show "emptyState 0 \<in> {st. validAndPositive_state st}" 
+    by (meson CollectI validAndPositive_initial_state)
+qed
 end

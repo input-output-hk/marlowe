@@ -1,268 +1,12 @@
 theory AssetsPreservation
-imports Semantics PositiveAccounts
+imports Semantics PositiveAccounts MultiAssets
 begin
 
-section "Assets"
+section "Assets helpers"
+text "This section defines helper functions and lemmas to see how many assets are stored in 
+different semantic types"
 
-text "We represent Multi-token assets as a function from Token to natural numbers." 
-(*
-TODO: decide if we want to change this definition to a (Token \<rightharpoonup> nat) Map with a 
-finite domain. This could help if we try to generate code from this theory as this definition yields 
-Wellsortedness error (see last dummy section).
-
-The problem that I see with changing the definition is that converting to a Map makes the 0 definition
-more complex or some theorems like assetZero not true, as having (\<forall> t. None) is not the same as (asset tok 0).
-One way to aliviate that is to also require the asset to be strictly bigger than 0, but is it worth it?
-*)
-
-typedef Assets = "{assets :: Token \<Rightarrow> nat. True}"
-  by auto 
-
-setup_lifting type_definition_Assets
-
-text 
-"
-The \<^emph>\<open>asset\<close> definition allows us to create a single-token asset
-"
-lift_definition asset :: "Token \<Rightarrow> nat \<Rightarrow> Assets" 
-  is "\<lambda>tok val. \<lambda>t. if t = tok then val else 0"
-  by simp
-
-text 
-"
-The \<^emph>\<open>assetValue\<close> definition allow us to obtain how many \<^emph>\<open>tokens\<close> (for a particular token)
-are in the Assets
-"
-lift_definition assetValue :: "Token \<Rightarrow> Assets \<Rightarrow> nat" is 
-  "\<lambda>t a. a t" .
-
-lemma assetValueOfSingleAsset [simp] : "assetValue tok (asset tok b) = b"
-  by transfer simp
-
-lemma assetValueOfDifferentToken [simp] : "tok1 \<noteq> tok2 \<Longrightarrow> assetValue tok1 (asset tok2 b) = 0"
-  by transfer simp
-
-lemma assetsEqByValue: "a = b \<longleftrightarrow> (\<forall> tok. assetValue tok a = assetValue tok b)"
-  by transfer auto
-
-
-subsection "Ordering"
-text "
-We define partial order for assets instead of total order because we cannot compare values of different tokens.
-"
-
-text "We need to define order because Assets can't be negative, so we can only simplify things like
-\<^term>\<open>a + (b - a) = b\<close> if \<^term>\<open>a \<le> b\<close>.
-"
-instantiation Assets :: ord
-begin
-
-
-lift_definition less_eq_Assets :: "Assets \<Rightarrow> Assets \<Rightarrow> bool" 
-  is "\<lambda>a b. \<forall>t. a t \<le> b t " .
-
-lift_definition less_Assets :: "Assets \<Rightarrow> Assets \<Rightarrow> bool" 
-  is "\<lambda>a b. (\<forall>rt. a rt \<le> b rt) \<and> (\<exists> st. a st < b st) " .
-
-instance ..
-
-end
-
-instantiation Assets :: preorder 
-begin 
-instance proof
- fix a b c :: Assets
-
- show "a \<le> a"
-   by transfer simp
-    
- show "a \<le> b \<Longrightarrow> b \<le> c \<Longrightarrow> a \<le> c"
-   using le_trans by transfer blast 
-
- show "a < b = ( a \<le> b \<and> \<not>  b \<le> a)"
-   by transfer (metis leD leI)    
-qed
-end
-
-instantiation Assets :: order 
-begin 
-instance proof 
-  fix a b :: Assets
-  show " a \<le> b \<Longrightarrow>  b \<le> a \<Longrightarrow> a = b"     
-    using le_antisym by transfer blast
-qed
-end
-
-text "If we create a single asset from a multi-asset, then the single asset is going to be lower or 
-equal to the multi-asset"
-lemma singleAsset_leq_than_asset: "asset t (assetValue t a) \<le> a" 
-  by transfer simp
-
-
-subsection "Arithmetic"
-
-instantiation Assets :: zero
-begin
-
-lift_definition zero_Assets :: Assets
-  is "\<lambda>_. 0"
-  by simp
-
-instance ..
-end
-
-text "Creating a single asset with 0 tokens is the same as creating the zero_Assets"
-lemma assetZero [simp] : "asset tok 0 = 0"
-  by transfer auto
-
-
-text "If we try to create a single asset from a negative integer is also the same as creating the zero_Assets"
-corollary assetOfNegInt [simp] : "(i :: int) \<le> 0 \<Longrightarrow> asset t (nat i) = 0 "
-  by simp
-
-text "Trying to count the amount of tokens of the zero_Assets is 0"
-lemma assetValueOfZero [simp] : "assetValue t 0 = 0"
-  by transfer simp
-
-
-instantiation Assets :: plus
-begin
-
-lift_definition plus_Assets :: "Assets \<Rightarrow> Assets \<Rightarrow> Assets" 
-  is "\<lambda>x y. \<lambda>tok. x tok + y tok"
-  by auto
-
-instance ..
-end
-
-lemma assetsDistributesPlus : "asset tok (a + b) = asset tok a + asset tok b"
-  by transfer auto
-
-lemma assetsJoinPlus : "asset tok a + asset tok b = asset tok (a + b)" 
-  by (simp add: assetsDistributesPlus)
-
-lemma assetValue_distrib : "assetValue tok (a + b) = assetValue tok a + assetValue tok b" 
-  by transfer auto 
-
-instantiation Assets :: minus
-begin
-
-lift_definition minus_Assets :: "Assets \<Rightarrow> Assets \<Rightarrow> Assets" 
-  is "\<lambda>x y. \<lambda>tok. x tok - y tok"
-  by auto
-
-instance ..
-end
-
-lemma assetsDistributesMinus : "asset tok (a - b) = asset tok a - asset tok b"
-  by transfer auto
-
-instantiation Assets :: semigroup_add
-begin
-instance proof
-  fix a b c :: Assets 
-
-  show "(a + b) + c = a + (b + c)"
-    by transfer (simp add: Groups.ab_semigroup_add_class.add_ac(1))
-qed
-end
-
-instantiation Assets :: ab_semigroup_add
-begin
-instance proof
-  fix a b :: Assets
-
-  show "a + b = b + a" 
-    by transfer (simp add: Groups.ab_semigroup_add_class.add.commute)    
-qed
-end
-
-
-instantiation Assets :: monoid_add
-begin
-instance proof 
-  fix a :: Assets
-
-  show "0 + a = a" 
-    by transfer auto
-  show "a + 0 = a" 
-    by transfer auto
-qed
-end
-
-(* TODO: This should be included by monoid_add, but for some reason I cannot delete it *)
-instantiation Assets :: comm_monoid_add 
-begin
-instance by standard simp
-end
-
-instantiation Assets :: cancel_ab_semigroup_add 
-begin 
-instance proof 
-  fix a b c :: Assets
-  show "a + b - a = b" 
-    by transfer force
-  show "a - b - c = a - (b + c)"
-    using diff_diff_left by transfer presburger
-qed
-end
-
-instantiation Assets :: comm_monoid_diff
-begin 
-instance proof 
-  fix a :: Assets
-  show "0 - a = 0" 
-    by transfer simp
-qed
-end
-
-instantiation Assets :: ordered_ab_semigroup_add 
-begin 
-instance proof 
-  fix a b c :: Assets
-  show "a \<le> b \<Longrightarrow> c + a \<le> c + b"
-    by transfer simp
-qed 
-end
-
-instantiation Assets :: ordered_ab_semigroup_add_imp_le
-begin 
-instance proof 
-  fix a b c :: Assets
-  show "c + a \<le> c + b \<Longrightarrow> a \<le> b"
-    by transfer simp
-qed
-end
-
-
-instantiation Assets :: canonically_ordered_monoid_add 
-begin 
-instance proof 
-  fix a b :: Assets 
-  (* TODO: See how to make this proof structured *)
-  have "a \<le> b \<Longrightarrow> \<exists>c. b = a + c"
-   apply transfer
-    subgoal for a2 b2       
-      apply (subgoal_tac  "\<And> x. a2 x \<le> b2 x \<Longrightarrow> b2 x = a2 x + (b2 x - a2 x)")
-       apply fast
-      by simp
-    done
-  also have "\<exists>c. b = a + c \<Longrightarrow> a \<le> b" 
-    by transfer auto
-
-  then show "(a \<le> b) = (\<exists>c. b = a + c)" 
-    using calculation by blast
-qed
-end
-
-instantiation Assets :: ordered_cancel_comm_monoid_diff 
-begin
-instance by standard 
-end
-
-
-
-section "Assets in Accounts"
+subsection "Assets in Accounts"
 
 text "Given a function that adds an entry of the account map to some accumulator"
 fun addAccountEntry :: " ((AccountId \<times> Token) \<times> int) \<Rightarrow> Assets \<Rightarrow> Assets" where 
@@ -288,7 +32,7 @@ text "And to be able to express it as a normal \<^emph>\<open>fold\<close> enabl
 lemma assetsInAccountFold : "assetsInAccounts accs = fold addAccountEntry accs 0" 
   by (simp add: addAccountEntryCommutesComposition foldr_fold)
 
-subsection "Ordering of assets in account"
+subsubsection "Ordering of assets in account"
 text "Because we are adding positive numbers, adding an account entry to some accumulator is always
 going to be the same size or bigger" 
 
@@ -316,7 +60,7 @@ next
   qed
 qed
 
-subsection "Assets in account distributes over insert"
+subsubsection "Assets in account distributes over insert"
 text "The main theorem of this section \<^emph>\<open>assetsInAccounts_distrib_insert\<close> describes how assets
 are distributed when we insert a new entry. To build up to that theorem, we start by analysing 
 how it distributes when there wasn't a previous entry for that pair. "
@@ -375,7 +119,7 @@ corollary AssetsInAccount_distrib_on_cons :
   by (simp add: Groups.ab_semigroup_add_class.add.commute)
 
 
-subsection "Account assets"
+subsubsection "Account assets"
 (* These helpers were translated from an older representation, they doesn't help prove that 
 the assets are preserved, but they help understand the assets of different Parties, so I leave
 them around for future usage *)
@@ -409,7 +153,7 @@ lemma accountAssets_leq_assetsInAccount:
   using filtered_as_leq_as by auto 
  
 
-subsection "Money in account" 
+subsubsection "Money in account" 
 
 lemma positiveAccounts_implies_positiveMoneyInAccount :
   assumes "valid_map accs" 
@@ -467,7 +211,7 @@ lemma moneyInAccount_leq_assetsInAccount :
     "
   using assetsOfMoneyInAccountAsFilter filtered_as_leq_as by presburger
 
-subsection "Update money in account"
+subsubsection "Update money in account"
 
 lemma assetsInAccounts_distrib_on_update: 
   assumes "valid_map accs"
@@ -484,7 +228,7 @@ next
 qed
 
 
-subsection "Add money to account" 
+subsubsection "Add money to account" 
 
 lemma addMoneyToAccount_distrib:
   assumes "allAccountsPositive accs" 
@@ -510,7 +254,7 @@ next
 qed
   
 
-section "Assets in state"
+subsection "Assets in state"
 
 fun assetsInState :: "State \<Rightarrow> Assets" where
 "assetsInState state = assetsInAccounts (accounts state)"
@@ -519,7 +263,7 @@ fun assetsInState :: "State \<Rightarrow> Assets" where
 lemma state_account_red : "accounts (state\<lparr> accounts := a\<rparr>) = a"
   by simp
 
-section "Assets in payment"
+subsection "Assets in payment"
 
 fun assetsInPayment :: "Payment \<Rightarrow> Assets" where
 "assetsInPayment (Payment _ (Party _) tok val) = asset tok (nat val)" |
@@ -560,7 +304,7 @@ next
     by (simp add: Groups.semigroup_add_class.add.assoc)
 qed
  
-section "Assets in input" 
+subsection "Assets in input" 
 
 fun assetsInInput :: "Input \<Rightarrow> Assets" where
   "assetsInInput (IDeposit _ _ tok money) = asset tok (nat money)" |
@@ -583,7 +327,7 @@ qed
 fun assetsInInputs :: "Input list \<Rightarrow> Assets" where
   "assetsInInputs inps = foldr addInput inps 0"
 
-section "Assets in transaction" 
+subsection "Assets in transaction" 
 
 fun assetsInTransaction :: "Transaction \<Rightarrow> Assets" where
   "assetsInTransaction tx = assetsInInputs (inputs tx)"
@@ -685,36 +429,6 @@ qed
 
 subsection "Reduce contract step"
 
-(* 
-TODO: simplify and move to accounts positive *)
-lemma updateMoneyIsPositive :
-  assumes "allAccountsPositive accs" 
-      and "valid_map accs" 
-      and "val \<ge> 0"
-    shows "allAccountsPositive (updateMoneyInAccount accId token val accs)"
-proof (cases "val = 0")
-  note assms
-  moreover assume "val = 0"
-  moreover have "updateMoneyInAccount accId token val accs = MList.delete (accId, token) accs"
-    using calculation(4) by force
-  
-  ultimately show ?thesis
-    (* TODO: this should be easier, we should unify
-       positiveMoneyInAccountOrNoAccount and allAccountsPositive to avoid unecesary conversion *)
-    by (metis MList_delete_preserves_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount delete_valid positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive)
-next
-  note assms
-  moreover assume "val \<noteq> 0"
-
-  moreover have "updateMoneyInAccount accId token val accs = MList.insert (accId, token) val accs"
-    using calculation(3) calculation(4) by force
-
-  ultimately show ?thesis 
-    (* TODO: same note as before *)
-    by (smt (verit, del_insts) PositiveAccounts.positiveMoneyInAccountOrNoAccount.simps addMoneyToAccountPositve_match allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount insert_lookup_different positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive updateMoneyInAccount_preserves_valid_map)
-qed
-
-
 lemma transferBetweenAccountsPreservesMoney : 
   assumes "balance = moneyInAccount payFrom token accs"
       and "paidMoney \<ge> 0"
@@ -746,7 +460,6 @@ proof -
     by (smt (verit, ccfv_threshold) semigroup_add_class.add.assoc addMoneyToAccount_distrib assetsDistributesPlus assetsInAccounts_distrib_on_update assms diff_add updateMoneyInAccount_preserves_valid_map)
 
 qed
-
 
 fun assetsInReduceEffect :: "ReduceEffect \<Rightarrow> Assets" where
 "assetsInReduceEffect (ReduceWithPayment p) = assetsInPayment p" |
@@ -1257,47 +970,5 @@ proof -
   ultimately show ?thesis
      by (auto simp add: empty_def)
 qed 
-
-section "DELETE"
-
-
-definition "t1 = Token (BS '''') (BS '''')"
-definition "t2 = Token (BS ''a'') (BS '''')"
-definition "t3 = Token (BS ''c'') (BS '''')"
-
-definition "a1 = asset t1 2"
-definition "a2 = asset t1 1 + asset t2 4 + asset t2 1"
-definition "a3 = a1 - a2"
-definition "a4 = a1 + a2"
-
-
-
-value "assetValue t1 a1"
-value "assetValue t1 a2"
-value "assetValue t2 a2"
-
-value "assetValue t1 a3"
-value "assetValue t2 a3"
-
-value "assetValue t1 a4"
-value "assetValue t2 a4"
-
-definition "acc1 = Role (BS ''a'')"
-definition "acc2 = Role (BS ''b'')"
-
-definition "sAccounts1 = [((acc1, t1), 2)]"
-
-definition "assets1 = assetsInAccounts sAccounts1"
-
-value "assetValue t1 assets1"
-
-
-(*
-instantiation Assets :: finite
-begin
-instance 
-  apply standard
-end
-*)
  
 end

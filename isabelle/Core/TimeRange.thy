@@ -1,5 +1,5 @@
 theory TimeRange
-imports Semantics PositiveAccounts QuiescentResult MoneyPreservation Timeout TransactionBound
+imports Semantics PositiveAccounts QuiescentResult Timeout TransactionBound
 begin
 
 theorem inIntervalIdempotentToIntersectInterval :

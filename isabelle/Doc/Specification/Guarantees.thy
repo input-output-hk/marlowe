@@ -2,7 +2,7 @@
 theory Guarantees
   imports
       Core.SemanticsTypes
-      Core.MoneyPreservation
+      Core.AssetsPreservation
       Core.Timeout
       Core.QuiescentResult
       Core.SingleInputTransactions
@@ -14,8 +14,8 @@ begin
 
 chapter \<open>Marlowe Guarantees \label{sec:marlowe-guarantees} \<close>
 
-text \<open>We can also use proof assistants to demonstrate that the Marlowe semantics presents certain
-desirable properties, such as that money is preserved and anything unspent is returned to users by
+text \<open>We can also use the Isabelle proof assistant to prove that the Marlowe semantics presents certain
+desirable properties, such as that assets are preserved and anything unspent is returned to users by
 the end of the execution of any contract.\<close>
 
 subsubsection \<open>Auxillary Functions\label{sec:playTrace}\<close>
@@ -31,36 +31,37 @@ text \<open>@{const playTraceAux} :: @{typeof playTraceAux}\<close>
 text \<open>@{const validAndPositive_state} :: @{typeof validAndPositive_state}\<close>
 text \<open>@{const maxTimeContract} :: @{typeof maxTimeContract}\<close>
 
-section \<open>Money Preservation\<close>
+section \<open>Assets Preservation\<close>
 
 text \<open>
 
 One of the dangers of using smart contracts is that a badly written one can potentially lock its
-funds forever. By the end of the contract, all the money paid to the contract must be distributed
-back, in some way, to a subset of the participants of the contract. To ensure this is the case we
-proved two properties: ``Money Preservation'' and ``Contracts Always Close''.
+funds forever.\<close>
+text \<open>By the end of a Marlowe contract, all the assets paid to the contract must be distributed
+back, in some way, to a subset of the participants. To ensure this behaviour we
+proved two properties: ``MultiAssets Preservation'' and ``Contracts Always Close''.\<close>
 
-Regarding money preservation, money is not created or destroyed by the semantics. More specifically,
-the money that comes in plus the money in the contract before the transaction must be equal to the
-money that comes out plus the contract after the transaction, except in the case of an error.
-
+text \<open>
+Regarding asset preservation, tokens are not created nor destroyed by the semantics. Formally speaking,
+if a transaction is computed successfully, the sum of the assets stored in the previous state and 
+the assets deposited by a transaction are equal to the assets in the new state and possible payments.
 \<close>
 
-text \<open>@{thm playTrace_preserves_money}\<close>
-
-text \<open>where @{const moneyInTransactions} and @{const moneyInPlayTraceResult} measure the funds in
-the transactions applied to a contract versus the funds in the contract state and the payments that
-it has made while executing.\<close>
+text \<open>@{thm computeTransaction_preserves_assets}\<close>
 
 section \<open>Contracts Always Close\<close>
 
 text \<open>
 
-For every Marlowe Contract there is a time after which an empty transaction can be issued that will
-close the contract and refund all the money in its accounts.
+For every Marlowe Contract there is a maximum time that allows any participant
+to create an empty transaction that will close the contract succesfuly. 
 \<close>
 
-text \<open>@{thm [display,names_short, margin=40] timedOutTransaction_closes_contract3}\<close>
+text \<open>@{thm [display,names_short, margin=40] timeOutTransaction_does_not_fail}\<close>
+
+text \<open>Moreover, that transaction empties the account and produces payments for any lingering assets\<close>
+
+text \<open>@{thm [display,names_short, margin=40] timedOutTransaction_preserves_assets}\<close>
 
 section \<open>Positive Accounts\<close>
 

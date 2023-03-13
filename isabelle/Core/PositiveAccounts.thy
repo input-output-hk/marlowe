@@ -478,4 +478,33 @@ lemma allAccountsPositive_implies_lookup_is_positive :
  ; lookup (accId, tok) m = Some v
 \<rbrakk> \<Longrightarrow> v > 0"
   by (metis allAccountsPositive_implies_every_account_positive lookupAsMap map_of_SomeD)
+
+
+lemma updateMoneyIsPositive :
+  assumes "allAccountsPositive accs" 
+      and "valid_map accs" 
+      and "val \<ge> 0"
+    shows "allAccountsPositive (updateMoneyInAccount accId token val accs)"
+proof (cases "val = 0")
+  note assms
+  moreover assume "val = 0"
+  moreover have "updateMoneyInAccount accId token val accs = MList.delete (accId, token) accs"
+    using calculation(4) by force
+  
+  ultimately show ?thesis
+    (* TODO: this should be easier, we should unify
+       positiveMoneyInAccountOrNoAccount and allAccountsPositive to avoid unecesary conversion *)
+    by (metis MList_delete_preserves_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount delete_valid positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive)
+next
+  note assms
+  moreover assume "val \<noteq> 0"
+
+  moreover have "updateMoneyInAccount accId token val accs = MList.insert (accId, token) val accs"
+    using calculation(3) calculation(4) by force
+
+  ultimately show ?thesis 
+    (* TODO: same note as before *)
+    by (smt (verit, del_insts) PositiveAccounts.positiveMoneyInAccountOrNoAccount.simps addMoneyToAccountPositve_match allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount insert_lookup_different positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive updateMoneyInAccount_preserves_valid_map)
+qed
+
 end

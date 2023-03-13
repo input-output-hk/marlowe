@@ -4,25 +4,30 @@
 module Marlowe.Spec.Core.Semantics where
 
 import qualified Arith as Arith
+import Control.Monad.IO.Class (MonadIO(..))
 import Data.Aeson (ToJSON(..))
 import qualified Data.Aeson as JSON
+import Data.List (sort)
 import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
 import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
 import Test.Tasty (TestTree, testGroup)
 import Test.QuickCheck (withMaxSuccess)
-import Test.QuickCheck.Monadic (assert, run)
-import Semantics (evalValue, playTrace)
-import SemanticsTypes (Value(..))
+import Test.QuickCheck.Monadic (assert, run, monitor, pre)
+import Semantics (evalValue, playTrace, computeTransaction, TransactionOutput (..), TransactionWarning, txOutWarnings, TransactionOutputRecord_ext (TransactionOutputRecord_ext))
+import SemanticsTypes (Value(..), State_ext (..))
 import SingleInputTransactions (traceListToSingleInput)
 import QuickCheck.GenT (suchThat)
 import QuickCheck.GenT (listOf)
+import Test.QuickCheck.Property (counterexample)
+import Marlowe.Utils (showAsJson)
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics"
     [ evalValueTest i
     , divisionRoundsTowardsZeroTest i
-    , singleInput i
+    , singleInputTransactions i
+    , computeTransactionIsQuiescent i
     ]
 
 -- The default maxSuccess is 100 and this tests modifies that to 500 as it was empirically found that 10 out of 10 times
@@ -58,10 +63,10 @@ divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division roundin
 
 -- theorem traceToSingleInputIsEquivalent:
 --    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
-singleInput :: InterpretJsonRequest -> TestTree
-singleInput interpret = reproducibleProperty "Single input"  do
+singleInputTransactions :: InterpretJsonRequest -> TestTree
+singleInputTransactions interpret = reproducibleProperty "Single input transactions"  do
     contract <- run $ generateT $ genContract interpret
-    transactions <- run $ generateT $ listOf $ genTransaction interpret
+    transactions <- run $ generateT $ (listOf $ genTransaction interpret) `suchThat` \t -> t /= traceListToSingleInput t
     startTime <- run $ generate $ arbitraryNonnegativeInteger
 
     let
@@ -78,3 +83,38 @@ singleInput interpret = reproducibleProperty "Single input"  do
 
 integer_of_int :: Arith.Int -> Integer
 integer_of_int (Arith.Int_of_integer k) = k
+
+-- theorem computeTransactionIsQuiescent:
+--    "validAndPositive_state sta ⟹
+--      computeTransaction traIn sta cont = TransactionOutput traOut ⟹
+--        isQuiescent (txOutContract traOut) (txOutState traOut)"
+computeTransactionIsQuiescent :: InterpretJsonRequest -> TestTree
+computeTransactionIsQuiescent interpret = reproducibleProperty "Compute transaction is quiescent" do
+    contract <- run $ generateT $ genContract interpret
+    state <- run $ generateT $ genState interpret
+    transactions <- run $ generateT $ genTransaction interpret
+    let
+        req :: Request JSON.Value
+        req = ComputeTransaction transactions state contract
+    RequestResponse res <- run $ liftIO $ interpret req
+
+    case JSON.fromJSON res of
+      JSON.Success transactionOutput  -> do
+        let expected = computeTransaction transactions state contract
+        monitor
+          ( counterexample $
+              "Request: " ++ showAsJson req ++ "\n"
+                ++ "Expected: " ++ show expected ++ "\n"
+                ++ "Actual: " ++ show transactionOutput)
+        assert (normalizeTransactionOutput transactionOutput == normalizeTransactionOutput expected)
+      _ -> fail "JSON parsing failed!"
+
+  where
+    normalizeTransactionOutput :: TransactionOutput -> TransactionOutput
+    normalizeTransactionOutput (TransactionOutput (TransactionOutputRecord_ext warnings payments state contract a)) =
+      TransactionOutput (TransactionOutputRecord_ext warnings payments (normalizeState state) contract a)
+    normalizeTransactionOutput err@(TransactionError _) = err
+
+    normalizeState :: State_ext () -> State_ext ()
+    normalizeState (State_ext accounts choices boundValues minTime a) =
+      State_ext (sort accounts) (sort choices) (sort boundValues) minTime a

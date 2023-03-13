@@ -106,15 +106,26 @@ computeTransactionIsQuiescent interpret = reproducibleProperty "Compute transact
               "Request: " ++ showAsJson req ++ "\n"
                 ++ "Expected: " ++ show expected ++ "\n"
                 ++ "Actual: " ++ show transactionOutput)
-        assert (normalizeTransactionOutput transactionOutput == normalizeTransactionOutput expected)
+        assert $ equals transactionOutput expected
       _ -> fail "JSON parsing failed!"
 
   where
-    normalizeTransactionOutput :: TransactionOutput -> TransactionOutput
-    normalizeTransactionOutput (TransactionOutput (TransactionOutputRecord_ext warnings payments state contract a)) =
-      TransactionOutput (TransactionOutputRecord_ext warnings payments (normalizeState state) contract a)
-    normalizeTransactionOutput err@(TransactionError _) = err
+    equals :: TransactionOutput -> TransactionOutput -> Bool
+    equals
+      (TransactionOutput (TransactionOutputRecord_ext warnings1 payments1 (State_ext accounts1 choices1 boundValues1 minTime1 b1) contract1 a1))
+      (TransactionOutput (TransactionOutputRecord_ext warnings2 payments2 (State_ext accounts2 choices2 boundValues2 minTime2 b2) contract2 a2)) =
+        warnings1 == warnings2
+        && payments1 == payments2
+        && accounts1 == accounts2
+        && setEquals choices1 choices2
+        && setEquals boundValues1 boundValues2
+        && minTime1 == minTime2
+        && contract1 == contract2
+        && a1 == a2
+        && b1 == b2
+    equals a b = a == b
 
-    normalizeState :: State_ext () -> State_ext ()
-    normalizeState (State_ext accounts choices boundValues minTime a) =
-      State_ext (sort accounts) (sort choices) (sort boundValues) minTime a
+    setEquals :: Eq a => [a] -> [a] -> Bool
+    setEquals l1 l2 =
+        all (flip elem l2) l1
+        && all (flip elem l1) l2

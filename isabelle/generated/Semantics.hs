@@ -8,9 +8,9 @@ module
              TransactionOutput(..), Transaction_ext(..), evalValue,
              evalObservation, txOutWarnings, txOutPayments, reductionLoop,
              reduceContractUntilQuiescent, applyAllInputs, computeTransaction,
-             playTrace, getOutcomes, maxTimeContract, getSignatures,
-             calculateNonAmbiguousInterval, txOutState, txOutContract,
-             equal_TransactionError, equal_TransactionOutput,
+             playTrace, getOutcomes, isQuiescent, maxTimeContract,
+             getSignatures, calculateNonAmbiguousInterval, txOutState,
+             txOutContract, equal_TransactionError, equal_TransactionOutput,
              equal_Transaction_ext)
   where {
 
@@ -752,6 +752,14 @@ getOutcomes ::
 getOutcomes eff inp =
   List.foldl (\ acc (p, (_, m)) -> addOutcome p m acc) emptyOutcome
     (getPartiesFromReduceEffect eff ++ getPartiesFromInput inp);
+
+isQuiescent :: SemanticsTypes.Contract -> SemanticsTypes.State_ext () -> Bool;
+isQuiescent SemanticsTypes.Close state = null (SemanticsTypes.accounts state);
+isQuiescent (SemanticsTypes.When uu uv uw) ux = True;
+isQuiescent (SemanticsTypes.Pay v va vb vc vd) uz = False;
+isQuiescent (SemanticsTypes.If v va vb) uz = False;
+isQuiescent (SemanticsTypes.Let v va vb) uz = False;
+isQuiescent (SemanticsTypes.Assert v va) uz = False;
 
 maxTimeCase :: SemanticsTypes.Case -> Arith.Int;
 maxTimeCase (SemanticsTypes.Case vc contract) = maxTimeContract contract;

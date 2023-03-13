@@ -7,14 +7,13 @@ import qualified Arith as Arith
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Aeson (ToJSON(..))
 import qualified Data.Aeson as JSON
-import Data.List (sort)
 import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
 import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
 import Test.Tasty (TestTree, testGroup)
 import Test.QuickCheck (withMaxSuccess)
-import Test.QuickCheck.Monadic (assert, run, monitor, pre)
-import Semantics (evalValue, playTrace, computeTransaction, TransactionOutput (..), TransactionWarning, txOutWarnings, TransactionOutputRecord_ext (TransactionOutputRecord_ext))
+import Test.QuickCheck.Monadic (assert, run, monitor)
+import Semantics (evalValue, playTrace, computeTransaction, TransactionOutput (..), TransactionOutputRecord_ext (TransactionOutputRecord_ext), isQuiescent)
 import SemanticsTypes (Value(..), State_ext (..))
 import SingleInputTransactions (traceListToSingleInput)
 import QuickCheck.GenT (suchThat)
@@ -84,6 +83,7 @@ singleInputTransactions interpret = reproducibleProperty "Single input transacti
 integer_of_int :: Arith.Int -> Integer
 integer_of_int (Arith.Int_of_integer k) = k
 
+-- QuiescentResults.thy
 -- theorem computeTransactionIsQuiescent:
 --    "validAndPositive_state sta ⟹
 --      computeTransaction traIn sta cont = TransactionOutput traOut ⟹
@@ -129,3 +129,26 @@ computeTransactionIsQuiescent interpret = reproducibleProperty "Compute transact
     setEquals l1 l2 =
         all (flip elem l2) l1
         && all (flip elem l1) l2
+
+-- QuiescentResults.thy
+-- theorem playTraceIsQuiescent:
+--    "playTrace sl cont (Cons h t) = TransactionOutput traOut ⟹
+--      isQuiescent (txOutContract traOut) (txOutState traOut)"
+playTraceIsQuiescent :: InterpretJsonRequest -> TestTree
+playTraceIsQuiescent interpret = reproducibleProperty "Play trace is quiescent" do
+    contract <- run $ generateT $ genContract interpret
+    transactions <- run $ generateT $ listOf $ genTransaction interpret
+    startTime <- run $ generate $ arbitraryNonnegativeInteger
+    let
+        req :: Request JSON.Value
+        req = PlayTrace (integer_of_int startTime) contract transactions
+    RequestResponse res <- run $ liftIO $ interpret req
+
+    case JSON.fromJSON res of
+      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _)) -> do
+        monitor
+          ( counterexample $
+              "Request: " ++ showAsJson req ++ "\n"
+                ++ "Expected reponse to be quiescent" )
+        assert $ isQuiescent txOutContract txOutState
+      _ -> fail "JSON parsing failed!"

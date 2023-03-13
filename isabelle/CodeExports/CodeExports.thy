@@ -60,6 +60,7 @@ export_code
   evalValue
   evalObservation
   reductionLoop
+  isQuiescent
   reduceContractUntilQuiescent
   traceListToSingleInput
   applyAllInputs

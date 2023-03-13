@@ -25,7 +25,7 @@ tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics"
     [ evalValueTest i
     , divisionRoundsTowardsZeroTest i
-    , singleInputTransactions i
+    , traceToSingleInputIsEquivalent i
     , computeTransactionIsQuiescent i
     ]
 
@@ -62,8 +62,8 @@ divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division roundin
 
 -- theorem traceToSingleInputIsEquivalent:
 --    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
-singleInputTransactions :: InterpretJsonRequest -> TestTree
-singleInputTransactions interpret = reproducibleProperty "Single input transactions"  do
+traceToSingleInputIsEquivalent :: InterpretJsonRequest -> TestTree
+traceToSingleInputIsEquivalent interpret = reproducibleProperty "Single input transactions"  do
     contract <- run $ generateT $ genContract interpret
     transactions <- run $ generateT $ (listOf $ genTransaction interpret) `suchThat` \t -> t /= traceListToSingleInput t
     startTime <- run $ generate $ arbitraryNonnegativeInteger

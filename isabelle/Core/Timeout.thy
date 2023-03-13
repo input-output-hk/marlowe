@@ -1,5 +1,5 @@
 theory Timeout
-imports Semantics PositiveAccounts QuiescentResult MoneyPreservation
+imports Semantics PositiveAccounts QuiescentResult AssetsPreservation
 begin
 
 fun isClosedAndEmpty :: "TransactionOutput \<Rightarrow> bool" where
@@ -239,33 +239,44 @@ theorem timedOutTransaction_closes_contract :
   apply (simp del:validAndPositive_state.simps reduceContractUntilQuiescent.simps)
   using maxTimeNotAmbiguous by auto
 
+corollary timeOutTransaction_does_not_fail : 
+  assumes "validAndPositive_state sta"
+  assumes "emptyTxAfterDeadline = \<lparr> interval = (iniTime, endTime), inputs = [] \<rparr>"
+  assumes "iniTime \<ge> minTime sta"
+      and "iniTime \<ge> maxTimeContract cont"
+      and "endTime \<ge> iniTime" 
+  assumes "accounts sta \<noteq> [] \<or> cont \<noteq> Close"
+    shows "\<exists>txOut. computeTransaction emptyTxAfterDeadline sta cont = TransactionOutput txOut"
+  using assms by (meson Timeout.isClosedAndEmpty.elims(2)  timedOutTransaction_closes_contract)
+
 theorem timeOutTransaction_closes_contract2 :
   "validAndPositive_state sta
    \<Longrightarrow> accounts sta \<noteq> [] \<or> cont \<noteq> Close
    \<Longrightarrow> \<exists> inp . isClosedAndEmpty (computeTransaction inp sta cont)"
   by (meson not_less not_less_iff_gr_or_eq timedOutTransaction_closes_contract)
 
-fun moneyInComputeTransactionOutput :: "TransactionOutput \<Rightarrow> int" where
-"moneyInComputeTransactionOutput (TransactionOutput txOut) = moneyInPayments (txOutPayments txOut)" |
-"moneyInComputeTransactionOutput _ = 0"
 
-theorem timedOutTransaction_closes_contract3 :
-  "validAndPositive_state sta
-   \<Longrightarrow> iniTime \<ge> minTime sta
-   \<Longrightarrow> iniTime \<ge> maxTimeContract cont
-   \<Longrightarrow> endTime \<ge> iniTime
-   \<Longrightarrow> accounts sta \<noteq> [] \<or> cont \<noteq> Close
-   \<Longrightarrow> moneyInComputeTransactionOutput (computeTransaction \<lparr> interval = (iniTime, endTime)
-                                                           , inputs = [] \<rparr> sta cont) = moneyInAccounts (accounts sta)"
-  apply (cases "computeTransaction \<lparr> interval = (iniTime, endTime), inputs = [] \<rparr> sta cont")
-  subgoal for txOut
-    apply (cases "txOut")
-    apply (simp only:refl moneyInTransactionOutput.simps)
-    apply (insert computeTransaction_preserves_money[of "sta" "\<lparr> interval = (iniTime, endTime)
-                                                      , inputs = [] \<rparr>" cont])
-    subgoal for txOutWarnings txOutPayments txOutState txOutContract
-      using timedOutTransaction_closes_contract by fastforce
-    done
-  by (metis isClosedAndEmpty.simps(2) timedOutTransaction_closes_contract)
+theorem timedOutTransaction_preserves_assets :
+  assumes "validAndPositive_state sta"
+  assumes "emptyTxAfterDeadline = \<lparr> interval = (iniTime, endTime), inputs = [] \<rparr>"
+  assumes "iniTime \<ge> minTime sta"
+      and "iniTime \<ge> maxTimeContract cont"
+      and "endTime \<ge> iniTime"
+  assumes "accounts sta \<noteq> [] \<or> cont \<noteq> Close"
+  assumes "computeTransaction emptyTxAfterDeadline sta cont = TransactionOutput txOut"
+  shows "assetsInState sta = assetsInPayments (txOutPayments txOut) "
+proof -
+  note assms
+
+  moreover have "assetsInState sta + assetsInTransaction emptyTxAfterDeadline 
+          = assetsInState (txOutState txOut) + assetsInPayments (txOutPayments txOut)"
+    using computeTransaction_preserves_assets calculation by presburger
+  
+  moreover have "accounts (txOutState txOut) = []"
+    using calculation by (metis Timeout.isClosedAndEmpty.simps(1) timedOutTransaction_closes_contract)
+ 
+  ultimately show ?thesis by auto
+qed
+
 
 end

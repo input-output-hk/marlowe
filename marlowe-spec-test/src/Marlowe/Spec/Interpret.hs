@@ -29,6 +29,7 @@ type Size = Int
 data Request transport
   = TestRoundtripSerialization TypeId transport
   | GenerateRandomValue TypeId Size Seed
+  | ReduceContractUntilQuiescent (C.Environment_ext ()) (C.State_ext ()) C.Contract
   | ComputeTransaction (C.Transaction_ext ()) (C.State_ext ()) C.Contract
   | PlayTrace Integer C.Contract [C.Transaction_ext ()]
   | EvalValue (C.Environment_ext ()) (C.State_ext ()) C.Value
@@ -44,6 +45,12 @@ instance ToJSON (Request JSON.Value) where
     , "typeId" .= toJSON t
     , "seed" .= toJSON seed
     , "size" .= toJSON size
+    ]
+  toJSON (ReduceContractUntilQuiescent env state c) = object
+    [ "request" .= JSON.String "compute-transaction"
+    , "environment" .= toJSON env
+    , "state" .= toJSON state
+    , "coreContract" .= toJSON c
     ]
   toJSON (ComputeTransaction i s c) = object
     [ "request" .= JSON.String "compute-transaction"

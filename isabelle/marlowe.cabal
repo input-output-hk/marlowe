@@ -44,10 +44,13 @@ library
         Examples.Escrow
         Examples.Swap
         MarloweCoreJson
+        PositiveAccounts
         Semantics
         SemanticsTypes
         SemanticsGuarantees
         SingleInputTransactions
+        Timeout
+        TransactionBound
 
 test-suite marlowe-spec-test-suite
     default-language: Haskell2010

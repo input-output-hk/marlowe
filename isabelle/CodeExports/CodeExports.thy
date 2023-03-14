@@ -61,6 +61,8 @@ export_code
   evalObservation
   reductionLoop
   isQuiescent
+  isClosedAndEmpty
+  maxTransactionsInitialState
   reduceContractUntilQuiescent
   traceListToSingleInput
   applyAllInputs
@@ -100,6 +102,7 @@ export_code
 
   \<comment> \<open>Force export of Arith.Int constructor\<close>
   int_of_integer
+  integer_of_nat
 
   \<comment> \<open>Force export of TransactionOutput constructors\<close>
   TransactionOutput
@@ -119,6 +122,14 @@ export_code
   \<comment> \<open>Force the export of the transaction output record\<close>
   TransactionOutputRecord_ext
 
+  ContractQuiescent
+  RRAmbiguousTimeIntervalError
+  ReduceNoWarning
+  ReduceNonPositivePay
+  ReducePartialPay
+  ReduceShadowing
+  ReduceAssertionFailed
+
   \<comment> \<open>Force the export on some equality functions (sadly it does not force the Eq instance)\<close>
   equal_TransactionWarning_inst.equal_TransactionWarning
   equal_Payment_inst.equal_Payment
@@ -131,6 +142,7 @@ export_code
   equal_IntervalError_inst.equal_IntervalError
   equal_TransactionError_inst.equal_TransactionError
   equal_TransactionOutput_inst.equal_TransactionOutput
+  equal_ReduceResult_inst.equal_ReduceResult
 
   in Haskell (string_classes)
 

@@ -46,7 +46,7 @@ import qualified Data.Text as T
 import Data.Scientific (Scientific, floatingOrInteger)
 import qualified Examples.Swap
 import SemanticsTypes (Action(..), Case(..), Contract(..), Input(..), Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..), State_ext(..), IntervalError(..), Environment_ext(..))
-import Semantics (Transaction_ext(..), Payment(..), TransactionWarning(..), TransactionError(..), TransactionOutput(..), TransactionOutputRecord_ext(..), txOutWarnings, txOutPayments, txOutState, txOutContract, playTrace )
+import Semantics (Transaction_ext(..), Payment(..), ReduceResult(..), ReduceWarning(..), TransactionWarning(..), TransactionError(..), TransactionOutput(..), TransactionOutputRecord_ext(..), txOutWarnings, txOutPayments, txOutState, txOutContract, playTrace)
 
 
 
@@ -1330,6 +1330,82 @@ in case of an error, or 4 properties in case of success.
 
 
 \begin{code}
+instance ToJSON ReduceWarning where
+  toJSON ReduceNoWarning = JSON.String "ReduceNoWarning"
+  toJSON (ReduceNonPositivePay accountId payee token amount)
+    = object
+        [ "accountId" .= toJSON accountId
+        , "payee" .= toJSON payee
+        , "token" .= toJSON token
+        , "amount" .= toJSON amount
+        ]
+  toJSON (ReducePartialPay accountId payee token paid expected)
+    = object
+        [ "accountId" .= toJSON accountId
+        , "payee" .= toJSON payee
+        , "token" .= toJSON token
+        , "paid" .= toJSON paid
+        , "expected" .= toJSON expected
+        ]
+  toJSON (ReduceShadowing valueId oldValue newValue)
+    = object
+        [ "valueId" .= toJSON valueId
+        , "oldValue" .= oldValue
+        , "newValue" .= newValue
+        ]
+  toJSON ReduceAssertionFailed = JSON.String "ReduceAssertionFailed"
+
+instance ToJSON ReduceResult where
+  toJSON (ContractQuiescent reduced warnings payments state contract)
+    = object
+        [ "reduced" .= toJSON reduced
+        , "warnings" .= toJSON warnings
+        , "payments" .= toJSON payments
+        , "state" .= toJSON state
+        , "contract" .= toJSON contract
+        ]
+  toJSON RRAmbiguousTimeIntervalError = JSON.String "RRAmbiguousTimeIntervalError"
+
+instance FromJSON ReduceWarning where
+  parseJSON (JSON.String "ReduceNoWarning") = return ReduceNoWarning
+  parseJSON (JSON.String "ReduceAssertionFailed") = return ReduceAssertionFailed
+
+  parseJSON x = withObject "ReduceResult"
+                (\v ->
+                  (ReduceNonPositivePay
+                            <$> (v .: "accountId")
+                            <*> (v .: "payee")
+                            <*> (v .: "token")
+                            <*> (v .: "amount")
+                  ) <|>
+                  (ReducePartialPay
+                            <$> (v .: "accountId")
+                            <*> (v .: "payee")
+                            <*> (v .: "token")
+                            <*> (v .: "paid")
+                            <*> (v .: "expected")
+                  ) <|>
+                  (ReduceShadowing
+                            <$> (v .: "valueId")
+                            <*> (v .: "oldValue")
+                            <*> (v .: "newValue")
+                  )
+                ) x
+
+instance FromJSON ReduceResult where
+  parseJSON (JSON.String "RRAmbiguousTimeIntervalError") = return RRAmbiguousTimeIntervalError
+
+  parseJSON x = withObject "ReduceResult"
+                (\v ->
+                  (ContractQuiescent
+                            <$> (v .: "reduced")
+                            <*> (v .: "warnings")
+                            <*> (v .: "payments")
+                            <*> (v .: "state")
+                            <*> (v .: "contract")
+                  )
+                ) x
+
 instance ToJSON TransactionOutput where
   toJSON (TransactionError err) = object
     [ "transaction_error" .= toJSON err ]

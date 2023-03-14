@@ -12,21 +12,39 @@ import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..)
 import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
 import Test.Tasty (TestTree, testGroup)
 import Test.QuickCheck (withMaxSuccess)
-import Test.QuickCheck.Monadic (assert, run, monitor)
-import Semantics (evalValue, playTrace, computeTransaction, TransactionOutput (..), TransactionOutputRecord_ext (TransactionOutputRecord_ext), isQuiescent)
-import SemanticsTypes (Value(..), State_ext (..))
+import Test.QuickCheck.Monadic (assert, run, monitor, pre)
+import Semantics (evalValue, playTrace, computeTransaction, TransactionOutput (..), TransactionOutputRecord_ext (TransactionOutputRecord_ext), isQuiescent, TransactionWarning, txOutWarnings, reduceContractUntilQuiescent, ReduceResult (..))
+import Timeout (isClosedAndEmpty)
+import SemanticsTypes (Value(..), State_ext (..), Contract(..))
 import SingleInputTransactions (traceListToSingleInput)
 import QuickCheck.GenT (suchThat)
 import QuickCheck.GenT (listOf)
 import Test.QuickCheck.Property (counterexample)
 import Marlowe.Utils (showAsJson)
+import PositiveAccounts (validAndPositive_state)
+import QuickCheck.GenT (listOf1)
+import TransactionBound (maxTransactionsInitialState)
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics"
     [ evalValueTest i
     , divisionRoundsTowardsZeroTest i
-    , traceToSingleInputIsEquivalent i
-    , computeTransactionIsQuiescent i
+    -- TransactionBound.thy
+    -- , playTrace_only_accepts_maxTransactionsInitialStateTest i -- FIXME: does not make sense!
+    -- SingleInputTransactions.thy
+    , traceToSingleInputIsEquivalentTest i
+    , reduceContractUntilQuiescentIdempotentTest i -- FIXME: new request
+    -- QuiescentResults.thy
+    , computeTransactionIsQuiescentTest i
+    , playTraceIsQuiescentTest i
+    -- PositiveAccounts.thy
+    -- playTraceAux_preserves_validAndPositive_state
+    -- Timeout.thy
+    , timedOutTransaction_closes_contractTest i
+    -- timedOutTransaction_closes_contract2Test i
+    -- timedOutTransaction_closes_contract3Test i
+    -- CloseIsSafe.thy
+    , closeIsSafeTest i
     ]
 
 -- The default maxSuccess is 100 and this tests modifies that to 500 as it was empirically found that 10 out of 10 times
@@ -60,10 +78,35 @@ divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division roundin
         successResponse = RequestResponse $ toJSON (0 :: Int)
     assertResponse interpret req successResponse
 
+-- TransactionBound.thy
+-- lemma playTrace_only_accepts_maxTransactionsInitialState :
+--    "playTrace sl c l = TransactionOutput txOut ⟹
+--      length l ≤ maxTransactionsInitialState c"
+playTrace_only_accepts_maxTransactionsInitialStateTest :: InterpretJsonRequest -> TestTree
+playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleProperty "playTrace only accepts maxTransactionsInitialState"  do
+    contract <- run $ generateT $ genContract interpret
+    transactions <- run $ generateT $ listOf1 $ genTransaction interpret
+    startTime <- run $ generate $ arbitraryNonnegativeInteger
+    let
+        req :: Request JSON.Value
+        req = PlayTrace (integer_of_int startTime) contract transactions
+    RequestResponse res <- run $ liftIO $ interpret req
+
+    case JSON.fromJSON res of
+      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ _ _ txOutContract _)) -> do
+        monitor
+          ( counterexample $
+              "Request: " ++ showAsJson req ++ "\n"
+                ++ "Expected reponse to be quiescent" )
+        assert $ toInteger (length transactions) <= Arith.integer_of_nat (maxTransactionsInitialState contract)
+      JSON.Success _ -> pre False
+      _ -> fail "JSON parsing failed!"
+
+-- SingleInputTransactions.thy
 -- theorem traceToSingleInputIsEquivalent:
 --    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
-traceToSingleInputIsEquivalent :: InterpretJsonRequest -> TestTree
-traceToSingleInputIsEquivalent interpret = reproducibleProperty "Single input transactions"  do
+traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
+traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single input transactions"  do
     contract <- run $ generateT $ genContract interpret
     transactions <- run $ generateT $ (listOf $ genTransaction interpret) `suchThat` \t -> t /= traceListToSingleInput t
     startTime <- run $ generate $ arbitraryNonnegativeInteger
@@ -83,15 +126,45 @@ traceToSingleInputIsEquivalent interpret = reproducibleProperty "Single input tr
 integer_of_int :: Arith.Int -> Integer
 integer_of_int (Arith.Int_of_integer k) = k
 
+-- SingleInputTransactions.thy
+--
+-- lemma reduceContractUntilQuiescentIdempotent :
+--    "reduceContractUntilQuiescent env state contract = ContractQuiescent reducedAfter wa pa nsta ncont ⟹
+--       reduceContractUntilQuiescent env nsta ncont = ContractQuiescent False [] [] nsta ncont"
+reduceContractUntilQuiescentIdempotentTest :: InterpretJsonRequest -> TestTree
+reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "reduceContractUntilQuiescent idempotent"  do
+    env <- run $ generate $ genEnvironment
+    state <- run $ generateT $ genState interpret
+    contract <- run $ generateT $ genContract interpret
+
+    let
+        req :: Request JSON.Value
+        req = ReduceContractUntilQuiescent env state contract
+    RequestResponse res <- run $ liftIO $ interpret req
+
+    case JSON.fromJSON res of
+      JSON.Success (ContractQuiescent reduced warnings payments nsta ncont) -> do
+        monitor
+          ( counterexample $
+              "Request: " ++ showAsJson req ++ "\n"
+                ++ "Expected: " ++ show False ++ "\n"
+                ++ "Actual: " ++ show contract)
+        assert $ case reduceContractUntilQuiescent env nsta ncont of
+                   ContractQuiescent False _ _ _ _ -> True
+                   _ -> False
+      JSON.Success _ -> pre False
+      _ -> fail "JSON parsing failed!"
+
+
 -- QuiescentResults.thy
 -- theorem computeTransactionIsQuiescent:
 --    "validAndPositive_state sta ⟹
 --      computeTransaction traIn sta cont = TransactionOutput traOut ⟹
 --        isQuiescent (txOutContract traOut) (txOutState traOut)"
-computeTransactionIsQuiescent :: InterpretJsonRequest -> TestTree
-computeTransactionIsQuiescent interpret = reproducibleProperty "Compute transaction is quiescent" do
+computeTransactionIsQuiescentTest :: InterpretJsonRequest -> TestTree
+computeTransactionIsQuiescentTest interpret = reproducibleProperty "Compute transaction is quiescent" do
     contract <- run $ generateT $ genContract interpret
-    state <- run $ generateT $ genState interpret
+    state <- run $ generateT $ genState interpret `suchThat` validAndPositive_state
     transactions <- run $ generateT $ genTransaction interpret
     let
         req :: Request JSON.Value
@@ -134,10 +207,10 @@ computeTransactionIsQuiescent interpret = reproducibleProperty "Compute transact
 -- theorem playTraceIsQuiescent:
 --    "playTrace sl cont (Cons h t) = TransactionOutput traOut ⟹
 --      isQuiescent (txOutContract traOut) (txOutState traOut)"
-playTraceIsQuiescent :: InterpretJsonRequest -> TestTree
-playTraceIsQuiescent interpret = reproducibleProperty "Play trace is quiescent" do
+playTraceIsQuiescentTest :: InterpretJsonRequest -> TestTree
+playTraceIsQuiescentTest interpret = reproducibleProperty "Play trace is quiescent" do
     contract <- run $ generateT $ genContract interpret
-    transactions <- run $ generateT $ listOf $ genTransaction interpret
+    transactions <- run $ generateT $ listOf1 $ genTransaction interpret
     startTime <- run $ generate $ arbitraryNonnegativeInteger
     let
         req :: Request JSON.Value
@@ -151,4 +224,61 @@ playTraceIsQuiescent interpret = reproducibleProperty "Play trace is quiescent" 
               "Request: " ++ showAsJson req ++ "\n"
                 ++ "Expected reponse to be quiescent" )
         assert $ isQuiescent txOutContract txOutState
+      JSON.Success _ -> pre False
       _ -> fail "JSON parsing failed!"
+
+-- Timeout.thy
+-- theorem timedOutTransaction_closes_contract:
+--    "validAndPositive_state sta
+--       ⟹  iniTime ≥ minTime sta
+--       ⟹  iniTime ≥ maxTimeContract cont
+--       ⟹  endTime ≥ iniTime
+--       ⟹  accounts sta ≠ [] ∨ cont ≠ Close
+--       ⟹  isClosedAndEmpty (computeTransaction ⦇ interval = (iniTime, endTime)
+--                                               , inputs = [] ⦈ sta cont)"
+timedOutTransaction_closes_contractTest :: InterpretJsonRequest -> TestTree
+timedOutTransaction_closes_contractTest interpret = reproducibleProperty "Timed-out transaction closes contract"  do
+  state <- run $ generateT $ genState interpret `suchThat` validAndPositive_state
+  txIn <- run $ generateT $ genTransaction interpret
+  let req :: Request JSON.Value
+      req = ComputeTransaction txIn state Close
+
+  RequestResponse res <- run $ liftIO $ interpret req
+
+  case JSON.fromJSON res of
+    JSON.Success txOut@(TransactionOutput trec) -> do
+      let expected :: [TransactionWarning]
+          expected = mempty
+      monitor
+        ( counterexample $
+            "Request: " ++ showAsJson req ++ "\n"
+              ++ "Expected: " ++ show expected ++ "\n"
+              ++ "Actual: " ++ show (txOutWarnings trec))
+      assert $ isClosedAndEmpty txOut
+    JSON.Success _ -> pre False
+    _ -> fail "JSON parsing failed!"
+
+-- CloseIsSafe.thy
+-- theorem closeIsSafe :
+--    "computeTransaction tra sta Close = TransactionOutput trec ⟹  txOutWarnings trec = []"
+closeIsSafeTest :: InterpretJsonRequest -> TestTree
+closeIsSafeTest interpret = reproducibleProperty "Close is safe" do
+  state <- run $ generateT $ genState interpret
+  txIn <- run $ generateT $ genTransaction interpret
+  let req :: Request JSON.Value
+      req = ComputeTransaction txIn state Close
+
+  RequestResponse res <- run $ liftIO $ interpret req
+
+  case JSON.fromJSON res of
+    JSON.Success (TransactionOutput trec) -> do
+      let expected :: [TransactionWarning]
+          expected = mempty
+      monitor
+        ( counterexample $
+            "Request: " ++ showAsJson req ++ "\n"
+              ++ "Expected: " ++ show expected ++ "\n"
+              ++ "Actual: " ++ show (txOutWarnings trec))
+      assert (txOutWarnings trec == expected)
+    JSON.Success _ -> pre False
+    _ -> fail "JSON parsing failed!"

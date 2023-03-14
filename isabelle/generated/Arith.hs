@@ -1,9 +1,9 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Arith(Int(..), equal_int, less_eq_int, less_int, Num(..), One, Zero,
-         Zero_neq_one, uminus_int, zero_int, abs_int, one_int, plus_int,
-         minus_int, times_int, of_bool, divide_int)
+  Arith(Int(..), equal_int, less_eq_int, less_int, Nat, integer_of_nat, Num(..),
+         One, Zero, Zero_neq_one, suc, uminus_int, zero_int, abs_int, one_int,
+         plus_int, zero_nat, minus_int, times_int, of_bool, divide_int)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -38,6 +38,22 @@ instance Orderings.Ord Int where {
   less = less_int;
 };
 
+newtype Nat = Nat Integer deriving (Prelude.Read, Prelude.Show);
+
+integer_of_nat :: Nat -> Integer;
+integer_of_nat (Nat x) = x;
+
+less_eq_nat :: Nat -> Nat -> Bool;
+less_eq_nat m n = integer_of_nat m <= integer_of_nat n;
+
+less_nat :: Nat -> Nat -> Bool;
+less_nat m n = integer_of_nat m < integer_of_nat n;
+
+instance Orderings.Ord Nat where {
+  less_eq = less_eq_nat;
+  less = less_nat;
+};
+
 data Num = One | Bit0 Num | Bit1 Num deriving (Prelude.Read, Prelude.Show);
 
 one_integer :: Integer;
@@ -65,6 +81,15 @@ class (One a, Zero a) => Zero_neq_one a where {
 instance Zero_neq_one Integer where {
 };
 
+plus_nat :: Nat -> Nat -> Nat;
+plus_nat m n = Nat (integer_of_nat m + integer_of_nat n);
+
+one_nat :: Nat;
+one_nat = Nat (1 :: Integer);
+
+suc :: Nat -> Nat;
+suc n = plus_nat n one_nat;
+
 uminus_int :: Int -> Int;
 uminus_int k = Int_of_integer (negate (integer_of_int k));
 
@@ -79,6 +104,9 @@ one_int = Int_of_integer (1 :: Integer);
 
 plus_int :: Int -> Int -> Int;
 plus_int k l = Int_of_integer (integer_of_int k + integer_of_int l);
+
+zero_nat :: Nat;
+zero_nat = Nat (0 :: Integer);
 
 divmod_integer :: Integer -> Integer -> (Integer, Integer);
 divmod_integer k l =

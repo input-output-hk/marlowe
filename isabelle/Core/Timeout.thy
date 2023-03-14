@@ -264,12 +264,12 @@ theorem timedOutTransaction_preserves_assets :
       and "endTime \<ge> iniTime"
   assumes "accounts sta \<noteq> [] \<or> cont \<noteq> Close"
   assumes "computeTransaction emptyTxAfterDeadline sta cont = TransactionOutput txOut"
-  shows "assetsInState sta = assetsInPayments (txOutPayments txOut) "
+  shows "assetsInState sta = assetsInExternalPayments (txOutPayments txOut) "
 proof -
   note assms
 
   moreover have "assetsInState sta + assetsInTransaction emptyTxAfterDeadline 
-          = assetsInState (txOutState txOut) + assetsInPayments (txOutPayments txOut)"
+          = assetsInState (txOutState txOut) + assetsInExternalPayments (txOutPayments txOut)"
     using computeTransaction_preserves_assets calculation by presburger
   
   moreover have "accounts (txOutState txOut) = []"

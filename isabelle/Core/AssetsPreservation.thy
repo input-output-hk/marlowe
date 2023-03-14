@@ -265,12 +265,12 @@ lemma state_account_red : "accounts (state\<lparr> accounts := a\<rparr>) = a"
 
 subsection "Assets in payment"
 
-fun assetsInPayment :: "Payment \<Rightarrow> Assets" where
-"assetsInPayment (Payment _ (Party _) tok val) = asset tok (nat val)" |
-"assetsInPayment (Payment _ (Account _) _ _) = 0"
+fun assetsInExternalPayment :: "Payment \<Rightarrow> Assets" where
+"assetsInExternalPayment (Payment _ (Party _) tok val) = asset tok (nat val)" |
+"assetsInExternalPayment (Payment _ (Account _) _ _) = 0"
 
 fun addPayment :: "Payment \<Rightarrow> Assets \<Rightarrow> Assets" where 
-"addPayment p a = assetsInPayment p + a" 
+"addPayment p a = assetsInExternalPayment p + a" 
 
 lemma addPaymentCommutesComposition : 
   "addPayment a \<circ> addPayment b = addPayment b \<circ> addPayment a" 
@@ -281,20 +281,20 @@ proof -
     by fastforce
 qed 
 
-fun assetsInPayments :: "Payment list \<Rightarrow> Assets" where
-"assetsInPayments ps = foldr addPayment ps 0"
+fun assetsInExternalPayments :: "Payment list \<Rightarrow> Assets" where
+"assetsInExternalPayments ps = foldr addPayment ps 0"
 
-lemma assetsInPayments_rev : "assetsInPayments payments = assetsInPayments (rev payments)"
+lemma assetsInPayments_rev : "assetsInExternalPayments payments = assetsInExternalPayments (rev payments)"
 proof (induction payments)
   case Nil
   then show ?case by simp
 next
   case (Cons head tail)
   then show ?case 
-    by (metis AssetsPreservation.assetsInPayments.elims fold_rev foldr_conv_fold addPaymentCommutesComposition)
+    by (metis assetsInExternalPayments.simps addPaymentCommutesComposition fold_rev foldr_conv_fold)
 qed
 
-lemma assetsInPayments_append : "assetsInPayments (xs @ ys) = assetsInPayments xs + assetsInPayments ys"
+lemma assetsInPayments_append : "assetsInExternalPayments (xs @ ys) = assetsInExternalPayments xs + assetsInExternalPayments ys"
 proof (induction xs)
   case Nil
   then show ?case by simp
@@ -418,7 +418,6 @@ next
   case (Some refund)
   moreover obtain accId tok val rest where "refund = ((accId, tok, val), rest)" 
     by (metis surj_pair)
-
   moreover have "accs = ((accId, tok), val) # rest"
     by (smt (verit, ccfv_threshold) Option.option.inject Option.option.simps(3) Pair_inject Semantics.refundOne.elims allAccountsPositiveMeansFirstIsPositive assms calculation(1) calculation(2))
 
@@ -462,7 +461,7 @@ proof -
 qed
 
 fun assetsInReduceEffect :: "ReduceEffect \<Rightarrow> Assets" where
-"assetsInReduceEffect (ReduceWithPayment p) = assetsInPayment p" |
+"assetsInReduceEffect (ReduceWithPayment p) = assetsInExternalPayment p" |
 "assetsInReduceEffect ReduceNoPayment = 0"
 
 text 
@@ -581,7 +580,7 @@ next
       case (Party payToExternal)
 
       moreover have "assetsInReduceEffect effect = asset payTok (nat paidMoney)"
-        using AssetsPreservation.assetsInPayment.simps(1) AssetsPreservation.assetsInReduceEffect.simps(1) calculation reducedEffect by presburger
+        using AssetsPreservation.assetsInExternalPayment.simps(1) AssetsPreservation.assetsInReduceEffect.simps(1) calculation reducedEffect by presburger
       moreover have  "finalAccs = accsWOFrom"
         using letBindings calculation by simp
       moreover have "assetsInState newState = assetsInAccounts accsWOFrom"        
@@ -607,7 +606,6 @@ next
 next
   (* When is only reduced if there is a timeout, if there is, the state is preserved and no payments are made *)
   case (When cases timeout tCont)
-
   assume "reduceContractStep env state cont = Reduced warnings effect newState newCont"
 
   moreover obtain startTime endTime where "timeInterval env = (startTime, endTime)"
@@ -653,8 +651,8 @@ lemma reductionLoop_preserves_assets :
   assumes  "validAndPositive_state inState" 
       and  "reductionLoop inReduced inEnv inState inContract inWarnings inPayments 
             = ContractQuiescent outReduced outWarnings outPayments outState outContract"
-    shows "assetsInState inState + assetsInPayments inPayments 
-           = assetsInState outState + assetsInPayments outPayments "
+    shows "assetsInState inState + assetsInExternalPayments inPayments 
+           = assetsInState outState + assetsInExternalPayments outPayments "
 using assms proof (induction inReduced inEnv inState inContract inWarnings inPayments rule:reductionLoop_induct)
   case (reductionLoopInduction reduced env state contract warnings payments)
   
@@ -666,7 +664,7 @@ using assms proof (induction inReduced inEnv inState inContract inWarnings inPay
     have "validAndPositive_state rState" 
       using reductionLoopInduction.prems Reduced reduceContractStep_preserves_validAndPositive_state by blast
     with reductionLoopInduction Reduced have newPaymentAssets:
-      "assetsInState rState + assetsInPayments ?newPayments = assetsInState outState + assetsInPayments outPayments"
+      "assetsInState rState + assetsInExternalPayments ?newPayments = assetsInState outState + assetsInExternalPayments outPayments"
       by simp metis
     with reductionLoopInduction.prems Reduced reduceContractStep_preserves_assets 
       have induction_reduceContractStep_preserves_assets: 
@@ -696,9 +694,9 @@ theorem reduceContractUntilQuiescent_preserves_assets :
   assumes "validAndPositive_state state"
       and "reduceContractUntilQuiescent env state contract 
            = ContractQuiescent reduced warnings payments newState cont" 
-    shows "assetsInState state = assetsInState newState + assetsInPayments payments" 
+    shows "assetsInState state = assetsInState newState + assetsInExternalPayments payments" 
 proof -
-  have "assetsInState state + assetsInPayments []  =  assetsInState newState + assetsInPayments payments"
+  have "assetsInState state + assetsInExternalPayments []  =  assetsInState newState + assetsInExternalPayments payments"
     by (metis reduceContractUntilQuiescent.simps assms reductionLoop_preserves_assets)
   with assms show ?thesis 
     by simp
@@ -748,8 +746,8 @@ lemma applyAllLoop_preserves_assets :
   assumes "validAndPositive_state inState"
       and "applyAllLoop inContractChanged env inState inContract inputs' inWarnings inPayments
           = ApplyAllSuccess outContractChanged outWarnings outPayments outState cont"
-    shows "assetsInState inState + assetsInInputs inputs' + assetsInPayments inPayments
-          = assetsInState outState + assetsInPayments outPayments"
+    shows "assetsInState inState + assetsInInputs inputs' + assetsInExternalPayments inPayments
+          = assetsInState outState + assetsInExternalPayments outPayments"
 using assms proof (induction  inContractChanged env inState inContract inputs' inWarnings inPayments rule: applyAllLoop_induct)
   case (applyAllLoopInduction contractChanged env state contract inputs warnings payments)
 
@@ -763,7 +761,7 @@ using assms proof (induction  inContractChanged env inState inContract inputs' i
     using Semantics.ReduceResult.exhaust by simp blast
 
   hence preservedReducedAssets: 
-    "assetsInState state = assetsInState rState + assetsInPayments rPayments"
+    "assetsInState state = assetsInState rState + assetsInExternalPayments rPayments"
     using local.applyAllLoopInduction.prems(1) reduceContractUntilQuiescent_preserves_assets by blast
 
   show ?case
@@ -806,8 +804,8 @@ using assms proof (induction  inContractChanged env inState inContract inputs' i
         using calculation by auto        
       
       moreover have  
-         "assetsInState applyState + assetsInInputs inputTail + assetsInPayments (payments @ rPayments) 
-          = assetsInState outState + assetsInPayments outPayments"
+         "assetsInState applyState + assetsInInputs inputTail + assetsInExternalPayments (payments @ rPayments) 
+          = assetsInState outState + assetsInExternalPayments outPayments"
         using calculation by blast
 
       moreover have "assetsInState rState + assetsInInput inputHead = assetsInState applyState" 
@@ -831,7 +829,7 @@ theorem applyAllInputs_preserves_assets :
       and "applyAllInputs env inState inContract inputs' 
           = ApplyAllSuccess outContractChanged outWarnings outPayments outState cont"
     shows "assetsInState inState + assetsInInputs inputs' 
-          = assetsInState outState + assetsInPayments outPayments"
+          = assetsInState outState + assetsInExternalPayments outPayments"
   using assms applyAllLoop_preserves_assets by fastforce
 
 subsection "Compute transaction"
@@ -841,7 +839,7 @@ theorem computeTransaction_preserves_assets :
   assumes "validAndPositive_state state"
       and "computeTransaction tx state contract = TransactionOutput out"
     shows "assetsInState state + assetsInTransaction tx 
-          = assetsInState (txOutState out) + assetsInPayments (txOutPayments out)" 
+          = assetsInState (txOutState out) + assetsInExternalPayments (txOutPayments out)" 
 proof -
   obtain env fixSta 
     where fixedTx: "fixInterval (interval tx) state = IntervalTrimmed env fixSta" 
@@ -868,7 +866,7 @@ proof -
       by blast
 
     moreover have "assetsInState fixSta + assetsInInputs (inputs tx)
-          = assetsInState newState + assetsInPayments payments"
+          = assetsInState newState + assetsInExternalPayments payments"
       using calculation applyAllInputs_preserves_assets
       by blast
 
@@ -887,10 +885,10 @@ lemma playTraceAux_preserves_assets :
   assumes "validAndPositive_state (txOutState prevOut)"
       and "playTraceAux prevOut txs = TransactionOutput nextOut"
     shows "assetsInState (txOutState prevOut) 
-             + assetsInPayments (txOutPayments prevOut) 
+             + assetsInExternalPayments (txOutPayments prevOut) 
              + assetsInTransactions txs
           = assetsInState (txOutState nextOut) 
-             + assetsInPayments (txOutPayments nextOut)" 
+             + assetsInExternalPayments (txOutPayments nextOut)" 
 using assms proof (induction txs arbitrary: prevOut)
   case Nil
   then show ?case by simp
@@ -918,7 +916,7 @@ next
       using calculation computeTransaction_preserves_validAndPositive_state by auto
 
     moreover have "assetsInState prevState + assetsInTransaction h 
-                  = assetsInState (txOutState transRes) + assetsInPayments (txOutPayments transRes)"
+                  = assetsInState (txOutState transRes) + assetsInExternalPayments (txOutPayments transRes)"
       using calculation computeTransaction_preserves_assets by presburger
 
 
@@ -927,11 +925,11 @@ next
 
     moreover have 
       "assetsInState (txOutState ?updTransRes) 
-        + assetsInPayments (txOutPayments ?updTransRes) 
+        + assetsInExternalPayments (txOutPayments ?updTransRes) 
         + assetsInTransactions t 
       =
        assetsInState (txOutState nextOut) 
-        + assetsInPayments (txOutPayments nextOut)"
+        + assetsInExternalPayments (txOutPayments nextOut)"
       using calculation by blast
    
     ultimately show ?thesis       
@@ -947,7 +945,7 @@ qed
 theorem playTrace_preserves_assets : 
   assumes "playTrace slot contract txs = TransactionOutput out" 
     shows "assetsInTransactions txs 
-         = assetsInState (txOutState out) + assetsInPayments (txOutPayments out)"
+         = assetsInState (txOutState out) + assetsInExternalPayments (txOutPayments out)"
 proof -
   let ?iniState = "\<lparr> txOutWarnings = []
                    , txOutPayments = []
@@ -962,9 +960,9 @@ proof -
   moreover
   
   have "assetsInState (txOutState ?iniState) 
-         + assetsInPayments (txOutPayments ?iniState) 
+         + assetsInExternalPayments (txOutPayments ?iniState) 
          + assetsInTransactions txs
-       = assetsInState (txOutState out) + assetsInPayments (txOutPayments out)"
+       = assetsInState (txOutState out) + assetsInExternalPayments (txOutPayments out)"
     using calculation playTraceAux_preserves_assets by blast
  
   ultimately show ?thesis

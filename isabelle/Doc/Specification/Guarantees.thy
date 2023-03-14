@@ -44,10 +44,14 @@ proved two properties: ``MultiAssets Preservation'' and ``Contracts Always Close
 text \<open>
 Regarding asset preservation, tokens are not created nor destroyed by the semantics. Formally speaking,
 if a transaction is computed successfully, the sum of the assets stored in the previous state and 
-the assets deposited by a transaction are equal to the assets in the new state and possible payments.
+the assets deposited by a transaction are equal to the assets in the new state and possible external payments
+(from internal account to external party).
 \<close>
 
 text \<open>@{thm computeTransaction_preserves_assets}\<close>
+
+text \<open>If calling computeTransaction yields an error, then the transaction is invalid and should not be
+part of the blockchain, preserving assets in its current state.\<close>
 
 section \<open>Contracts Always Close\<close>
 

@@ -198,7 +198,7 @@ text \<open>@{thm evalValue_TimeIntervalEnd}\<close>
 
 subsubsection \<open>Use Value\<close>
 
-text \<open>For the \<^emph>\<open>TimeIntervalEnd\<close> case, @{const evalValue} will look in its state for a bound @{typ ValueId}.
+text \<open>For the \<^emph>\<open>UseValue\<close> case, @{const evalValue} will look in its state for a bound @{typ ValueId}.
 It will default to zero if it doesn't find it.\<close>
 
 text \<open>@{thm evalValue_UseValue}\<close>

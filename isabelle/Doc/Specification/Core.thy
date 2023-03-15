@@ -51,10 +51,6 @@ with the time interval of @{term Environment} \secref{sec:state-and-env} to yiel
 time for the new state that will result from applying the transaction. It throws an error if the
 interval is nonsensical or in the past.\<close>
 
-text \<open>
-@{datatype [display,names_short, margin=40]IntervalResult}
-\<close>
-
 (* FIXME: synonim are expanding *)
 text \<open>@{code_stmts fixInterval constant: fixInterval (Haskell)}\<close>
 

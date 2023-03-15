@@ -158,9 +158,9 @@ text \<open>@{thm evalValue_SubValue}\<close>
 
 subsubsection \<open>Negation\<close>
 
-text \<open>For every value \<^emph>\<open>x\<close> there is the complement \<^emph>\<open>NegValue x\<close> so that\<close>
+text \<open>For the \<^emph>\<open>NegValue\<close> case, @{const evalValue} will evaluate the inner value and negate it\<close>
 
-text \<open>@{thm evalNegValue}\<close>
+text \<open>@{thm evalValue_NegValue}\<close>
 
 subsubsection \<open>Multiplication\<close>
 

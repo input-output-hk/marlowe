@@ -104,12 +104,21 @@ subsection \<open>Utilities\label{sec:accountutilities}\<close>
 
 text \<open>The @{const moneyInAccount}, @{const updateMoneyInAccount}, and @{const addMoneyToAccount}
 functions read, write, and increment the funds in a particular account of the @{term State},
-respectively. The @{const giveMoney} function transfer funds internally between accounts. The
-@{const refundOne} function finds the first account with funds in it.\<close>
+respectively.\<close>
 text \<open>@{code_stmts moneyInAccount constant: moneyInAccount (Haskell)}\<close>
 text \<open>@{code_stmts updateMoneyInAccount constant: updateMoneyInAccount (Haskell)}\<close>
 text \<open>@{code_stmts addMoneyToAccount constant: addMoneyToAccount (Haskell)}\<close>
+
+(* TODO: This will become clearer after refactoring the semantics as literal programming PLT-3761 *)
+text \<open>The @{const giveMoney} function is used in @{const reduceContractStep} to execute a Payment.
+It takes as arguments the Party to remove funds from, the Payee to pay to, the amount and token to pay 
+and the state accounts. It returns the Payment as a Reduce effect and the new state accounts.
+
+\<close>
 text \<open>@{code_stmts giveMoney constant: giveMoney (Haskell)}\<close>
+
+text \<open>The @{const refundOne} function is also used inside @{const reduceContractStep}. It receives
+the state accounts, and returns the first account with funds and the rest of the accounts.\<close>
 text \<open>@{code_stmts refundOne constant: refundOne (Haskell)}\<close>
 
 subsection \<open>Evaluate Value\label{sec:evalvalue}\<close>

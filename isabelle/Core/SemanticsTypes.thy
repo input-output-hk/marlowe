@@ -259,7 +259,7 @@ and Contract = Close
              | Assert Observation Contract
 
 text \<open>@{term Close} is the simplest contract, when we evaluate it, the execution is completed and we
-generate \<^term>\<open>Payment\<close>s \secref{TODO} for the assets in the internal accounts to their default owners
+generate \<^term>\<open>Payment\<close>s for the assets in the internal accounts to their default owners
 \<^footnote>\<open>Even if the payments are generated one at a time (per account and per Token), the cardano implementation
 generates a single transaction\<close>.
 \<close>

@@ -119,6 +119,8 @@ data type is a tuple of integers that represents an \<^bold>\<open>inclusive\<cl
 
 datatype Bound = Bound int int
 
+text \<open>A \<^emph>\<open>Choice\<close> is an external action \secref{sec:actions-and-inputs}, so it can only be made as part
+of a \<^emph>\<open>When\<close> contract \secref{sec:contracts}\<close>
 
 subsection \<open>Values and Observations\label{sec:values-and-observations} \<close>
 
@@ -194,14 +196,13 @@ and @{term "x = y"} are represented by @{term "ValueLT x y"}, @{term "ValueLE x 
 
 subsection \<open>Actions and inputs\label{sec:actions-and-inputs}\<close>
 text \<open>
-@{term "Action"}s and @{term "Input"}s are closely related. An @{term "Action"} can be added in a list
-of @{term "Case"}s \secref{sec:contracts} as a way to declare the possible external @{term "Input"}s a
-@{term "Party"} can include in a @{term "Transaction"} at a certain time.
-
+@{term "Action"}s and @{term "Input"}s are closely related. When we design the contract we
+can declare that an external @{term "Action"} is needed to advance to a particular path. 
+These actions can only be present in a @{term "Case"} of the @{term "When"} contract \secref{sec:contracts}
 \<close>
 
 text \<open>
-The different types of actions are:
+The different types of external actions are:
 \<close>
 
 datatype Action = Deposit AccountId Party Token Value

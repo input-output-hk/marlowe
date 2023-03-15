@@ -165,7 +165,7 @@ text \<open>@{thm evalValue_MulValue}\<close>
 
 subsubsection \<open>Division\<close>
 
-text \<open>Division is a special case because we only evaluate to natural numbers:
+text \<open>Division is a special case because we only evaluate to integers:
 \<^item> If the denominator is 0, the result is also 0. Other languages uses NaN or Infinity to represent this case
 \<^item> The result will be rounded towards zero.\<close>
 

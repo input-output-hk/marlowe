@@ -157,25 +157,18 @@ lemma fixInterval_preserves_valid_state :
   apply (simp del:valid_state.simps add:Let_def)
   by auto
 
-lemma computeTransaction_preserves_valid_state_aux :
-  "valid_state state \<Longrightarrow>
-   computeTransaction  \<lparr>interval = intervalI, inputs = inputsI\<rparr> state cont
-      = TransactionOutput \<lparr>txOutWarnings = txOutWarningsO, txOutPayments = txOutPaymentsO, txOutState = txOutStateO, txOutContract = txOutContractO\<rparr> \<Longrightarrow>
-   valid_state (txOutStateO)"
+theorem computeTransaction_preserves_valid_state :
+   "valid_state state \<Longrightarrow> computeTransaction tran state cont = TransactionOutput out \<Longrightarrow> valid_state (txOutState out)"
   apply (simp only:computeTransaction.simps Let_def)
-  apply (cases "fixInterval (interval \<lparr>interval = intervalI, inputs = inputsI\<rparr>) state")
+  apply (cases "fixInterval (interval tran) state")
   apply (simp only:IntervalResult.case)
   subgoal for env sta
-    apply (cases "applyAllInputs env sta cont (inputs \<lparr>interval = intervalI, inputs = inputsI\<rparr>)")
+    apply (cases "applyAllInputs env sta cont (inputs tran)")
     apply (simp only:ApplyAllResult.case)
     apply (metis TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) applyAllInputs.simps applyAllLoop_preserves_valid_state fixInterval_preserves_valid_state small_lazy'.cases)
     apply simp
     by simp
   by simp
-
-theorem computeTransaction_preserves_valid_state :
-  "valid_state state \<Longrightarrow> computeTransaction tran state cont = TransactionOutput out \<Longrightarrow> valid_state (txOutState out) "
-  by (metis (full_types) Transaction.surjective TransactionOutputRecord.surjective computeTransaction_preserves_valid_state_aux old.unit.exhaust)
 
 lemma playTraceAux_preserves_valid_state :
   "valid_state (txOutState txIn) \<Longrightarrow>

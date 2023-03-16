@@ -47,17 +47,15 @@ instantiation "Party" :: linorder
 begin
 instance
 proof
-  fix x y
-  have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: Party))"
+  fix x y :: Party
+  show "x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x"
     by (meson less_Party.simps less_Party_def less_eq_Party_def linearParty)
-  thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
 next
-  fix x
-  have "x \<le> (x :: Party)" by (meson linearParty)
-  thus "x \<le> x" by simp
+  fix x :: Party 
+  show "x \<le> x" by (meson linearParty)
 next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: Party)"    
+  fix x y z :: Party
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"    
     apply (auto simp add:less_eq_Party_def)
     apply (cases x)
      apply (cases y)
@@ -69,19 +67,14 @@ next
      apply (cases y)
       apply (cases z)
       apply simp_all
-    by (metis (full_types) SemanticsGuarantees.less_eq_Party.elims(2) SemanticsGuarantees.less_eq_Party.simps(4) SemanticsTypes.Party.simps(4) less_eq_BS_trans less_eq_ByteString_def)
-  
-  thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
+    by (metis (full_types) SemanticsGuarantees.less_eq_Party.elims(2) SemanticsGuarantees.less_eq_Party.simps(4) SemanticsTypes.Party.simps(4) less_eq_BS_trans less_eq_ByteString_def)    
 next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Party)"
-    by (smt (verit) SemanticsGuarantees.less_eq_Party.elims(2) SemanticsGuarantees.less_eq_Party.simps(3) SemanticsTypes.Party.inject(2) SemanticsTypes.Party.simps(4) byteStringLessEqTwiceEq less_eq_ByteString_def less_eq_Party_def)
- 
-  thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Party)" by simp
+  fix x y z :: Party
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+    by (smt (verit) SemanticsGuarantees.less_eq_Party.elims(2) SemanticsGuarantees.less_eq_Party.simps(3) SemanticsTypes.Party.inject(2) SemanticsTypes.Party.simps(4) byteStringLessEqTwiceEq less_eq_ByteString_def less_eq_Party_def) 
 next
-  fix x y
-  from linearParty have "x \<le> y \<or> y \<le> (x :: Party)" by simp
-  thus "x \<le> y \<or> y \<le> x" by simp
+  fix x y :: Party
+  from linearParty show "x \<le> y \<or> y \<le> x " by simp
 qed
 end
 
@@ -113,28 +106,23 @@ instantiation "Token" :: linorder
 begin
 instance
 proof
-  fix x y
-  have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: Token))"
+  fix x y :: Token     
+  show "x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x" 
     by (meson less_Tok.simps less_Token_def less_eq_Token_def linearToken)
-  thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
 next
-  fix x
-  have "x \<le> (x :: Token)" by (meson linearToken)
-  thus "x \<le> x" by simp
+  fix x :: Token
+  show "x \<le> x" by (meson linearToken)
 next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: Token)"
+  fix x y z :: Token
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
     by (smt less_eq_BS_trans less_BS.simps less_eq_Tok.elims(2) less_eq_Tok.simps less_eq_Token_def oneLessEqBS)
-  thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
 next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Token)"
+  fix x y z :: Token
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
     by (smt Token.simps(1) byteStringLessEqTwiceEq less_BS.simps less_eq_Tok.elims(2) less_eq_Token_def oneLessEqBS)
-  thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: Token)" by simp
 next
-  fix x y
-  from linearToken have "x \<le> y \<or> y \<le> (x :: Token)" by simp
-  thus "x \<le> y \<or> y \<le> x" by simp
+  fix x y :: Token
+  from linearToken show "x \<le> y \<or> y \<le> x" by simp
 qed
 end
 (* END Proof of linorder for Token *)
@@ -166,32 +154,28 @@ instantiation "ChoiceId" :: linorder
 begin
 instance
 proof
-  fix x y
-  have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: ChoiceId))"
+  fix x y :: ChoiceId
+  show "x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x"
     by (meson less_ChoId.elims(2) less_ChoId.elims(3) less_ChoiceId_def less_eq_ChoiceId_def linearChoiceId)
-  thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
 next
-  fix x
-  have "x \<le> (x :: ChoiceId)" by (meson linearChoiceId)
-  thus "x \<le> x" by simp
+  fix x :: ChoiceId
+  show "x \<le> x" by (meson linearChoiceId)
+
 next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: ChoiceId)"
+  fix x y z :: ChoiceId
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
     apply (cases x)
     apply (cases y)
     apply (cases z)
     apply (simp only:less_eq_ChoiceId_def)
     by (smt less_eq_BS_trans less_BS.simps less_eq_ChoId.simps oneLessEqBS order.trans)
-  thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
 next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ChoiceId)"
+  fix x y z :: ChoiceId
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
     by (smt byteStringLessEqTwiceEq eq_iff less_BS.simps less_eq_ChoId.elims(2) less_eq_ChoId.simps less_eq_ChoiceId_def oneLessEqBS)
-  thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ChoiceId)" by simp
 next
-  fix x y
-  from linearChoiceId have "x \<le> y \<or> y \<le> (x :: ChoiceId)" by simp
-  thus "x \<le> y \<or> y \<le> x" by simp
+  fix x y :: ChoiceId
+  from linearChoiceId show "x \<le> y \<or> y \<le> x" by simp
 qed
 end
 (* END Proof of linorder for ChoiceId *)
@@ -221,28 +205,23 @@ instantiation "ValueId" :: linorder
 begin
 instance
 proof
-  fix x y
-  have "(x < y) = (x \<le> y \<and> \<not> y \<le> (x :: ValueId))"
+  fix x y :: ValueId
+  show "x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x"
     by (metis ValueId.exhaust less_BS.simps less_ValId.simps less_ValueId_def less_eq_ValId.simps less_eq_ValueId_def linearValueId)
-  thus "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" by simp
 next
-  fix x
-  have "x \<le> (x :: ValueId)" by (meson linearValueId)
-  thus "x \<le> x" by simp
+  fix x :: ValueId
+  show "x \<le> x" by (meson linearValueId)
 next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> (z :: ValueId)"
+  fix x y z :: ValueId
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
     by (smt ValueId.simps(1) less_eq_BS_trans less_eq_ValId.elims(2) less_eq_ValId.elims(3) less_eq_ValueId_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by simp
 next
-  fix x y z
-  have "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ValueId)"
+  fix x y z :: ValueId
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
     by (metis ValueId.simps(1) byteStringLessEqTwiceEq less_eq_ValId.elims(2) less_eq_ValueId_def)
-  thus "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = (y :: ValueId)" by simp
 next
-  fix x y
-  from linearValueId have "x \<le> y \<or> y \<le> (x :: ValueId)" by simp
-  thus "x \<le> y \<or> y \<le> x" by simp
+  fix x y :: ValueId
+  from linearValueId show "x \<le> y \<or> y \<le> x" by simp
 qed
 end
 (* END Proof of linorder for ValueId *)

@@ -510,7 +510,7 @@ fun applyCases :: "Environment \<Rightarrow> State \<Rightarrow> Input \<Rightar
         \<and> amount = evalValue env state val)
    then let warning = if amount > 0
                       then ApplyNoWarning
-                      else ApplyNonPositiveDeposit party1 accId2 tok2 amount in
+                      else ApplyNonPositiveDeposit party2 accId2 tok2 amount in
         let newState = state \<lparr> accounts := addMoneyToAccount accId1 tok1 amount (accounts state) \<rparr> in
         Applied warning newState cont
    else applyCases env state (IDeposit accId1 party1 tok1 amount) rest)" |

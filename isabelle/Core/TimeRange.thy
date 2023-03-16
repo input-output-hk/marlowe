@@ -227,8 +227,6 @@ lemma geIfNone_redListSize :
   "geIfNone n (int (length (h # t))) \<Longrightarrow> geIfNone (subIfSome n 1) (int (length t))"
   by (smt (verit, ccfv_threshold) Semantics.geIfNone.elims(1) Semantics.geIfNone.simps(2) Semantics.subIfSome.elims impossible_Cons of_nat_le_iff)
 
-fun isValidInterval :: "POSIXTime \<times> POSIXTime \<Rightarrow> bool" where
-"isValidInterval (a, b) = (a \<le> b)"
 
 lemma reduceStep_ifCaseLtCt_aux : "inInterval (a, b) (calculateNonAmbiguousInterval n ct (When x41 x42 x43)) \<Longrightarrow>
                                    a \<le> b \<Longrightarrow> env = \<lparr>timeInterval = (a, b)\<rparr> \<Longrightarrow> b < x42 \<Longrightarrow> ct < x42"
@@ -243,7 +241,7 @@ lemma reduceStep_ifCaseLtCt_aux : "inInterval (a, b) (calculateNonAmbiguousInter
   done
 
 lemma reduceStep_ifCaseLtCt : "inInterval (timeInterval env) (calculateNonAmbiguousInterval n ct (When x41 x42 x43)) \<Longrightarrow>
-                               reduceContractStep env state (When x41 x42 x43) = NotReduced \<Longrightarrow> isValidInterval (timeInterval env) \<Longrightarrow> ct < x42"
+                               reduceContractStep env state (When x41 x42 x43) = NotReduced \<Longrightarrow> validTimeInterval (timeInterval env) \<Longrightarrow> ct < x42"
   apply (cases env)
   subgoal for timeInterv
     apply (cases timeInterv)
@@ -257,7 +255,7 @@ lemma reduceStep_ifCaseLtCt : "inInterval (timeInterval env) (calculateNonAmbigu
   done
 
 lemma reduceLoop_ifCaseLtCt : "inInterval (timeInterval env) (calculateNonAmbiguousInterval n ct cont) \<Longrightarrow>
-                               reductionLoop b env state cont wa ef = ContractQuiescent x11 x12 x13 x14 x15 \<Longrightarrow> isValidInterval (timeInterval env) \<Longrightarrow> ifCaseLt ct x15"
+                               reductionLoop b env state cont wa ef = ContractQuiescent x11 x12 x13 x14 x15 \<Longrightarrow> validTimeInterval (timeInterval env) \<Longrightarrow> ifCaseLt ct x15"
   apply (induction b env state cont wa ef rule:reductionLoop.induct)
   subgoal for reduced env state contract warnings payments
   apply (cases "x15 = Close")
@@ -279,14 +277,14 @@ lemma reduceLoop_ifCaseLtCt : "inInterval (timeInterval env) (calculateNonAmbigu
 
 lemma reduceContractUntilQuiescent_ifCaseLtCt : "inInterval (timeInterval env) (calculateNonAmbiguousInterval n ct cont) \<Longrightarrow>
                                                  reduceContractUntilQuiescent env state cont = ContractQuiescent x11 x12 x13 x14 x15 \<Longrightarrow>
-                                                 isValidInterval (timeInterval env) \<Longrightarrow> ifCaseLt ct x15"
+                                                 validTimeInterval (timeInterval env) \<Longrightarrow> ifCaseLt ct x15"
   apply (simp only:reduceContractUntilQuiescent.simps)
   by (simp add: reduceLoop_ifCaseLtCt)
 
 lemma calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_applyAllLoop :
 "geIfNone n (int (length inps)) \<Longrightarrow>
  inInterval (timeInterval env) (calculateNonAmbiguousInterval n ct c) \<Longrightarrow>
- isValidInterval (timeInterval env) \<Longrightarrow>
+ validTimeInterval (timeInterval env) \<Longrightarrow>
  applyAllLoop b env s c inps wa ef \<noteq>
  ApplyAllAmbiguousTimeIntervalError"
   apply (induction b env s c inps wa ef arbitrary: n ct rule:applyAllLoop.induct)
@@ -320,7 +318,7 @@ lemma calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_applyAllLoop :
 lemma calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_applyAllInputs :
 "geIfNone n (int (length inps)) \<Longrightarrow>
  inInterval (minInterv, maxInterv) (calculateNonAmbiguousInterval n ct c) \<Longrightarrow>
- isValidInterval (minInterv, maxInterv) \<Longrightarrow>
+ validTimeInterval (minInterv, maxInterv) \<Longrightarrow>
  applyAllInputs \<lparr> timeInterval = (minInterv, maxInterv) \<rparr> s c inps
     \<noteq> ApplyAllAmbiguousTimeIntervalError"
   apply (simp only:applyAllInputs.simps)
@@ -346,8 +344,8 @@ theorem calculateNonAmbiguousIntervalAvoidsAmbiguousInterval :
       subgoal for accounts choices boundValues minTime
         apply (cases "minInterv \<le> minTime")
         apply (simp del:applyAllInputs.simps)
-         apply (smt (verit, ccfv_threshold) OptBoundTimeInterval.inInterval.elims(3) OptBoundTimeInterval.inInterval.simps(2) OptBoundTimeInterval.inInterval.simps(3) OptBoundTimeInterval.inInterval.simps(4) TimeRange.isValidInterval.simps calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_applyAllInputs)
-        by (metis Lattices.linorder_class.max.absorb4 Lattices.linorder_class.max.commute TimeRange.isValidInterval.simps calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_applyAllInputs linorder_not_le)
+         apply (smt (verit, ccfv_threshold) OptBoundTimeInterval.inInterval.elims(3) OptBoundTimeInterval.inInterval.simps(2) OptBoundTimeInterval.inInterval.simps(3) OptBoundTimeInterval.inInterval.simps(4) validTimeInterval.simps calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_applyAllInputs)
+        by (metis Lattices.linorder_class.max.absorb4 Lattices.linorder_class.max.commute OptBoundTimeInterval.validTimeInterval.simps calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_applyAllInputs linorder_not_le)
       done
     done
   done

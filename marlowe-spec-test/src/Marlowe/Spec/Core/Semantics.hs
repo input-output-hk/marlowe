@@ -7,15 +7,15 @@ import qualified Arith as Arith
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Aeson (ToJSON(..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger)
+import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger, arbitraryValidStep)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
 import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
 import Test.Tasty (TestTree, testGroup)
 import Test.QuickCheck (withMaxSuccess)
 import Test.QuickCheck.Monadic (assert, run, monitor, pre)
-import Semantics (evalValue, playTrace, computeTransaction, TransactionOutput (..), TransactionOutputRecord_ext (TransactionOutputRecord_ext), isQuiescent, TransactionWarning, txOutWarnings, reduceContractUntilQuiescent, ReduceResult (..))
+import Semantics (evalValue, playTrace, computeTransaction, TransactionOutput (..), TransactionOutputRecord_ext (TransactionOutputRecord_ext), isQuiescent, TransactionWarning, txOutWarnings, reduceContractUntilQuiescent, ReduceResult (..), Transaction_ext (..))
 import Timeout (isClosedAndEmpty)
-import SemanticsTypes (Value(..), State_ext (..), Contract(..))
+import SemanticsTypes (Value(..), State_ext (..), Contract(..), minTime)
 import SingleInputTransactions (traceListToSingleInput)
 import QuickCheck.GenT (suchThat)
 import QuickCheck.GenT (listOf)
@@ -24,6 +24,7 @@ import Marlowe.Utils (showAsJson)
 import PositiveAccounts (validAndPositive_state)
 import QuickCheck.GenT (listOf1)
 import TransactionBound (maxTransactionsInitialState)
+import Orderings (Ord(..))
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics"
@@ -208,10 +209,10 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "Compute tran
 --    "playTrace sl cont (Cons h t) = TransactionOutput traOut ⟹
 --      isQuiescent (txOutContract traOut) (txOutState traOut)"
 playTraceIsQuiescentTest :: InterpretJsonRequest -> TestTree
-playTraceIsQuiescentTest interpret = reproducibleProperty "Play trace is quiescent" do
+playTraceIsQuiescentTest interpret = reproducibleProperty "playTrace is quiescent" do
     contract <- run $ generateT $ genContract interpret
-    transactions <- run $ generateT $ listOf1 $ genTransaction interpret
     startTime <- run $ generate $ arbitraryNonnegativeInteger
+    transactions <- run $ generate $ listOf1 $ arbitraryValidStep (State_ext [] [] [] startTime ()) contract
     let
         req :: Request JSON.Value
         req = PlayTrace (integer_of_int startTime) contract transactions
@@ -239,7 +240,7 @@ playTraceIsQuiescentTest interpret = reproducibleProperty "Play trace is quiesce
 timedOutTransaction_closes_contractTest :: InterpretJsonRequest -> TestTree
 timedOutTransaction_closes_contractTest interpret = reproducibleProperty "Timed-out transaction closes contract"  do
   state <- run $ generateT $ genState interpret `suchThat` validAndPositive_state
-  txIn <- run $ generateT $ genTransaction interpret
+  txIn <- run $ generateT $ genTransaction interpret `suchThat` \(Transaction_ext (_,upper) _ _) -> less_eq (minTime state) upper
   let req :: Request JSON.Value
       req = ComputeTransaction txIn state Close
 
@@ -264,7 +265,7 @@ timedOutTransaction_closes_contractTest interpret = reproducibleProperty "Timed-
 closeIsSafeTest :: InterpretJsonRequest -> TestTree
 closeIsSafeTest interpret = reproducibleProperty "Close is safe" do
   state <- run $ generateT $ genState interpret
-  txIn <- run $ generateT $ genTransaction interpret
+  txIn <- run $ generateT $ genTransaction interpret `suchThat` \(Transaction_ext (_,upper) _ _) -> less_eq (minTime state) upper
   let req :: Request JSON.Value
       req = ComputeTransaction txIn state Close
 

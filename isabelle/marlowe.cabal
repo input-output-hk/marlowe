@@ -31,7 +31,6 @@ library
         ListTools
         MList
         Option
-        Orderings
         OptBoundTimeInterval
         Product_Lexorder
         Product_Type
@@ -44,6 +43,7 @@ library
         Examples.Escrow
         Examples.Swap
         MarloweCoreJson
+        Orderings
         PositiveAccounts
         Semantics
         SemanticsTypes

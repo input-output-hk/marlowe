@@ -580,8 +580,8 @@ fun applyAllLoop :: "bool \<Rightarrow> Environment \<Rightarrow> State \<Righta
                                  (payments @ pays) curState cont
         | Cons input rest \<Rightarrow>
            (case applyInput env curState input cont of
-              Applied applyWarn newState cont \<Rightarrow>
-                  applyAllLoop True env newState cont rest
+              Applied applyWarn newState appliedCont \<Rightarrow>
+                  applyAllLoop True env newState appliedCont rest
                                (warnings @ (convertReduceWarnings reduceWarns)
                                          @ (convertApplyWarning applyWarn))
                                (payments @ pays)

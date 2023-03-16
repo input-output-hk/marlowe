@@ -18,18 +18,17 @@ import Data.List (nub)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), parseValidResponse)
 import Marlowe.Spec.TypeId (TypeId (..))
 import Orderings (Ord (..), max)
-import QuickCheck.GenT (GenT, MonadGen (..), frequency, resize, scale, sized, suchThat, vectorOf)
+import QuickCheck.GenT (GenT, MonadGen (..), frequency, resize, sized, suchThat, vectorOf)
 import Semantics (Payment (..), TransactionError (..), TransactionOutput (..), TransactionOutputRecord_ext (..), TransactionWarning (..), Transaction_ext (..), computeTransaction, evalValue)
 import SemanticsGuarantees (valid_state)
 import SemanticsTypes (Action (..), Bound (..), Case (..), ChoiceId (ChoiceId), Contract (..), Environment_ext (..), Input (..), IntervalError (..), Observation (..), Party, Payee (..), State_ext (..), Token (..), Value (..), ValueId (..), minTime)
 import Test.QuickCheck (Gen, chooseInt, getSize)
 import Test.QuickCheck.Arbitrary (Arbitrary (..))
-import Test.QuickCheck.Gen (chooseInteger, elements)
+import qualified Test.QuickCheck.Gen as QC (chooseInteger, elements)
 
 data RandomResponse a
   = RandomValue a
   | UnknownType TypeId
-
 
 instance ToJSON a => ToJSON (RandomResponse a) where
   toJSON (RandomValue v) = object
@@ -49,16 +48,13 @@ instance FromJSON a => FromJSON (RandomResponse a) where
 data GenerateRandomValueException = GenerateRandomValueException String
   deriving (Show, Exception)
 
-
 -- | Part of the Fibonacci sequence.
 fibonaccis :: Num a => [a]
 fibonaccis = [2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584]
 
-
 -- | Inverse-Fibanoncci frequencies.
 fibonacciFrequencies :: Integral a => [a]
 fibonacciFrequencies = (1000000 `div`) <$> fibonaccis
-
 
 -- | Select an element of a list with propability proportional to inverse-Fibonacci weights.
 arbitraryFibonacci :: [a] -> Gen a
@@ -80,9 +76,9 @@ arbitraryInteger = Arith.Int_of_integer <$>
     , (60, arbitraryFibonacci fibonaccis)
     ]
 
-chooseInteger' :: (Arith.Int, Arith.Int) -> Gen Arith.Int
-chooseInteger' (Arith.Int_of_integer i, Arith.Int_of_integer j) =
-  Arith.Int_of_integer <$> chooseInteger (i, j)
+chooseinteger :: (Arith.Int, Arith.Int) -> Gen Arith.Int
+chooseinteger (Arith.Int_of_integer i, Arith.Int_of_integer j) =
+  Arith.Int_of_integer <$> QC.chooseInteger (i, j)
 
 -- | An arbitrary non-negative integer, mostly small.
 arbitraryNonnegativeInteger :: Gen Arith.Int
@@ -102,10 +98,8 @@ arbitraryPositiveInteger = Arith.Int_of_integer <$>
     , (30, arbitraryFibonacci fibonaccis)
     ]
 
-type TimeInterval = (Arith.Int, Arith.Int)
-
 -- | Geneate a semi-random time interval.
-arbitraryTimeInterval :: Gen TimeInterval
+arbitraryTimeInterval :: Gen (Arith.Int, Arith.Int)
 arbitraryTimeInterval =
   do
     start <- arbitraryInteger
@@ -113,31 +107,31 @@ arbitraryTimeInterval =
     pure (start, start + duration)
 
 -- | Generate a semi-random time interrval straddling a given time.
-arbitraryTimeIntervalAround :: Arith.Int -> Gen TimeInterval
+arbitraryTimeIntervalAround :: Arith.Int -> Gen (Arith.Int, Arith.Int)
 arbitraryTimeIntervalAround limit =
   do
-    start <- arbitraryInteger `suchThat` (less_eq limit)
+    start <- arbitraryInteger `suchThat` (flip less_eq limit)
     duration <- ((limit - start) +) <$> arbitraryNonnegativeInteger
     pure (start, start + duration)
 
 -- | Generate a semi-random time interval before a given time.
-arbitraryTimeIntervalBefore :: Arith.Int -> Arith.Int -> Gen TimeInterval
+arbitraryTimeIntervalBefore :: Arith.Int -> Arith.Int -> Gen (Arith.Int, Arith.Int)
 arbitraryTimeIntervalBefore lower upper =
   do
-    start <- arbitraryInteger `suchThat` (less_eq lower)
-    duration <- chooseInteger' (0, upper - start - 1)
+    start <- arbitraryInteger `suchThat` (flip less_eq lower)
+    duration <- chooseinteger (0, upper - start - 1)
     pure (start, start + duration)
 
 -- | Generate a semi-random time interval after a given time.
-arbitraryTimeIntervalAfter :: Arith.Int -> Gen TimeInterval
+arbitraryTimeIntervalAfter :: Arith.Int -> Gen (Arith.Int, Arith.Int)
 arbitraryTimeIntervalAfter lower =
   do
-    start <- arbitraryInteger `suchThat` (\t -> less t lower)
+    start <- arbitraryInteger `suchThat` (less_eq lower)
     duration <- arbitraryNonnegativeInteger
     pure (start, start + duration)
 
 -- | Shrink a generated time interval.
-shrinkTimeInterval :: TimeInterval -> [TimeInterval]
+shrinkTimeInterval :: (Arith.Int, Arith.Int) -> [(Arith.Int, Arith.Int)]
 shrinkTimeInterval (start, end) =
   let
     mid = (start + end) `Arith.divide_int` 2
@@ -151,7 +145,6 @@ shrinkTimeInterval (start, end) =
       , (mid  , end  )
       , (end  , end  )
       ]
-
 
 arbitrarySeed :: Gen Int
 arbitrarySeed = resize 10000 $ choose (1, 10000000)
@@ -176,6 +169,17 @@ genParty interpret = do
     case parseValidResponse res of
       Left err -> throwIO $ GenerateRandomValueException err
       Right (UnknownType _) -> throwIO $ GenerateRandomValueException "Client process doesn't know how to generate Core.Party"
+      Right (RandomValue t) -> pure t
+
+genContract :: InterpretJsonRequest -> GenT IO Contract
+genContract interpret = do
+  size <- liftGen $ getSize
+  seed <- liftGen $ arbitrarySeed
+  liftIO do
+    res <- interpret (GenerateRandomValue (TypeId "Core.Contract" (Proxy :: Proxy Contract)) size seed)
+    case parseValidResponse res of
+      Left err -> throwIO $ GenerateRandomValueException err
+      Right (UnknownType _) -> throwIO $ GenerateRandomValueException "Client process doesn't know how to generate Core.Contract"
       Right (RandomValue t) -> pure t
 
 genPayee ::  InterpretJsonRequest -> GenT IO Payee
@@ -338,8 +342,8 @@ genObservation i = sized (
 
 genAction :: InterpretJsonRequest -> GenT IO Action
 genAction i = frequency
-      [ (4, Deposit <$> genParty i <*> genParty i <*> genToken i <*> genValue i)
-      , (5, do
+      [ (7, Deposit <$> genParty i <*> genParty i <*> genToken i <*> genValue i)
+      , (2, do
           lSize <- liftGen $ chooseInt (1, 4)
           Choice <$> genChoiceId i <*> vectorOf lSize (liftGen genBound)
         )
@@ -348,32 +352,6 @@ genAction i = frequency
 
 genCase :: InterpretJsonRequest -> GenT IO Case
 genCase i = Case <$> genAction i <*> genContract i
-
-genContract :: InterpretJsonRequest -> GenT IO Contract
-genContract i = sized (
-  \case n | n <= 1 -> genClose
-          | otherwise -> frequency
-            [ ( 30, genClose)
-            , ( 20, genPay n)
-            , ( 15, genIf n)
-            , ( 20, genWhen n)
-            , ( 10, genLet n)
-            , ( 5, genAssert n)
-            ]
-  )
-  where
-  genClose = pure Close
-  genPay n = Pay <$> genParty i <*> genPayee i <*> genToken i <*> limit (genValue i) <*> resize (n - 1) (genContract i)
-  genIf n = If <$> limit  (genObservation i) <*> resize (n - 1) (genContract i) <*> resize (n - 1) (genContract i)
-  genWhen n = do
-    lSize <- liftGen $ chooseInt (0, 3)
-    cases <- vectorOf lSize (resize (n - lSize) (genCase i))
-    timeout <- liftGen $ arbitraryInteger
-    cont <- resize (n - 1) (genContract i)
-    pure $ When cases timeout cont
-  genLet n = Let <$> liftGen genValueId <*> limit (genValue i) <*> resize (n - 1) (genContract i)
-  genAssert n = Assert <$> limit (genObservation i) <*> resize (n - 1) (genContract i)
-  limit = scale (min 3)
 
 genInput :: InterpretJsonRequest -> GenT IO Input
 genInput i = frequency
@@ -469,27 +447,22 @@ arbitraryValidStep state (When cases timeout _) =
     isTimeout <- frequency [(9, pure False), (1, pure True)]
     if isTimeout || less_eq timeout minTime' || all (isEmptyChoice . getAction) cases
       then Transaction_ext <$> arbitraryTimeIntervalAfter timeout <*> pure [] <*> pure ()
-      else do
-             times <- arbitraryTimeIntervalBefore minTime' timeout
-             case' <- elements $ filter (not . isEmptyChoice . getAction) cases
-             i <- case getAction case' of
-                    Deposit a p t v -> pure . IDeposit a p t $ evalValue (Environment_ext times ()) state v
-                    Choice n bs     -> do
-                                         Bound lower upper <- elements bs
-                                         IChoice n <$> chooseInteger' (lower, upper)
-                    Notify _        -> pure INotify
-             pure $ Transaction_ext times [i] ()
+      else
+        do
+          times <- arbitraryTimeIntervalBefore minTime' timeout
+          case' <- QC.elements $ filter (not . isEmptyChoice . getAction) cases
+          i <- case getAction case' of
+                 Deposit a p t v -> pure . IDeposit a p t $ evalValue (Environment_ext times ()) state v
+                 Choice n bs     -> do
+                                      Bound lower upper <- QC.elements bs
+                                      IChoice n <$> chooseinteger (lower, upper)
+                 Notify _        -> pure INotify
+          pure $ Transaction_ext times [i] ()
   where
     getAction :: Case -> Action
     getAction (Case a _) = a
 
 arbitraryValidStep state contract =
-{-
-  NOTE: Alternatively, if semantics should allow applying `[]` to a non-quiescent contract
-  without ever throwing a timeout-related error, then replace the above with the following:
-
-  TransactionInput <$> arbitraryTimeIntervalAround minTime <*> pure []
--}
   let
     nextTimeout Close                                    = minTime state
     nextTimeout (Pay _ _ _ _ continuation)               = nextTimeout continuation
@@ -502,26 +475,6 @@ arbitraryValidStep state contract =
  where
   maximum' = foldl1 Orderings.max
 
--- | Generate random transaction input.
-arbitraryValidInput :: State_ext ()             -- ^ The state of the contract.
-                    -> Contract                 -- ^ The contract.
-                    -> Gen (Transaction_ext ()) -- ^ Generator for a transaction input.
-arbitraryValidInput = arbitraryValidInput' Nothing
-
-arbitraryValidInput' :: Maybe (Transaction_ext ()) -> State_ext () -> Contract -> Gen (Transaction_ext ())
-arbitraryValidInput' Nothing state contract = arbitraryValidStep state contract
-arbitraryValidInput' (Just tr@(Transaction_ext timeInterval input _)) state contract =
-  case computeTransaction tr state contract of
-    TransactionError _              -> pure tr
-    TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _) -> do
-                               Transaction_ext a nextInput b <- arbitraryValidStep state contract
-                               let
-                                 combinedInput = input ++ nextInput -- {txInputs = txInputs input ++ txInputs nextInput}
-                                 newTr = Transaction_ext a combinedInput b
-                               case computeTransaction newTr txOutState txOutContract of
-                                 TransactionError _                                        -> pure tr
-                                 TransactionOutput (TransactionOutputRecord_ext _ _ _ _ _) -> pure newTr
-
 -- | Generate a random path through a contract.
 arbitraryValidInputs :: State_ext ()             -- ^ The state of the contract.
                      -> Contract                 -- ^ The contract.
@@ -529,7 +482,7 @@ arbitraryValidInputs :: State_ext ()             -- ^ The state of the contract.
 arbitraryValidInputs _ Close = pure []
 arbitraryValidInputs state contract =
   do
-    input <- arbitraryValidInput state contract
-    case computeTransaction input state contract of  -- FIXME: It is tautological to use `computeTransaction` to filter test cases.
+    txIn <- arbitraryValidStep state contract
+    case computeTransaction txIn state contract of  -- FIXME: It is tautological to use `computeTransaction` to filter test cases.
       TransactionError _ -> pure []
-      TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _) -> (input :) <$> arbitraryValidInputs txOutState txOutContract
+      TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _) -> (txIn :) <$> arbitraryValidInputs txOutState txOutContract

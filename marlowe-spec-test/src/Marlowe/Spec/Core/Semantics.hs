@@ -1,13 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
 
-module Marlowe.Spec.Core.Semantics where
+module Marlowe.Spec.Core.Semantics
+  ( tests
+  )
+  where
 
 import qualified Arith as Arith
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Aeson (ToJSON(..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger, arbitraryValidStep)
+import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger, arbitraryValidInputs)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
 import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
 import Test.Tasty (TestTree, testGroup)
@@ -31,10 +34,10 @@ tests i = testGroup "Semantics"
     [ evalValueTest i
     , divisionRoundsTowardsZeroTest i
     -- TransactionBound.thy
-    -- , playTrace_only_accepts_maxTransactionsInitialStateTest i -- FIXME: does not make sense!
+    -- , playTrace_only_accepts_maxTransactionsInitialStateTest i -- FIXME: does not make sense
     -- SingleInputTransactions.thy
     , traceToSingleInputIsEquivalentTest i
-    , reduceContractUntilQuiescentIdempotentTest i -- FIXME: new request
+    , reduceContractUntilQuiescentIdempotentTest i
     -- QuiescentResults.thy
     , computeTransactionIsQuiescentTest i
     , playTraceIsQuiescentTest i
@@ -94,7 +97,7 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
-      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ _ _ txOutContract _)) -> do
+      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ _ _ _ _)) -> do
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
@@ -144,7 +147,7 @@ reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "red
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
-      JSON.Success (ContractQuiescent reduced warnings payments nsta ncont) -> do
+      JSON.Success (ContractQuiescent _ _ _ nsta ncont) -> do
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
@@ -210,9 +213,9 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "Compute tran
 --      isQuiescent (txOutContract traOut) (txOutState traOut)"
 playTraceIsQuiescentTest :: InterpretJsonRequest -> TestTree
 playTraceIsQuiescentTest interpret = reproducibleProperty "playTrace is quiescent" do
-    contract <- run $ generateT $ genContract interpret
+    contract <- run $ generateT $ genContract interpret `suchThat` (/=Close)
     startTime <- run $ generate $ arbitraryNonnegativeInteger
-    transactions <- run $ generate $ listOf1 $ arbitraryValidStep (State_ext [] [] [] startTime ()) contract
+    transactions <- run $ generate $ arbitraryValidInputs (State_ext [] [] [] startTime ()) contract `suchThat` ((>0) . length)
     let
         req :: Request JSON.Value
         req = PlayTrace (integer_of_int startTime) contract transactions

@@ -5,47 +5,31 @@ begin
 theorem inIntervalIdempotentToIntersectInterval :
   "inInterval (min1, max1) (min2, max2) =
      (intersectInterval (Bounded min1, Bounded max1) (min2, max2) = (Bounded min1, Bounded max1))"
-  apply (cases min2)
-  apply (cases max2)
-    apply simp
-  subgoal for a
-    by auto[1]
-    apply (cases max2)
-    subgoal for a
-      by auto
-    subgoal for a b
-      by auto
-    done
+  by (cases min2;cases max2;auto) 
 
 lemma inIntervalIdempotency1 :
-  "inInterval (x, y) (intersectInterval b c) \<Longrightarrow> inInterval (x, y) b"
-  apply (cases b)
-  apply (cases c)
-  subgoal for b1 b2 c1 c2
-    apply (simp only:inInterval.simps)
-    apply (cases b1)
-    apply (cases c1)
-    apply (smt (verit, best) OptBoundTimeInterval.intersectInterval.simps OptBoundTimeInterval.maxLow.simps(1) OptBoundTimeInterval.minHigh.elims assoc commute inIntervalIdempotentToIntersectInterval)
-    apply (smt (verit, ccfv_threshold) OptBoundTimeInterval.inInterval.simps(2) OptBoundTimeInterval.inInterval.simps(4) OptBoundTimeInterval.intersectInterval.simps OptBoundTimeInterval.maxLow.simps(2) OptBoundTimeInterval.minHigh.elims OptBoundTimeInterval.minHigh.simps(2) inIntervalIdempotentToIntersectInterval maxLow_comm)
-    apply (cases c1)
-    apply simp
-    apply (smt (verit, ccfv_threshold) OptBoundTimeInterval.inInterval.simps(3) OptBoundTimeInterval.inInterval.simps(4) OptBoundTimeInterval.minHigh.elims)
-    by (smt (verit) Groups.abel_semigroup.commute Groups.semigroup.assoc OptBoundTimeInterval.intersectInterval.simps OptBoundTimeInterval.maxLow.simps(3) OptBoundTimeInterval.minHigh.elims abel_semigroup_axioms inIntervalIdempotentToIntersectInterval semigroup_axioms)
-  done
+  assumes "inInterval (x, y) (intersectInterval b c)"
+  shows   "inInterval (x, y) b"
+proof (cases b)
+  case [simp]: (Pair b1 b2)
+  thus ?thesis proof (cases c)
+    case (Pair c1 c2)
+    thus ?thesis using assms by (cases c1; cases c2; cases b1; cases b2; simp)
+  qed
+qed
+
 
 lemma inIntervalIdempotency2 :
-  "inInterval (x, y) (intersectInterval b c) \<Longrightarrow> inInterval (x, y) c"
-  apply (cases b)
-  apply (cases c)
-  subgoal for b1 b2 c1 c2
-    apply (simp only:intersectInterval.simps)
-    apply (cases b1)
-    apply (cases c1)
-    apply (metis OptBoundTimeInterval.intersectInterval.simps commute inIntervalIdempotency1)
-    apply (metis OptBoundTimeInterval.intersectInterval.simps commute inIntervalIdempotency1)
-    apply simp
-    by (metis OptBoundTimeInterval.intersectInterval.simps inIntervalIdempotency1 minHigh_comm)
-  done
+  assumes "inInterval (x, y) (intersectInterval b c)"
+  shows   "inInterval (x, y) c"
+proof (cases b)
+  case [simp]: (Pair b1 b2)
+  thus ?thesis proof (cases c)
+    case (Pair c1 c2)
+    thus ?thesis using assms by (cases c1; cases c2; cases b1; cases b2; simp)
+  qed
+qed
+
 
 lemma compatibleIdempotencyWhen :
   "b \<le> a2 \<Longrightarrow> b \<le> a1 \<Longrightarrow>

@@ -9,8 +9,7 @@ fun positiveMoneyInAccountOrNoAccount :: "AccountId \<Rightarrow> Token \<Righta
    | Some x \<Rightarrow> x > 0)"
 
 lemma addMoneyToAccountPositve_match :
- "\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
-    money > 0 \<Longrightarrow>
+ "money > 0 \<Longrightarrow>
     newBalance > 0 \<Longrightarrow>
     positiveMoneyInAccountOrNoAccount y tok2 (MList.insert (y, tok2) newBalance accs)"
   apply simp
@@ -18,7 +17,6 @@ lemma addMoneyToAccountPositve_match :
 
 lemma addMoneyToAccountPositive_noMatch :
  "\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
-    money > 0 \<Longrightarrow>
     (accId, tok) \<noteq> (y, tok2) \<Longrightarrow>
     newBalance > 0 \<Longrightarrow>
     positiveMoneyInAccountOrNoAccount y tok2 (MList.insert (accId, tok2) newBalance accs)"

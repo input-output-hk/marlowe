@@ -173,7 +173,7 @@ lemma computeTransaction_preserves_valid_state_aux :
     by simp
   by simp
 
-lemma computeTransaction_preserves_valid_state :
+theorem computeTransaction_preserves_valid_state :
   "valid_state state \<Longrightarrow> computeTransaction tran state cont = TransactionOutput out \<Longrightarrow> valid_state (txOutState out) "
   by (metis (full_types) Transaction.surjective TransactionOutputRecord.surjective computeTransaction_preserves_valid_state_aux old.unit.exhaust)
 
@@ -191,7 +191,7 @@ lemma empty_state_valid_state :
   "valid_state (emptyState sl)"
   by (metis MList.valid_empty State.select_convs(1) State.select_convs(2) State.select_convs(3) emptyState.elims valid_state.simps)
 
-lemma playTrace_preserves_valid_state :
+theorem playTrace_preserves_valid_state :
   "playTrace sl c transList = TransactionOutput txOut \<Longrightarrow>
    valid_state (txOutState txOut)"
   apply (simp only:playTrace.simps)

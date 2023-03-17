@@ -213,7 +213,7 @@ lemma geIfNone_redListSize :
 
 
 lemma reduceStep_ifCaseLtCt_aux : "inInterval (a, b) (calculateNonAmbiguousInterval n ct (When x41 x42 x43)) \<Longrightarrow>
-                                   a \<le> b \<Longrightarrow> env = \<lparr>timeInterval = (a, b)\<rparr> \<Longrightarrow> b < x42 \<Longrightarrow> ct < x42"
+                                   a \<le> b \<Longrightarrow> b < x42 \<Longrightarrow> ct < x42"
   apply (induction x41)
    apply simp
    apply (smt (verit, best) OptBoundTimeInterval.inInterval.simps(3) inIntervalIdempotency1)

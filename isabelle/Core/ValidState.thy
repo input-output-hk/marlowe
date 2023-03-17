@@ -25,8 +25,7 @@ lemma refundOne_preserves_valid_map_accounts :
 lemma reductionStep_preserves_valid_state_Refund :
   "valid_state state \<Longrightarrow>
    reduceContractStep env state Close = Reduced wa ef newState newCont \<Longrightarrow>
-   state = \<lparr>accounts = oldAccounts, choices = oldChoices, boundValues = oldBoundValues, minTime = oldMinTime\<rparr> \<Longrightarrow>
-   newState = \<lparr>accounts = newAccounts, choices = newChoices, boundValues = newBoundValues, minTime = newMinTime\<rparr> \<Longrightarrow>
+   state = \<lparr>accounts = oldAccounts, choices = oldChoices, boundValues = oldBoundValues, minTime = oldMinTime\<rparr> \<Longrightarrow>   
    valid_state newState"
   apply (cases "refundOne oldAccounts")
   using refundOne_preserves_valid_map_accounts by auto

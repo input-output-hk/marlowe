@@ -13,8 +13,7 @@ lemma reduceContractStepPayIsQuiescent :
                     warning = if paidMoney < moneyToPay then ReducePartialPay x21 x22 tok paidMoney moneyToPay else ReduceNoWarning;
                     (payment, finalAccs) = giveMoney x21 x22 tok paidMoney newAccs
                 in Reduced warning payment (sta\<lparr>accounts := finalAccs\<rparr>) x24) =
-       NotReduced \<Longrightarrow>
-       cont = Pay x21 x22 tok x23 x24 \<Longrightarrow> False"
+       NotReduced \<Longrightarrow> False"
   apply (cases "evalValue env sta x23 \<le> 0")
   apply simp
   apply (cases "min (moneyInAccount x21 tok (accounts sta)) (evalValue env sta x23) < (evalValue env sta x23)")

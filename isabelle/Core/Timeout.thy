@@ -40,8 +40,7 @@ lemma reduceClose_is_Close : "reduceContractUntilQuiescent env sta Close = Contr
   using reductionLoopClose_is_Close by blast
 
 lemma timedOutReduce_only_quiescent_in_close_When :
-  "minTime sta \<le> iniTime \<Longrightarrow>
-   maxTimeContract (When x41 x42 x43) \<le> iniTime \<Longrightarrow>
+  "maxTimeContract (When x41 x42 x43) \<le> iniTime \<Longrightarrow>
    iniTime \<le> endTime \<Longrightarrow>
    reduceContractStep \<lparr>timeInterval = (iniTime, endTime)\<rparr> (sta\<lparr>minTime := iniTime\<rparr>) (When x41 x42 x43) \<noteq> NotReduced"
   apply (induction x41)
@@ -119,7 +118,7 @@ lemma maxTimeNotAmbiguous : "maxTimeContract cont \<le> iniTime \<Longrightarrow
 
 
 lemma timedOutReduce_only_quiescent_in_close :
-  "minTime sta \<le> iniTime \<Longrightarrow>
+  "
    maxTimeContract c \<le> iniTime \<Longrightarrow>
    iniTime \<le> endTime \<Longrightarrow>
    reduceContractStep \<lparr>timeInterval = (iniTime, endTime)\<rparr> (sta\<lparr>minTime := iniTime\<rparr>) c = NotReduced \<Longrightarrow> c = Close"
@@ -167,7 +166,7 @@ lemma timedOutReduceStep_does_not_modify_minTime :
     apply (smt ReduceStepResult.inject State.ext_inject State.surjective State.update_convs(3) State.update_convs(4) reduceContractStep.simps(5))
     by simp
 
-lemma timedOutReduceContractLoop_closes_contract : "minTime sta \<le> iniTime \<Longrightarrow>
+lemma timedOutReduceContractLoop_closes_contract : "
     maxTimeContract cont \<le> iniTime \<Longrightarrow>
     iniTime \<le> endTime \<Longrightarrow>
     minTime sta = iniTime \<Longrightarrow>
@@ -187,13 +186,14 @@ lemma timedOutReduceContractLoop_closes_contract : "minTime sta \<le> iniTime \<
         apply simp
         apply simp
         apply simp
+
+        using facts maxTimeOnlyDecreases_reduceStep apply fastforce
         apply simp
-        using facts(3) facts(7) maxTimeOnlyDecreases_reduceStep apply fastforce
-        apply simp
-        using facts(5) facts(7) timedOutReduceStep_does_not_modify_minTime apply blast
-        by (metis (no_types, lifting) ReduceStepResult.simps(8) facts(6) facts(7) reductionLoop.simps)
+        using facts timedOutReduceStep_does_not_modify_minTime apply meson
+        using facts by (metis (no_types, lifting) ReduceStepResult.simps(8)  reductionLoop.simps)
       done
-    using timedOutReduce_only_quiescent_in_close apply fastforce
+    using timedOutReduce_only_quiescent_in_close
+    apply (metis SemanticsTypes.State.cases SemanticsTypes.State.select_convs(4) SemanticsTypes.State.update_convs(4) reductionLoopClose_is_Close)
     using maxTimeNotAmbiguous_reduceStep by blast
   done
 

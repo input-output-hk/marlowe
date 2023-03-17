@@ -61,14 +61,6 @@ lemma positiveMoneyInAccountOrNoAccount_sublist_gtZero_different :
   apply (simp only:positiveMoneyInAccountOrNoAccount.simps findWithDefault.simps)
   by (metis MList.delete.simps(2) MList.different_delete_lookup)
 
-lemma positiveMoneyInAccountOrNoAccount_sublist_gtZero :
-    "valid_map ((accIdTok, money) # rest) \<Longrightarrow>
-     money > 0 \<Longrightarrow>
-    (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok ((accIdTok, money) # rest)) \<Longrightarrow> positiveMoneyInAccountOrNoAccount y tok2 rest"
-  apply (cases "accIdTok = (y, tok2)")
-  using positiveMoneyInAccountOrNoAccount_valid_zero apply auto[1]
-  using positiveMoneyInAccountOrNoAccount_sublist_gtZero_different by blast
-
 lemma positiveMoneyInAccountOrNoAccount_gtZero_preservation :
   "valid_map ((accIdTok, money) # rest) \<Longrightarrow>
    (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok ((accIdTok, money) # rest)) \<Longrightarrow> positiveMoneyInAccountOrNoAccount y tok2 rest"

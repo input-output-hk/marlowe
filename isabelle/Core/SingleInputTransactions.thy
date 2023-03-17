@@ -1211,14 +1211,6 @@ lemma transactionPrefixForSingleInput : "h # t = traceListToSingleInput nt \<Lon
   done
 
 
-lemma traceListToSingleInput_isSingleInput : "\<lparr>interval = inte, inputs = inp_h # inp_t\<rparr> # t = traceListToSingleInput t2 \<Longrightarrow> inp_t \<noteq> [] \<Longrightarrow> False"
-  apply (induction t2 rule:traceListToSingleInput.induct)
-  apply simp_all
-  subgoal for si inps rest
-    apply (induction si inps rule:inputsToTransactions.induct)
-    by simp_all
-  done
-
 fun isSingleInput :: "Transaction list \<Rightarrow> bool" where
 "isSingleInput [] = True" |
 "isSingleInput (h # t) = (length (inputs h) \<le> 1 \<and> isSingleInput t)"

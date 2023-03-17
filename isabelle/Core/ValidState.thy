@@ -6,14 +6,6 @@ lemma valid_state_valid_accounts : "valid_state state \<Longrightarrow> valid_ma
   apply (cases state)
   by simp
 
-lemma valid_state_valid_choices : "valid_state state \<Longrightarrow> valid_map (choices state)"
-  apply (cases state)
-  by simp
-
-lemma valid_state_valid_boundValues : "valid_state state \<Longrightarrow> valid_map (boundValues state)"
-  apply (cases state)
-  by simp
-
 lemma refundOne_preserves_valid_map_accounts :
   "valid_map oldAccounts \<Longrightarrow>
    refundOne oldAccounts = Some ((party, money), newAccounts)

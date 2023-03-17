@@ -2,9 +2,6 @@ theory QuiescentResult
 imports Semantics PositiveAccounts
 begin
 
-lemma reduceOne_onlyIfNonEmptyState : "refundOne acc = Some c \<Longrightarrow> acc \<noteq> []"
-  by auto
-
 lemma reduceContractStepPayIsQuiescent :
       "(let moneyToPay = evalValue env sta x23
         in if moneyToPay \<le> 0 then Reduced (ReduceNonPositivePay x21 x22 tok moneyToPay) ReduceNoPayment sta x24
@@ -149,7 +146,8 @@ lemma reductionLoop_reduce_monotonic : "reductionLoop True env sta cont wa ef = 
     by simp
   done
 
-lemma reduceContractUntilQuiescent_ifDifferentReduced : "reduceContractUntilQuiescent si sta cont = ContractQuiescent reduce wa ef sta newCont \<Longrightarrow> cont \<noteq> newCont \<Longrightarrow> reduce"
+text "If we reduce the contract and the continuation has changed, then the reduced flag should be true"
+theorem reduceContractUntilQuiescent_ifDifferentReduced : "reduceContractUntilQuiescent si sta cont = ContractQuiescent reduce wa ef sta newCont \<Longrightarrow> cont \<noteq> newCont \<Longrightarrow> reduce"
   apply (simp only:reduceContractUntilQuiescent.simps)
   apply (simp only:reductionLoop.simps)
   apply (cases "reduceContractStep si sta cont")

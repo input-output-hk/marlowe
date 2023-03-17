@@ -364,20 +364,11 @@ lemma positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive :
   apply simp
   using positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive_aux2 by auto
 
-theorem accountsArePositive :
-  "valid_state state \<Longrightarrow> (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
-  computeTransaction txIn state cont = TransactionOutput txOut \<Longrightarrow>
-  positiveMoneyInAccountOrNoAccount y tok2 (accounts (txOutState txOut))"
-  using computeTransaction_gtZero by blast
-
 theorem accountsArePositive2 :
     "valid_state state \<Longrightarrow> allAccountsPositiveState state
     \<Longrightarrow> computeTransaction txIn state cont = TransactionOutput txOut
-    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"
-  by (meson accountsArePositive allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2))
-
-lemma valid_state_valid_accounts : "valid_state state \<Longrightarrow> valid_map (accounts state)"
-  by simp
+    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"  
+  by (meson computeTransaction_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2))
 
 theorem accountsArePositive2_trace :
     "valid_state (txOutState txIn) \<Longrightarrow> allAccountsPositiveState (txOutState txIn)

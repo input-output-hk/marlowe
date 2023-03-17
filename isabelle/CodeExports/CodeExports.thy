@@ -29,9 +29,9 @@ code_printing
       \<rightharpoonup> (Haskell) "String"
   \<comment> \<open>The next three commands tells the serializer to use the operators provided by\<close>
   \<comment> \<open>the Ord instance instead of the ones that work with the logical representation\<close>
-  | constant "less_eq_BS"
+  | constant "ord_ByteString_inst.less_eq_ByteString"
       \<rightharpoonup> (Haskell) infix 4 "<="
-  | constant "less_BS"
+  | constant "ord_ByteString_inst.less_ByteString"
       \<rightharpoonup> (Haskell) infix 4 "<"
   | constant "HOL.equal :: ByteString \<Rightarrow> ByteString \<Rightarrow> bool"
       \<rightharpoonup> (Haskell) infix 4 "=="

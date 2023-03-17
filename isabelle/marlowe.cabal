@@ -25,7 +25,6 @@ library
         text >= 1.2.4 && < 2,
         scientific >= 0.3.7 && < 0.4,
     other-modules:
-        ByteString
         HOL
         List
         ListTools

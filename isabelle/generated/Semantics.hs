@@ -544,7 +544,7 @@ applyCases env state (SemanticsTypes.IDeposit accId1 party1 tok1 amount)
       then let {
              warning =
                (if Arith.less_int Arith.zero_int amount then ApplyNoWarning
-                 else ApplyNonPositiveDeposit party1 accId2 tok2 amount);
+                 else ApplyNonPositiveDeposit party2 accId2 tok2 amount);
              newState =
                SemanticsTypes.accounts_update
                  (\ _ ->
@@ -618,8 +618,8 @@ applyAllLoop contractChanged env state contract inputs warnings payments =
                 (payments ++ pays) curState cont;
         input : rest ->
           (case applyInput env curState input cont of {
-            Applied applyWarn newState conta ->
-              applyAllLoop True env newState conta rest
+            Applied applyWarn newState appliedCont ->
+              applyAllLoop True env newState appliedCont rest
                 (warnings ++
                   convertReduceWarnings reduceWarns ++
                     convertApplyWarning applyWarn)
@@ -806,14 +806,14 @@ calculateNonAmbiguousInterval n t (SemanticsTypes.When [] timeout tcont) =
              OptBoundTimeInterval.Unbounded)
            (calculateNonAmbiguousInterval n t tcont));
 calculateNonAmbiguousInterval n t
-  (SemanticsTypes.When (SemanticsTypes.Case vb cont : tail) timeout tcont) =
-  (if gtIfNone n Arith.zero_int
-    then OptBoundTimeInterval.intersectInterval
-           (calculateNonAmbiguousInterval (subIfSome n Arith.one_int) t cont)
-           (calculateNonAmbiguousInterval n t
-             (SemanticsTypes.When tail timeout tcont))
-    else calculateNonAmbiguousInterval n t
-           (SemanticsTypes.When tail timeout tcont));
+  (SemanticsTypes.When (SemanticsTypes.Case vb cont : restCases) timeout tcont)
+  = (if gtIfNone n Arith.zero_int
+      then OptBoundTimeInterval.intersectInterval
+             (calculateNonAmbiguousInterval (subIfSome n Arith.one_int) t cont)
+             (calculateNonAmbiguousInterval n t
+               (SemanticsTypes.When restCases timeout tcont))
+      else calculateNonAmbiguousInterval n t
+             (SemanticsTypes.When restCases timeout tcont));
 calculateNonAmbiguousInterval n t (SemanticsTypes.Let vc vd c) =
   calculateNonAmbiguousInterval n t c;
 calculateNonAmbiguousInterval n t (SemanticsTypes.Assert ve c) =

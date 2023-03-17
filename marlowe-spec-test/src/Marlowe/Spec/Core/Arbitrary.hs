@@ -5,6 +5,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Marlowe.Spec.Core.Arbitrary where
 
 import qualified Arith
@@ -14,17 +16,26 @@ import Control.Monad (liftM2)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Data.Data (Proxy (..))
-import Data.List (nub)
+import Data.List (nub, nubBy)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), parseValidResponse)
 import Marlowe.Spec.TypeId (TypeId (..))
 import Orderings (Ord (..), max)
+import qualified QuickCheck.GenT as QCT (listOf)
 import QuickCheck.GenT (GenT, MonadGen (..), frequency, resize, sized, suchThat, vectorOf)
 import Semantics (Payment (..), TransactionError (..), TransactionOutput (..), TransactionOutputRecord_ext (..), TransactionWarning (..), Transaction_ext (..), computeTransaction, evalValue)
 import SemanticsGuarantees (valid_state)
-import SemanticsTypes (Action (..), Bound (..), Case (..), ChoiceId (ChoiceId), Contract (..), Environment_ext (..), Input (..), IntervalError (..), Observation (..), Party, Payee (..), State_ext (..), Token (..), Value (..), ValueId (..), minTime)
+import SemanticsTypes (Action (..), Bound (..), Case (..), ChoiceId (..), Contract (..), Environment_ext (..), Input (..), IntervalError (..), Observation (..), Party (..), Payee (..), State_ext (..), Token (..), Value (..), ValueId (..), minTime)
 import Test.QuickCheck (Gen, chooseInt, getSize)
 import Test.QuickCheck.Arbitrary (Arbitrary (..))
 import qualified Test.QuickCheck.Gen as QC (chooseInteger, elements)
+import Data.Map (Map, fromList)
+import qualified Examples.Swap as Swap
+import qualified Examples.Escrow as Escrow
+import Test.QuickCheck (elements)
+import Test.QuickCheck.Gen (listOf)
+import Data.Function (on)
+import Test.QuickCheck.Arbitrary (shrinkList)
+import Arith (divide_int)
 
 data RandomResponse a
   = RandomValue a
@@ -76,6 +87,7 @@ arbitraryInteger = Arith.Int_of_integer <$>
     , (60, arbitraryFibonacci fibonaccis)
     ]
 
+-- | An arbitrary integer within an interval.
 chooseinteger :: (Arith.Int, Arith.Int) -> Gen Arith.Int
 chooseinteger (Arith.Int_of_integer i, Arith.Int_of_integer j) =
   Arith.Int_of_integer <$> QC.chooseInteger (i, j)
@@ -172,15 +184,8 @@ genParty interpret = do
       Right (RandomValue t) -> pure t
 
 genContract :: InterpretJsonRequest -> GenT IO Contract
-genContract interpret = do
-  size <- liftGen $ getSize
-  seed <- liftGen $ arbitrarySeed
-  liftIO do
-    res <- interpret (GenerateRandomValue (TypeId "Core.Contract" (Proxy :: Proxy Contract)) size seed)
-    case parseValidResponse res of
-      Left err -> throwIO $ GenerateRandomValueException err
-      Right (UnknownType _) -> throwIO $ GenerateRandomValueException "Client process doesn't know how to generate Core.Contract"
-      Right (RandomValue t) -> pure t
+genContract interpret = frequency [(95, gen =<< liftGen arbitrary), (5, pure Close)]
+  where gen context = sized \size -> arbitraryContractSized (min size 100 `div` 20) context interpret -- Keep tests from growing too large to execute by capping the maximum contract depth at 5
 
 genPayee ::  InterpretJsonRequest -> GenT IO Payee
 genPayee i = do
@@ -221,28 +226,6 @@ shrinkChoiceName = shrinkString id randomChoiceNames
 
 genChoiceId :: InterpretJsonRequest -> GenT IO ChoiceId
 genChoiceId i = ChoiceId <$> liftGen arbitraryChoiceName <*> genParty i
-
--- | Some value identifiers.
-randomValueIds :: [ValueId]
-randomValueIds = ValueId <$>
-  [
-    "x"
-  , "id"
-  , "lab"
-  , "idea"
-  , "story"
-  , "memory"
-  , "fishing"
-  , ""
-  , "drawing"
-  , "reaction"
-  , "difference"
-  , "replacement"
-  , "paper apartment"
-  , "leadership information"
-  , "entertainment region assumptions"
-  , "candidate apartment reaction replacement"  -- NB: Too long for ledger.
-  ]
 
 genValueId :: Gen ValueId
 genValueId = arbitraryFibonacci randomValueIds
@@ -486,3 +469,192 @@ arbitraryValidInputs state contract =
     case computeTransaction txIn state contract of  -- FIXME: It is tautological to use `computeTransaction` to filter test cases.
       TransactionError _ -> pure []
       TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _) -> (txIn :) <$> arbitraryValidInputs txOutState txOutContract
+
+-- | Generate one of the golden contracts and its initial state.
+goldenContract :: Gen (Contract, State_ext ())
+goldenContract = (,) <$> elements goldenContracts <*> pure (State_ext [] [] [] 0 ())
+
+goldenContracts :: [Contract]
+goldenContracts = [ Swap.swapExample, Escrow.escrowExample ]
+
+-- | Generate a random case, weighted towards different contract constructs.
+arbitraryCaseWeighted :: [(Int, Int, Int, Int, Int, Int)] -- ^ The weights for contract terms.
+                      -> Context                          -- ^ The Marlowe context.
+                      -> InterpretJsonRequest             -- ^ The JSON request interpreter.
+                      -> GenT IO Case                     -- ^ Generator for a case.
+arbitraryCaseWeighted w context interpret =
+  Case <$> genAction interpret <*> arbitraryContractWeighted w context interpret
+
+-- | Generate an arbitrary contract, weighted towards different contract constructs.
+arbitraryContractWeighted :: [(Int, Int, Int, Int, Int, Int)] -- ^ The weights of contract terms, which must eventually include `Close` as a posibility.
+                          -> Context                          -- ^ The Marlowe context.
+                          -> InterpretJsonRequest             -- ^ The JSON request interpreter.
+                          -> GenT IO Contract                 -- ^ Generator for a contract.
+arbitraryContractWeighted ((wClose, wPay, wIf, wWhen, wLet, wAssert) : w) context interpret =
+  frequency
+    [
+      (wClose , pure Close)
+    , (wPay   , Pay <$> genParty interpret <*> genPayee interpret <*> genToken interpret <*> genValue interpret <*> arbitraryContractWeighted w context interpret)
+    , (wIf    , If <$> genObservation interpret <*> arbitraryContractWeighted w context interpret <*> arbitraryContractWeighted w context interpret)
+    , (wWhen  , When <$> QCT.listOf (arbitraryCaseWeighted w context interpret) `suchThat` ((<= length w) . length) <*> liftSemiArbitrary context <*> arbitraryContractWeighted w context interpret)
+    , (wLet   , Let <$> liftSemiArbitrary context <*> genValue interpret <*> arbitraryContractWeighted w context interpret)
+    , (wAssert, Assert <$> genObservation interpret <*> arbitraryContractWeighted w context interpret)
+    ]
+  where
+    liftSemiArbitrary :: SemiArbitrary a => Context -> GenT IO a
+    liftSemiArbitrary = liftGen . semiArbitrary
+arbitraryContractWeighted [] _ _ = pure Close
+
+-- | Default weights for contract terms.
+defaultContractWeights :: (Int, Int, Int, Int, Int, Int)
+defaultContractWeights = (35, 20, 10, 15, 20, 5)
+
+-- | Generate a semi-random contract of a given depth.
+arbitraryContractSized :: Int           -- ^ The maximum depth.
+                       -> Context       -- ^ The Marlowe context.
+                       -> InterpretJsonRequest
+                       -> GenT IO Contract  -- ^ Generator for a contract.
+arbitraryContractSized = arbitraryContractWeighted . (`replicate` defaultContractWeights)
+
+-- | Some value identifiers.
+randomValueIds :: [ValueId]
+randomValueIds =
+  [
+    ValueId "x"
+  , ValueId "id"
+  , ValueId "lab"
+  , ValueId "idea"
+  , ValueId "story"
+  , ValueId "memory"
+  , ValueId "fishing"
+  , ValueId ""
+  , ValueId "drawing"
+  , ValueId "reaction"
+  , ValueId "difference"
+  , ValueId "replacement"
+  , ValueId "paper apartment"
+  , ValueId "leadership information"
+  , ValueId "entertainment region assumptions"
+  , ValueId "candidate apartment reaction replacement"  -- NB: Too long for ledger.
+  ]
+
+-- | Class for arbitrary values with respect to a context.
+class Arbitrary a => SemiArbitrary a where
+  -- | Generate an arbitrary value within a context.
+  semiArbitrary :: Context -> Gen a
+  semiArbitrary context =
+     case fromContext context of
+       [] -> arbitrary
+       xs -> perturb arbitrary xs
+  -- | Report values present in a context.
+  fromContext :: Context -> [a]
+  fromContext _ = []
+
+-- | Select an element of a list with high probability, or create a non-element at random with low probability.
+perturb :: Gen a   -- ^ The generator for a random item.
+        -> [a]     -- ^ The list of pre-defined items.
+        -> Gen a   -- ^ Generator for an item
+perturb gen [] = gen
+perturb gen xs = frequency [(20, gen), (80, elements xs)]
+
+-- | Context for generating correlated Marlowe terms and state.
+data Context =
+  Context
+  {
+    amounts      :: [Arith.Int]                  -- ^ Universe of token amounts.
+  , choiceNames  :: [String]                     -- ^ Universe of choice names.
+  , chosenNums   :: [Arith.Int]                  -- ^ Universe of chosen numbers.
+  , valueIds     :: [ValueId]                    -- ^ Universe of value identifiers.
+  , values       :: [Arith.Int]                  -- ^ Universe of values.
+  , times        :: [Arith.Int]                  -- ^ Universe of times.
+  , cboundValues :: Map ValueId Arith.Int        -- ^ Bound values for state.
+  }
+
+instance Prelude.Ord ValueId where
+   compare (ValueId a) (ValueId b) = compare a b
+
+instance Arbitrary Context where
+  arbitrary =
+    do
+      amounts <- listOf arbitraryPositiveInteger
+      choiceNames <- listOf arbitraryChoiceName
+      chosenNums <- listOf arbitraryInteger
+      valueIds <- arbitrary
+      values <- listOf arbitraryInteger
+      times <- listOf arbitraryPositiveInteger
+      cboundValues <- fromList . nubBy ((==) `on` fst) <$> listOf ((,) <$> perturb arbitrary valueIds <*> perturb arbitraryInteger values)
+      pure Context{..}
+  shrink context@Context{..} =
+      [context {amounts = amounts'} | amounts' <- shrink amounts]
+      ++ [context {choiceNames = choiceNames'} | choiceNames' <- shrinkList shrinkChoiceName choiceNames]
+      ++ [context {chosenNums = chosenNums'} | chosenNums' <- shrink chosenNums]
+      ++ [context {valueIds = valueIds'} | valueIds' <- shrink valueIds]
+      ++ [context {values = values'} | values' <- shrink values]
+      ++ [context {times = times'} | times' <- shrink times]
+      ++ [context {cboundValues = cboundValues'} | cboundValues' <- shrink cboundValues]
+
+instance Arbitrary Arith.Int where
+  arbitrary = arbitraryInteger
+
+instance SemiArbitrary Arith.Int where
+  fromContext = times
+
+-- | Some role names.
+randomRoleNames :: [String]
+randomRoleNames =
+  [
+    "Cy"
+  , "Noe"
+  , "Sten"
+  , "Cara"
+  , "Alene"
+  , "Hande"
+  , ""
+  , "I"
+  , "Zakkai"
+  , "Laurent"
+  , "Prosenjit"
+  , "Dafne Helge Mose"
+  , "Nonso Ernie Blanka"
+  , "Umukoro Alexander Columb"
+  , "Urbanus Roland Alison Ty Ryoichi"
+  , "Alcippe Alende Blanka Roland Dafne"  -- NB: Too long for Cardano ledger.
+  ]
+
+
+instance Arbitrary ValueId where
+  arbitrary = arbitraryFibonacci randomValueIds
+  shrink = shrinkString (\(ValueId x) -> x) randomValueIds
+
+instance SemiArbitrary ValueId where
+  fromContext = valueIds
+
+instance Arbitrary Bound where
+  arbitrary =
+    do
+      lower <- arbitraryInteger
+      extent <- arbitraryNonnegativeInteger
+      pure $ Bound lower (lower + extent)
+  shrink (Bound lower upper) =
+    let
+      mid = (lower + upper) `divide_int` 2
+    in
+      filter (/= Bound lower upper)
+        $ nub
+        [
+          Bound lower lower
+        , Bound lower mid
+        , Bound mid   mid
+        , Bound mid   upper
+        , Bound upper upper
+        ]
+
+instance SemiArbitrary Bound where
+  semiArbitrary context =
+      do
+        lower <- semiArbitrary context
+        extent <- arbitraryNonnegativeInteger
+        pure $ Bound lower (lower + extent)
+
+instance SemiArbitrary [Bound] where
+  semiArbitrary context = listOf $ semiArbitrary context

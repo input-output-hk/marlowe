@@ -66,8 +66,9 @@ export_code
   reduceContractUntilQuiescent
   traceListToSingleInput
   applyAllInputs
-  playTrace
   fixInterval
+  playTrace
+  playTraceAux
   computeTransaction
 
    \<comment> \<open> Export utility functions\<close>

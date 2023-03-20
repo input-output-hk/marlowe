@@ -33,6 +33,7 @@ data Request transport
   | ReduceContractUntilQuiescent (C.Environment_ext ()) (C.State_ext ()) C.Contract
   | ComputeTransaction (C.Transaction_ext ()) (C.State_ext ()) C.Contract
   | PlayTrace Integer C.Contract [C.Transaction_ext ()]
+  | PlayTraceAux (C.TransactionOutputRecord_ext ()) [C.Transaction_ext ()]
   | EvalValue (C.Environment_ext ()) (C.State_ext ()) C.Value
 
 instance ToJSON (Request JSON.Value) where
@@ -64,6 +65,11 @@ instance ToJSON (Request JSON.Value) where
     , "transactionInputs" .= toJSON is
     , "coreContract" .= toJSON c
     , "initialTime" .= toJSON t
+    ]
+  toJSON (PlayTraceAux o is) = object
+    [ "request" .= JSON.String "playtrace-aux"
+    , "transactionOutput" .= toJSON o
+    , "transactionInputs" .= toJSON is
     ]
   toJSON (EvalValue env state val) = object
     [ "request" .= JSON.String "eval-value"

@@ -401,16 +401,19 @@ genTransactionOutput :: InterpretJsonRequest -> GenT IO TransactionOutput
 genTransactionOutput i =
  frequency
     [ (30, TransactionError <$> liftGen genTransactionError)
-    , (70, do
-              wSize <- liftGen $ chooseInt (0, 2)
-              warnings <- vectorOf wSize $ genTransactionWarning i
-              pSize <- liftGen $ chooseInt (0, 2)
-              payments <- vectorOf pSize $ genPayment i
-              state <- resize 2 $ genState i
-              contract <- resize 2 $ genContract i
-              pure $ TransactionOutput $ TransactionOutputRecord_ext warnings payments state contract ()
-      )
+    , (70, TransactionOutput <$> genTransactionOutputRecord_ext i)
     ]
+
+genTransactionOutputRecord_ext :: InterpretJsonRequest -> GenT IO (TransactionOutputRecord_ext ())
+genTransactionOutputRecord_ext i =
+    do
+       wSize <- liftGen $ chooseInt (0, 2)
+       warnings <- vectorOf wSize $ genTransactionWarning i
+       pSize <- liftGen $ chooseInt (0, 2)
+       payments <- vectorOf pSize $ genPayment i
+       state <- resize 2 $ genState i
+       contract <- resize 2 $ genContract i
+       pure $ TransactionOutputRecord_ext warnings payments state contract ()
 
 genEnvironment :: Gen (Environment_ext ())
 genEnvironment = Environment_ext <$> genInterval <*> pure ()

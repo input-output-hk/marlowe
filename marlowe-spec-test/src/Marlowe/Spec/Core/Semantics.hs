@@ -10,7 +10,7 @@ import qualified Arith as Arith
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Aeson (ToJSON(..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger, arbitraryValidInputs, genInterval)
+import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger, arbitraryValidInputs, genInterval, genTransactionOutputRecord_ext)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
 import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
 import Test.Tasty (TestTree, testGroup)
@@ -33,6 +33,10 @@ tests i = testGroup "Semantics"
     [ evalValueTest i
     , divisionRoundsTowardsZeroTest i
     , fixIntervalTest i
+    --
+    -- Property based test correponding to theorems defined
+    -- in Isabelle:
+    --
     -- TransactionBound.thy
     , playTrace_only_accepts_maxTransactionsInitialStateTest i
     -- SingleInputTransactions.thy
@@ -42,11 +46,9 @@ tests i = testGroup "Semantics"
     , computeTransactionIsQuiescentTest i
     , playTraceIsQuiescentTest i
     -- PositiveAccounts.thy
-    -- , playTraceAux_preserves_validAndPositive_state i -- requires playTraceAux
+    , playTraceAux_preserves_validAndPositive_state i
     -- Timeout.thy
     , timedOutTransaction_closes_contractTest i
-    -- timedOutTransaction_closes_contract2Test i
-    -- timedOutTransaction_closes_contract3Test i
     -- CloseIsSafe.thy
     , closeIsSafeTest i
     ]
@@ -93,6 +95,7 @@ fixIntervalTest interpret = reproducibleProperty "Fix Interval" do
     assertResponse interpret req successResponse
 
 -- TransactionBound.thy
+--
 -- lemma playTrace_only_accepts_maxTransactionsInitialState :
 --    "playTrace sl c l = TransactionOutput txOut ⟹
 --      length l ≤ maxTransactionsInitialState c"
@@ -117,6 +120,7 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
       _ -> fail "JSON parsing failed!"
 
 -- SingleInputTransactions.thy
+--
 -- theorem traceToSingleInputIsEquivalent:
 --    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
 traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
@@ -140,8 +144,6 @@ traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single inpu
 integer_of_int :: Arith.Int -> Integer
 integer_of_int (Arith.Int_of_integer k) = k
 
--- SingleInputTransactions.thy
---
 -- lemma reduceContractUntilQuiescentIdempotent :
 --    "reduceContractUntilQuiescent env state contract = ContractQuiescent reducedAfter wa pa nsta ncont ⟹
 --       reduceContractUntilQuiescent env nsta ncont = ContractQuiescent False [] [] nsta ncont"
@@ -168,8 +170,8 @@ reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "red
       JSON.Success _ -> pre False
       _ -> fail "JSON parsing failed!"
 
-
 -- QuiescentResults.thy
+--
 -- theorem computeTransactionIsQuiescent:
 --    "validAndPositive_state sta ⟹
 --      computeTransaction traIn sta cont = TransactionOutput traOut ⟹
@@ -217,6 +219,7 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "Compute tran
         && all (flip elem l1) l2
 
 -- QuiescentResults.thy
+--
 -- theorem playTraceIsQuiescent:
 --    "playTrace sl cont (Cons h t) = TransactionOutput traOut ⟹
 --      isQuiescent (txOutContract traOut) (txOutState traOut)"
@@ -241,31 +244,32 @@ playTraceIsQuiescentTest interpret = reproducibleProperty "playTrace is quiescen
       _ -> fail "JSON parsing failed!"
 
 -- PositiveAccounts.thy
+--
 -- lemma playTraceAux_preserves_validAndPositive_state :
 --    "validAndPositive_state (txOutState txIn) ⟹
 --      playTraceAux txIn transList = TransactionOutput txOut ⟹
 --        validAndPositive_state (txOutState txOut)"
--- playTraceAux_preserves_validAndPositive_state :: InterpretJsonRequest -> TestTree
--- playTraceAux_preserves_validAndPositive_state interpret = reproducibleProperty "playTrace is quiescent" do
---     contract <- run $ generateT $ genContract interpret `suchThat` (/=Close)
---     startTime <- run $ generate $ arbitraryNonnegativeInteger
---     transactions <- run $ generate $ arbitraryValidInputs (State_ext [] [] [] startTime ()) contract
---     let
---         req :: Request JSON.Value
---         req = PlayTraceAux out transactions
---     RequestResponse res <- run $ liftIO $ interpret req
---
---     case JSON.fromJSON res of
---       JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _)) -> do
---         monitor
---           ( counterexample $
---               "Request: " ++ showAsJson req ++ "\n"
---                 ++ "Expected reponse to be quiescent" )
---         assert $ validAndPositive_state txOutState
---       JSON.Success _ -> pre False
---       _ -> fail "JSON parsing failed!"
+playTraceAux_preserves_validAndPositive_state :: InterpretJsonRequest -> TestTree
+playTraceAux_preserves_validAndPositive_state interpret = reproducibleProperty "playTrace is quiescent" do
+    transactionOut@(TransactionOutputRecord_ext _ _ state contract _) <- run $ generateT $ genTransactionOutputRecord_ext interpret `suchThat` \(TransactionOutputRecord_ext _ _ s _ _) -> validAndPositive_state s
+    transactions <- run $ generate $ arbitraryValidInputs state contract
+    let
+        req :: Request JSON.Value
+        req = PlayTraceAux transactionOut transactions
+    RequestResponse res <- run $ liftIO $ interpret req
+
+    case JSON.fromJSON res of
+      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ _ txOutState _ _)) -> do
+        monitor
+          ( counterexample $
+              "Request: " ++ showAsJson req ++ "\n"
+                ++ "Expected reponse to be quiescent" )
+        assert $ validAndPositive_state txOutState
+      JSON.Success _ -> pre False
+      _ -> fail "JSON parsing failed!"
 
 -- Timeout.thy
+--
 -- theorem timedOutTransaction_closes_contract:
 --    "validAndPositive_state sta
 --       ⟹  iniTime ≥ minTime sta
@@ -298,6 +302,7 @@ timedOutTransaction_closes_contractTest interpret = reproducibleProperty "Timed-
     _ -> fail "JSON parsing failed!"
 
 -- CloseIsSafe.thy
+--
 -- theorem closeIsSafe :
 --    "computeTransaction tra sta Close = TransactionOutput trec ⟹  txOutWarnings trec = []"
 closeIsSafeTest :: InterpretJsonRequest -> TestTree

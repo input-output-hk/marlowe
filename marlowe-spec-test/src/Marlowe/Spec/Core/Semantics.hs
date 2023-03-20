@@ -10,7 +10,7 @@ import qualified Arith as Arith
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Aeson (ToJSON(..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger, arbitraryValidInputs, genInterval, genTransactionOutputRecord_ext)
+import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger, arbitraryValidInputs, genInterval)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
 import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
 import Test.Tasty (TestTree, testGroup)
@@ -45,8 +45,6 @@ tests i = testGroup "Semantics"
     -- QuiescentResults.thy
     , computeTransactionIsQuiescentTest i
     , playTraceIsQuiescentTest i
-    -- PositiveAccounts.thy
-    , playTraceAux_preserves_validAndPositive_state i
     -- Timeout.thy
     , timedOutTransaction_closes_contractTest i
     -- CloseIsSafe.thy
@@ -240,31 +238,6 @@ playTraceIsQuiescentTest interpret = reproducibleProperty "playTrace is quiescen
               "Request: " ++ showAsJson req ++ "\n"
                 ++ "Expected reponse to be quiescent" )
         assert $ isQuiescent txOutContract txOutState
-      JSON.Success _ -> pre False
-      _ -> fail "JSON parsing failed!"
-
--- PositiveAccounts.thy
---
--- lemma playTraceAux_preserves_validAndPositive_state :
---    "validAndPositive_state (txOutState txIn) ⟹
---      playTraceAux txIn transList = TransactionOutput txOut ⟹
---        validAndPositive_state (txOutState txOut)"
-playTraceAux_preserves_validAndPositive_state :: InterpretJsonRequest -> TestTree
-playTraceAux_preserves_validAndPositive_state interpret = reproducibleProperty "playTrace is quiescent" do
-    transactionOut@(TransactionOutputRecord_ext _ _ state contract _) <- run $ generateT $ genTransactionOutputRecord_ext interpret `suchThat` \(TransactionOutputRecord_ext _ _ s _ _) -> validAndPositive_state s
-    transactions <- run $ generate $ arbitraryValidInputs state contract
-    let
-        req :: Request JSON.Value
-        req = PlayTraceAux transactionOut transactions
-    RequestResponse res <- run $ liftIO $ interpret req
-
-    case JSON.fromJSON res of
-      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ _ txOutState _ _)) -> do
-        monitor
-          ( counterexample $
-              "Request: " ++ showAsJson req ++ "\n"
-                ++ "Expected reponse to be quiescent" )
-        assert $ validAndPositive_state txOutState
       JSON.Success _ -> pre False
       _ -> fail "JSON parsing failed!"
 

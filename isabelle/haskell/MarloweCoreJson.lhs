@@ -1330,6 +1330,32 @@ in case of an error, or 4 properties in case of success.
 
 
 \begin{code}
+instance ToJSON TransactionOutput where
+  toJSON (TransactionError err) = object
+    [ "transaction_error" .= toJSON err ]
+  toJSON (TransactionOutput out)
+    = object
+        [ "warnings" .= toJSON (txOutWarnings out)
+        , "payments" .= toJSON (txOutPayments out)
+        , "state" .= toJSON (txOutState out)
+        , "contract" .= toJSON (txOutContract out)
+        ]
+
+instance FromJSON TransactionOutput where
+  parseJSON = withObject "TransactionOutput"
+                (\v ->
+                     (TransactionError <$> ( v .: "transaction_error"))
+                  <|> (TransactionOutput <$>
+                         (TransactionOutputRecord_ext
+                            <$> (v .: "warnings")
+                            <*> (v .: "payments")
+                            <*> (v .: "state")
+                            <*> (v .: "contract")
+                            <*> pure ()
+                         )
+                      )
+                )
+
 instance ToJSON ReduceWarning where
   toJSON ReduceNoWarning = JSON.String "ReduceNoWarning"
   toJSON (ReduceNonPositivePay accountId payee token amount)
@@ -1406,78 +1432,24 @@ instance FromJSON ReduceResult where
                   )
                 ) x
 
--- data TransactionOutputRecord_ext a =
---   TransactionOutputRecord_ext [TransactionWarning] [Payment]
---     (SemanticsTypes.State_ext ()) SemanticsTypes.Contract a
---   deriving (Prelude.Read, Prelude.Show);
-
-instance ToJSON (TransactionOutputRecord_ext ()) where
-  toJSON (TransactionOutputRecord_ext warnings payments state contract _)
-    = object
-        [ "warnings" .= toJSON warnings
-        , "payments" .= toJSON payments
-        , "state" .= toJSON state
-        , "contract" .= toJSON contract
-        ]
-
-instance FromJSON (TransactionOutputRecord_ext ()) where
-  parseJSON = withObject "TransactionOutputRecord_ext"
-                (\v -> (TransactionOutputRecord_ext
-                            <$> (v .: "warnings")
-                            <*> (v .: "payments")
-                            <*> (v .: "state")
-                            <*> (v .: "contract")
-                            <*> pure ()
-                         )
-                )
-
-instance ToJSON TransactionOutput where
-  toJSON (TransactionError err) = object
-    [ "transaction_error" .= toJSON err ]
-  toJSON (TransactionOutput out)
-    = object
-        [ "warnings" .= toJSON (txOutWarnings out)
-        , "payments" .= toJSON (txOutPayments out)
-        , "state" .= toJSON (txOutState out)
-        , "contract" .= toJSON (txOutContract out)
-        ]
-
-
-instance FromJSON TransactionOutput where
-  parseJSON = withObject "TransactionOutput"
-                (\v ->
-                     (TransactionError <$> ( v .: "transaction_error"))
-                  <|> (TransactionOutput <$>
-                         (TransactionOutputRecord_ext
-                            <$> (v .: "warnings")
-                            <*> (v .: "payments")
-                            <*> (v .: "state")
-                            <*> (v .: "contract")
-                            <*> pure ()
-                         )
-                      )
-                )
-
 instance ToJSON IntervalResult where
   toJSON (IntervalError err) = object
-    [ "transaction_error" .= toJSON err ]
+    [ "interval_error" .= toJSON err ]
   toJSON (IntervalTrimmed env state)
     = object
-        [ "enviroment" .= toJSON env
+        [ "environment" .= toJSON env
         , "state" .= toJSON state
         ]
-
 
 instance FromJSON IntervalResult where
   parseJSON = withObject "IntervalResult"
                 (\v ->
-                     (IntervalError <$> ( v .: "transaction_error"))
+                     (IntervalError <$> ( v .: "interval_error"))
                   <|> (IntervalTrimmed
                             <$> (v .: "environment")
                             <*> (v .: "state")
                       )
                 )
-
 \end{code}
 
 Here are some examples for each \emph{TransactionOutput} constructor:

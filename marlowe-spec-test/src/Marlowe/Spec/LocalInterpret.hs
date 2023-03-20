@@ -15,7 +15,7 @@ module Marlowe.Spec.LocalInterpret
 import qualified Arith (Int(..))
 import qualified Data.Aeson as JSON
 import Marlowe.Spec.Interpret (Response(..), Request(..))
-import Semantics (playTrace, playTraceAux, computeTransaction, evalValue, reduceContractUntilQuiescent, fixInterval)
+import Semantics (playTrace, computeTransaction, evalValue, reduceContractUntilQuiescent, fixInterval)
 import Marlowe.Spec.TypeId (TypeId (..), fromTypeName)
 import Marlowe.Spec.Core.Serialization.Json
 import Data.Data (Proxy)
@@ -39,11 +39,6 @@ interpretLocal (PlayTrace t c is) =
     $ RequestResponse
     $ JSON.toJSON
     $ playTrace (Arith.Int_of_integer t) c is
-interpretLocal (PlayTraceAux o is) =
-  pure
-    $ RequestResponse
-    $ JSON.toJSON
-    $ playTraceAux o is
 interpretLocal (EvalValue env state val) =
   pure
     $ RequestResponse

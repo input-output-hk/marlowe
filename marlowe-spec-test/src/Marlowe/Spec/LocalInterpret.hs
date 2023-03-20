@@ -15,7 +15,7 @@ module Marlowe.Spec.LocalInterpret
 import qualified Arith (Int(..))
 import qualified Data.Aeson as JSON
 import Marlowe.Spec.Interpret (Response(..), Request(..))
-import Semantics (playTrace, computeTransaction, evalValue, reduceContractUntilQuiescent)
+import Semantics (playTrace, computeTransaction, evalValue, reduceContractUntilQuiescent, fixInterval)
 import Marlowe.Spec.TypeId (TypeId (..), fromTypeName)
 import Marlowe.Spec.Core.Serialization.Json
 import Data.Data (Proxy)
@@ -54,6 +54,11 @@ interpretLocal (ComputeTransaction t s c) =
     $ RequestResponse
     $ JSON.toJSON
     $ computeTransaction t s c
+interpretLocal (FixInterval (a, b) s) =
+  pure
+    $ RequestResponse
+    $ JSON.toJSON
+    $ fixInterval (Arith.Int_of_integer a, Arith.Int_of_integer b) s
 interpretLocal (GenerateRandomValue t@(TypeId name _) size seed) =
   pure
     $ RequestResponse

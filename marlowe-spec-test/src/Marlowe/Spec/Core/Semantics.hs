@@ -10,13 +10,13 @@ import qualified Arith as Arith
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Aeson (ToJSON(..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger, arbitraryValidInputs)
+import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger, arbitraryValidInputs, genInterval)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
 import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
 import Test.Tasty (TestTree, testGroup)
 import Test.QuickCheck (withMaxSuccess)
 import Test.QuickCheck.Monadic (assert, run, monitor, pre)
-import Semantics (evalValue, playTrace, computeTransaction, TransactionOutput (..), TransactionOutputRecord_ext (TransactionOutputRecord_ext), isQuiescent, TransactionWarning, txOutWarnings, reduceContractUntilQuiescent, ReduceResult (..), Transaction_ext (..))
+import Semantics (evalValue, playTrace, fixInterval, computeTransaction, TransactionOutput (..), TransactionOutputRecord_ext (TransactionOutputRecord_ext), isQuiescent, TransactionWarning, txOutWarnings, reduceContractUntilQuiescent, ReduceResult (..), Transaction_ext (..))
 import Timeout (isClosedAndEmpty)
 import SemanticsTypes (Value(..), State_ext (..), Contract(..), minTime)
 import SingleInputTransactions (traceListToSingleInput)
@@ -32,6 +32,7 @@ tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics"
     [ evalValueTest i
     , divisionRoundsTowardsZeroTest i
+    , fixIntervalTest i
     -- TransactionBound.thy
     , playTrace_only_accepts_maxTransactionsInitialStateTest i
     -- SingleInputTransactions.thy
@@ -79,6 +80,16 @@ divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division roundin
         req :: Request JSON.Value
         req = EvalValue env state (DivValue numerator denominator)
         successResponse = RequestResponse $ toJSON (0 :: Int)
+    assertResponse interpret req successResponse
+
+fixIntervalTest :: InterpretJsonRequest -> TestTree
+fixIntervalTest interpret = reproducibleProperty "Fix Interval" do
+    i@(Arith.Int_of_integer a, Arith.Int_of_integer b) <- run $ generate $ genInterval
+    state <- run $ generateT $ genState interpret
+    let
+        req :: Request JSON.Value
+        req = FixInterval (a, b) state
+        successResponse = RequestResponse $ toJSON $ fixInterval i state
     assertResponse interpret req successResponse
 
 -- TransactionBound.thy

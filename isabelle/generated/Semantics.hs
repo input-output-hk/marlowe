@@ -7,11 +7,12 @@ module
              TransactionError(..), TransactionOutputRecord_ext(..),
              TransactionOutput(..), Transaction_ext(..), evalValue,
              evalObservation, txOutWarnings, txOutPayments, reductionLoop,
-             reduceContractUntilQuiescent, applyAllInputs, computeTransaction,
-             playTrace, getOutcomes, isQuiescent, maxTimeContract,
-             getSignatures, calculateNonAmbiguousInterval, txOutState,
-             txOutContract, equal_ReduceResult, equal_TransactionError,
-             equal_TransactionOutput, equal_Transaction_ext)
+             reduceContractUntilQuiescent, applyAllInputs, fixInterval,
+             computeTransaction, playTrace, getOutcomes, isQuiescent,
+             maxTimeContract, getSignatures, calculateNonAmbiguousInterval,
+             txOutState, txOutContract, equal_ReduceResult,
+             equal_TransactionError, equal_TransactionOutput,
+             equal_Transaction_ext)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),

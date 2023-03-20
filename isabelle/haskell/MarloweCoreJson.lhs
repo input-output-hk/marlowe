@@ -45,7 +45,7 @@ import qualified Data.Foldable as F
 import qualified Data.Text as T
 import Data.Scientific (Scientific, floatingOrInteger)
 import qualified Examples.Swap
-import SemanticsTypes (Action(..), Case(..), Contract(..), Input(..), Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..), State_ext(..), IntervalError(..), Environment_ext(..))
+import SemanticsTypes (Action(..), Case(..), Contract(..), Input(..), Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..), State_ext(..), IntervalError(..), Environment_ext(..), IntervalResult(..))
 import Semantics (Transaction_ext(..), Payment(..), ReduceResult(..), ReduceWarning(..), TransactionWarning(..), TransactionError(..), TransactionOutput(..), TransactionOutputRecord_ext(..), txOutWarnings, txOutPayments, txOutState, txOutContract, playTrace)
 
 
@@ -1432,6 +1432,26 @@ instance FromJSON TransactionOutput where
                          )
                       )
                 )
+instance ToJSON IntervalResult where
+  toJSON (IntervalError err) = object
+    [ "transaction_error" .= toJSON err ]
+  toJSON (IntervalTrimmed env state)
+    = object
+        [ "enviroment" .= toJSON env
+        , "state" .= toJSON state
+        ]
+
+
+instance FromJSON IntervalResult where
+  parseJSON = withObject "IntervalResult"
+                (\v ->
+                     (IntervalError <$> ( v .: "transaction_error"))
+                  <|> (IntervalTrimmed
+                            <$> (v .: "environment")
+                            <*> (v .: "state")
+                      )
+                )
+
 \end{code}
 
 Here are some examples for each \emph{TransactionOutput} constructor:

@@ -13,38 +13,46 @@ CloseRefund:  "refundOne (accounts s) = Some ((party, token, money), newAccount)
 PayNonPositive: "evalValue env s val \<le> 0 \<Longrightarrow>
   (Pay accId payee token val cont, s, env, warns, payments) \<rightarrow>
   (cont, s, env, warns @ [ReduceNonPositivePay accId payee token (evalValue env s val)], payments)" |
-PayPositivePartialWithPayment: "\<lbrakk>evalValue env s val > 0;
-  evalValue env s val > moneyInAccount accId token (accounts s);
+\<comment>\<open>TODO: Partial external payment\<close>
+PayPositivePartialWithPayment: "\<lbrakk>
+  \<comment>\<open>TODO: We may be able to remove this using validAndPositive_state\<close>
+  evalValue env s val > 0;
+  moneyInAccount accId token (accounts s) = availableMoney; 
+  evalValue env s val > availableMoney;
   updateMoneyInAccount accId token 0 (accounts s) = newAccs;
-  moneyInAccount accId token (accounts s) = moneyToPay;
-  giveMoney accId payee token (moneyToPay) newAccs = (payment, finalAccs);
-  payment = ReduceWithPayment somePayment\<rbrakk> \<Longrightarrow>
+  giveMoney accId payee token (availableMoney) newAccs = (ReduceWithPayment payment, finalAccs)
+  \<rbrakk> \<Longrightarrow>
   (Pay accId payee token val cont, s, env, warns, payments) \<rightarrow>
-  ((cont, s\<lparr>accounts := finalAccs\<rparr>, env, warns @ [ReducePartialPay accId payee token moneyToPay (evalValue env s val)], payments @ [somePayment]))" |
-PayPositivePartialWithoutPayment: "\<lbrakk>evalValue env s val > 0;
-  evalValue env s val > moneyInAccount accId token (accounts s);
-  updateMoneyInAccount accId token 0 (accounts s) = newAccs;
-  moneyInAccount accId token (accounts s) = moneyToPay;
-  giveMoney accId payee token (moneyToPay) newAccs = (payment, finalAccs);
-  payment = ReduceNoPayment\<rbrakk> \<Longrightarrow>
+  ((cont, s\<lparr>accounts := finalAccs\<rparr>, env, warns @ [ReducePartialPay accId payee token availableMoney (evalValue env s val)], payments @ [payment]))" |
+\<comment>\<open>TODO: Partial internal payment\<close>
+PayPositivePartialWithoutPayment: "\<lbrakk>
+  \<comment>\<open>TODO: We may be able to remove this using validAndPositive_state\<close>
+  evalValue env s val > 0;
+  moneyInAccount accId token (accounts s) = availableMoney;
+  evalValue env s val > availableMoney;
+  updateMoneyInAccount accId token 0 (accounts s) = newAccs;  
+  giveMoney accId payee token (availableMoney) newAccs = (ReduceNoPayment, finalAccs)
+  \<rbrakk> \<Longrightarrow>
   (Pay accId payee token val cont, s, env, warns, payments) \<rightarrow>
-  ((cont, s\<lparr>accounts := finalAccs\<rparr>, env, warns @ [ReducePartialPay accId payee token moneyToPay (evalValue env s val)], payments))" |
+  ((cont, s\<lparr>accounts := finalAccs\<rparr>, env, warns @ [ReducePartialPay accId payee token availableMoney (evalValue env s val)], payments))" |
+\<comment>\<open>TODO: Full external payment\<close>
 PayPositiveFullWithPayment: "\<lbrakk>evalValue env s val > 0;
-  evalValue env s val \<le> moneyInAccount accId token (accounts s);
-  moneyInAccount accId token (accounts s) = moneyInAcc;
-  moneyInAcc - (evalValue env s val) = newBalance;
+  moneyInAccount accId token (accounts s) = availableMoney;
+  evalValue env s val \<le> availableMoney;
+  availableMoney - (evalValue env s val) = newBalance;
   updateMoneyInAccount accId token newBalance (accounts s) = newAccs;
-  giveMoney accId payee token (evalValue env s val) newAccs = (payment, finalAccs);
-  payment = ReduceWithPayment somePayment\<rbrakk> \<Longrightarrow>
+  giveMoney accId payee token (evalValue env s val) newAccs = (ReduceWithPayment payment, finalAccs)
+  \<rbrakk> \<Longrightarrow>
   (Pay accId payee token val cont, s, env, warns, payments) \<rightarrow>
-  (cont, s\<lparr>accounts := finalAccs\<rparr>, env, warns @ [ReduceNoWarning], payments @ [somePayment])" |
+  (cont, s\<lparr>accounts := finalAccs\<rparr>, env, warns @ [ReduceNoWarning], payments @ [payment])" |
+\<comment>\<open>TODO: Full internal payment\<close>
 PayPositiveFullWithoutPayment: "\<lbrakk>evalValue env s val > 0;
-  evalValue env s val \<le> moneyInAccount accId token (accounts s);
-  moneyInAccount accId token (accounts s) = moneyInAcc;
-  moneyInAcc - (evalValue env s val) = newBalance;
+  moneyInAccount accId token (accounts s) = availableMoney;
+  evalValue env s val \<le> availableMoney;
+  availableMoney - (evalValue env s val) = newBalance;
   updateMoneyInAccount accId token newBalance (accounts s) = newAccs;
-  giveMoney accId payee token (evalValue env s val) newAccs = (payment, finalAccs);
-  payment = ReduceNoPayment\<rbrakk> \<Longrightarrow>
+  giveMoney accId payee token (evalValue env s val) newAccs = (ReduceNoPayment, finalAccs)
+  \<rbrakk> \<Longrightarrow>
   (Pay accId payee token val cont, s, env, warns, payments) \<rightarrow>
   (cont, s\<lparr>accounts := finalAccs\<rparr>, env, warns @ [ReduceNoWarning], payments)"  |
 IfTrue: "evalObservation env s obs \<Longrightarrow>
@@ -53,14 +61,16 @@ IfTrue: "evalObservation env s obs \<Longrightarrow>
 IfFalse: "\<not>evalObservation env s obs \<Longrightarrow>
   (If obs cont1 cont2, s, env, warns, payments) \<rightarrow>
   (cont2, s, env, warns @ [ReduceNoWarning], payments)" |
-WhenTimeout: "\<lbrakk>slotInterval env = (startSlot, endSlot);
-  endSlot \<ge> timeout;
-  startSlot \<ge> timeout\<rbrakk> \<Longrightarrow>
+WhenTimeout: "\<lbrakk>timeInterval env = (startTime, endTime);
+  endTime \<ge> timeout;
+  startTime \<ge> timeout\<rbrakk> \<Longrightarrow>
   (When cases timeout cont, s, env, warns, payments) \<rightarrow>
   (cont, s, env, warns @ [ReduceNoWarning], payments)"|
-LetShadow: "lookup valId (boundValues s) = Some oldVal \<Longrightarrow>
+LetShadow: "\<lbrakk> lookup valId (boundValues s) = Some oldVal; 
+  evalValue env s val = newVal
+  \<rbrakk> \<Longrightarrow>
   (Let valId val cont, s, env, warns, payments) \<rightarrow>
-  (cont, s\<lparr> boundValues := MList.insert valId (evalValue env s val) (boundValues s)\<rparr>, env, warns @ [ReduceShadowing valId oldVal (evalValue env s val)], payments)" |
+  (cont, s\<lparr> boundValues := MList.insert valId newVal (boundValues s)\<rparr>, env, warns @ [ReduceShadowing valId oldVal newVal], payments)" |
 LetNoShadow: "lookup valId (boundValues s) = None \<Longrightarrow>
   (Let valId val cont, s, env, warns, payments) \<rightarrow>
   (cont, s\<lparr> boundValues := MList.insert valId (evalValue env s val) (boundValues s)\<rparr>, env, warns @ [ReduceNoWarning], payments)"  |

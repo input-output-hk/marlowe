@@ -151,10 +151,9 @@ reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "red
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
-                ++ "Expected: " ++ show False ++ "\n"
-                ++ "Actual: " ++ show contract)
+                ++ "Expected: ContractQuiescent" )
         assert $ case reduceContractUntilQuiescent env nsta ncont of
-                   ContractQuiescent False _ _ _ _ -> True
+                   ContractQuiescent False [] [] nsta' ncont' -> nsta == nsta' && ncont == ncont'
                    _ -> False
       JSON.Success _ -> pre False
       _ -> fail "JSON parsing failed!"

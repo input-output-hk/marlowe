@@ -69,6 +69,7 @@ tests i = testGroup "Semantics"
     [ evalValueTest i
     , divisionRoundsTowardsZeroTest i
     , fixIntervalTest i
+    , computeTransactionTest i
     --
     -- Property based test correponding to theorems defined
     -- in Isabelle:
@@ -119,7 +120,7 @@ divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division roundin
     assertResponse interpret req successResponse
 
 fixIntervalTest :: InterpretJsonRequest -> TestTree
-fixIntervalTest interpret = reproducibleProperty "Fix Interval" do
+fixIntervalTest interpret = reproducibleProperty "Calling fixInterval test" do
     i@(Arith.Int_of_integer a, Arith.Int_of_integer b) <- run $ generate $ genInterval
     state <- run $ generateT $ genState interpret
     let
@@ -128,13 +129,23 @@ fixIntervalTest interpret = reproducibleProperty "Fix Interval" do
         successResponse = RequestResponse $ toJSON $ fixInterval i state
     assertResponse interpret req successResponse
 
+computeTransactionTest :: InterpretJsonRequest -> TestTree
+computeTransactionTest interpret = reproducibleProperty "Calling computeTransaction test" do
+    state <- run $ generateT $ genState interpret
+    contract <- run $ generateT $ genContract interpret
+    transaction <- run $ generateT $ genTransaction interpret
+    let req :: Request JSON.Value
+        req = ComputeTransaction transaction state contract
+        successResponse = RequestResponse $ toJSON $ computeTransaction transaction state contract
+    assertResponse interpret req successResponse
+
 -- TransactionBound.thy
 --
 -- lemma playTrace_only_accepts_maxTransactionsInitialState :
 --    "playTrace sl c l = TransactionOutput txOut ⟹
 --      length l ≤ maxTransactionsInitialState c"
 playTrace_only_accepts_maxTransactionsInitialStateTest :: InterpretJsonRequest -> TestTree
-playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleProperty "playTrace only accepts maxTransactionsInitialState"  do
+playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleProperty "Calling playTrace only accepts maxTransactionsInitialState"  do
     contract <- run $ generateT $ genContract interpret
     startTime <- run $ generate $ arbitraryNonnegativeInteger
     transactions <- run $ generate $ arbitraryValidInputs (State_ext [] [] [] startTime ()) contract
@@ -182,7 +193,7 @@ integer_of_int (Arith.Int_of_integer k) = k
 --    "reduceContractUntilQuiescent env state contract = ContractQuiescent reducedAfter wa pa nsta ncont ⟹
 --       reduceContractUntilQuiescent env nsta ncont = ContractQuiescent False [] [] nsta ncont"
 reduceContractUntilQuiescentIdempotentTest :: InterpretJsonRequest -> TestTree
-reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "reduceContractUntilQuiescent idempotent"  do
+reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "Calling is reduceContractUntilQuiescent idempotent"  do
     env <- run $ generate $ genEnvironment
     state <- run $ generateT $ genState interpret
     contract <- run $ generateT $ genContract interpret
@@ -211,7 +222,7 @@ reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "red
 --      computeTransaction traIn sta cont = TransactionOutput traOut ⟹
 --        isQuiescent (txOutContract traOut) (txOutState traOut)"
 computeTransactionIsQuiescentTest :: InterpretJsonRequest -> TestTree
-computeTransactionIsQuiescentTest interpret = reproducibleProperty "Compute transaction is quiescent" do
+computeTransactionIsQuiescentTest interpret = reproducibleProperty "Calling computeTransaction is quiescent" do
     contract <- run $ generateT $ genContract interpret
     state <- run $ generateT $ genState interpret `suchThat` validAndPositive_state
     transaction <- run $ generateT $ genTransaction interpret
@@ -258,7 +269,7 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "Compute tran
 --    "playTrace sl cont (Cons h t) = TransactionOutput traOut ⟹
 --      isQuiescent (txOutContract traOut) (txOutState traOut)"
 playTraceIsQuiescentTest :: InterpretJsonRequest -> TestTree
-playTraceIsQuiescentTest interpret = reproducibleProperty "playTrace is quiescent" do
+playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is quiescent" do
     contract <- run $ generateT $ genContract interpret `suchThat` (/=Close)
     startTime <- run $ generate $ arbitraryNonnegativeInteger
     transactions <- run $ generate $ arbitraryValidInputs (State_ext [] [] [] startTime ()) contract `suchThat` ((>0) . length)

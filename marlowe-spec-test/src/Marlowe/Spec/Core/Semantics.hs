@@ -7,26 +7,62 @@ module Marlowe.Spec.Core.Semantics
   where
 
 import qualified Arith as Arith
-import Control.Monad.IO.Class (MonadIO(..))
-import Data.Aeson (ToJSON(..))
+import Control.Monad.IO.Class (MonadIO (..))
+import Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genContract, genTransaction, arbitraryNonnegativeInteger, arbitraryValidInputs, genInterval)
-import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
-import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
-import Test.Tasty (TestTree, testGroup)
-import Test.QuickCheck (withMaxSuccess)
-import Test.QuickCheck.Monadic (assert, run, monitor, pre)
-import Semantics (evalValue, playTrace, fixInterval, computeTransaction, TransactionOutput (..), TransactionOutputRecord_ext (TransactionOutputRecord_ext), isQuiescent, TransactionWarning, txOutWarnings, reduceContractUntilQuiescent, ReduceResult (..), Transaction_ext (..))
-import Timeout (isClosedAndEmpty)
-import SemanticsTypes (Value(..), State_ext (..), Contract(..), minTime)
-import SingleInputTransactions (traceListToSingleInput)
-import QuickCheck.GenT (suchThat)
-import QuickCheck.GenT (listOf)
-import Test.QuickCheck.Property (counterexample)
+import Marlowe.Spec.Core.Arbitrary
+  ( arbitraryNonnegativeInteger,
+    arbitraryValidInputs,
+    genContract,
+    genEnvironment,
+    genInterval,
+    genState,
+    genTransaction,
+    genValue,
+  )
+import Marlowe.Spec.Interpret
+  ( InterpretJsonRequest,
+    Request (..),
+    Response (..),
+  )
+import Marlowe.Spec.Reproducible
+  ( assertResponse,
+    generate,
+    generateT,
+    reproducibleProperty,
+    reproducibleProperty',
+  )
 import Marlowe.Utils (showAsJson)
+import Orderings (Ord (..))
 import PositiveAccounts (validAndPositive_state)
+import QuickCheck.GenT (listOf, suchThat)
+import Semantics
+  ( ReduceResult (..),
+    TransactionOutput (..),
+    TransactionOutputRecord_ext (TransactionOutputRecord_ext),
+    TransactionWarning,
+    Transaction_ext (..),
+    computeTransaction,
+    evalValue,
+    fixInterval,
+    isQuiescent,
+    playTrace,
+    reduceContractUntilQuiescent,
+    txOutWarnings,
+  )
+import SemanticsTypes
+  ( Contract (..),
+    State_ext (..),
+    Value (..),
+    minTime,
+  )
+import SingleInputTransactions (traceListToSingleInput)
+import Test.QuickCheck (withMaxSuccess)
+import Test.QuickCheck.Monadic (assert, monitor, pre, run)
+import Test.QuickCheck.Property (counterexample)
+import Test.Tasty (TestTree, testGroup)
+import Timeout (isClosedAndEmpty)
 import TransactionBound (maxTransactionsInitialState)
-import Orderings (Ord(..))
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics"

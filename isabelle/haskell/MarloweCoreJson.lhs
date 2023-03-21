@@ -1355,101 +1355,6 @@ instance FromJSON TransactionOutput where
                          )
                       )
                 )
-
-instance ToJSON ReduceWarning where
-  toJSON ReduceNoWarning = JSON.String "ReduceNoWarning"
-  toJSON (ReduceNonPositivePay accountId payee token amount)
-    = object
-        [ "accountId" .= toJSON accountId
-        , "payee" .= toJSON payee
-        , "token" .= toJSON token
-        , "amount" .= toJSON amount
-        ]
-  toJSON (ReducePartialPay accountId payee token paid expected)
-    = object
-        [ "accountId" .= toJSON accountId
-        , "payee" .= toJSON payee
-        , "token" .= toJSON token
-        , "paid" .= toJSON paid
-        , "expected" .= toJSON expected
-        ]
-  toJSON (ReduceShadowing valueId oldValue newValue)
-    = object
-        [ "valueId" .= toJSON valueId
-        , "oldValue" .= oldValue
-        , "newValue" .= newValue
-        ]
-  toJSON ReduceAssertionFailed = JSON.String "ReduceAssertionFailed"
-
-instance ToJSON ReduceResult where
-  toJSON (ContractQuiescent reduced warnings payments state contract)
-    = object
-        [ "reduced" .= toJSON reduced
-        , "warnings" .= toJSON warnings
-        , "payments" .= toJSON payments
-        , "state" .= toJSON state
-        , "contract" .= toJSON contract
-        ]
-  toJSON RRAmbiguousTimeIntervalError = JSON.String "RRAmbiguousTimeIntervalError"
-
-instance FromJSON ReduceWarning where
-  parseJSON (JSON.String "ReduceNoWarning") = return ReduceNoWarning
-  parseJSON (JSON.String "ReduceAssertionFailed") = return ReduceAssertionFailed
-
-  parseJSON x = withObject "ReduceResult"
-                (\v ->
-                  (ReduceNonPositivePay
-                            <$> (v .: "accountId")
-                            <*> (v .: "payee")
-                            <*> (v .: "token")
-                            <*> (v .: "amount")
-                  ) <|>
-                  (ReducePartialPay
-                            <$> (v .: "accountId")
-                            <*> (v .: "payee")
-                            <*> (v .: "token")
-                            <*> (v .: "paid")
-                            <*> (v .: "expected")
-                  ) <|>
-                  (ReduceShadowing
-                            <$> (v .: "valueId")
-                            <*> (v .: "oldValue")
-                            <*> (v .: "newValue")
-                  )
-                ) x
-
-instance FromJSON ReduceResult where
-  parseJSON (JSON.String "RRAmbiguousTimeIntervalError") = return RRAmbiguousTimeIntervalError
-
-  parseJSON x = withObject "ReduceResult"
-                (\v ->
-                  (ContractQuiescent
-                            <$> (v .: "reduced")
-                            <*> (v .: "warnings")
-                            <*> (v .: "payments")
-                            <*> (v .: "state")
-                            <*> (v .: "contract")
-                  )
-                ) x
-
-instance ToJSON IntervalResult where
-  toJSON (IntervalError err) = object
-    [ "interval_error" .= toJSON err ]
-  toJSON (IntervalTrimmed env state)
-    = object
-        [ "environment" .= toJSON env
-        , "state" .= toJSON state
-        ]
-
-instance FromJSON IntervalResult where
-  parseJSON = withObject "IntervalResult"
-                (\v ->
-                     (IntervalError <$> ( v .: "interval_error"))
-                  <|> (IntervalTrimmed
-                            <$> (v .: "environment")
-                            <*> (v .: "state")
-                      )
-                )
 \end{code}
 
 Here are some examples for each \emph{TransactionOutput} constructor:
@@ -1524,4 +1429,101 @@ instance FromJSON (Environment_ext ()) where
       )
 \end{code}
 
+\isamarkupsection{ReduceContract}
 
+\begin{code}
+instance ToJSON ReduceWarning where
+  toJSON ReduceNoWarning = JSON.String "ReduceNoWarning"
+  toJSON (ReduceNonPositivePay accountId payee token amount)
+    = object
+        [ "accountId" .= toJSON accountId
+        , "payee" .= toJSON payee
+        , "token" .= toJSON token
+        , "amount" .= toJSON amount
+        ]
+  toJSON (ReducePartialPay accountId payee token paid expected)
+    = object
+        [ "accountId" .= toJSON accountId
+        , "payee" .= toJSON payee
+        , "token" .= toJSON token
+        , "paid" .= toJSON paid
+        , "expected" .= toJSON expected
+        ]
+  toJSON (ReduceShadowing valueId oldValue newValue)
+    = object
+        [ "valueId" .= toJSON valueId
+        , "oldValue" .= oldValue
+        , "newValue" .= newValue
+        ]
+  toJSON ReduceAssertionFailed = JSON.String "ReduceAssertionFailed"
+
+instance ToJSON ReduceResult where
+  toJSON (ContractQuiescent reduced warnings payments state contract)
+    = object
+        [ "reduced" .= toJSON reduced
+        , "warnings" .= toJSON warnings
+        , "payments" .= toJSON payments
+        , "state" .= toJSON state
+        , "contract" .= toJSON contract
+        ]
+  toJSON RRAmbiguousTimeIntervalError = JSON.String "RRAmbiguousTimeIntervalError"
+
+instance FromJSON ReduceWarning where
+  parseJSON (JSON.String "ReduceNoWarning") = return ReduceNoWarning
+  parseJSON (JSON.String "ReduceAssertionFailed") = return ReduceAssertionFailed
+  parseJSON x = withObject "ReduceResult"
+                  (\v ->
+                    (ReduceNonPositivePay
+                              <$> (v .: "accountId")
+                              <*> (v .: "payee")
+                              <*> (v .: "token")
+                              <*> (v .: "amount")
+                    ) <|>
+                    (ReducePartialPay
+                              <$> (v .: "accountId")
+                              <*> (v .: "payee")
+                              <*> (v .: "token")
+                              <*> (v .: "paid")
+                              <*> (v .: "expected")
+                    ) <|>
+                    (ReduceShadowing
+                              <$> (v .: "valueId")
+                              <*> (v .: "oldValue")
+                              <*> (v .: "newValue")
+                    )
+                  ) x
+
+instance FromJSON ReduceResult where
+  parseJSON (JSON.String "RRAmbiguousTimeIntervalError") = return RRAmbiguousTimeIntervalError
+  parseJSON x = withObject "ReduceResult"
+                (\v ->
+                  (ContractQuiescent
+                            <$> (v .: "reduced")
+                            <*> (v .: "warnings")
+                            <*> (v .: "payments")
+                            <*> (v .: "state")
+                            <*> (v .: "contract")
+                  )
+                ) x
+
+instance ToJSON IntervalResult where
+  toJSON (IntervalError err)
+    = object
+        [ "interval_error" .= toJSON err
+        ]
+  toJSON (IntervalTrimmed env state)
+    = object
+        [ "environment" .= toJSON env
+        , "state" .= toJSON state
+        ]
+
+instance FromJSON IntervalResult where
+  parseJSON = withObject "IntervalResult"
+                (\v ->
+                     (IntervalError <$> ( v .: "interval_error"))
+                  <|> (IntervalTrimmed
+                            <$> (v .: "environment")
+                            <*> (v .: "state")
+                      )
+                )
+\end{code}

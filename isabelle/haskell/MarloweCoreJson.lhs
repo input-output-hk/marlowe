@@ -1431,6 +1431,8 @@ instance FromJSON (Environment_ext ()) where
 
 \isamarkupsection{ReduceContract}
 
+The following JSON encode and decode specifications are for the types used in the function \emph{reduceContractUntilQuiescent}.
+
 \begin{code}
 instance ToJSON ReduceWarning where
   toJSON ReduceNoWarning = JSON.String "ReduceNoWarning"

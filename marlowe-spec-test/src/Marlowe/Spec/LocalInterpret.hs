@@ -1,9 +1,9 @@
 {-# LANGUAGE BlockArguments    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -12,21 +12,39 @@ module Marlowe.Spec.LocalInterpret
  )
  where
 
-import qualified Arith (Int(..))
+import qualified Arith (Int (..))
+import Data.Aeson (FromJSON, Result (..), ToJSON)
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Interpret (Response(..), Request(..))
-import Semantics (playTrace, computeTransaction, evalValue, reduceContractUntilQuiescent, fixInterval)
-import Marlowe.Spec.TypeId (TypeId (..), fromTypeName)
-import Marlowe.Spec.Core.Serialization.Json
 import Data.Data (Proxy)
-import Data.Aeson (Result (..),FromJSON,ToJSON)
-import SemanticsTypes (Token(Token), Party (..), ChoiceId (..), Action (..), Value (..), Payee (..), Observation (..))
-import Test.QuickCheck (frequency, Arbitrary (..), suchThat, resize)
+import Marlowe.Spec.Core.Arbitrary
+  ( arbitraryChoiceName,
+    arbitraryFibonacci,
+    arbitraryPositiveInteger,
+    shrinkChoiceName,
+  )
 import qualified Marlowe.Spec.Core.Arbitrary as RandomResponse
-import Marlowe.Spec.Core.Arbitrary (arbitraryFibonacci, arbitraryPositiveInteger, arbitraryChoiceName, shrinkChoiceName)
-import Test.QuickCheck.Gen (Gen(..))
+import Marlowe.Spec.Core.Serialization.Json
+import Marlowe.Spec.Interpret (Request (..), Response (..))
+import Marlowe.Spec.TypeId (TypeId (..), fromTypeName)
+import Semantics
+  ( computeTransaction,
+    evalValue,
+    fixInterval,
+    playTrace,
+    reduceContractUntilQuiescent,
+  )
+import SemanticsTypes
+  ( Action (..),
+    ChoiceId (..),
+    Observation (..),
+    Party (..),
+    Payee (..),
+    Token (Token),
+    Value (..),
+  )
+import Test.QuickCheck (Arbitrary (..), frequency, resize, sized, suchThat)
+import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Random (mkQCGen)
-import Test.QuickCheck (sized)
 
 interpretLocal :: Request JSON.Value -> IO (Response JSON.Value)
 interpretLocal (TestRoundtripSerialization t v) =
@@ -66,29 +84,29 @@ interpretLocal (GenerateRandomValue t@(TypeId name _) size seed) =
     $ case name of
       "Core.Token" -> RandomResponse.RandomValue $ JSON.toJSON $ (generate' arbitrary :: Token)
       "Core.Party" -> RandomResponse.RandomValue $ JSON.toJSON $ (generate' arbitrary :: Party)
-      _ -> RandomResponse.UnknownType t
+      _            -> RandomResponse.UnknownType t
   where
   generate' (MkGen g) = g (mkQCGen seed) size
 
 instance Ord Party where
   compare (Address a) (Address b) = compare a b
-  compare (Address _) (Role _) = LT
-  compare (Role _) (Address _) = GT
-  compare (Role a) (Role b) = compare a b
+  compare (Address _) (Role _)    = LT
+  compare (Role _) (Address _)    = GT
+  compare (Role a) (Role b)       = compare a b
 
 instance Ord Token where
   compare (Token a1 b1) (Token a2 b2) =
     let res = compare a1 a2
      in case res of
       EQ -> compare b1 b2
-      _ -> res
+      _  -> res
 
 instance Ord ChoiceId where
   compare (ChoiceId a1 b1) (ChoiceId a2 b2) =
     let res = compare a1 a2
      in case res of
       EQ -> compare b1 b2
-      _ -> res
+      _  -> res
 
 instance Arbitrary Token where
   arbitrary =
@@ -99,7 +117,7 @@ instance Arbitrary Token where
          else Token <$> arbitrary <*> arbitrary
   shrink (Token c n)
     | c == "" && n == "" = []
-    | otherwise                       = Token "" "" : [Token c' n' | c' <- shrink c, n' <- shrink n]
+    | otherwise          = Token "" "" : [Token c' n' | c' <- shrink c, n' <- shrink n]
 
 instance Arbitrary Party where
   arbitrary =
@@ -109,7 +127,7 @@ instance Arbitrary Party where
          then Address <$> arbitrary
          else Role <$> arbitraryFibonacci randomRoleNames
   shrink (Address _) = Role <$> randomRoleNames
-  shrink (Role _)      = Role <$> randomRoleNames
+  shrink (Role _)    = Role <$> randomRoleNames
 
 -- | Some role names.
 randomRoleNames :: [String]
@@ -234,7 +252,7 @@ instance Arbitrary Action where
 
 localJsonRoundtripSerialization :: TypeId -> JSON.Value -> SerializationResponse JSON.Value
 localJsonRoundtripSerialization t@(TypeId name proxy) v = case fromTypeName name of
-      Nothing -> UnknownType t
+      Nothing  -> UnknownType t
       (Just _) -> roundtrip proxy
     where
     roundtrip :: forall a. ToJSON a => FromJSON a => Proxy a -> SerializationResponse JSON.Value

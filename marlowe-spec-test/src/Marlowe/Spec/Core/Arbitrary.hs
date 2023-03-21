@@ -7,8 +7,40 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Marlowe.Spec.Core.Arbitrary where
+module Marlowe.Spec.Core.Arbitrary
+  ( genValue
+  , genObservation
+  , genToken
+  , genParty
+  , genPayee
+  , genChoiceId
+  , genBound
+  , genState
+  , genEnvironment
+  , genContract
+  , genInterval
+  , genTransaction
+  , genAction
+  , genInput
+  , genPayment
+  , genTransactionWarning
+  , genIntervalError
+  , genTransactionError
+  , genTransactionOutput
+  , arbitraryValidInputs
+  , arbitraryNonnegativeInteger
+  , arbitraryFibonacci
+  , arbitraryPositiveInteger
+  , arbitraryChoiceName
+  , arbitraryTimeInterval
+  , arbitraryTimeIntervalAround
+  , shrinkChoiceName
+  , shrinkTimeInterval
+  , RandomResponse (..)
+  )
+  where
 
+import Arith (divide_int)
 import qualified Arith
 import Control.Applicative ((<|>))
 import Control.Exception (Exception, throwIO)
@@ -16,26 +48,47 @@ import Control.Monad (liftM2)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Data.Data (Proxy (..))
+import Data.Function (on)
 import Data.List (nub, nubBy)
+import Data.Map (Map, fromList)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), parseValidResponse)
 import Marlowe.Spec.TypeId (TypeId (..))
 import Orderings (Ord (..), max)
-import qualified QuickCheck.GenT as QCT (listOf)
 import QuickCheck.GenT (GenT, MonadGen (..), frequency, resize, sized, suchThat, vectorOf)
-import Semantics (Payment (..), TransactionError (..), TransactionOutput (..), TransactionOutputRecord_ext (..), TransactionWarning (..), Transaction_ext (..), computeTransaction, evalValue)
+import qualified QuickCheck.GenT as QCT (listOf)
+import Semantics
+  ( Payment (..),
+    TransactionError (..),
+    TransactionOutput (..),
+    TransactionOutputRecord_ext (..),
+    TransactionWarning (..),
+    Transaction_ext (..),
+    computeTransaction,
+    evalValue,
+  )
 import SemanticsGuarantees (valid_state)
-import SemanticsTypes (Action (..), Bound (..), Case (..), ChoiceId (..), Contract (..), Environment_ext (..), Input (..), IntervalError (..), Observation (..), Party (..), Payee (..), State_ext (..), Token (..), Value (..), ValueId (..), minTime)
-import Test.QuickCheck (Gen, chooseInt, getSize)
-import Test.QuickCheck.Arbitrary (Arbitrary (..))
-import qualified Test.QuickCheck.Gen as QC (chooseInteger, elements)
-import Data.Map (Map, fromList)
-import qualified Examples.Swap as Swap
-import qualified Examples.Escrow as Escrow
-import Test.QuickCheck (elements)
+import SemanticsTypes
+  ( Action (..),
+    Bound (..),
+    Case (..),
+    ChoiceId (..),
+    Contract (..),
+    Environment_ext (..),
+    Input (..),
+    IntervalError (..),
+    Observation (..),
+    Party (..),
+    Payee (..),
+    State_ext (..),
+    Token (..),
+    Value (..),
+    ValueId (..),
+    minTime,
+  )
+import Test.QuickCheck (Gen, chooseInt, elements, getSize)
+import Test.QuickCheck.Arbitrary (Arbitrary (..), shrinkList)
 import Test.QuickCheck.Gen (listOf)
-import Data.Function (on)
-import Test.QuickCheck.Arbitrary (shrinkList)
-import Arith (divide_int)
+import qualified Test.QuickCheck.Gen as QC (chooseInteger, elements)
 
 data RandomResponse a
   = RandomValue a
@@ -333,9 +386,6 @@ genAction i = frequency
       , (1, Notify <$> genObservation i)
       ]
 
-genCase :: InterpretJsonRequest -> GenT IO Case
-genCase i = Case <$> genAction i <*> genContract i
-
 genInput :: InterpretJsonRequest -> GenT IO Input
 genInput i = frequency
   [ (50, IDeposit <$> genParty i <*> genParty i <*> genToken i <*> liftGen arbitraryInteger)
@@ -469,13 +519,6 @@ arbitraryValidInputs state contract =
       TransactionError _ -> pure []
       TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _) -> (txIn :) <$> arbitraryValidInputs txOutState txOutContract
 
--- | Generate one of the golden contracts and its initial state.
-goldenContract :: Gen (Contract, State_ext ())
-goldenContract = (,) <$> elements goldenContracts <*> pure (State_ext [] [] [] 0 ())
-
-goldenContracts :: [Contract]
-goldenContracts = [ Swap.swapExample, Escrow.escrowExample ]
-
 -- | Generate a random case, weighted towards different contract constructs.
 arbitraryCaseWeighted :: [(Int, Int, Int, Int, Int, Int)] -- ^ The weights for contract terms.
                       -> Context                          -- ^ The Marlowe context.
@@ -597,29 +640,6 @@ instance Arbitrary Arith.Int where
 
 instance SemiArbitrary Arith.Int where
   fromContext = times
-
--- | Some role names.
-randomRoleNames :: [String]
-randomRoleNames =
-  [
-    "Cy"
-  , "Noe"
-  , "Sten"
-  , "Cara"
-  , "Alene"
-  , "Hande"
-  , ""
-  , "I"
-  , "Zakkai"
-  , "Laurent"
-  , "Prosenjit"
-  , "Dafne Helge Mose"
-  , "Nonso Ernie Blanka"
-  , "Umukoro Alexander Columb"
-  , "Urbanus Roland Alison Ty Ryoichi"
-  , "Alcippe Alende Blanka Roland Dafne"  -- NB: Too long for Cardano ledger.
-  ]
-
 
 instance Arbitrary ValueId where
   arbitrary = arbitraryFibonacci randomValueIds

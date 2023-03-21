@@ -59,17 +59,12 @@ export_code
     \<close>
   evalValue
   evalObservation
-  reductionLoop
-  isQuiescent
-  isClosedAndEmpty
-  maxTransactionsInitialState
-  reduceContractUntilQuiescent
-  traceListToSingleInput
-  applyAllInputs
   fixInterval
-  playTrace
-  playTraceAux
+  reductionLoop
+  reduceContractUntilQuiescent
+  applyAllInputs
   computeTransaction
+  playTrace
 
    \<comment> \<open> Export utility functions\<close>
   getOutcomes
@@ -77,6 +72,10 @@ export_code
   maxTimeContract
   calculateNonAmbiguousInterval
   validAndPositive_state
+  isQuiescent
+  isClosedAndEmpty
+  maxTransactionsInitialState
+  traceListToSingleInput
 
   \<comment> \<open> Export examples to be used as oracle specification tests\<close>
   escrowExample
@@ -118,12 +117,7 @@ export_code
   \<comment> \<open>Force export of Payment constructor\<close>
   Payment
 
-  \<comment> \<open>Force the export of the transaction record\<close>
-  Transaction_ext
-
-  \<comment> \<open>Force the export of the transaction output record\<close>
-  TransactionOutputRecord_ext
-
+  \<comment> \<open>Force the export of the reduce contract constructors\<close>
   ContractQuiescent
   RRAmbiguousTimeIntervalError
   ReduceNoWarning
@@ -131,6 +125,12 @@ export_code
   ReducePartialPay
   ReduceShadowing
   ReduceAssertionFailed
+
+  \<comment> \<open>Force the export of the transaction record\<close>
+  Transaction_ext
+
+  \<comment> \<open>Force the export of the transaction output record\<close>
+  TransactionOutputRecord_ext
 
   \<comment> \<open>Force the export on some equality functions (sadly it does not force the Eq instance)\<close>
   equal_TransactionWarning_inst.equal_TransactionWarning

@@ -6,19 +6,20 @@ module Marlowe.Spec.Core.Semantics where
 import Arith (less_int, abs_int)
 import Data.Aeson (ToJSON(..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment)
+import Marlowe.Spec.Core.Arbitrary (genValue, genState, genEnvironment, genObservation)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..))
 import Marlowe.Spec.Reproducible (reproducibleProperty, reproducibleProperty', generate, generateT, assertResponse)
 import Test.Tasty (TestTree, testGroup)
 import Test.QuickCheck (withMaxSuccess)
 import Test.QuickCheck.Monadic (run)
-import Semantics (evalValue)
+import Semantics (evalValue, evalObservation)
 import SemanticsTypes (Value(..))
 import QuickCheck.GenT (suchThat)
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics"
     [ evalValueTest i
+    , evalObservationTest i
     , divisionRoundsTowardsZeroTest i
     ]
 
@@ -36,6 +37,17 @@ evalValueTest interpret = reproducibleProperty' "Eval Value" (withMaxSuccess 500
         req :: Request JSON.Value
         req = EvalValue env state value
         successResponse = RequestResponse $ toJSON $ evalValue env state value
+    assertResponse interpret req successResponse
+
+evalObservationTest :: InterpretJsonRequest -> TestTree
+evalObservationTest interpret = reproducibleProperty "Eval Observation" do
+    env <- run $ generate $ genEnvironment
+    state <- run $ generateT $ genState interpret
+    observation <- run $ generateT $ genObservation interpret
+    let
+        req :: Request JSON.Value
+        req = EvalObservation env state observation
+        successResponse = RequestResponse $ toJSON $ evalObservation env state observation
     assertResponse interpret req successResponse
 
 divisionRoundsTowardsZeroTest :: InterpretJsonRequest -> TestTree

@@ -6,7 +6,7 @@ module Marlowe.Spec.LocalInterpret where
 import Arith (Int(..))
 import qualified Data.Aeson as JSON
 import Marlowe.Spec.Interpret (Response(..), Request(..))
-import Semantics (playTrace, computeTransaction, evalValue)
+import Semantics (playTrace, computeTransaction, evalValue, evalObservation)
 import Marlowe.Spec.TypeId (TypeId (..), fromTypeName)
 import Marlowe.Spec.Core.Serialization.Json
 import Data.Data (Proxy)
@@ -35,6 +35,11 @@ interpretLocal (EvalValue env state val) =
     $ RequestResponse
     $ JSON.toJSON
     $ evalValue env state val
+interpretLocal (EvalObservation env state obs) =
+  pure
+    $ RequestResponse
+    $ JSON.toJSON
+    $ evalObservation env state obs
 interpretLocal (ComputeTransaction t s c) =
   pure
     $ RequestResponse

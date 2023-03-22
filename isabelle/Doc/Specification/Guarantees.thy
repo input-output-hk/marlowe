@@ -79,8 +79,6 @@ case of Isabelle semantics where we use lists of key values to represent maps:
 \end{enumerate}
 \<close>
 
-
-
 text \<open>@{code_stmts validAndPositive_state constant: validAndPositive_state valid_state valid_map allAccountsPositive allAccountsPositiveState (Haskell)}\<close>
 
 text \<open>If the accounts are valid and possitive, then applying an input preserves that property.\<close>
@@ -127,14 +125,12 @@ text \<open>@{thm playTraceAuxToSingleInputIsEquivalent }\<close>
 subsection \<open>Termination Proof\<close>
 
 text \<open>
-
 Isabelle automatically proves termination for most function. However, this is not the case for
 @{const reductionLoop}, but it is manually proved that the reduction loop monotonically reduces the
 size of the contract (except for @{term Close}, which reduces the number of accounts), this is
 sufficient to prove termination.
 
 @{thm reduceContractStepReducesSize}
-
 \<close>
 
 subsection \<open>All Contracts Have a Maximum Time\label{sec:max-time-guarantee}\<close>

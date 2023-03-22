@@ -37,8 +37,7 @@ text \<open>
 
 One of the dangers of using smart contracts is that a badly written one can potentially lock its
 funds forever.\<close>
-text \<open>By the end of a Marlowe contract, all the assets paid to the contract must be distributed
-back, in some way, to a subset of the participants. To ensure this behaviour we
+text \<open>By the end of a Marlowe contract, all the assets paid to the contract must be returned to a subset of the participants. To ensure this behaviour we
 proved two properties: ``MultiAssets Preservation'' and ``Contracts Always Close''.\<close>
 
 text \<open>
@@ -58,7 +57,7 @@ section \<open>Contracts Always Close\<close>
 text \<open>
 
 For every Marlowe Contract there is a maximum time that allows any participant
-to create an empty transaction that will close the contract succesfuly. 
+to create an empty transaction that will close the contract successfully. 
 \<close>
 
 text \<open>@{thm [display,names_short, margin=40] timeOutTransaction_does_not_fail}\<close>

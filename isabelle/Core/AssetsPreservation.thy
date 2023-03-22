@@ -77,7 +77,7 @@ proof -
     by simp
 qed
 
-text "Following the simple case, we provide two lemma's around what happens if there was an existing
+text "Following the simple case, we provide two lemmas around what happens if there was an existing
 entry"
  
 lemma assetsInAccounts_distrib_insert_deleted : 
@@ -399,7 +399,7 @@ theorem refundOnePreservesAssets :
   assumes "allAccountsPositive accs"
   shows "
     assetsInAccounts accs = (
-      case (refundOne accs) of
+      case refundOne accs of
         Some ((accId, tok, val), rest) \<Rightarrow> assetsInAccounts rest + asset tok (nat val)
       | None \<Rightarrow> 0
     )

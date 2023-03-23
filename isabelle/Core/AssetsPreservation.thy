@@ -9,35 +9,35 @@ different semantic types"
 subsection "Assets in Accounts"
 
 text "Given a function that adds an entry of the account map to some accumulator"
-fun addAccountEntry :: "((AccountId \<times> Token) \<times> int) \<Rightarrow> Assets \<Rightarrow> Assets" where
-"addAccountEntry ((_, t), v) b = b + asset t (nat v)"
+fun addAccountAssets :: "((AccountId \<times> Token) \<times> int) \<Rightarrow> Assets \<Rightarrow> Assets" where
+"addAccountAssets ((_, t), v) b = b + asset t (nat v)"
 
 text "We can express the \<^bold>\<open>assets in the account\<close> as a simple foldr over the accounts array"
 fun assetsInAccounts :: "Accounts \<Rightarrow> Assets" where
-"assetsInAccounts accs = foldr addAccountEntry accs 0"
+"assetsInAccounts accs = foldr addAccountAssets accs 0"
 
-text "The \<^emph>\<open>addAccountEntry\<close> function is commutative over composition, which allows to operate
+text "The \<^emph>\<open>addAccountAssets\<close> function is commutative over composition, which allows to operate
 with the fold in different ways."
-lemma addAccountEntryCommutesComposition :
-  "addAccountEntry a \<circ> addAccountEntry b = addAccountEntry b \<circ> addAccountEntry a"
+lemma addAccountAssetsCommutesComposition :
+  "addAccountAssets a \<circ> addAccountAssets b = addAccountAssets b \<circ> addAccountAssets a"
 proof -
-  have "\<forall> c. addAccountEntry a (addAccountEntry b c) = addAccountEntry b (addAccountEntry a c)"
-    by (metis addAccountEntry.simps ab_semigroup_add_class.add.commute semigroup_add_class.add.assoc Product_Type.prod.exhaust)
+  have "\<forall> c. addAccountAssets a (addAccountAssets b c) = addAccountAssets b (addAccountAssets a c)"
+    by (metis addAccountAssets.simps ab_semigroup_add_class.add.commute semigroup_add_class.add.assoc Product_Type.prod.exhaust)
   then show ?thesis
     by fastforce
 qed
 
 text "And to be able to express it as a normal \<^emph>\<open>fold\<close> enables more lemmas to work with."
-lemma assetsInAccountFold : "assetsInAccounts accs = fold addAccountEntry accs 0"
-  by (simp add: addAccountEntryCommutesComposition foldr_fold)
+lemma assetsInAccountFold : "assetsInAccounts accs = fold addAccountAssets accs 0"
+  by (simp add: addAccountAssetsCommutesComposition foldr_fold)
 
 subsubsection "Ordering of assets in account"
 
 text "Because we are adding positive numbers, adding an account entry to some accumulator is always
 going to be the same size or bigger"
 
-lemma addAccountEntry_AlwaysIncreases : "accu \<le> addAccountEntry entry accu"
-  by (metis AssetsPreservation.addAccountEntry.elims add_increasing2 order_le_less zero_le)
+lemma addAccountAssets_AlwaysIncreases : "accu \<le> addAccountAssets entry accu"
+  by (metis AssetsPreservation.addAccountAssets.elims add_increasing2 order_le_less zero_le)
 
 text "Moreover, filtering an account list is always lower or equal to the unfiltered version"
 lemma filtered_as_leq_as : "assetsInAccounts (filter P accs) \<le> assetsInAccounts accs"
@@ -51,11 +51,11 @@ next
   proof (cases "P head")
     case True
     then show ?thesis
-      by auto (metis addAccountEntry.elims addAccountEntry.simps assetsInAccounts.simps Cons add_le_cancel_right)
+      by auto (metis addAccountAssets.elims addAccountAssets.simps assetsInAccounts.simps Cons add_le_cancel_right)
   next
     case False
     then show ?thesis
-      by auto (metis assetsInAccounts.simps Cons addAccountEntry_AlwaysIncreases order_trans)
+      by auto (metis assetsInAccounts.simps Cons addAccountAssets_AlwaysIncreases order_trans)
   qed
 qed
 
@@ -69,8 +69,8 @@ lemma assetsInAccounts_distrib_insert_not_member :
   assumes "(accId, tok) \<notin> keys accs"
   shows "assetsInAccounts (insert (accId, tok) val accs) = assetsInAccounts accs + asset tok (nat val)"
 proof -
-  have "foldr addAccountEntry (insert (accId, tok) val accs) = addAccountEntry ((accId, tok), val) \<circ> foldr addAccountEntry accs" (is "?l = ?r")
-    by (meson foldr_insert keys_member_r assms addAccountEntryCommutesComposition)
+  have "foldr addAccountAssets (insert (accId, tok) val accs) = addAccountAssets ((accId, tok), val) \<circ> foldr addAccountAssets accs" (is "?l = ?r")
+    by (meson foldr_insert keys_member_r assms addAccountAssetsCommutesComposition)
   then have "?l 0 = ?r 0"
     by fastforce
   then show ?thesis
@@ -256,20 +256,20 @@ fun assetsInExternalPayment :: "Payment \<Rightarrow> Assets" where
 "assetsInExternalPayment (Payment _ (Party _) tok val) = asset tok (nat val)" |
 "assetsInExternalPayment (Payment _ (Account _) _ _) = 0"
 
-fun addPayment :: "Payment \<Rightarrow> Assets \<Rightarrow> Assets" where
-"addPayment p a = assetsInExternalPayment p + a"
+fun addExternalPaymentAssets :: "Payment \<Rightarrow> Assets \<Rightarrow> Assets" where
+"addExternalPaymentAssets p a = assetsInExternalPayment p + a"
 
-lemma addPaymentCommutesComposition :
-  "addPayment a \<circ> addPayment b = addPayment b \<circ> addPayment a"
+lemma addExternalPaymentAssetsCommutesComposition :
+  "addExternalPaymentAssets a \<circ> addExternalPaymentAssets b = addExternalPaymentAssets b \<circ> addExternalPaymentAssets a"
 proof -
-  have "\<forall> c. addPayment a (addPayment b c) = addPayment b (addPayment a c)"
+  have "\<forall> c. addExternalPaymentAssets a (addExternalPaymentAssets b c) = addExternalPaymentAssets b (addExternalPaymentAssets a c)"
     using Groups.group_cancel.add2 by auto
   then show ?thesis
     by fastforce
 qed
 
 fun assetsInExternalPayments :: "Payment list \<Rightarrow> Assets" where
-"assetsInExternalPayments ps = foldr addPayment ps 0"
+"assetsInExternalPayments ps = foldr addExternalPaymentAssets ps 0"
 
 lemma assetsInPayments_rev : "assetsInExternalPayments payments = assetsInExternalPayments (rev payments)"
 proof (induction payments)
@@ -278,7 +278,7 @@ proof (induction payments)
 next
   case (Cons head tail)
   then show ?case
-    by (metis assetsInExternalPayments.simps addPaymentCommutesComposition fold_rev foldr_conv_fold)
+    by (metis assetsInExternalPayments.simps addExternalPaymentAssetsCommutesComposition fold_rev foldr_conv_fold)
 qed
 
 lemma assetsInPayments_append : "assetsInExternalPayments (xs @ ys) = assetsInExternalPayments xs + assetsInExternalPayments ys"
@@ -298,20 +298,20 @@ fun assetsInInput :: "Input \<Rightarrow> Assets" where
   "assetsInInput (IChoice _ _) = 0" |
   "assetsInInput INotify = 0"
 
-fun addInput :: "Input \<Rightarrow> Assets \<Rightarrow> Assets" where
-  "addInput i a = assetsInInput i + a"
+fun addInputAssets :: "Input \<Rightarrow> Assets \<Rightarrow> Assets" where
+  "addInputAssets i a = assetsInInput i + a"
 
-lemma addInputCommutesComposition :
-  "addInput a \<circ> addInput b = addInput b \<circ> addInput a"
+lemma addInputAssetsCommutesComposition :
+  "addInputAssets a \<circ> addInputAssets b = addInputAssets b \<circ> addInputAssets a"
 proof -
-  have "\<forall> c. addInput a (addInput b c) = addInput b (addInput a c)"
+  have "\<forall> c. addInputAssets a (addInputAssets b c) = addInputAssets b (addInputAssets a c)"
     using Groups.group_cancel.add2 by auto
   then show ?thesis
     by fastforce
 qed
 
 fun assetsInInputs :: "Input list \<Rightarrow> Assets" where
-  "assetsInInputs inps = foldr addInput inps 0"
+  "assetsInInputs inps = foldr addInputAssets inps 0"
 
 subsection "Assets in transaction"
 

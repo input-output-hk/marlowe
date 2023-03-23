@@ -131,10 +131,12 @@ fixIntervalTest interpret = reproducibleProperty "Calling fixInterval test" do
 
 computeTransactionTest :: InterpretJsonRequest -> TestTree
 computeTransactionTest interpret = reproducibleProperty "Calling computeTransaction test" do
+    contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
     state <- run $ generateT $ genState interpret
-    contract <- run $ generateT $ genContract interpret
-    transaction <- run $ generateT $ genTransaction interpret
-    let req :: Request JSON.Value
+    transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` \l -> length l > 0
+
+    let transaction = head transactions
+        req :: Request JSON.Value
         req = ComputeTransaction transaction state contract
 
     RequestResponse res <- run $ liftIO $ interpret req

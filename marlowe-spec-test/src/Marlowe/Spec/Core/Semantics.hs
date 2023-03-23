@@ -136,8 +136,38 @@ computeTransactionTest interpret = reproducibleProperty "Calling computeTransact
     transaction <- run $ generateT $ genTransaction interpret
     let req :: Request JSON.Value
         req = ComputeTransaction transaction state contract
-        successResponse = RequestResponse $ toJSON $ computeTransaction transaction state contract
-    assertResponse interpret req successResponse
+
+    RequestResponse res <- run $ liftIO $ interpret req
+    case JSON.fromJSON res of
+      JSON.Success transactionOutput  -> do
+        let expected = computeTransaction transaction state contract
+        monitor
+          ( counterexample $
+              "Request: " ++ showAsJson req ++ "\n"
+                ++ "Expected: " ++ show expected ++ "\n"
+                ++ "Actual: " ++ show transactionOutput)
+        assert $ txOutEquals transactionOutput expected
+      _ -> fail "JSON parsing failed!"
+
+txOutEquals :: TransactionOutput -> TransactionOutput -> Bool
+txOutEquals
+  (TransactionOutput (TransactionOutputRecord_ext warnings1 payments1 (State_ext accounts1 choices1 boundValues1 minTime1 b1) contract1 a1))
+  (TransactionOutput (TransactionOutputRecord_ext warnings2 payments2 (State_ext accounts2 choices2 boundValues2 minTime2 b2) contract2 a2)) =
+    warnings1 == warnings2
+    && payments1 == payments2
+    && accounts1 == accounts2
+    && setEquals choices1 choices2
+    && setEquals boundValues1 boundValues2
+    && minTime1 == minTime2
+    && contract1 == contract2
+    && a1 == a2
+    && b1 == b2
+txOutEquals a b = a == b
+
+setEquals :: Eq a => [a] -> [a] -> Bool
+setEquals l1 l2 =
+    all (flip elem l2) l1
+    && all (flip elem l1) l2
 
 -- TransactionBound.thy
 --
@@ -239,29 +269,8 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "Calling comp
               "Request: " ++ showAsJson req ++ "\n"
                 ++ "Expected: " ++ show expected ++ "\n"
                 ++ "Actual: " ++ show transactionOutput)
-        assert $ equals transactionOutput expected
+        assert $ txOutEquals transactionOutput expected
       _ -> fail "JSON parsing failed!"
-
-  where
-    equals :: TransactionOutput -> TransactionOutput -> Bool
-    equals
-      (TransactionOutput (TransactionOutputRecord_ext warnings1 payments1 (State_ext accounts1 choices1 boundValues1 minTime1 b1) contract1 a1))
-      (TransactionOutput (TransactionOutputRecord_ext warnings2 payments2 (State_ext accounts2 choices2 boundValues2 minTime2 b2) contract2 a2)) =
-        warnings1 == warnings2
-        && payments1 == payments2
-        && accounts1 == accounts2
-        && setEquals choices1 choices2
-        && setEquals boundValues1 boundValues2
-        && minTime1 == minTime2
-        && contract1 == contract2
-        && a1 == a2
-        && b1 == b2
-    equals a b = a == b
-
-    setEquals :: Eq a => [a] -> [a] -> Bool
-    setEquals l1 l2 =
-        all (flip elem l2) l1
-        && all (flip elem l1) l2
 
 -- QuiescentResults.thy
 --

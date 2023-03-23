@@ -12,6 +12,7 @@
 - [SCP-4860](https://github.com/input-output-hk/marlowe/pull/158) - Make tests reproducible
 - [SCP-4698](https://github.com/input-output-hk/marlowe/pull/154) - Implement roundtrip test for all serialized types
 - [SCP-4901](https://github.com/input-output-hk/marlowe/pull/160) - Add tests to EvalValue
+- [PLT-4250](https://github.com/input-output-hk/marlowe/pull/170) - Add tests to EvalObservation
 
 ## General
 - [SCP-4748](https://github.com/input-output-hk/marlowe/pull/155) - Fixed cabal packages.

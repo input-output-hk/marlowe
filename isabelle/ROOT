@@ -22,7 +22,7 @@ session Core in "Core" = HOL +
   theories
     CloseSafe
     ListTools
-    MoneyPreservation
+    AssetsPreservation
     PositiveAccounts
     QuiescentResult
     Semantics
@@ -33,7 +33,7 @@ session Core in "Core" = HOL +
     TransactionBound
     ValidState
     OptBoundTimeInterval
-
+    MultiAssets
 
 
 session StaticAnalysis in "StaticAnalysis" = HOL +

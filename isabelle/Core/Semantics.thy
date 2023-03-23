@@ -17,7 +17,6 @@ fun fixInterval :: "TimeInterval \<Rightarrow> State \<Rightarrow> IntervalResul
            then IntervalError (IntervalInPastError curMinTime (low, high))
            else IntervalTrimmed env newState)))"
 
-
 fun signum :: "int \<Rightarrow> int" where
 "signum x = (if x > 0 then 1 else if x = 0 then 0 else -1)"
 
@@ -48,8 +47,8 @@ evalValue_DivValue: "evalValue env state (DivValue lhs rhs) =
        else n quot d)" |
 evalValue_ChoiceValue: "evalValue env state (ChoiceValue choId) =
     findWithDefault 0 choId (choices state)" |
-evalValue_TimeIntervalStart: "evalValue env state (TimeIntervalStart) = fst (timeInterval env)" |
-evalValue_TimeIntervalEnd: "evalValue env state (TimeIntervalEnd) = snd (timeInterval env)" |
+evalValue_TimeIntervalStart: "evalValue env state TimeIntervalStart = fst (timeInterval env)" |
+evalValue_TimeIntervalEnd: "evalValue env state TimeIntervalEnd = snd (timeInterval env)" |
 evalValue_UseValue: "evalValue env state (UseValue valId) =
     findWithDefault 0 valId (boundValues state)" |
 evalValue_Cond: "evalValue env state (Cond cond thn els) =
@@ -109,11 +108,10 @@ lemma evalDivByItSelf : "a \<noteq> 0 \<Longrightarrow> evalValue env sta x = a 
 lemma evalDivByOneIsX : "evalValue env sta y = 1 \<Longrightarrow> evalValue env sta (DivValue x y) = evalValue env sta x"
   by (simp add:Let_def)
 
-
 lemma evalDivRoundToZero :
   assumes "\<bar>(evalValue env sta n)\<bar> < \<bar>(evalValue env sta d)\<bar>"
-  shows "evalValue env sta (DivValue n d) = 0" 
-  using assms 
+  shows "evalValue env sta (DivValue n d) = 0"
+  using assms
   by (auto simp add: Let_def)
 
 lemma quotMultiplyEquivalence : "c \<noteq> 0 \<Longrightarrow> (c * a) quot (c * b) = a quot b"
@@ -132,7 +130,6 @@ proof -
   then show ?thesis
     by (simp add: right_diff_distrib')
 qed
-
 
 lemma signEqualityPreservation : "(a :: int) \<noteq> 0 \<Longrightarrow> (b :: int) \<noteq> 0 \<Longrightarrow> (c :: int) \<noteq> 0 \<Longrightarrow> ((c * a < 0) = (c * b < 0)) = ((a < 0) = (b < 0))"
   by (smt mult_neg_pos mult_nonneg_nonneg mult_nonpos_nonpos mult_pos_neg)
@@ -490,6 +487,10 @@ termination reductionLoop
   apply blast
   using reduceContractStepReducesSize by auto
 
+(* This lemma allows to work with the reductionLoop.induct theorem with a new name for the induction
+   case.*)
+lemmas reductionLoop_induct = reductionLoop.induct[case_names "reductionLoopInduction"]
+
 fun reduceContractUntilQuiescent :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceResult" where
 "reduceContractUntilQuiescent env state contract = reductionLoop False env state contract [] []"
 
@@ -585,6 +586,11 @@ fun applyAllLoop :: "bool \<Rightarrow> Environment \<Rightarrow> State \<Righta
                                          @ (convertApplyWarning applyWarn))
                                (payments @ pays)
             | ApplyNoMatchError \<Rightarrow> ApplyAllNoMatchError)))"
+
+(* This lemma allows to work with the applyAllLoop.induct theorem with a new name for the induction
+   case.*)
+lemmas applyAllLoop_induct = applyAllLoop.induct[case_names applyAllLoopInduction]
+
 
 fun applyAllInputs :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> Input list \<Rightarrow>
                  ApplyAllResult" where
@@ -713,8 +719,7 @@ and maxTimeCase :: "Case \<Rightarrow> int" where
 "maxTimeContract (Assert _ contract) = maxTimeContract contract" |
 "maxTimeCase (Case _ contract) = maxTimeContract contract"
 
-
-subsection "calculateNonAmbiguousInterval" 
+subsection "calculateNonAmbiguousInterval"
 
 fun gtIfNone :: "int option \<Rightarrow> int \<Rightarrow> bool" where
 "gtIfNone None _ = True" |

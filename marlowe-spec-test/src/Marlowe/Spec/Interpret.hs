@@ -34,6 +34,7 @@ data Request transport
   | ComputeTransaction (C.Transaction_ext ()) (C.State_ext ()) C.Contract
   | PlayTrace Integer C.Contract [C.Transaction_ext ()]
   | EvalValue (C.Environment_ext ()) (C.State_ext ()) C.Value
+  | EvalObservation (C.Environment_ext ()) (C.State_ext ()) C.Observation
 
 instance ToJSON (Request JSON.Value) where
   toJSON (TestRoundtripSerialization t v) = object
@@ -70,6 +71,12 @@ instance ToJSON (Request JSON.Value) where
     , "environment" .= toJSON env
     , "state" .= toJSON state
     , "value" .= toJSON val
+    ]
+  toJSON (EvalObservation env state obs) = object
+    [ "request" .= JSON.String "eval-observation"
+    , "environment" .= toJSON env
+    , "state" .= toJSON state
+    , "observation" .= toJSON obs
     ]
   toJSON (FixInterval interval state) = object
     [ "request" .= JSON.String "fix-interval"

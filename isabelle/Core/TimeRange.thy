@@ -1,5 +1,5 @@
 theory TimeRange
-imports Semantics PositiveAccounts QuiescentResult MoneyPreservation Timeout TransactionBound
+imports Semantics PositiveAccounts QuiescentResult Timeout TransactionBound
 begin
 
 theorem inIntervalIdempotentToIntersectInterval :
@@ -124,7 +124,6 @@ lemma resultOfReduceIsCompatibleToo :
     done
   apply (metis Semantics.ReduceStepResult.inject Semantics.calculateNonAmbiguousInterval.simps(6) Semantics.reduceContractStep.simps(5))
   by simp
-
 
 lemma resultOfReductionLoopQuiescentIsCompatibleToo :
   "inInterval (timeInterval env) (calculateNonAmbiguousInterval n ct contract) \<Longrightarrow>
@@ -256,7 +255,6 @@ lemma reduceStep_ifCaseLtCt : "inInterval (timeInterval env) (calculateNonAmbigu
       by (metis Semantics.ReduceStepResult.distinct(5) Semantics.ReduceStepResult.simps(3))
     done
   done
-
 
 lemma reduceLoop_ifCaseLtCt : "inInterval (timeInterval env) (calculateNonAmbiguousInterval n ct cont) \<Longrightarrow>
                                reductionLoop b env state cont wa ef = ContractQuiescent x11 x12 x13 x14 x15 \<Longrightarrow> isValidInterval (timeInterval env) \<Longrightarrow> ifCaseLt ct x15"

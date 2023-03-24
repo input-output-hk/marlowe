@@ -29,7 +29,7 @@ lemma updateMoneyInAccount_gtZero :
   \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
   positiveMoneyInAccountOrNoAccount y tok2 (updateMoneyInAccount accId tok2 newBalance accs)"
   by (metis addMoneyToAccountPositive_noMatch addMoneyToAccountPositve_match not_less updateMoneyInAccount.simps)
-  
+
 lemma addMoneyToAccountPositive :
   "(\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs)
   \<Longrightarrow> positiveMoneyInAccountOrNoAccount y tok2 (addMoneyToAccount accId tok3 money accs)"
@@ -106,7 +106,7 @@ lemma MList_delete_preserves_gtZero : "valid_map accs \<Longrightarrow> \<forall
 lemma reduceContractStep_gtZero_Pay_aux :
   "valid_state state \<Longrightarrow>
    \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
-   positiveMoneyInAccountOrNoAccount y tok2 (updateMoneyInAccount accId tok3 amount (accounts state))"                                                                                                 
+   positiveMoneyInAccountOrNoAccount y tok2 (updateMoneyInAccount accId tok3 amount (accounts state))"
   by (metis MList_delete_preserves_gtZero insert_lookup_different not_le positiveMoneyInAccountOrNoAccount.elims(2) positiveMoneyInAccountOrNoAccount.elims(3) updateMoneyInAccount.simps updateMoneyInAccount_gtZero valid_state_valid_accounts)
 
 lemma reduceContractStep_gtZero_Pay :
@@ -154,13 +154,13 @@ theorem reduceContractStep_gtZero :
   using reduceContractStep_gtZero_Let apply blast
   by simp
 
-lemma reduceLoop_gtZero : 
+lemma reduceLoop_gtZero :
   "valid_state state \<Longrightarrow>
     \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
     reductionLoop reduced env state contract warns pays = ContractQuiescent nreduced nwa npa newState ncont \<Longrightarrow>
     positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
   apply (induction reduced env state contract warns pays rule: reductionLoop.induct)
-  subgoal for reduced env state contract warns pays 
+  subgoal for reduced env state contract warns pays
     apply (cases "reduceContractStep env state contract")
     apply (simp only:reductionLoop.simps [of reduced env state contract warns pays])
       apply (metis (no_types, lifting) ReduceStepResult.simps(8) reduceContractStep_gtZero reductionStep_preserves_valid_state)
@@ -185,7 +185,7 @@ lemma applyCases_positive : "valid_state state \<Longrightarrow>
   subgoal for env state accId1 party1 tok1 amount accId2 party2 tok2a val cont rest
     apply (simp only:applyCases.simps(1) [of env state accId1 party1 tok1 amount accId2 party2 tok2 val cont rest])
     apply (cases "accId1 = accId2 \<and> party1 = party2 \<and> tok1 = tok2a \<and> amount = evalValue env state val")
-    apply (cases " evalValue env state val \<le> 0")
+    apply (cases "evalValue env state val \<le> 0")
     apply (simp add:Let_def del:valid_state.simps positiveMoneyInAccountOrNoAccount.simps moneyInAccount.simps)
     apply (simp add:Let_def del:valid_state.simps updateMoneyInAccount.simps positiveMoneyInAccountOrNoAccount.simps moneyInAccount.simps)
     apply (metis State.simps(1) State.surjective State.update_convs(1) reduceContractStep_gtZero_Pay_aux)
@@ -203,15 +203,15 @@ lemma applyInput_gtZero :
    applyInput env state inp cont = Applied nwa newState ncont \<Longrightarrow>
    positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
   apply (cases cont)
-  apply (simp)
-  apply (simp)
-  apply (simp)
+  apply simp
+  apply simp
+  apply simp
   apply (simp only:applyInput.simps)
   using applyCases_positive apply blast
   apply simp
   by simp
 
-lemma applyAllLoop_gtZero : 
+lemma applyAllLoop_gtZero :
   "valid_state state \<Longrightarrow>
    \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
    applyAllLoop reduced env state cont inps warns pays = ApplyAllSuccess newReduced wa pa newState ncont \<Longrightarrow>
@@ -287,7 +287,7 @@ lemma playTraceAux_gtZero :
 
 lemma emptyState_gtZero : "positiveMoneyInAccountOrNoAccount y tok (accounts (emptyState sl))"
   apply simp
-  by (simp add: MList.lookup_empty)  
+  by (simp add: MList.lookup_empty)
 
 theorem playTrace_gtZero :
   "playTrace sl contract t = TransactionOutput txOut \<Longrightarrow>
@@ -375,11 +375,10 @@ theorem accountsArePositive :
 theorem accountsArePositive2 :
     "valid_state state \<Longrightarrow> allAccountsPositiveState state
     \<Longrightarrow> computeTransaction txIn state cont = TransactionOutput txOut
-    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"  
+    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"
   by (meson accountsArePositive allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2))
 
 lemma valid_state_valid_accounts : "valid_state state \<Longrightarrow> valid_map (accounts state)"
-  apply (cases state)
   by simp
 
 theorem accountsArePositive2_trace :
@@ -437,7 +436,7 @@ lemma applyAllLoop_preserves_preserves_validAndPositive_state :
 lemma computeTransaction_preserves_validAndPositive_state :
     "validAndPositive_state state
     \<Longrightarrow> computeTransaction txIn state cont = TransactionOutput txOut
-    \<Longrightarrow> validAndPositive_state (txOutState txOut)"  
+    \<Longrightarrow> validAndPositive_state (txOutState txOut)"
   using accountsArePositive2 computeTransaction_preserves_valid_state validAndPositive_state.simps by blast
 
 lemma playTraceAux_preserves_validAndPositive_state :
@@ -448,5 +447,52 @@ lemma playTraceAux_preserves_validAndPositive_state :
 
 lemma validAndPositive_initial_state : "validAndPositive_state (emptyState sl)"
   using emptyState_gtZero empty_state_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive by auto
+
+lemma allAccountsPositive_implies_every_account_positive :
+  fixes accId tok val
+  assumes "((accId, tok), val) \<in> set m" (is "?entry \<in> _")
+  assumes "allAccountsPositive m" and "valid_map m"
+  shows "val > 0"
+proof (rule ccontr)
+  assume valIsNeg: "\<not> (val > 0)"
+  obtain headM restM where pList: "m = headM @ [?entry] @ restM"
+    by (metis append_Cons append_Nil assms(1) in_set_conv_decomp_first)
+  with assms(1) allAccountsPositive.simps have "allAccountsPositive m = False"
+    by (smt (z3) valIsNeg allAccountsPositiveMeansFirstIsPositive foldl_Cons foldl_append)
+  with assms show False
+    by blast
+qed
+
+lemma allAccountsPositive_implies_lookup_is_positive :
+"\<lbrakk> valid_map m
+ ; allAccountsPositive m
+ ; lookup (accId, tok) m = Some v
+\<rbrakk> \<Longrightarrow> v > 0"
+  by (metis allAccountsPositive_implies_every_account_positive lookupAsMap map_of_SomeD)
+
+
+lemma updateMoneyIsPositive :
+  assumes "allAccountsPositive accs"
+      and "valid_map accs"
+      and "val \<ge> 0"
+    shows "allAccountsPositive (updateMoneyInAccount accId token val accs)"
+proof (cases "val = 0")
+  note assms
+  moreover assume "val = 0"
+  moreover have "updateMoneyInAccount accId token val accs = MList.delete (accId, token) accs"
+    using calculation(4) by force
+  ultimately show ?thesis
+    (* TODO: this should be easier, we should unify
+       positiveMoneyInAccountOrNoAccount and allAccountsPositive to avoid unecesary conversion *)
+    by (metis MList_delete_preserves_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount delete_valid positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive)
+next
+  note assms
+  moreover assume "val \<noteq> 0"
+  moreover have "updateMoneyInAccount accId token val accs = MList.insert (accId, token) val accs"
+    using calculation(3) calculation(4) by force
+  ultimately show ?thesis
+    (* TODO: same note as before *)
+    by (smt (verit, del_insts) PositiveAccounts.positiveMoneyInAccountOrNoAccount.simps addMoneyToAccountPositve_match allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount insert_lookup_different positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive updateMoneyInAccount_preserves_valid_map)
+qed
 
 end

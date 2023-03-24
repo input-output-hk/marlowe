@@ -19,6 +19,7 @@ import Marlowe.Spec.Core.Arbitrary
     genState,
     genTransaction,
     genValue,
+    genObservation,
   )
 import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
@@ -44,6 +45,7 @@ import Semantics
     Transaction_ext (..),
     computeTransaction,
     evalValue,
+    evalObservation,
     fixInterval,
     isQuiescent,
     playTrace,
@@ -67,6 +69,7 @@ import TransactionBound (maxTransactionsInitialState)
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics"
     [ evalValueTest i
+    , evalObservationTest i
     , divisionRoundsTowardsZeroTest i
     , fixIntervalTest i
     , computeTransactionTest i
@@ -102,6 +105,17 @@ evalValueTest interpret = reproducibleProperty' "Eval Value" (withMaxSuccess 500
         req :: Request JSON.Value
         req = EvalValue env state value
         successResponse = RequestResponse $ toJSON $ evalValue env state value
+    assertResponse interpret req successResponse
+
+evalObservationTest :: InterpretJsonRequest -> TestTree
+evalObservationTest interpret = reproducibleProperty "Eval Observation" do
+    env <- run $ generate $ genEnvironment
+    state <- run $ generateT $ genState interpret
+    observation <- run $ generateT $ genObservation interpret
+    let
+        req :: Request JSON.Value
+        req = EvalObservation env state observation
+        successResponse = RequestResponse $ toJSON $ evalObservation env state observation
     assertResponse interpret req successResponse
 
 divisionRoundsTowardsZeroTest :: InterpretJsonRequest -> TestTree

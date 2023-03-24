@@ -24,6 +24,9 @@ the mediation.
 record EscrowArgs =
   price             :: Value
   token             :: Token
+  buyerParty        :: Party
+  sellerParty       :: Party
+  mediatorParty     :: Party
   paymentDeadline   :: Timeout
   complaintDeadline :: Timeout
   disputeDeadline   :: Timeout
@@ -80,6 +83,9 @@ fun escrow :: "EscrowArgs \<Rightarrow> Contract" where
 definition "exampleArgs =
   \<lparr> price = Constant 10
   , token = Token (BS '''') (BS '''')
+  , buyerParty = buyer
+  , sellerParty = seller
+  , mediatorParty = mediator
   , paymentDeadline = 1664812800000
   , complaintDeadline = 1664816400000
   , disputeDeadline = 1664820420000

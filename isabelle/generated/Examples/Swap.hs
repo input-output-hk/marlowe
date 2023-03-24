@@ -1,7 +1,7 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Examples.Swap(SwapParty_ext, swapExample, happyPathPayments,
+  Examples.Swap(SwapParty_ext(..), swap, swapExample, happyPathPayments,
                  happyPathTransactions)
   where {
 

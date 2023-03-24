@@ -89,6 +89,8 @@ import Test.QuickCheck (Gen, chooseInt, elements, getSize)
 import Test.QuickCheck.Arbitrary (Arbitrary (..), shrinkList)
 import Test.QuickCheck.Gen (listOf)
 import qualified Test.QuickCheck.Gen as QC (chooseInteger, elements)
+import qualified Examples.Escrow as Escrow
+import qualified Examples.Swap as Swap
 
 data RandomResponse a
   = RandomValue a
@@ -237,8 +239,53 @@ genParty interpret = do
       Right (RandomValue t) -> pure t
 
 genContract :: InterpretJsonRequest -> GenT IO Contract
-genContract interpret = frequency [(95, gen =<< liftGen arbitrary), (5, pure Close)]
+genContract interpret = frequency [(90, gen =<< liftGen arbitrary), (10, goldenContracts interpret)]
   where gen context = sized \size -> arbitraryContractSized (min size 100 `div` 20) context interpret -- Keep tests from growing too large to execute by capping the maximum contract depth at 5
+
+goldenContracts :: InterpretJsonRequest -> GenT IO Contract
+goldenContracts interpret =
+  frequency
+    [ (50, escrow),
+      (50, swap)
+    ]
+  where
+    escrow :: GenT IO Contract
+    escrow = do
+      paymentDeadline <- liftGen arbitraryPositiveInteger
+      complaintDeadline <- (+ paymentDeadline) <$> liftGen arbitraryPositiveInteger
+      disputeDeadline <- (+ complaintDeadline) <$> liftGen arbitraryPositiveInteger
+      mediationDeadline <- (+ disputeDeadline) <$> liftGen arbitraryPositiveInteger
+      let args =
+            Escrow.EscrowArgs_ext
+              <$> genValue interpret
+              <*> genToken interpret
+              <*> genParty interpret
+              <*> genParty interpret
+              <*> genParty interpret
+              <*> pure paymentDeadline
+              <*> pure complaintDeadline
+              <*> pure disputeDeadline
+              <*> pure mediationDeadline
+              <*> pure ()
+      Escrow.escrow <$> args
+
+    swap :: GenT IO Contract
+    swap = do
+      let p1 =
+            Swap.SwapParty_ext
+              <$> genParty interpret
+              <*> genValue interpret
+              <*> genToken interpret
+              <*> liftGen arbitraryPositiveInteger
+              <*> pure ()
+          p2 =
+            Swap.SwapParty_ext
+              <$> genParty interpret
+              <*> genValue interpret
+              <*> genToken interpret
+              <*> liftGen arbitraryPositiveInteger
+              <*> pure ()
+      Swap.swap <$> p1 <*> p2
 
 genPayee ::  InterpretJsonRequest -> GenT IO Payee
 genPayee i = do

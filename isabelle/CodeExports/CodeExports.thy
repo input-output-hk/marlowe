@@ -78,6 +78,8 @@ export_code
   traceListToSingleInput
 
   \<comment> \<open> Export examples to be used as oracle specification tests\<close>
+  escrow
+  EscrowArgs_ext
   escrowExample
   everythingIsAlrightTransactions
   everythingIsAlrightPayments
@@ -88,6 +90,8 @@ export_code
   confirmClaimTransactions
   confirmClaimPayments
 
+  swap
+  SwapParty_ext
   swapExample
   happyPathTransactions
   happyPathPayments

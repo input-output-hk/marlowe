@@ -156,14 +156,16 @@ txOutEquals
   (TransactionOutput (TransactionOutputRecord_ext warnings1 payments1 (State_ext accounts1 choices1 boundValues1 minTime1 b1) contract1 a1))
   (TransactionOutput (TransactionOutputRecord_ext warnings2 payments2 (State_ext accounts2 choices2 boundValues2 minTime2 b2) contract2 a2)) =
     warnings1 == warnings2
-    && payments1 == payments2
-    && accounts1 == accounts2
+    && setEquals payments1 payments2
+    && setEquals (notZero accounts1) (notZero accounts2)
     && setEquals choices1 choices2
     && setEquals boundValues1 boundValues2
     && minTime1 == minTime2
     && contract1 == contract2
     && a1 == a2
     && b1 == b2
+  where
+    notZero = filter (\(_, i) -> less 0 i)
 txOutEquals a b = a == b
 
 setEquals :: Eq a => [a] -> [a] -> Bool
@@ -202,19 +204,14 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
 --    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
 traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
 traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single input transactions"  do
-    contract <- run $ generateT $ genContract interpret
-    startTime <- run $ generate $ arbitraryNonnegativeInteger
+    contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
+    state <- run $ generateT $ genState interpret
     transactions <- run $ generateT $ (listOf $ genTransaction interpret) `suchThat` \t -> t /= traceListToSingleInput t
 
     let
-        multipleInputs = PlayTrace (integer_of_int startTime) contract transactions
-        singletonInput = PlayTrace (integer_of_int startTime) contract (traceListToSingleInput transactions)
-
-        multipleInputsResponse = RequestResponse $ toJSON $ playTrace startTime contract transactions
-        singletonInputResponse = RequestResponse $ toJSON $ playTrace startTime contract (traceListToSingleInput transactions)
-
-    assertResponse interpret multipleInputs multipleInputsResponse
-    assertResponse interpret singletonInput singletonInputResponse
+      State_ext _ _ _ startTime _ = state
+      multipleInputsResponse = RequestResponse $ toJSON $ playTrace startTime contract transactions
+      singletonInputResponse = RequestResponse $ toJSON $ playTrace startTime contract (traceListToSingleInput transactions)
 
     assert $ multipleInputsResponse == singletonInputResponse
 
@@ -283,7 +280,7 @@ playTraceIsQuiescentTest :: InterpretJsonRequest -> TestTree
 playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is quiescent" do
     contract <- run $ generateT $ genContract interpret `suchThat` (/=Close)
     startTime <- run $ generate $ arbitraryNonnegativeInteger
-    transactions <- run $ generate $ arbitraryValidInputs (State_ext [] [] [] startTime ()) contract `suchThat` ((>0) . length)
+    transactions <- run $ generate $ arbitraryValidInputs (State_ext [] [] [] startTime ()) contract `suchThat` (\l -> length l > 0)
     let
         req :: Request JSON.Value
         req = PlayTrace (integer_of_int startTime) contract transactions

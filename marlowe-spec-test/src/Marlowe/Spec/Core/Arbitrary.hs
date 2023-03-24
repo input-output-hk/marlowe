@@ -55,7 +55,6 @@ import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), parseValidRes
 import Marlowe.Spec.TypeId (TypeId (..))
 import Orderings (Ord (..), max)
 import QuickCheck.GenT (GenT, MonadGen (..), frequency, resize, sized, suchThat, vectorOf)
-import qualified QuickCheck.GenT as QCT (listOf)
 import Semantics
   ( Payment (..),
     TransactionError (..),
@@ -177,7 +176,7 @@ arbitraryTimeInterval =
 arbitraryTimeIntervalAround :: Arith.Int -> Gen (Arith.Int, Arith.Int)
 arbitraryTimeIntervalAround limit =
   do
-    start <- arbitraryInteger `suchThat` (flip less_eq limit)
+    start <- arbitraryInteger `suchThat` greater_eq limit
     duration <- ((limit - start) +) <$> arbitraryNonnegativeInteger
     pure (start, start + duration)
 
@@ -185,7 +184,7 @@ arbitraryTimeIntervalAround limit =
 arbitraryTimeIntervalBefore :: Arith.Int -> Arith.Int -> Gen (Arith.Int, Arith.Int)
 arbitraryTimeIntervalBefore lower upper =
   do
-    start <- arbitraryInteger `suchThat` (flip less_eq lower)
+    start <- arbitraryInteger `suchThat` greater_eq lower
     duration <- chooseinteger (0, upper - start - 1)
     pure (start, start + duration)
 
@@ -193,7 +192,7 @@ arbitraryTimeIntervalBefore lower upper =
 arbitraryTimeIntervalAfter :: Arith.Int -> Gen (Arith.Int, Arith.Int)
 arbitraryTimeIntervalAfter lower =
   do
-    start <- arbitraryInteger `suchThat` (less_eq lower)
+    start <- arbitraryInteger `suchThat` less_eq lower
     duration <- arbitraryNonnegativeInteger
     pure (start, start + duration)
 
@@ -212,6 +211,9 @@ shrinkTimeInterval (start, end) =
       , (mid  , end  )
       , (end  , end  )
       ]
+
+greater_eq :: Orderings.Ord a => a -> a -> Bool
+greater_eq = flip less_eq
 
 arbitrarySeed :: Gen Int
 arbitrarySeed = resize 10000 $ choose (1, 10000000)
@@ -240,7 +242,7 @@ genParty interpret = do
 
 genContract :: InterpretJsonRequest -> GenT IO Contract
 genContract interpret = frequency [(90, gen =<< liftGen arbitrary), (10, goldenContracts interpret)]
-  where gen context = sized \size -> arbitraryContractSized (min size 100 `div` 20) context interpret -- Keep tests from growing too large to execute by capping the maximum contract depth at 5
+  where gen context = sized \size -> arbitraryContractSized (min (size `div` 6) 5) context interpret -- Keep tests from growing too large to execute by capping the maximum contract depth at 5 (default size is 30)
 
 goldenContracts :: InterpretJsonRequest -> GenT IO Contract
 goldenContracts interpret =
@@ -585,7 +587,7 @@ arbitraryContractWeighted ((wClose, wPay, wIf, wWhen, wLet, wAssert) : w) contex
       (wClose , pure Close)
     , (wPay   , Pay <$> genParty interpret <*> genPayee interpret <*> genToken interpret <*> genValue interpret <*> arbitraryContractWeighted w context interpret)
     , (wIf    , If <$> genObservation interpret <*> arbitraryContractWeighted w context interpret <*> arbitraryContractWeighted w context interpret)
-    , (wWhen  , When <$> QCT.listOf (arbitraryCaseWeighted w context interpret) `suchThat` ((<= length w) . length) <*> liftSemiArbitrary context <*> arbitraryContractWeighted w context interpret)
+    , (wWhen  , When <$> (liftGen (chooseInt (0, length w)) >>= flip vectorOf (arbitraryCaseWeighted w context interpret)) <*> liftSemiArbitrary context <*> arbitraryContractWeighted w context interpret)
     , (wLet   , Let <$> liftSemiArbitrary context <*> genValue interpret <*> arbitraryContractWeighted w context interpret)
     , (wAssert, Assert <$> genObservation interpret <*> arbitraryContractWeighted w context interpret)
     ]

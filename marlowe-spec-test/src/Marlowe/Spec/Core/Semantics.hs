@@ -12,6 +12,7 @@ import Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as JSON
 import Marlowe.Spec.Core.Arbitrary
   ( arbitraryNonnegativeInteger,
+    arbitraryTimeIntervalAfter,
     arbitraryValidInputs,
     genContract,
     genEnvironment,
@@ -20,6 +21,7 @@ import Marlowe.Spec.Core.Arbitrary
     genTransaction,
     genValue,
     genObservation,
+    greater_eq
   )
 import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
@@ -51,6 +53,7 @@ import Semantics
     playTrace,
     reduceContractUntilQuiescent,
     txOutWarnings,
+    maxTimeContract,
   )
 import SemanticsTypes
   ( Contract (..),
@@ -271,11 +274,10 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "Calling comp
     transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` \l -> length l > 0
     let
         transaction = head transactions
-
         req :: Request JSON.Value
         req = ComputeTransaction transaction state contract
-    RequestResponse res <- run $ liftIO $ interpret req
 
+    RequestResponse res <- run $ liftIO $ interpret req
     case JSON.fromJSON res of
       JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _)) -> do
         monitor
@@ -321,10 +323,18 @@ playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is 
 --       ⟹  isClosedAndEmpty (computeTransaction ⦇ interval = (iniTime, endTime), inputs = [] ⦈ sta cont)"
 timedOutTransaction_closes_contractTest :: InterpretJsonRequest -> TestTree
 timedOutTransaction_closes_contractTest interpret = reproducibleProperty "Timed-out transaction closes contract"  do
-    state <- run $ generateT $ genState interpret `suchThat` validAndPositive_state
-    transaction <- run $ generateT $ genTransaction interpret `suchThat` \(Transaction_ext (_,upper) _ _) -> less_eq (minTime state) upper
-    let req :: Request JSON.Value
-        req = ComputeTransaction transaction state Close
+    (contract, state@(State_ext _ _ _ minTime' _)) <- run $ generateT $ do
+      c <- genContract interpret `suchThat` (/=Close)
+      s <- genState interpret `suchThat` validAndPositive_state
+      pure (c,s) `suchThat` \(contract, State_ext accounts _ _ _ _) -> (null accounts || contract /= Close)
+    interval <- run $ generate $ arbitraryTimeIntervalAfter minTime' `suchThat` \(iniTime, endTime) ->
+           (iniTime `greater_eq` minTime')
+        && (iniTime `greater_eq` maxTimeContract contract)
+        && (endTime `greater_eq` iniTime)
+
+    let transaction = Transaction_ext interval [] ()
+        req :: Request JSON.Value
+        req = ComputeTransaction transaction state contract
 
     RequestResponse res <- run $ liftIO $ interpret req
 

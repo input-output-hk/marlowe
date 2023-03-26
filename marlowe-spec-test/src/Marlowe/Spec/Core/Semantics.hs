@@ -198,11 +198,11 @@ setEquals l1 l2 =
 playTrace_only_accepts_maxTransactionsInitialStateTest :: InterpretJsonRequest -> TestTree
 playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleProperty "Calling playTrace only accepts maxTransactionsInitialState"  do
     contract <- run $ generateT $ genContract interpret
-    startTime <- run $ generate $ arbitraryNonnegativeInteger
-    transactions <- run $ generate $ arbitraryValidInputs (State_ext [] [] [] startTime ()) contract
+    state <- run $ generateT $ genState interpret
+    transactions <- run $ generate $ arbitraryValidInputs state contract
     let
         req :: Request JSON.Value
-        req = PlayTrace (integer_of_int startTime) contract transactions
+        req = PlayTrace (integer_of_int $ minTime state) contract transactions
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
@@ -222,11 +222,10 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
 traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
 traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single input transactions"  do
     contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
-    state <- run $ generateT $ genState interpret
+    startTime <- run $ generate $ arbitraryNonnegativeInteger
     transactions <- run $ generateT $ (listOf $ genTransaction interpret) `suchThat` \t -> t /= traceListToSingleInput t
 
     let
-      State_ext _ _ _ startTime _ = state
       multipleInputsResponse = RequestResponse $ toJSON $ playTrace startTime contract transactions
       singletonInputResponse = RequestResponse $ toJSON $ playTrace startTime contract (traceListToSingleInput transactions)
 
@@ -239,13 +238,12 @@ integer_of_int (Arith.Int_of_integer k) = k
 --    "reduceContractUntilQuiescent env state contract = ContractQuiescent reducedAfter wa pa nsta ncont ⟹
 --       reduceContractUntilQuiescent env nsta ncont = ContractQuiescent False [] [] nsta ncont"
 reduceContractUntilQuiescentIdempotentTest :: InterpretJsonRequest -> TestTree
-reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "Calling is reduceContractUntilQuiescent idempotent"  do
+reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "Calling is reduceContractUntilQuiescent idempotent" do
     env <- run $ generate $ genEnvironment
     state <- run $ generateT $ genState interpret
     contract <- run $ generateT $ genContract interpret
 
-    let
-        req :: Request JSON.Value
+    let req :: Request JSON.Value
         req = ReduceContractUntilQuiescent env state contract
     RequestResponse res <- run $ liftIO $ interpret req
 
@@ -254,10 +252,11 @@ reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "Cal
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
-                ++ "Expected: ContractQuiescent" )
+                ++ "Expected: ContractQuiescent"
+          )
         assert $ case reduceContractUntilQuiescent env nsta ncont of
-                   ContractQuiescent False [] [] nsta' ncont' -> nsta == nsta' && ncont == ncont'
-                   _ -> False
+          ContractQuiescent False [] [] nsta' ncont' -> nsta == nsta' && ncont == ncont'
+          _ -> False
       JSON.Success _ -> pre False
       _ -> fail "JSON parsing failed!"
 
@@ -295,11 +294,11 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "Calling comp
 playTraceIsQuiescentTest :: InterpretJsonRequest -> TestTree
 playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is quiescent" do
     contract <- run $ generateT $ genContract interpret `suchThat` (/=Close)
-    startTime <- run $ generate $ arbitraryNonnegativeInteger
-    transactions <- run $ generate $ arbitraryValidInputs (State_ext [] [] [] startTime ()) contract `suchThat` (\l -> length l > 0)
+    state <- run $ generateT $ genState interpret
+    transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` (\l -> length l > 0)
     let
         req :: Request JSON.Value
-        req = PlayTrace (integer_of_int startTime) contract transactions
+        req = PlayTrace (integer_of_int $ minTime state) contract transactions
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
@@ -358,7 +357,7 @@ timedOutTransaction_closes_contractTest interpret = reproducibleProperty "Timed-
 closeIsSafeTest :: InterpretJsonRequest -> TestTree
 closeIsSafeTest interpret = reproducibleProperty "Close is safe" do
     state <- run $ generateT $ genState interpret
-    transaction <- run $ generateT $ genTransaction interpret `suchThat` \(Transaction_ext (_,upper) _ _) -> less_eq (minTime state) upper
+    transaction <- run $ generateT $ genTransaction interpret `suchThat` \(Transaction_ext (_,upper) _ _) -> minTime state `less_eq` upper
     let req :: Request JSON.Value
         req = ComputeTransaction transaction state Close
 

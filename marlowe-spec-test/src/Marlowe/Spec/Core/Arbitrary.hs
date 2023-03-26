@@ -33,10 +33,13 @@ module Marlowe.Spec.Core.Arbitrary
   , arbitraryPositiveInteger
   , arbitraryChoiceName
   , arbitraryTimeInterval
+  , arbitraryTimeIntervalAfter
+  , arbitraryTimeIntervalBefore
   , arbitraryTimeIntervalAround
   , shrinkChoiceName
   , shrinkTimeInterval
   , RandomResponse (..)
+  , greater_eq
   )
   where
 

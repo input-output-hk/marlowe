@@ -50,7 +50,6 @@ import Semantics
     evalObservation,
     fixInterval,
     isQuiescent,
-    playTrace,
     reduceContractUntilQuiescent,
     txOutWarnings,
     maxTimeContract,
@@ -226,10 +225,13 @@ traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single inpu
     transactions <- run $ generateT $ (listOf $ genTransaction interpret) `suchThat` \t -> t /= traceListToSingleInput t
 
     let
-      multipleInputsResponse = RequestResponse $ toJSON $ playTrace startTime contract transactions
-      singletonInputResponse = RequestResponse $ toJSON $ playTrace startTime contract (traceListToSingleInput transactions)
+        multipleInputs = PlayTrace (integer_of_int startTime) contract transactions
+        singletonInput = PlayTrace (integer_of_int startTime) contract (traceListToSingleInput transactions)
 
-    assert $ multipleInputsResponse == singletonInputResponse
+    RequestResponse resMultipleInputs <- run $ liftIO $ interpret multipleInputs
+    RequestResponse resSingletonInput <- run $ liftIO $ interpret singletonInput
+
+    assert $ resMultipleInputs == resSingletonInput
 
 integer_of_int :: Arith.Int -> Integer
 integer_of_int (Arith.Int_of_integer k) = k

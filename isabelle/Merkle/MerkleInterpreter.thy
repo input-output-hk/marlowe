@@ -1,6 +1,6 @@
 theory MerkleInterpreter
 
-imports MerkleTypes Core.Semantics
+imports MerkleTypes Core.Semantics Unmerkleize
 begin
 
 section "Interpreter"
@@ -252,4 +252,78 @@ fun computeMTransaction :: "MTransaction \<Rightarrow> State \<Rightarrow> MCont
         | ApplyAllHashMismatch => TransactionError TEHashMismatch        
        )        
      | IntervalError error \<Rightarrow> TransactionError (TEIntervalError error))"
+
+section "Interpreter equivalence"
+
+subsection "Reduce contract step"
+definition reduceStepResult_equiv :: "ReduceStepMResult \<Rightarrow> ReduceStepResult \<Rightarrow> bool" (infixl "\<equiv>\<^sub>s\<^sub>r" 50)
+  where "resM \<equiv>\<^sub>s\<^sub>r res \<longleftrightarrow> (case (resM, res) of 
+   (Reduced warnM effM stateM contM, Semantics.Reduced warn eff state cont) \<Rightarrow> warnM = warn \<and> effM = eff \<and> stateM = state
+   |(AmbiguousTimeIntervalReductionError, Semantics.AmbiguousTimeIntervalReductionError) \<Rightarrow> True
+   |(NotReduced, Semantics.NotReduced) \<Rightarrow> True
+   |(_, _) \<Rightarrow> False)"
+
+declare reduceStepResult_equiv_def [simp]
+
+theorem merkle_reduceContractStep_equiv :
+  assumes "unmerkleize continuations contM = Some cont" 
+  shows "reduceMContractStep env st contM \<equiv>\<^sub>s\<^sub>r reduceContractStep env st cont"
+proof (cases "contM")
+  case [simp]: Close
+  
+  have "cont = Contract.Close"    
+    using assms by auto
+
+  show ?thesis
+  proof (cases "refundOne (accounts st)")
+    case None
+    with assms show ?thesis 
+      by simp
+  next
+    case [simp]: (Some refund)
+    obtain party token money newAccount where "refund = ((party, token, money), newAccount)" 
+      by (metis Product_Type.prod.exhaust_sel)
+    with assms show ?thesis
+      by auto      
+  qed
+    
+next
+  case [simp]: (Pay accId payee tok val contM')
+  obtain cont' where [simp]: "cont = Contract.Pay accId payee tok val cont'"
+    using assms by auto
+
+  show ?thesis
+    by (cases "payee") (simp_all add: Let_def)
+next
+  case [simp]: (If obs trueContM falseContM)
+
+  obtain trueCont falseCont where [simp]: "cont = Contract.If obs trueCont falseCont"
+    using assms If unmerkleizeIf by blast
+  
+  then show ?thesis 
+    by (simp add: Let_def)
+next
+  case [simp]: (When casesM timeout timeoutContM)
+
+  obtain timeoutCont cases where [simp]: "cont = Contract.When cases timeout timeoutCont"
+    using assms When unmerkleizeWhen by blast   
+
+  obtain startTime endTime where [simp]: "timeInterval env = (startTime, endTime)" 
+    by fastforce
+    
+  show ?thesis by auto
+      
+next
+  case [simp]: (Let valId val contM')
+  obtain cont' where [simp]: "cont = Contract.Let valId val cont'"
+    using assms by auto
+
+  show ?thesis
+    by (auto simp add: Let_def)
+next
+  case [simp]: (Assert obs contM')
+  obtain cont' where [simp]: "cont = Contract.Assert obs cont'"
+    using assms by auto
+  then show ?thesis by auto
+qed
 end

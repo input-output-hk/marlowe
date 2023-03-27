@@ -142,6 +142,27 @@ possible continuations (from the map) get smaller\<close>
                       |Inr (dict, case') \<Rightarrow> merkleMap_size dict + mcase_size case'
                     )")
    using merkleMap_size_distrib_drop by auto
-  
+
+
+lemma unmerkleizeIf : 
+  assumes "unmerkleize continuations contM = Some cont" 
+      and "contM = If obs trueContM falseContM"
+    shows "\<exists> trueCont falseCont. cont = Contract.If obs trueCont falseCont"
+  using assms
+  by (cases "unmerkleize continuations trueContM" 
+            "unmerkleize continuations falseContM" 
+            rule: option.exhaust[case_product option.exhaust]
+     ) auto
+
+
+lemma unmerkleizeWhen : 
+  assumes "unmerkleize continuations contM = Some cont" 
+      and "contM = When casesM timeout timeoutContM"
+    shows "\<exists> cases timeoutCont. cont = Contract.When cases timeout timeoutCont"
+  using assms
+  by (cases "unmerkleize continuations timeoutContM"
+            "those (map (unmerkleizeCase continuations) casesM)" 
+            rule: option.exhaust[case_product option.exhaust]
+     ) auto
 
 end

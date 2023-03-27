@@ -223,7 +223,7 @@ traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single inpu
         c <- genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
         s <- genState interpret
         t <- liftGen $ arbitraryValidInputs s c
-        pure (c,s,t)) `suchThat` \(_,_,t) -> (t /= traceListToSingleInput t)
+        pure (c,s,t)) `suchThat` \(_,_,t) -> t /= traceListToSingleInput t
 
     let
         multipleInputs = PlayTrace (integer_of_int startTime) contract transactions

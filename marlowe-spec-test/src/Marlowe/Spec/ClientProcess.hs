@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Marlowe.Spec.ClientProcess
  ( CliPath(..)
@@ -30,7 +30,6 @@ import Control.Monad (forM_, forM)
 import Control.Concurrent.STM (atomically)
 import System.Timeout (timeout)
 import GHC.IO.IOMode (IOMode(..))
-import Data.Functor (void)
 
 type ClientProcessId = Int
 
@@ -68,7 +67,7 @@ parseJsonResponse cp = do
       h = stdOutH cp
       debugH = traceH cp
       pid = cpId cp
-    mLine <- timeout (5000000) $ hGetLine h
+    mLine <- timeout 5000000 $ hGetLine h
     let
       res = case mLine of
         Nothing -> RequestTimeOut
@@ -125,7 +124,7 @@ withThreadProcess clientProcess callback = do
   pure res
 
 debug :: Maybe Handle -> String -> IO ()
-debug mh str = void $ forM mh (\h -> hPutStrLn h $ C.pack str)
+debug mh str = forM_ mh (\h -> hPutStrLn h $ C.pack str)
 
 createThreadProcess :: Int -> FilePath -> Maybe Handle -> IO ClientProcess
 createThreadProcess pid cliPath debugH = do

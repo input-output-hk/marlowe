@@ -4,17 +4,15 @@
 
 module Marlowe.Spec.Reproducible where
 import Test.QuickCheck.Random (mkQCGen, QCGen)
-import Control.Monad.State (StateT, evalStateT, MonadState)
+import Control.Monad.State (StateT, evalStateT, MonadState (..), gets)
 import Control.Monad.IO.Class (MonadIO(..))
 import qualified System.Random as Gen
-import Control.Monad.State (MonadState (get, put))
 import QuickCheck.GenT (GenT, runGenT)
-import Test.QuickCheck (Testable, Property, arbitrarySizedBoundedIntegral, resize, ioProperty, counterexample)
+import Test.QuickCheck (Testable(..), Property, arbitrarySizedBoundedIntegral, resize, ioProperty, counterexample)
 import Test.QuickCheck.Gen (Gen(..))
 import Test.Tasty (TestName, TestTree)
 import Test.QuickCheck.Monadic (PropertyM, monadic', run, assert, monitor)
 import Test.Tasty.QuickCheck (testProperty)
-import Test.QuickCheck (Testable(..))
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request, Response)
 import qualified Data.Aeson as JSON
 import Marlowe.Utils (showAsJson)
@@ -31,14 +29,14 @@ runReproducibleTest seed (ReproducibleTest m) = do
 
 generate :: MonadState QCGen m => Gen a -> m a
 generate (MkGen g) = do
-  (oldGen, newGen) <- Gen.split <$> get
+  (oldGen, newGen) <- gets Gen.split
   put newGen
   return (g oldGen 30)
 
 
 generateT :: (MonadState QCGen m, MonadIO m) => GenT IO a -> m a
 generateT gt = do
-  (oldGen, newGen) <- Gen.split <$> get
+  (oldGen, newGen) <- gets Gen.split
   put newGen
   let
     MkGen iog = runGenT gt
@@ -67,8 +65,8 @@ reproducibleProperty' testName tx prop =
   prop' = tx <$> prop
 
   runProperty ::  Int -> Gen Property
-  runProperty seed = ioProperty <$> runReproducibleTest seed <$> monadic' prop'
+  runProperty seed = ioProperty . runReproducibleTest seed <$> monadic' prop'
 
 
 reproducibleProperty :: Testable a => TestName -> PropertyM ReproducibleTest a -> TestTree
-reproducibleProperty testName prop = reproducibleProperty' testName property prop
+reproducibleProperty testName = reproducibleProperty' testName property

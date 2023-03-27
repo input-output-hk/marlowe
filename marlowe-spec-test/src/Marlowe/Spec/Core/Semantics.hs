@@ -6,7 +6,7 @@ module Marlowe.Spec.Core.Semantics
   )
   where
 
-import qualified Arith as Arith
+import qualified Arith
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as JSON
@@ -101,7 +101,7 @@ tests i = testGroup "Semantics"
 -- are no bugs, only that the selected arbitrary examples didn't find one.
 evalValueTest :: InterpretJsonRequest -> TestTree
 evalValueTest interpret = reproducibleProperty' "Eval Value" (withMaxSuccess 500) do
-    env <- run $ generate $ genEnvironment
+    env <- run $ generate genEnvironment
     state <- run $ generateT $ genState interpret
     value <- run $ generateT $ genValue interpret
     let
@@ -112,7 +112,7 @@ evalValueTest interpret = reproducibleProperty' "Eval Value" (withMaxSuccess 500
 
 evalObservationTest :: InterpretJsonRequest -> TestTree
 evalObservationTest interpret = reproducibleProperty "Eval Observation" do
-    env <- run $ generate $ genEnvironment
+    env <- run $ generate genEnvironment
     state <- run $ generateT $ genState interpret
     observation <- run $ generateT $ genObservation interpret
     let
@@ -123,7 +123,7 @@ evalObservationTest interpret = reproducibleProperty "Eval Observation" do
 
 divisionRoundsTowardsZeroTest :: InterpretJsonRequest -> TestTree
 divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division rounding"  do
-    env <- run $ generate $ genEnvironment
+    env <- run $ generate genEnvironment
     state <- run $ generateT $ genState interpret
     numerator <- run $ generateT $ genValue interpret
     denominator <- run $ generateT
@@ -138,7 +138,7 @@ divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division roundin
 
 fixIntervalTest :: InterpretJsonRequest -> TestTree
 fixIntervalTest interpret = reproducibleProperty "Calling fixInterval test" do
-    i@(Arith.Int_of_integer a, Arith.Int_of_integer b) <- run $ generate $ genInterval
+    i@(Arith.Int_of_integer a, Arith.Int_of_integer b) <- run $ generate genInterval
     state <- run $ generateT $ genState interpret
     let
         req :: Request JSON.Value
@@ -150,7 +150,7 @@ computeTransactionTest :: InterpretJsonRequest -> TestTree
 computeTransactionTest interpret = reproducibleProperty "Calling computeTransaction test" do
     contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
     state <- run $ generateT $ genState interpret
-    transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` \l -> length l > 0
+    transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` (not . null)
 
     let transaction = head transactions
         req :: Request JSON.Value
@@ -206,7 +206,7 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
-      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ _ _ _ _)) -> do
+      JSON.Success (TransactionOutput TransactionOutputRecord_ext {}) -> do
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
@@ -222,7 +222,7 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
 traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
 traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single input transactions"  do
     contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
-    startTime <- run $ generate $ arbitraryNonnegativeInteger
+    startTime <- run $ generate arbitraryNonnegativeInteger
     transactions <- run $ generateT $ (listOf $ genTransaction interpret) `suchThat` \t -> t /= traceListToSingleInput t
 
     let
@@ -239,7 +239,7 @@ integer_of_int (Arith.Int_of_integer k) = k
 --       reduceContractUntilQuiescent env nsta ncont = ContractQuiescent False [] [] nsta ncont"
 reduceContractUntilQuiescentIdempotentTest :: InterpretJsonRequest -> TestTree
 reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "Calling is reduceContractUntilQuiescent idempotent" do
-    env <- run $ generate $ genEnvironment
+    env <- run $ generate genEnvironment
     state <- run $ generateT $ genState interpret
     contract <- run $ generateT $ genContract interpret
 
@@ -270,7 +270,7 @@ computeTransactionIsQuiescentTest :: InterpretJsonRequest -> TestTree
 computeTransactionIsQuiescentTest interpret = reproducibleProperty "Calling computeTransaction is quiescent" do
     contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
     state <- run $ generateT $ genState interpret `suchThat` validAndPositive_state
-    transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` \l -> length l > 0
+    transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` (not . null)
     let
         transaction = head transactions
         req :: Request JSON.Value
@@ -295,7 +295,7 @@ playTraceIsQuiescentTest :: InterpretJsonRequest -> TestTree
 playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is quiescent" do
     contract <- run $ generateT $ genContract interpret `suchThat` (/=Close)
     state <- run $ generateT $ genState interpret
-    transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` (\l -> length l > 0)
+    transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` (not . null)
     let
         req :: Request JSON.Value
         req = PlayTrace (integer_of_int $ minTime state) contract transactions
@@ -325,7 +325,7 @@ timedOutTransaction_closes_contractTest interpret = reproducibleProperty "Timed-
     (contract, state@(State_ext _ _ _ minTime' _)) <- run $ generateT $ do
       c <- genContract interpret `suchThat` (/=Close)
       s <- genState interpret `suchThat` validAndPositive_state
-      pure (c,s) `suchThat` \(contract, State_ext accounts _ _ _ _) -> (null accounts || contract /= Close)
+      pure (c,s) `suchThat` \(contract, State_ext accounts _ _ _ _) -> null accounts || contract /= Close
     interval <- run $ generate $ arbitraryTimeIntervalAfter minTime' `suchThat` \(iniTime, endTime) ->
            (iniTime `greater_eq` minTime')
         && (iniTime `greater_eq` maxTimeContract contract)

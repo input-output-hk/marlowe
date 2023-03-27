@@ -130,9 +130,9 @@ instance ToJSON (Response JSON.Value) where
 
 parseValidResponse :: FromJSON a => Response JSON.Value -> Either String a
 parseValidResponse (InvalidRequest err) = Left $ "Invalid request: " ++ err
-parseValidResponse UnknownRequest = Left $ "Unknown request"
-parseValidResponse RequestNotImplemented = Left $ "Request not implemented"
-parseValidResponse RequestTimeOut = Left $ "Request timed out"
+parseValidResponse UnknownRequest = Left "Unknown request"
+parseValidResponse RequestNotImplemented = Left "Request not implemented"
+parseValidResponse RequestTimeOut = Left "Request timed out"
 parseValidResponse (ResponseFailure err) = Left $ "Problem processing the response: " ++ err
 
 parseValidResponse (RequestResponse v) = case fromJSON v of

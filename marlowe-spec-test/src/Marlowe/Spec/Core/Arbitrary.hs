@@ -113,7 +113,7 @@ instance FromJSON a => FromJSON (RandomResponse a) where
     asRandomValue v = RandomValue <$> v .: "value"
     asUnknownType v = UnknownType <$> v .: "unknown-type"
 
-data GenerateRandomValueException = GenerateRandomValueException String
+newtype GenerateRandomValueException = GenerateRandomValueException String
   deriving (Show, Exception)
 
 -- | Part of the Fibonacci sequence.
@@ -131,7 +131,7 @@ arbitraryFibonacci = frequency . zip fibonacciFrequencies . fmap pure
 -- | Shrink a string.
 shrinkString :: (a -> String) -> [a] -> a -> [a]
 shrinkString f universe selected = filter
-  (\candidate -> length (f candidate) > 0 && length (f candidate) < length (f selected)) universe
+  (\candidate -> not (null (f candidate)) && length (f candidate) < length (f selected)) universe
 
 -- | An arbitrary integer, mostly small.
 arbitraryInteger :: Gen Arith.Int
@@ -223,8 +223,8 @@ arbitrarySeed = resize 10000 $ choose (1, 10000000)
 
 genToken :: InterpretJsonRequest -> GenT IO Token
 genToken interpret = do
-  size <- liftGen $ getSize
-  seed <- liftGen $ arbitrarySeed
+  size <- liftGen getSize
+  seed <- liftGen arbitrarySeed
   liftIO do
     res <- interpret (GenerateRandomValue (TypeId "Core.Token" (Proxy :: Proxy Token)) size seed)
     case parseValidResponse res of
@@ -234,8 +234,8 @@ genToken interpret = do
 
 genParty :: InterpretJsonRequest -> GenT IO Party
 genParty interpret = do
-  size <- liftGen $ getSize
-  seed <- liftGen $ arbitrarySeed
+  size <- liftGen getSize
+  seed <- liftGen arbitrarySeed
   liftIO do
     res <- interpret (GenerateRandomValue (TypeId "Core.Party" (Proxy :: Proxy Party)) size seed)
     case parseValidResponse res of
@@ -368,16 +368,16 @@ genValue i = sized (
             frequency
               [ ( 8, genAvailableMoney)
               , (14, genConstant)
-              , ( 8, resize (n - 1) $ genNegValue)
-              , ( 8, resize (n - 2) $ genAddValue)
-              , ( 8, resize (n - 2) $ genSubValue)
-              , ( 8, resize (n - 2) $ genMulValue)
-              , ( 8, resize (n - 2) $ genDivValue)
+              , ( 8, resize (n - 1) genNegValue)
+              , ( 8, resize (n - 2) genAddValue)
+              , ( 8, resize (n - 2) genSubValue)
+              , ( 8, resize (n - 2) genMulValue)
+              , ( 8, resize (n - 2) genDivValue)
               , (10, genChoiceValue)
               , ( 6, genTimeIntervalStart)
               , ( 6, genTimeIntervalEnd)
               , ( 8, genUseValue)
-              , ( 8, resize (n - 3) $ genCond)
+              , ( 8, resize (n - 3) genCond)
               ]
   )
   where
@@ -402,15 +402,15 @@ genObservation i = sized (
             , (45, genFalse)
             ]
           | otherwise -> frequency
-            [ ( 8, resize (n - 2) $ genAndObs)
-            , ( 8, resize (n - 2) $ genOrObs)
-            , ( 8, resize (n - 1) $ genNotObs)
+            [ ( 8, resize (n - 2) genAndObs)
+            , ( 8, resize (n - 2) genOrObs)
+            , ( 8, resize (n - 1) genNotObs)
             , (16, genChoseSomething)
-            , ( 8, resize (n - 2) $ genValueGE)
-            , ( 8, resize (n - 2) $ genValueGT)
-            , ( 8, resize (n - 2) $ genValueLT)
-            , ( 8, resize (n - 2) $ genValueLE)
-            , ( 8, resize (n - 2) $ genValueEQ)
+            , ( 8, resize (n - 2) genValueGE)
+            , ( 8, resize (n - 2) genValueGT)
+            , ( 8, resize (n - 2) genValueLT)
+            , ( 8, resize (n - 2) genValueLE)
+            , ( 8, resize (n - 2) genValueEQ)
             , (10, genTrue)
             , (10, genFalse)
             ]
@@ -447,8 +447,8 @@ genInput i = frequency
 
 genTransaction :: InterpretJsonRequest -> GenT IO (Transaction_ext ())
 genTransaction i = do
-  lower <- liftGen $ arbitraryInteger
-  extent <- liftGen $ arbitraryNonnegativeInteger
+  lower <- liftGen arbitraryInteger
+  extent <- liftGen arbitraryNonnegativeInteger
   iSize <- liftGen $ chooseInt (0, 4)
   inputs <- vectorOf iSize (genInput i)
   pure $ Transaction_ext (lower, lower + extent) inputs ()

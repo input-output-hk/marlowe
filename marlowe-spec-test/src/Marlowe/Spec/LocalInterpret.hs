@@ -2,8 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -16,7 +14,6 @@ import qualified Arith (Int (..))
 import Data.Aeson (FromJSON, Result (..), ToJSON)
 import qualified Data.Aeson as JSON
 import Marlowe.Spec.Interpret (Response(..), Request(..))
-import Semantics (playTrace, computeTransaction, evalValue, evalObservation)
 import Marlowe.Spec.TypeId (TypeId (..), fromTypeName)
 import Marlowe.Spec.Core.Serialization.Json
 import Data.Data (Proxy)
@@ -24,12 +21,16 @@ import Marlowe.Spec.Core.Arbitrary
   ( arbitraryChoiceName,
     arbitraryFibonacci,
     arbitraryPositiveInteger,
-    shrinkChoiceName,
+    shrinkChoiceName
   )
 import qualified Marlowe.Spec.Core.Arbitrary as RandomResponse
 import Semantics
   ( fixInterval,
     reduceContractUntilQuiescent,
+    playTrace,
+    computeTransaction,
+    evalValue,
+    evalObservation
   )
 import SemanticsTypes
   ( Action (..),
@@ -85,8 +86,8 @@ interpretLocal (GenerateRandomValue t@(TypeId name _) size seed) =
     $ RequestResponse
     $ JSON.toJSON
     $ case name of
-      "Core.Token" -> RandomResponse.RandomValue $ JSON.toJSON $ (generate' arbitrary :: Token)
-      "Core.Party" -> RandomResponse.RandomValue $ JSON.toJSON $ (generate' arbitrary :: Party)
+      "Core.Token" -> RandomResponse.RandomValue $ JSON.toJSON (generate' arbitrary :: Token)
+      "Core.Party" -> RandomResponse.RandomValue $ JSON.toJSON (generate' arbitrary :: Party)
       _            -> RandomResponse.UnknownType t
   where
   generate' (MkGen g) = g (mkQCGen seed) size
@@ -175,16 +176,16 @@ instance Arbitrary Value where
               frequency
                 [ ( 8, genAvailableMoney)
                 , (14, genConstant)
-                , ( 8, resize (n - 1) $ genNegValue)
-                , ( 8, resize (n - 2) $ genAddValue)
-                , ( 8, resize (n - 2) $ genSubValue)
-                , ( 8, resize (n - 2) $ genMulValue)
-                , ( 8, resize (n - 2) $ genDivValue)
+                , ( 8, resize (n - 1) genNegValue)
+                , ( 8, resize (n - 2) genAddValue)
+                , ( 8, resize (n - 2) genSubValue)
+                , ( 8, resize (n - 2) genMulValue)
+                , ( 8, resize (n - 2) genDivValue)
                 , (10, genChoiceValue)
                 , ( 6, genTimeIntervalStart)
                 , ( 6, genTimeIntervalEnd)
                 , ( 8, genUseValue)
-                , ( 8, resize (n - 3) $ genCond)
+                , ( 8, resize (n - 3) genCond)
                 ]
     where
       genAvailableMoney = AvailableMoney <$> arbitrary <*> arbitrary

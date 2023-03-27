@@ -53,9 +53,7 @@ import Control.Monad (liftM2)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Data.Data (Proxy (..))
-import Data.Function (on)
-import Data.List (nub, nubBy)
-import Data.Map (Map, fromList)
+import Data.List (nub)
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), parseValidResponse)
 import Marlowe.Spec.TypeId (TypeId (..))
 import Orderings (Ord (..), max)
@@ -666,11 +664,7 @@ data Context =
   , valueIds     :: [ValueId]                    -- ^ Universe of value identifiers.
   , values       :: [Arith.Int]                  -- ^ Universe of values.
   , times        :: [Arith.Int]                  -- ^ Universe of times.
-  , cboundValues :: Map ValueId Arith.Int        -- ^ Bound values for state.
   }
-
-instance Prelude.Ord ValueId where
-   compare (ValueId a) (ValueId b) = compare a b
 
 instance Arbitrary Context where
   arbitrary =
@@ -681,7 +675,6 @@ instance Arbitrary Context where
       valueIds <- arbitrary
       values <- listOf arbitraryInteger
       times <- listOf arbitraryPositiveInteger
-      cboundValues <- fromList . nubBy ((==) `on` fst) <$> listOf ((,) <$> perturb arbitrary valueIds <*> perturb arbitraryInteger values)
       pure Context{..}
   shrink context@Context{..} =
       [context {amounts = amounts'} | amounts' <- shrink amounts]
@@ -690,7 +683,6 @@ instance Arbitrary Context where
       ++ [context {valueIds = valueIds'} | valueIds' <- shrink valueIds]
       ++ [context {values = values'} | values' <- shrink values]
       ++ [context {times = times'} | times' <- shrink times]
-      ++ [context {cboundValues = cboundValues'} | cboundValues' <- shrink cboundValues]
 
 instance Arbitrary Arith.Int where
   arbitrary = arbitraryInteger

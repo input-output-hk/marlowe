@@ -171,7 +171,7 @@ arbitraryPositiveInteger = Arith.Int_of_integer <$>
 arbitraryTimeInterval :: Gen (Arith.Int, Arith.Int)
 arbitraryTimeInterval =
   do
-    start <- arbitraryInteger
+    start <- arbitraryNonnegativeInteger
     duration <- arbitraryNonnegativeInteger
     pure (start, start + duration)
 
@@ -179,7 +179,7 @@ arbitraryTimeInterval =
 arbitraryTimeIntervalAround :: Arith.Int -> Gen (Arith.Int, Arith.Int)
 arbitraryTimeIntervalAround limit =
   do
-    start <- arbitraryInteger `suchThat` greater_eq limit
+    start <- arbitraryNonnegativeInteger `suchThat` greater_eq limit
     duration <- ((limit - start) +) <$> arbitraryNonnegativeInteger
     pure (start, start + duration)
 
@@ -187,7 +187,7 @@ arbitraryTimeIntervalAround limit =
 arbitraryTimeIntervalBefore :: Arith.Int -> Arith.Int -> Gen (Arith.Int, Arith.Int)
 arbitraryTimeIntervalBefore lower upper =
   do
-    start <- arbitraryInteger `suchThat` greater_eq lower
+    start <- arbitraryNonnegativeInteger `suchThat` greater_eq lower
     duration <- chooseinteger (0, upper - start - 1)
     pure (start, start + duration)
 
@@ -195,7 +195,7 @@ arbitraryTimeIntervalBefore lower upper =
 arbitraryTimeIntervalAfter :: Arith.Int -> Gen (Arith.Int, Arith.Int)
 arbitraryTimeIntervalAfter lower =
   do
-    start <- arbitraryInteger `suchThat` less_eq lower
+    start <- arbitraryNonnegativeInteger `suchThat` less_eq lower
     duration <- arbitraryNonnegativeInteger
     pure (start, start + duration)
 

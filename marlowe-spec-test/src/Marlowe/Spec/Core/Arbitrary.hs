@@ -18,6 +18,7 @@ module Marlowe.Spec.Core.Arbitrary
   , genState
   , genEnvironment
   , genContract
+  , genGoldenContract
   , genInterval
   , genTransaction
   , genAction
@@ -28,6 +29,7 @@ module Marlowe.Spec.Core.Arbitrary
   , genTransactionError
   , genTransactionOutput
   , arbitraryValidInputs
+  , arbitraryValidStep
   , arbitraryNonnegativeInteger
   , arbitraryFibonacci
   , arbitraryPositiveInteger
@@ -244,11 +246,11 @@ genParty interpret = do
       Right (RandomValue t) -> pure t
 
 genContract :: InterpretJsonRequest -> GenT IO Contract
-genContract interpret = frequency [(90, gen =<< liftGen arbitrary), (10, goldenContracts interpret)]
+genContract interpret = frequency [(90, gen =<< liftGen arbitrary), (10, genGoldenContract interpret)]
   where gen context = sized \size -> arbitraryContractSized (min (size `div` 6) 5) context interpret -- Keep tests from growing too large to execute by capping the maximum contract depth at 5 (default size is 30)
 
-goldenContracts :: InterpretJsonRequest -> GenT IO Contract
-goldenContracts interpret =
+genGoldenContract :: InterpretJsonRequest -> GenT IO Contract
+genGoldenContract interpret =
   frequency
     [ (50, escrow),
       (50, swap)
@@ -534,14 +536,17 @@ arbitraryValidStep state (When cases timeout _) =
       else
         do
           times <- arbitraryTimeIntervalBefore minTime' timeout
-          case' <- QC.elements $ filter (not . isEmptyChoice . getAction) cases
-          i <- case getAction case' of
+          Case action cont <- QC.elements $ filter (not . isEmptyChoice . getAction) cases
+          i <- case action of
                  Deposit a p t v -> pure . IDeposit a p t $ evalValue (Environment_ext times ()) state v
                  Choice n bs     -> do
                                       Bound lower upper <- QC.elements bs
                                       IChoice n <$> chooseinteger (lower, upper)
                  Notify _        -> pure INotify
-          pure $ Transaction_ext times [i] ()
+          case cont of
+            Close -> pure $ Transaction_ext times [i] ()
+            _ -> do Transaction_ext _ inputs _ <- arbitraryValidStep state cont
+                    pure $ Transaction_ext times (i:inputs) ()
   where
     getAction :: Case -> Action
     getAction (Case a _) = a

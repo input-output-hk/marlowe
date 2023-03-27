@@ -11,8 +11,7 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as JSON
 import Marlowe.Spec.Core.Arbitrary
-  ( arbitraryNonnegativeInteger,
-    arbitraryTimeIntervalAfter,
+  ( arbitraryTimeIntervalAfter,
     arbitraryValidInputs,
     genContract,
     genEnvironment,
@@ -38,7 +37,7 @@ import Marlowe.Spec.Reproducible
 import Marlowe.Utils (showAsJson)
 import Orderings (Ord (..))
 import PositiveAccounts (validAndPositive_state)
-import QuickCheck.GenT (listOf, suchThat)
+import QuickCheck.GenT (suchThat, liftGen)
 import Semantics
   ( ReduceResult (..),
     TransactionOutput (..),
@@ -220,9 +219,11 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
 --    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
 traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
 traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single input transactions"  do
-    contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
-    startTime <- run $ generate arbitraryNonnegativeInteger
-    transactions <- run $ generateT $ (listOf $ genTransaction interpret) `suchThat` \t -> t /= traceListToSingleInput t
+    (contract, State_ext _ _ _ startTime _, transactions) <- run $ generateT $ (do
+        c <- genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
+        s <- genState interpret
+        t <- liftGen $ arbitraryValidInputs s c
+        pure (c,s,t)) `suchThat` \(_,_,t) -> (t /= traceListToSingleInput t)
 
     let
         multipleInputs = PlayTrace (integer_of_int startTime) contract transactions

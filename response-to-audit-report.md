@@ -1,3 +1,4 @@
+
 # DRAFT Response to Audit Report
 
 TODO:
@@ -12,9 +13,12 @@ TODO:
 - [ ] Proofread.
 
 
+
 # 2 Findings
 
+
 ## 2.1 Main concerns
+
 
 ### 2.1.1 Negative deposits allow stealing funds *(Severity: High)*
 
@@ -22,7 +26,8 @@ TODO:
 >
 > The income from deposits is computed by adding up the deposit inputs, regardless of whether they are negative, while the semantics considers them as zero deposits. Combined with the absence of a balance check on the ending Marlowe state, this allows the ending balance to differ from the value paid to the Marlowe validator.
 > 
-> This disagreement can be exploited to steal money from a flawed Marlowe contract that allows a negative deposit. The issue is demonstrated in .
+> This disagreement can be exploited to steal money from a flawed Marlowe contract that allows a negative deposit. The issue is demonstrated in ….
+
 
 ### 2.1.2 Contracts vulnerable to double satisfaction attacks *(Severity: High)*
 
@@ -32,11 +37,13 @@ TODO:
 > 
 > One way to strengthen the implementation is for the Marlowe validator to demand that outputs paid to addresses contain a datum that identifies the contract instance, like the `TxOutRef` of the validator UTxO being spent. Then cooperation with other contracts is possible without double satisfaction if the validators of the other contracts demand a different datum for their outputs.
 
+
 ### 2.1.3 Missing constructor in equality instance *(Severity: High)*
 
 > **File `Semantics.hs`, Class instance `Eq ReduceWarning`, line *845***
 > 
 > The constructor `ReduceAssertionFailed` is not mentioned and compares `False` against itself. This might cause validators to fail checking the presence of this particular warning.
+
 
 ### 2.1.4 Inaccurate formulation of Money preservation *(Severity: High)*
 
@@ -46,11 +53,13 @@ TODO:
 > 
 > Money preservation is a property stated with an equality. The left hand side is the sum of the deposits done by a list of transactions. The right hand side of the equality is the sum of all the payments done in the same list of transactions. Each sum, in turn, is represented as a single integer which aggregates the amounts of the various payments and deposits, irrespective of what currencies correspond to these amounts.
 
+
 ### 2.1.5 Insufficient documentation of Money preservation *(Severity: Medium)*
 
 > **File `specification-v3-rc1.pdf`, Section `3.1 Money preservation`, page *29***
 > 
 > Money preservation is formulated in terms of functions that are not discussed in the specification. It is necessary to explain the meaning of these functions in sufficient detail so readers can understand the property.
+
 
 ### 2.1.6 Missing description of Merkleization *(Severity: High)*
 
@@ -64,6 +73,7 @@ TODO:
 > 2.  If a merkleized case input is applied successfully, it implies that the contract hash in the input corresponds to the continuation of the contract.
 > 3.  Merkleizing and unmerkleizing a contract gives back the original contract.
 
+
 ### 2.1.7 Positive balances are not checked for the output state *(Severity: High)*
 
 > **File `marlowe-cardano-specification.md`, `Constraint 13`** 
@@ -71,6 +81,7 @@ TODO:
 > *Positive balances* are only checked for the input, not for the output Marlowe state. If the semantics are flawed, a transaction can produce an unspendable output that does not satisfy this constraint.
 > 
 > If such a transaction is accepted, no further evaluation will be possible since all subsequent transactions will be rejected due to the very same Constraint 13. This is an hypothetical attack vector, where a malicious actor could send a transaction to block a contract.
+
 
 ### 2.1.8 Non-validated Marlowe states *(Severity: High)*
 
@@ -84,6 +95,7 @@ TODO:
 > 
 > For a valid Marlowe state, the association lists for bound values, accounts, and choices have keys sorted and without duplicates.
 
+
 ### 2.1.9 Total balance of ending state uncomputed *(Severity: High)*
 
 > **File `marlowe-cardano-specification.md`, `Constraint 6`** 
@@ -95,6 +107,7 @@ TODO:
 > 
 > However, the Marlowe validator never computes the total balance of the accounts in the ending Marlowe state. Instead, the ending balance is assumed to be whatever value is paid by the transaction to the Marlowe validator. The natural language should describe precisely what is being checked.
 
+
 ### 2.1.10 Unchecked ending balance *(Severity: High)*
 
 > **File `marlowe-cardano-specification.md`, `Constraint 5`** 
@@ -103,6 +116,7 @@ TODO:
 > 
 > The specification should at least discuss why the check is absent together with the other similar checks that are not implemented (checking that ending accounts have positive balances, checking that the ending Marlowe state is valid).
 
+
 ### 2.1.11 Partial functions used outside their domain *(Severity: Medium)*
 
 > **File `MoneyPreservation.thy`, various functions ``**
@@ -110,6 +124,7 @@ TODO:
 > `moneyInRefundOneResult`, `moneyInApplyResult`, `moneyInApplyAllResult`, `moneyInTransactionOutput`, and `moneyInPlayTraceResult` have strange meanings when the result is an error. Arguably, on error there is no money to retrieve, so the return type should be `(Token \times int) option` instead.
 > 
 > Some lemmas rely on this behavior to have equalities hold even in cases of errors, but the cost is that the meaning is so surprising that the reader may be confused by it. It would be more reliable to have explicit and weaker lemmas that assert equalities only when there are no errors.
+
 
 ### 2.1.12 Different insertion functions used in Isabelle and Haskell code *(Severity: High)*
 
@@ -155,13 +170,16 @@ TODO:
 > -   Line 482, function `reduceContractStep` relies on `AssocMap.insert`.
 > -   Line 567, function `applyAction` relies on `AssocMap.insert`.
 
+
 ### 2.1.13 Missing specification tests *(Severity: Medium)*
 
 > **File `Spec/Marlowe/Semantics/Compute.hs`, ``** 
 > 
 > There are no tests for the properties in Section 3 of `specification-v3-rc1.pdf`. Besides checking that there are no translation mistakes, these properties would also help contrasting the assumptions in the Isabelle and the Haskell sides, like the meaning of validity of an association list, which is focused in the previous issue.
 
+
 ## 2.2 Marlowe specification
+
 
 ### 2.2.1 Lack of explanation regarding changing choices *(Severity: Low)*
 
@@ -169,17 +187,20 @@ TODO:
 > 
 > Choices can only be changed when evaluating `When` statements. This is something only evident after looking at the implementation of `computeTransaction`. It needs to be discussed when first introducing choices and the `When` contract.
 
+
 ### 2.2.2 Undefined reference *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.1.7 Contracts`, page *13***
 > 
 > There is an undefined reference.
 
+
 ### 2.2.3 Lack of explanation for necessity of `Environment` type *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.1.8 State and Environment`, page *14***
 > 
 > An `Environment` type is introduced, but it is unclear why it is needed as it is defined as a synonym for time intervals.
+
 
 ### 2.2.4 Unclear meaning of execution environment *(Severity: Low)*
 
@@ -193,11 +214,13 @@ TODO:
 > 
 > One has to infer that evaluating a Marlowe contract is undefined if it does not happen within a transaction, as otherwise the description of the execution environment would not make sense. It would be necessary to establish more explicitly the relationship between the contract evaluation and the notion of transaction.
 
+
 ### 2.2.5 Unexplained interval data types *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.1.8 State and Environment`, page *14***
 > 
 > The meaning of the data types `IntervalError` and `IntervalResult` needs to be explained.
+
 
 ### 2.2.6 Incomplete explanation for `TransactionOutput` *(Severity: Low)*
 
@@ -207,11 +230,13 @@ TODO:
 > 
 > The purpose of these types needs to be made explicit so it can be checked if the code is doing what is intended.
 
+
 ### 2.2.7 Code snippets switch languages *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.1 Compute Transaction`, page *15***
 > 
 > The specification changes from using Isabelle to using Haskell henceforth. Making the reader aware of the criteria for the language change would help maintaining the document.
+
 
 ### 2.2.8 Repeated definition of `IntervalResult` *(Severity: Low)*
 
@@ -219,17 +244,20 @@ TODO:
 > 
 > The `IntervalResult` type is defined twice in the specification. One should be removed.
 
+
 ### 2.2.9 Poorly named variable `newAccount` *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.6 Reduce Contract Step`, page *19***
 > 
 > In the implementation of the function `reduceContractStep`, the variable `newAccount` should be named `newAccounts`.
 
+
 ### 2.2.10 Poorly named variable `acc` in specification *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.8 Apply Cases`, page *22***
 > 
 > On the last equation of `applyCases`, `acc` should be named `input`.
+
 
 ### 2.2.11 Inaccurate specification of `giveMoney` *(Severity: Low)*
 
@@ -245,11 +273,13 @@ TODO:
 > 
 > This function is confusing in that it takes the account identifier of the paying account which is not used for anything other than filling a field in the returned value.
 
+
 ### 2.2.12 Redundant evaluation in `addMoneyToAccount` *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.9 Utilities`, page *22***
 > 
 > `addMoneyToAccount` is redundantly evaluating `money <= 0` when invoking `updateMoneyInAccount`. The else branch could be replaced instead with `insert (accId, token) money accountsV`.
+
 
 ### 2.2.13 Redundant statement regarding addition *(Severity: Low)*
 
@@ -261,17 +291,20 @@ TODO:
 > 
 > or remove the redundant statement.
 
+
 ### 2.2.14 Missing implementation for negation case of `evalValue` *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.10 Evaluate Value`, page *24***
 > 
 > Negation for `evalValue` does not show the implementation, just one lemma about `NegValue`, which is inconsistent with how other operations are presented.
 
+
 ### 2.2.15 Missing parentheses in `div` specification *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.10 Evaluate Value`, page *25***
 > 
 > On page 25 formula $$c \neq 0 \Rightarrow c \mathbin{∗} a \mathbin{\mathrm{div}} (c \mathbin{∗} b) = a \mathbin{\mathrm{div}} b$$ needs additional parentheses around the term $c \mathbin{∗} a$, otherwise it can be parsed as $$c \neq 0 \Rightarrow c \mathbin{∗} (a \mathbin{\mathrm{div}} (c \mathbin{∗} b)) = a \mathbin{\mathrm{div}} b$$ which does not hold (Counter-example: $c=2, a=3, b=2$). The lemma `divMultiply` in the file `Semantics.thy` does use extra parentheses around $c \mathbin{∗} a$.
+
 
 ### 2.2.16 Unclear division explanation *(Severity: Low)*
 
@@ -283,6 +316,7 @@ TODO:
 > 
 > The meaning of this statement needs to be further explained, since the arguments of `DivValue` could evaluate to negative numbers.
 
+
 ### 2.2.17 Discrepancy with `evalValue` *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.10 Evaluate Value`, pages *23--26***
@@ -291,11 +325,13 @@ TODO:
 > 
 > Moreover, the definition of `evalValue` is juxtaposed with some lemmas about its behavior (for example, `AddValue` being associative and commutative), making it harder to match the specification text with the Isabelle code.
 
+
 ### 2.2.18 Missing `evalValue` lemmas in specification *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.10 Evaluate Value`, pages *23--26***
 > 
 > Not all lemmas about `evalValue` are listed in the specification. The absent lemmas include `evalDoubleNegValue`, `evalMulValue`, `evalSubValue`, and all division lemmas.
+
 
 ### 2.2.19 Typo in **Use Value** case of `evalValue` *(Severity: Low)*
 
@@ -303,17 +339,20 @@ TODO:
 > 
 > The **Use Value** case mentions `TimeIntervalEnd` instead of `UseValue`.
 
+
 ### 2.2.20 Unexplained parameters of `playTrace` *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `3 Marlowe Guarantees`, page *28***
 > 
 > The parameters of the function `playTrace` need to be explained.
 
+
 ### 2.2.21 Type parameter discrepancy in `playTrace` *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `3 Marlowe Guarantees`, page *28***
 > 
 > The first parameter of `playTrace` in the specification is `int`, while it is `POSIXTime` in the code. Even though the latter is an alias for the former, it is beneficial to use the `POSIXTime` name both for consistency and readability.
+
 
 ### 2.2.22 Money preservation on failing transactions not specified *(Severity: Low)*
 
@@ -323,11 +362,13 @@ TODO:
 > 
 > This is not a concern in practice because the lists of transactions that fail to evaluate are not accepted in the blockchain. However, this should be made explicit in the explanation of the property.
 
+
 ### 2.2.23 Complicated definition of `allAccountsPositive` *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `3.3 Possitive Accounts`, page *30***
 > 
 > The definition of\ `allAccountsPositive` is complicated and can be refactored as `all ((_, money) -> money > 0)`.
+
 
 ### 2.2.24 Discrepancy with Isabelle code for `allAccountsPositive` *(Severity: Low)*
 
@@ -335,11 +376,13 @@ TODO:
 > 
 > The `allAccountsPositive` function is defined differently in the specification and in the Isabelle code, although both definitions show the same behavior. These definitions need to be consolidated.
 
+
 ### 2.2.25 Misleading or incorrect formula for contract not holding funds *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `3.6.3 Contract Does Not Hold Funds After it Closes`, page *32***
 > 
 > The statement in natural language looks unconnected from the proposed formula. Otherwise, it is unclear how not holding funds forever is a consequence of producing no warnings.
+
 
 ### 2.2.26 Different format for lemma statement *(Severity: Low)*
 
@@ -347,11 +390,13 @@ TODO:
 > 
 > The lemma is stated using the proof derivation tree format as opposed to the rest of the specification and the Isabelle code.
 
+
 ### 2.2.27 Function `isClosedAndEmpty` is unexplained *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `3.6.2 All Contracts Have a Maximum Time`, page *32***
 > 
 > The function `isClosedAndEmpty` needs to be explained.
+
 
 ### 2.2.28 Top-down definitions *(Severity: Low)*
 
@@ -359,13 +404,16 @@ TODO:
 > 
 > In Section 2, the order of definitions is reversed, and the reader is thus faced with functions which call other functions that have not been introduced yet, despite the claim in Section 1.3 that the definitions will be presented bottom-up.
 
+
 ### 2.2.29 No mention of Isabelle lemmas in specification *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Multiple sections ``** 
 > 
 > Generally, readability can be improved by mentioning the Isabelle lemma names alongside their statements. This way, it would be much easier to search for the actual Isabelle code and proofs matching the informal specification text, and compare the two.
 
+
 ## 2.3 Lemmas and proofs
+
 
 ### 2.3.1 Unnecessarily large proofs *(Severity: Medium)*
 
@@ -383,6 +431,7 @@ TODO:
 > -   in `MoneyPreservation.thy`, lemmas `reduceContractStep_preserves_money` and\ `reductionLoop_preserves_money`
 > -   in `SingleInputTransactions.thy`, lemmas `applyAllInputsPrefix_aux`,\ `computeTransactionIterative`, and `computeTransactionStepEquivalence_error`
 
+
 ### 2.3.2 Long lines in lemmas *(Severity: Low)*
 
 > **Several Isabelle files, several lemmas**
@@ -398,6 +447,7 @@ TODO:
 > -   in `TimeRange.thy`, lemmas `reduceStep_ifCaseLtCt` and `reduceLoop_ifCaseLtCt`
 > -   in `ValidState.thy`, lemma `reductionLoop_preserves_valid_state_aux`
 
+
 ### 2.3.3 Confusing auxiliary lemmas *(Severity: Low)*
 
 > **Several Isabelle files, several lemmas**
@@ -408,6 +458,7 @@ TODO:
 > -   in `QuiescentResult.thy`, lemmas `reduceContractStepPayIsQuiescent`, `reductionLoopIsQuiescent_aux`, and `applyAllInputsLoopIsQuiescent_loop`
 > -   in `PositiveAccounts.thy`, lemma `positiveMoneyInAccountOrNoAccountImpliesAllPositive_aux2`
 > -   in `SingleInputTransactions.thy`, lemma `applyAllInputsPrefix_aux`
+
 
 ### 2.3.4 Undescriptive variable names *(Severity: Low)*
 
@@ -420,6 +471,7 @@ TODO:
 > -   in `SingleInputTransactions.thy`, lemmas `beforeApplyAllLoopIsUseless` and\ `applyAllInputsPrefix_aux`
 > -   in `ValidState.thy`, lemma `reductionLoop_preserves_valid_state_aux`
 > -   in `TimeRange.thy`, lemmas `resultOfReduceIsCompatibleToo`, `resultOfReductionLoopIsCompatibleToo`, `resultOfReduceUntilQuiescentIsCompatibleToo`, `reduceLoop_ifCaseLtCt`, and\ `reduceContractUntilQuiescent_ifCaseLtCt`
+
 
 ### 2.3.5 Involved proof of `insert_valid` *(Severity: Low)*
 
@@ -453,6 +505,7 @@ TODO:
 > 
 > The proofs of the lemmas can be found in .
 
+
 ### 2.3.6 Repeated verbose expression *(Severity: Low)*
 
 > **File `MoneyPreservation.thy`, lemma `removeMoneyFromAccount_preservation`, line *202***
@@ -470,11 +523,13 @@ TODO:
 > 
 > is large and used in other lemmas as well. It would need to be moved to a separate function to save the effort of reading it repeteadly.
 
+
 ### 2.3.7 Inconsistent variable name `valTrans` *(Severity: Low)*
 
 > **File `MoneyPreservation.thy`, lemma `transferMoneyBetweenAccounts_preserves_aux`, line *257***
 > 
 > The lemma uses a variable `valTrans` where other proofs use the name `paidMoney`. To convey the meaning of the variable faster, the same name should be used consistently in all places.
+
 
 ### 2.3.8 Unused binding `interAccs` *(Severity: Low)*
 
@@ -482,11 +537,13 @@ TODO:
 > 
 > The binding `interAccs` was probably intended to be used on this line. It should either be used or removed from the premise.
 
+
 ### 2.3.9 Undescriptive variable name `acc` *(Severity: Low)*
 
 > **File `MoneyPreservation.thy`, lemma `transferMoneyBetweenAccounts_preserves`, line *295***
 > 
 > This lemma has a variable `acc` that is used together with `tok2`. It would be more descriptive to call it `accId2`.
+
 
 ### 2.3.10 Misleading indentation *(Severity: Low)*
 
@@ -494,17 +551,20 @@ TODO:
 > 
 > The indentation is misleading: the premises on these lines are indented as if they are a part of the previous functional premise.
 
+
 ### 2.3.11 Missing theorem regarding `playTrace` *(Severity: Low)*
 
 > **File `PositiveAccounts.thy`, `playTrace preserves valid and positive state`** 
 > 
 > There is no theorem that `playTrace` keeps the state valid and positive when given a state which is valid and positive. This trivially follows from `playTraceAux_preserves_validAndPositive_state` but no such theorem is present.
 
+
 ### 2.3.12 Unconcise goal in `reduceContractStepPayIsQuiescent` *(Severity: Low)*
 
 > **File `QuiescentResult.thy`, lemma `reduceContractStepPayIsQuiescent`, line *8***
 > 
 > This lemma does not express its goal concisely, as it makes no mention of `reduceContractStep` in the formulation. Changing the first assumption to $\texttt{reduceContractStep}\ \mathit{env}\ \mathit{sta}\ (\texttt{Pay}\ \mathit{x21}\ \mathit{x22}\ \mathit{tok}\ \mathit{x23}\ \mathit{x24})$ makes more explicit in which contexts this lemma can be useful. Modifying this assumption requires an additional `apply simp` to be added to the proof (before line 30) for the lemma to go through. Further, an additional `apply simp` will need to be added in lemmas `reduceContractStepIsQuiescent` (before line 44) and `timedOutReduce_only_quiescent_in_close` (`Timeout.thy`, before line 128) as well.
+
 
 ### 2.3.13 Misleading lemma names *(Severity: Low)*
 
@@ -520,11 +580,13 @@ TODO:
 > 
 > This lemma should be renamed as `applyAllInputs_decreases_maxTransactions` or `applyAllInputs_reduced_decreases_maxTransactions`.
 
+
 ### 2.3.14 Misleading variable name `reduced` *(Severity: Low)*
 
 > **File `QuiescentResult.thy`, lemmas `reductionLoop_reduce_monotonic, reduceContractUntilQuiescent_ifDifferentReduced`, lines *138, 153***
 > 
 > The boolean variable name `reduce` would be better named `reduced` as it is signifying that the contract has been reduced.
+
 
 ### 2.3.15 Undescriptive name `beforeApplyAllLoopIsUseless` *(Severity: Low)*
 
@@ -533,6 +595,7 @@ TODO:
 > This lemma seems to say that `reduceContractUntilQuiescent` has no effect when composed with `applyAllLoop`, because `applyAllLoop` evaluates `reduceContractUntilQuiescent`, and `reduceContractUntilQuiescent` is idempotent.
 > 
 > A more descriptive name for this lemma could be `reduceContractUntilQuiescent_hasNoEffect_before_applyAllLoop`
+
 
 ### 2.3.16 Unused and undocumented lemmas *(Severity: Low)*
 
@@ -549,11 +612,13 @@ TODO:
 >     2.  Line 13, lemma `valid_state_valid_valueBounds`
 > 5.  In file `SingleInputTransactions.thy`, line 1214, lemma `traceListToSingleInput_isSingleInput`. It is mentioned in a commented out line in `StaticAnalysis.thy`. Furthermore, the lemma can be expressed more concisely as $$\llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = \mathit{inp\_h}\ \#\ \mathit{inp\_t} \rrparenthesis\ \#\ t = \mathit{traceListToSingleInput}\ \mathit{t2} % \mathrel{% \mbox{\fontfamily{cmr}\fontencoding{OT1}\selectfont=}}% \joinrel\Rightarrow\mathit{inp\_t} = []$$
 
+
 ### 2.3.17 Redundant `reduceContractStep` lemmas *(Severity: Low)*
 
 > **File `MoneyPreservation.thy`, lemma `reduceContractStep_preserves_money_acc_to_acc_aux`, line *310***
 > 
 > This lemma is weaker than `transferMoneyBetweenAccounts_preserves`. If we replace its usage at line 351 with `transferMoneyBetweenAccounts_preserves`, the proof goes through.
+
 
 ### 2.3.18 Redundant `transferMoneyBetweenAccounts_preserves` *(Severity: Low)*
 
@@ -574,6 +639,7 @@ TODO:
 >   using transferMoneyBetweenAccounts_preserves validAndPositive_state.simps by auto
 > ```
 
+
 ### 2.3.19 Duplicated lemmas *(Severity: Low)*
 
 > **File `PositiveAccounts.thy`, theorems `computeTransaction_gtZero, accountsArePositive`, lines *257, 369***
@@ -584,11 +650,13 @@ TODO:
 > 
 > This lemma is defined twice, once in each of these files. One of them should be removed.
 
+
 ### 2.3.20 Redundant `computeTransaction` lemmas *(Severity: Low)*
 
 > **File `ValidState.thy`, lemmas `computeTransaction_preserves_valid_state_aux, computeTransaction_preserve_valid_state`, lines *160, 176***
 > 
 > If `computeTransaction_preserves_valid_state_aux` is rewritten to have the same formulation as `computeTransaction_preserves_valid_state`, then the lemma (with the exact same proof) is still accepted, and these lemmas become duplicates of each other. Thus, no auxiliary lemma is needed.
+
 
 ### 2.3.21 Complicated formulation of `updateMoneyInAccount_money2_aux` *(Severity: Low)*
 
@@ -613,6 +681,7 @@ TODO:
 > ``` {.text escapeinside="||" mathescape="true"}
 >   cases "moneyInAccount accId tok ((thisAccIdTok, money) # tail) |$\leq$| 0"
 > ```
+
 
 ### 2.3.22 Complicated proofs that can be simplified *(Severity: Low)*
 
@@ -664,11 +733,13 @@ TODO:
 > 
 > This pattern appears many times in this file. For example, in the `Party` instantation alone, it is present on lines 51 -- 53, 56 -- 57, 77 -- 80, and 83 -- 84.
 
+
 ### 2.3.23 Inconsistent style when applying constructor *(Severity: Low)*
 
 > **File `SingleInputTransactions.thy`, lemmas `beforeApplyAllLoopIsUseless, fixIntervalOnlySummary`, lines *275, 398***
 > 
 > The lines mentioned in these lemmas display the resulting constructor before the function application, which differs from the general style in the rest of the codebase.
+
 
 ### 2.3.24 Unsimplified boolean formulas *(Severity: Low)*
 
@@ -676,11 +747,13 @@ TODO:
 > 
 > In multiple places, this lemma formulation includes top-level negation in front of nontrivial conjunctions and disjunctions. These negations should be distributed. Otherwise, the reader is taxed with the chore to mentally distribute the negation to understand the lemma.
 
+
 ### 2.3.25 Typo with "independet" in multiple lemmas *(Severity: Low)*
 
 > **File `SingleInputTransactions.thy`, lemmas `applyAllLoop_independet_of_acc_error1, applyAllLoop_independet_of_acc_error2`, lines *977, 987***
 > 
 > In both of these lemmas, there is a typo with the word "independet".
+
 
 ### 2.3.26 Poorly named `acc` lemmas *(Severity: Low)*
 
@@ -688,11 +761,13 @@ TODO:
 > 
 > It is unclear what `acc` refers to in these lemma names, as the lemmas are about the independence of warnings and payments, not accounts.
 
+
 ### 2.3.27 Verbose lemma statement `playTraceAuxIterative_base_case` *(Severity: Low)*
 
 > **File `SingleInputTransactions.thy`, lemma `playTraceAuxIterative_base_case`, line *1063***
 > 
 > The statement of this lemma is very verbose. A more natural (and slightly stronger) formulation could be $$\begin{aligned} &\mathit{playTraceAux}\ \mathit{txOut}\ [\ \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = [h] \rrparenthesis, \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = t \rrparenthesis \ ] \\ =\ &\mathit{playTraceAux}\ \mathit{txOut}\ [\ \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = h\ \#\ t \rrparenthesis \ ]\end{aligned}$$
+
 
 ### 2.3.28 `playTrace_only_accepts_maxTransactionsInitialState` not written as `theorem` *(Severity: Low)*
 
@@ -700,11 +775,13 @@ TODO:
 > 
 > This lemma seems like the main result of this file. Assuming it is an important result, we recommend writing it as a `theorem` rather than a `lemma`.
 
+
 ### 2.3.29 Inconsistent style with assumptions *(Severity: Low)*
 
 > **File `Timeout.thy`, lemmas `timedOutReduceContractUntilQuiescent_closes_contract, timedOutReduceContractStep_empties_accounts`, lines *201/204, 211/214***
 > 
 > These lemmas use the hypothesis $\mathit{minTime}\ \mathit{sta} \leq \mathit{iniTime}$ and build a state $\mathit{sta}\ \llparenthesis \mathit{minTime} := \mathit{iniTime} \rrparenthesis)$ while other lemmas simply say $\mathit{minTime}\ \mathit{sta} = \mathit{iniTime}$. Readability would be improved by presenting these lemmas in the same style as the others, or documenting the need for these distinct presentations via code comments.
+
 
 ### 2.3.30 Function `validTimeInterval` unnecessarily unfolded in lemma *(Severity: Low)*
 
@@ -712,17 +789,20 @@ TODO:
 > 
 > For consistency, $a \leq b$ should be replaced by $\texttt{validTimeInterval}$.
 
+
 ### 2.3.31 Overly specific auxiliary lemma *(Severity: Low)*
 
 > **File `ValidState.thy`, lemma `reductionLoop_preserves_valid_state_aux`, line *73***
 > 
 > This lemma on its own is very specific, and is only used in `reductionLoop_preserves_valid_state`. If possible, we recommend this lemma to be generalized or broken down into smaller lemmas, in order to present the arguments to the reader in smaller pieces.
 
+
 ### 2.3.32 `playTrace_preserves_valid_state` not written as `theorem` *(Severity: Low)*
 
 > **File `ValidState.thy`, lemma `playTrace_preserves_valid_state`, line *194***
 > 
 > This lemma seems like the main result of this file. Assuming it is an important result, we recommend writing it as a `theorem` instead.
+
 
 ### 2.3.33 Unnecessary assumptions *(Severity: Low)*
 
@@ -769,7 +849,9 @@ TODO:
 > 
 > The assumption $$\begin{aligned} \mathit{newState} = \llparenthesis &\mathit{accounts} = \mathit{newAccounts}, \mathit{choices} = \mathit{newChoices}, \\ &\mathit{boundValues} = \mathit{newBoundValues}, \mathit{minTime} = \mathit{newMinTime} \rrparenthesis\end{aligned}$$ is unnecessary.
 
+
 ## 2.4 Isabelle implementation
+
 
 ### 2.4.1 Variable shadowing in `applyAllLoop` *(Severity: Medium)*
 
@@ -777,11 +859,13 @@ TODO:
 > 
 > The $\texttt{cont}$ variable introduced by the pattern match shadows another $\texttt{cont}$ variable, coming from the pattern match of an outer case expression, making the function harder to follow while also making it more error-prone to future changes.
 
+
 ### 2.4.2 Undescriptive name `moneyInPayment` *(Severity: Low)*
 
 > **File `MoneyPreservation.thy`, function `moneyInPayment`, line *5***
 > 
 > The name of the function can be more precise. Perhaps `moneyInPaymentToParty` or `moneyInExternalPayment` would work.
+
 
 ### 2.4.3 Typo in section name *(Severity: Low)*
 
@@ -789,11 +873,13 @@ TODO:
 > 
 > Typo in section name: "Interval intesection".
 
+
 ### 2.4.4 Typo in comment *(Severity: Low)*
 
 > **File `OptBoundTimeInterval.thy`, line `42`** 
 > 
 > Typo in comment: "endpoits".
+
 
 ### 2.4.5 Unclear need for multiple formulations for positive accounts *(Severity: Low)*
 
@@ -801,11 +887,13 @@ TODO:
 > 
 > It is unclear what the use is for multiple formulations (and lemmas about) positive accounts. The first formulation (with the theorems `playTraceAux_gtZero` and `playTrace_gtZero`) is not used in any other modules but the alternative formulation is used instead. If both formulations are relevant, then it should be explained why.
 
+
 ### 2.4.6 Variable name discrepancy in `reductionLoop` *(Severity: Low)*
 
 > **File `Semantics.thy`, function `reductionLoop`** 
 > 
 > When comparing this function against `specification-v3-rc1.pdf`, different names are used for a let-bound variable. It is `a` in the pdf and `newPayments` in the file `Semantics.thy`. There are similar issues in the function `reduceContractStep` in the equation for the `If` case, and in the function `giveMoney`.
+
 
 ### 2.4.7 Typo in constructor *(Severity: Low)*
 
@@ -813,11 +901,13 @@ TODO:
 > 
 > Apparent typo in the error message constructor: the party mentioned should be $\texttt{party2}$.
 
+
 ### 2.4.8 Unclear function name `calculateNonAmbiguousInterval` *(Severity: Low)*
 
 > **File `Semantics.thy`, function `calculateNonAmbiguousInterval`, line *725***
 > 
 > The meaning of the function is not obvious. It needs a comment to explain it.
+
 
 ### 2.4.9 Non-modularized file `SingleInputTransactions.thy` *(Severity: Low)*
 
@@ -826,6 +916,7 @@ TODO:
 > This file is very long, and it covers more than just single-input transactions. For instance, about 530 lines at the beginning are rather dedicated to idempotence of certain operations. Then, the lemmas around lines 530 -- 700 focus on "well-foundedness" of the recursion on contract steps. Then there is also a clear block of lemmas about "distributivity" of semantics over transaction lists.
 > 
 > Splitting the module, grouping the related lemmas, would help understanding the relationships between the groups.
+
 
 ### 2.4.10 Misleading function names *(Severity: Low)*
 
@@ -843,11 +934,13 @@ TODO:
 > 
 > This function should be renamed or repurposed. If renamed, `allAreSingleInput` more accurately reflects the meaning of the function. If repurposed, it should check that a single transaction has a single input, and `all isSingleInput` can be used to express the current behavior.
 
+
 ### 2.4.11 Unused parameter in `maxTransactionCaseList` *(Severity: Low)*
 
 > **File `TransactionBound.thy`, function `maxTransactionCaseList`, line *16***
 > 
 > This function has a parameter of type `State` that is completely unused and can be removed.
+
 
 ### 2.4.12 Duplicated `isValidInterval` function *(Severity: Low)*
 
@@ -855,7 +948,9 @@ TODO:
 > 
 > This function duplicates $\texttt{validTimeInterval}$ from $\texttt{OptBoundTimeInterval.thy}$, and the latter has certain additional properties proven about it specifically, so it makes sense to use the latter in both cases.
 
+
 ## 2.5 marlowe-cardano specification
+
 
 ### 2.5.1 Lack of guidelines for creating cooperating contracts *(Severity: Medium)*
 
@@ -867,17 +962,20 @@ TODO:
 > 
 > Another alternative would be to demand other contracts' outputs to use datums that are different from the roles used by the Marlowe contract for payments.
 
+
 ### 2.5.2 No reference to creating a minting policy *(Severity: Low)*
 
 > **File `marlowe-cardano-specification.md`, Section `Monetary Policy for Role Tokens`** 
 > 
 > The minting policy is not specified, but a reference needs to be offered to explain how to create one.
 
+
 ### 2.5.3 Argument for Contract in `txInfoData` not specified *(Severity: Low)*
 
 > **File `marlowe-cardano-specification.md`, Section `Types`** 
 > 
 > The argument by which the `Contract` in the `txInfoData` list corresponds to the given hash needs to be made explicit.
+
 
 ### 2.5.4 Merkleization section not detailed enough *(Severity: Low)*
 
@@ -887,11 +985,13 @@ TODO:
 > 
 > When explaining how it works, it needs to make explicit that only the `Case` type is modified, and that in the semantics, only the `Input` type is modified. It needs to explain why the `Input` type needs to carry a hash and a contract, and why the evaluation of the contract is changed as described.
 
+
 ### 2.5.5 Unnecessary constraint *(Severity: Low)*
 
 > **File `marlowe-cardano-specification.md`, `Constraint 12. Merkleized continuations`** 
 > 
 > This constraint is unnecessary to have in the Marlowe validator, since the construction of the arguments for evaluation of the Marlowe contract would fail. However, it would be useful to have it appear in the specification for users to be aware of it when crafting transactions. A note to motivate the presence of the constraint could be helpful.
+
 
 ### 2.5.6 Asymmetry between role and wallet payouts *(Severity: Low)*
 
@@ -899,11 +999,13 @@ TODO:
 > 
 > The marlowe validator allows multiple outputs to be paid to a wallet, but it demands that a single output exists when paying to a role instead. The motivation to use different approaches needs to be documented. This is implemented in `Scripts.hs` at line 371, in function `payoutConstraints`.
 
+
 ### 2.5.7 Incorrect description of `rolePayoutValidator` *(Severity: Low)*
 
 > **File `marlowe-cardano-specification.md`, Section `Plutus Validator for Marlowe Payouts`** 
 > 
 > The description of the Marlowe payout validator in the specification states that it is parameterized by the currency symbol. However, this is not correct as the validator is unparameterized; rather, the datum type of the validator includes the currency symbol (as well as token name). The description should be modified to reflect this.
+
 
 ### 2.5.8 Unspecified initial state *(Severity: Low)*
 
@@ -911,13 +1013,16 @@ TODO:
 > 
 > The specification should say what the initial state of a Marlowe contract should be. In particular, creating a contract requires giving the minimum Ada to some account in the Marlowe state. Otherwise, Constraint 5 will reject the transactions that try to spend the output.
 
+
 ### 2.5.9 Unspecified behavior when multiple cases can apply *(Severity: Low)*
 
 > **File `Semantics.hs`, Function `applyCases`, line *597***
 > 
 > If multiple cases in a case list can apply, the first one is taken. This behavior should be better communicated in the specification.
 
+
 ## 2.6 Haskell implementation
+
 
 ### 2.6.1 Name shadowing in `applyAllInputs` *(Severity: Medium)*
 
@@ -925,11 +1030,13 @@ TODO:
 > 
 > The binding `cont` from the `Applied` constructor shadows the `cont` variable coming from the pattern match in an enclosing case expression. This makes the code error-prone to subsequent changes and refactorings.
 
+
 ### 2.6.2 Non-isomorphic types in `playTraceAux` *(Severity: Medium)*
 
 > **File `Semantics.hs`, Function `playTraceAux`, line *710***
 > 
 > The function in the Isabelle code takes a `TransactionOutputRecord` while the Haskell version takes a `TransactionOutput`. This means `TransactionError` cannot be an input to `playTraceAux` in Isabelle, possibly invalidating proofs about its properties.
+
 
 ### 2.6.3 Variable names differ from Isabelle code *(Severity: Low)*
 
@@ -946,6 +1053,7 @@ TODO:
 > -   Line 439, function `refundOne` uses a variable `balance` where the Isabelle code uses `money`.
 > -   Line 463, function `addMoneyToAccount` uses variable `accounts` where the Isabelle code uses `accountsV`.
 
+
 ### 2.6.4 Naming of functions and variables *(Severity: Low)*
 
 > **File `Several files`, `several functions`** 
@@ -957,6 +1065,7 @@ TODO:
 > -   `Semantics.hs:439`: `refundOne` is named somewhat confusingly, and understanding the name requires the context of `reduceContractStep` where the function is called. Perhaps a better name would be `dropWhileNonPositiveAndUncons`.
 > -   `Semantics.hs:597`: the binding `tailCase` should rather be named `tailCases`.
 
+
 ### 2.6.5 Unused functions *(Severity: Low)*
 
 > **File `Several files`, `several functions`** 
@@ -966,6 +1075,7 @@ TODO:
 > -   `Semantics.hs:680`: `isClose` is not used in the rest of the codebase (besides checking its behavior via testing). It should either be removed, or comments justifying its existence should be included.
 > 
 > In addition to that, the functions `validateBalances` and `totalBalance` (defined at `Semantics.hs:755` and `:762`) are only used in `Scripts.hs` and never reused, so they should probably be moved to `Scripts.hs`.
+
 
 ### 2.6.6 Comments *(Severity: Low)*
 
@@ -977,11 +1087,13 @@ TODO:
 > 
 > There is a typo in the comment: `accoun` is written instead of `account`.
 
+
 ### 2.6.7 Record updates in `playTraceAux` *(Severity: Low)*
 
 > **File `Semantics.hs`, Function `playTraceAux`, line *710***
 > 
 > The function could have followed the Isabelle code more closely if it used a record update instead of creating a new `TransactionOutput` record from scratch.
+
 
 ### 2.6.8 Potential simplifications *(Severity: Low)*
 
@@ -992,6 +1104,7 @@ TODO:
 > **File `Types.hs`, Class instance `Eq Contract`, line *873***
 > 
 > The equality of cases for the `When` constructor would be simplified by using `cases1 == cases2`. If there is a reason for the more verbose equality condition, it should be outlined in a comment.
+
 
 ### 2.6.9 `computeTransaction` differs from the Isabelle implementation *(Severity: Low)*
 
@@ -1011,11 +1124,13 @@ TODO:
 > 
 > The Haskell function is implemented using `foldr`, while the Isabelle function uses explicit recursion, making a one-to-one comparison less obvious. If there is a reason for this discrepancy, such as `foldr` yielding some optimizations, this should be outlined in a comment.
 
+
 ### 2.6.10 Constraint implementations differ from description *(Severity: Low)*
 
 > **File `marlowe-cardano-specification.md`, Section `Plutus Validator for Marlowe Semantics`** 
 > 
 > Some constraints mentioned in the specification are written in a different structure than the corresponding constraint in `Scripts.hs`. While such a discrepancy may be useful to minimize verbosity, a unified structure when possible would alleviate a side-by-side comparison. Examples of these differing structures include Constraint 6 and Constraint 14.
+
 
 ### 2.6.11 Missing argument of `computeTransaction` *(Severity: Low)*
 
@@ -1023,11 +1138,13 @@ TODO:
 > 
 > The specification mentions the output datum as the (fifth) argument for the `computeTransaction` function, while it is not an argument to it.
 
+
 ### 2.6.12 Missing `smallMarloweValidator` *(Severity: Low)*
 
 > **File `marlowe-cardano-specification.md`, Various sections ``** 
 > 
 > The specification mentions `smallMarloweValidator` in a few places, but it is never mentioned in the source code.
+
 
 ### 2.6.13 Incorrect constraint reference *(Severity: Low)*
 
@@ -1035,11 +1152,13 @@ TODO:
 > 
 > This line should refer to Constraint 17 rather than Constraint 16.
 
+
 ### 2.6.14 `MarloweParams` differs from the specification *(Severity: Low)*
 
 > **File `Semantics.hs`, type `MarloweParams`, line *355***
 > 
 > The specification defines `MarloweParams` to contain just the payout validator hash, while the definition in the Haskell code contains just the roles currency symbol.
+
 
 ### 2.6.15 Timeout boundary differs from the specification *(Severity: Low)*
 
@@ -1051,7 +1170,9 @@ TODO:
 > 
 > where "bigger" implies strict inequality, while the code makes non-strict comparison. This difference needs to be acknowledged and further explained in the specification.
 
+
 ## 2.7 Haskell tests
+
 
 ### 2.7.1 More precise failure checks *(Severity: Medium)*
 
@@ -1060,6 +1181,7 @@ TODO:
 > The tests use the functions `checkSemanticsTransaction` and `checkPayoutTransaction` to verify that various error conditions cause transactions to be rejected. These functions test that a transaction passes or fails, but when it fails, the functions do not consider the error cause. Checking the exact cause is necessary to ensure the transaction is rejected because of the intended reason and not because of some other error condition arising in a particular test case by coincidence.
 > 
 > The absence of this information makes it easier to accidentally produce a test that is not testing what is intended.
+
 
 ### 2.7.2 Missing tests *(Severity: Medium)*
 

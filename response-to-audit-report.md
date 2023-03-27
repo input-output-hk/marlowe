@@ -6,12 +6,31 @@ TODO:
 - [ ] Add prefatory text.
 - [ ] Add responses and mitigation commits to Isabelle-related findings.
 - [ ] Add responses and mitigation commits to Haskell-related findings.
+    - [ ] Convert the commit messages to narrative, and just link to the commit.
 - [ ] Fix display of equations or replace ones that cannot be fixed with ellipses ("...").
 - [ ] Replace broken links and cross references, or use elipses ("...").
 - [ ] Verify the section numbering is correct.
 - [ ] Add table of contents.
 - [ ] Proofread.
 
+
+## Overview of Isabelle Changes
+
+
+## Overview of Marlowe-Cardano Specification and Haskell (Plutus) Implementation
+
+TODO: @bwbush will add text here.
+
+```console
+commit fca49124f9ebad285bb08d643a3c5fcf5e1df618
+Merge: 27a3e32bb 6a0517770
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 15 13:50:51 2023 -0600
+
+    Merge pull request #524 from input-output-hk/PLT-3064
+    
+    PLT-3064 Cumulative validator changes based on audit report
+```
 
 
 # 2 Findings
@@ -28,6 +47,52 @@ TODO:
 > 
 > This disagreement can be exploited to steal money from a flawed Marlowe contract that allows a negative deposit. The issue is demonstrated in ….
 
+TODO: @bwbush will add text here.
+
+```console
+commit 15446073131c4098fed781cdcc701b89b77f6bd0
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 16:56:31 2023 -0700
+
+    SCP-5123 Property-based tests for contracts with negative deposits.
+
+commit 4b81ee96b1e7c74c4964cf25f6bb599c80d07a52
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 16:56:31 2023 -0700
+
+    SCP-5123 Property-based tests for contracts with negative deposits.
+
+commit 9d5443c5e9306eaf49ac5389df455e07555c9e04
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 2 10:54:48 2023 -0700
+
+    SCP-5123 Improved negative-deposit test case.
+
+commit 20bf9f13fe33acf9612ec26fe640d27975b0dc59
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 17:10:11 2023 -0700
+
+    SCP-5123 Rephrased comment.
+
+commit bbb9b8fc21ad93b7bcdb3b60be0f2f9c921f6bec
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 16:56:31 2023 -0700
+
+    SCP-5123 Property-based tests for contracts with negative deposits.
+
+commit 597281c176bcb1f326329ba40b0d968d5e7eb84b
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 11:36:56 2023 -0700
+
+    SCP-5123 Updated validator script size and hash tests.
+
+commit 68791facc195068717cbc6e55d1e4fdbe1f4a521
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 11:20:27 2023 -0700
+
+    SCP-5123 Ensured that negative deposits do not corrupt accounting equation.
+```
+
 
 ### 2.1.2 Contracts vulnerable to double satisfaction attacks *(Severity: High)*
 
@@ -37,6 +102,58 @@ TODO:
 > 
 > One way to strengthen the implementation is for the Marlowe validator to demand that outputs paid to addresses contain a datum that identifies the contract instance, like the `TxOutRef` of the validator UTxO being spent. Then cooperation with other contracts is possible without double satisfaction if the validators of the other contracts demand a different datum for their outputs.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 0bf75ac775e53507db4e313f705a7a667f98aac1
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Sat Mar 4 09:46:24 2023 -0700
+
+    SCP-5125 Added property-based tests for multiple validators.
+
+commit 9f4fc9cde581b6dbbb939ec9d8e6303b8b67350e
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Fri Mar 3 08:54:31 2023 -0700
+
+    SCP-5141 Property-based tests for duplicate detection in validator.
+
+commit 435ac680eb8119db1c43ec968cf8ea4ef08158b6
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Sat Mar 4 09:46:24 2023 -0700
+
+    SCP-5125 Added property-based tests for multiple validators.
+
+commit 39fcc8aa9d61ed97dfa56e7ce078bf5e4c4cd6cc
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Fri Mar 3 08:54:31 2023 -0700
+
+    SCP-5141 Property-based tests for duplicate detection in validator.
+
+commit 6f6331b463e7f2fddce7ec0f64b37b030f2f795b
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Fri Mar 3 08:54:31 2023 -0700
+
+    SCP-5141 Property-based tests for duplicate detection in validator.
+
+commit 3f222bc363fcf3e9cd2fa0cb5206933ef597a619
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Sat Mar 4 09:46:24 2023 -0700
+
+    SCP-5125 Added property-based tests for multiple validators.
+
+commit 5f673c477ccc9b38626dca505a399962b22c2675
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Sat Mar 4 09:45:32 2023 -0700
+
+    SCP-5125 Included implicit close payments in satisfaction restriction.
+
+commit 4adf115dbf795e4b014eb6ccab0acb20a73e74ed
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Fri Mar 3 13:54:52 2023 -0700
+
+    SCP-5125 Prevented double-satisfaction.
+```
+
 
 ### 2.1.3 Missing constructor in equality instance *(Severity: High)*
 
@@ -44,6 +161,24 @@ TODO:
 > 
 > The constructor `ReduceAssertionFailed` is not mentioned and compares `False` against itself. This might cause validators to fail checking the presence of this particular warning.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 04805a393c0815fe0f2a1a6d7f76d9867ffe0c14
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 2 08:27:25 2023 -0700
+
+    SCP-5129 Hardened `Eq` instances in validator files.
+    
+    See https://github.com/input-output-hk/marlowe-cardano/pull/513#discussion_r1123062500
+    for motivation.
+
+commit 84d65a70c29320fab501ad759bbc71855d1b63fc
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 17:21:39 2023 -0700
+
+    SCP-5129 Fixed `(==)` for `ReduceAssertionFailed`.
+```
 
 ### 2.1.4 Inaccurate formulation of Money preservation *(Severity: High)*
 
@@ -82,6 +217,22 @@ TODO:
 > 
 > If such a transaction is accepted, no further evaluation will be possible since all subsequent transactions will be rejected due to the very same Constraint 13. This is an hypothetical attack vector, where a malicious actor could send a transaction to block a contract.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 8855feae473882b82643db792327423152e45b5c
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 2 15:27:42 2023 -0700
+
+    SCP-5141 SCP-5142 Enforced initial and final state validity in validator.
+
+commit ebab31d9ba6dd322d374b34cad3995050a0e476e
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 2 11:52:04 2023 -0700
+
+    SCP-5124 Added property-based test for new final-balance constraint.
+```
+
 
 ### 2.1.8 Non-validated Marlowe states *(Severity: High)*
 
@@ -95,6 +246,22 @@ TODO:
 > 
 > For a valid Marlowe state, the association lists for bound values, accounts, and choices have keys sorted and without duplicates.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 8855feae473882b82643db792327423152e45b5c
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 2 15:27:42 2023 -0700
+
+    SCP-5141 SCP-5142 Enforced initial and final state validity in validator.
+
+commit ebab31d9ba6dd322d374b34cad3995050a0e476e
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 2 11:52:04 2023 -0700
+
+    SCP-5124 Added property-based test for new final-balance constraint.
+```
+
 
 ### 2.1.9 Total balance of ending state uncomputed *(Severity: High)*
 
@@ -102,10 +269,37 @@ TODO:
 > 
 > The constraint says
 > 
-> > The beginning balance plus the deposits equals the ending balance plus
-> > the payments.
+> > The beginning balance plus the deposits equals the ending balance plus the payments.
 > 
 > However, the Marlowe validator never computes the total balance of the accounts in the ending Marlowe state. Instead, the ending balance is assumed to be whatever value is paid by the transaction to the Marlowe validator. The natural language should describe precisely what is being checked.
+
+TODO: @bwbush will add text here.
+
+```console
+commit 8855feae473882b82643db792327423152e45b5c
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 2 15:27:42 2023 -0700
+
+    SCP-5141 SCP-5142 Enforced initial and final state validity in validator.
+
+commit ebab31d9ba6dd322d374b34cad3995050a0e476e
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 2 11:52:04 2023 -0700
+
+    SCP-5124 Added property-based test for new final-balance constraint.
+
+commit d514bcd075732b07e1c6a73e2e3c68afa01acf2c
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 2 11:52:04 2023 -0700
+
+    SCP-5124 Added property-based test for new final-balance constraint.
+
+commit 7f562545d013dd17472b692b550ffdc7f8a383f3
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 2 11:52:04 2023 -0700
+
+    SCP-5124 Added property-based test for new final-balance constraint.
+```
 
 
 ### 2.1.10 Unchecked ending balance *(Severity: High)*
@@ -115,6 +309,28 @@ TODO:
 > The balance of the starting Marlowe state is checked to match the value in the input. However, the validator does not check that the ending balance matches the value in the output paid to the Marlowe validator. Similarly to Issue [\[main:positive-balances-unchecked\]](#main:positive-balances-unchecked){reference-type="ref" reference="main:positive-balances-unchecked"}, if there are flaws in the semantics that cause the ending balance to differ from the actual value paid to the validator, this constraint would prevent any transaction from spending the output.
 > 
 > The specification should at least discuss why the check is absent together with the other similar checks that are not implemented (checking that ending accounts have positive balances, checking that the ending Marlowe state is valid).
+
+```console
+commit 0a890845c44ccfe4df97e765e9b9eb743ce7d580
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 2 09:32:09 2023 -0700
+
+    SCP-5124 Ensured script output is consistent with output state.
+
+commit 201c5df9de29b3b142be5ff7d0a9b56d1b378204
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 13:35:40 2023 -0700
+
+    PLT-4169 Optimized checking of script output in validator.
+
+commit 26f024e80cea0dd4ebf8bff0f1a10b97aea87894
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Thu Mar 9 12:43:12 2023 -0700
+
+    PLT-3064 Made suggested changes to `examineScripts` in validator.
+    
+    See https://github.com/input-output-hk/marlowe-cardano/pull/524#discussion_r1127270744.
+```
 
 
 ### 2.1.11 Partial functions used outside their domain *(Severity: Medium)*
@@ -170,12 +386,54 @@ TODO:
 > -   Line 482, function `reduceContractStep` relies on `AssocMap.insert`.
 > -   Line 567, function `applyAction` relies on `AssocMap.insert`.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 9e068b6a60103f2a40604a7eaea57c5f29b59180
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 11:00:45 2023 -0700
+
+    SCP-5126 Aligned `Gen MList` with semantics.
+
+commit b65ccfec3708484ff52514671e0e227c13f084f3
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 10:52:17 2023 -0700
+
+    SCP-5126 Hardened equivalence testing for `MList` vs `AssocMap`.
+
+commit a95a616aca59bc7159d3ffa92487f8f021820bff
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 10:28:54 2023 -0700
+
+    SCP-5126 Elaborated comments on `MList` property tests.
+
+commit e2277677987f359dcd8754275eccd5b7c9a880a7
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 10:23:16 2023 -0700
+
+    SCP-5126 Added note on invariants in unpack and repacking `AssocMap`.
+
+commit af380a292c0369bcc77d8584d81ea80a31326b61
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Feb 28 13:49:44 2023 -0700
+
+    SCP-5126 Property-based tests for `MList` vs `AssocMap`.
+
+commit a2ff6aa334efb7b7955408d29cf0e2edf06bca08
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Feb 28 12:05:32 2023 -0700
+
+    SCP-5126 Annotated Marlowe validator regarding association lists.
+```
+
 
 ### 2.1.13 Missing specification tests *(Severity: Medium)*
 
 > **File `Spec/Marlowe/Semantics/Compute.hs`, ``** 
 > 
 > There are no tests for the properties in Section 3 of `specification-v3-rc1.pdf`. Besides checking that there are no translation mistakes, these properties would also help contrasting the assumptions in the Isabelle and the Haskell sides, like the meaning of validity of an association list, which is focused in the previous issue.
+
+TODO: @bwbush will add text here.
 
 
 ## 2.2 Marlowe specification
@@ -962,6 +1220,32 @@ TODO:
 > 
 > Another alternative would be to demand other contracts' outputs to use datums that are different from the roles used by the Marlowe contract for payments.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 00010ea48439892ff9eec54fb93929f56bcb6c7b
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 11:20:14 2023 -0700
+
+    PLT-4169 Added text on running Plutus with Marlowe to specification doc.
+    
+    This addresses the following audit comment:
+    
+    > File marlowe-cardano-specification.md, Section Life Cycle of a
+    > Marlowe Contract Given that transactions are expected to work
+    > with Marlowe and non-Marlowe contracts simultaneously, it would
+    > be helpful to offer some guidelines for other contracts to avoid
+    > double satisfaction. Some degree of cooperation between the
+    > contracts that can appear in the same transaction is unavoidable.
+    >
+    > One measure could be to ask every cooperating contract to refrain
+    > from paying to the payout validator. In this way, double satisfaction
+    > can not affect the payments of the Marlowe contract. Another
+    > alternative would be to demand other contracts’ outputs to use datums
+    > that are different from the roles used by the Marlowe contract for
+    > payments.
+```
+
 
 ### 2.5.2 No reference to creating a minting policy *(Severity: Low)*
 
@@ -969,12 +1253,44 @@ TODO:
 > 
 > The minting policy is not specified, but a reference needs to be offered to explain how to create one.
 
+TODO: @bwbush will add text here.
+
+```console
+commit fe00af7d622bbd17c3327363d4650ee544d1fff7
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 11:25:09 2023 -0700
+
+    PLT-4169 Added text to specification on how to mint role tokens.
+    
+    This addresses the audit comment:
+    
+    > File marlowe-cardano-specification.md, Section Monetary Policy
+    > for Role Tokens The minting policy is not specified, but a
+    > reference needs to be offered to explain how to create one.
+```
+
 
 ### 2.5.3 Argument for Contract in `txInfoData` not specified *(Severity: Low)*
 
 > **File `marlowe-cardano-specification.md`, Section `Types`** 
 > 
 > The argument by which the `Contract` in the `txInfoData` list corresponds to the given hash needs to be made explicit.
+
+TODO: @bwbush will add text here.
+
+```console
+commit b6366efc9f8df38bfe9232f81e6caf2c7f11ffa8
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 11:31:11 2023 -0700
+
+    PLT-4169 Made explicit the relationship between continuation and its hash.
+    
+    This addresses the audit comment:
+    
+    > File marlowe-cardano-specification.md, Section Types The argument
+    > by which the Contract in the txInfoData list corresponds to the
+    > given hash needs to be made explicit.
+```
 
 
 ### 2.5.4 Merkleization section not detailed enough *(Severity: Low)*
@@ -985,12 +1301,52 @@ TODO:
 > 
 > When explaining how it works, it needs to make explicit that only the `Case` type is modified, and that in the semantics, only the `Input` type is modified. It needs to explain why the `Input` type needs to carry a hash and a contract, and why the evaluation of the contract is changed as described.
 
+TODO: @bwbush will add text here.
+
+```console
+commit a9d4043230cb4f240fab2d816bed6a3cab4f5053
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 11:44:32 2023 -0700
+
+    PLT-4169 Elaborated explanation of and motivation for merkleization.
+    
+    This addresses the audit comment:
+    
+    > File marlowe-cardano-specification.md, Section Merkleization
+    > This section is too terse. It needs to explain what Merkleization
+    > is, and to motivate why it is needed. When explaining how it works,
+    > it needs to make explicit that only the Case type is modified, and
+    > that in the semantics, only the Input type is modified. It needs
+    > to explain why the Input type needs to carry a hash and a contract,
+    > and why the evaluation of the contract is changed as described.
+```
+
 
 ### 2.5.5 Unnecessary constraint *(Severity: Low)*
 
 > **File `marlowe-cardano-specification.md`, `Constraint 12. Merkleized continuations`** 
 > 
 > This constraint is unnecessary to have in the Marlowe validator, since the construction of the arguments for evaluation of the Marlowe contract would fail. However, it would be useful to have it appear in the specification for users to be aware of it when crafting transactions. A note to motivate the presence of the constraint could be helpful.
+
+TODO: @bwbush will add text here.
+
+```console
+commit fda1d3e862fc8f8c31ff479fbd338226e661eb0b
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 11:50:20 2023 -0700
+
+    PLT-4169 Clarified nature of Constraint 12 in specification.
+    
+    This addresses the auditor comment:
+    
+    > File marlowe-cardano-specification.md, Constraint 12. Merkleized
+    > continuations This constraint is unnecessary to have in the
+    > Marlowe validator, since the construction of the arguments for
+    > evaluation of the Marlowe contract would fail. However, it would
+    > be useful to have it appear in the specification, for users to
+    > be made aware of it when crafting transactions. A note to motivate
+    > the presence of the constraint could be helpful.
+```
 
 
 ### 2.5.6 Asymmetry between role and wallet payouts *(Severity: Low)*
@@ -999,12 +1355,38 @@ TODO:
 > 
 > The marlowe validator allows multiple outputs to be paid to a wallet, but it demands that a single output exists when paying to a role instead. The motivation to use different approaches needs to be documented. This is implemented in `Scripts.hs` at line 371, in function `payoutConstraints`.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 4e81470de90ddd6858c3ad8aace96e90df5a86ae
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Wed Mar 1 17:40:38 2023 -0700
+
+    SCP-5128 Commented on rationale for allowing multiple outputs to an address.
+```
 
 ### 2.5.7 Incorrect description of `rolePayoutValidator` *(Severity: Low)*
 
 > **File `marlowe-cardano-specification.md`, Section `Plutus Validator for Marlowe Payouts`** 
 > 
 > The description of the Marlowe payout validator in the specification states that it is parameterized by the currency symbol. However, this is not correct as the validator is unparameterized; rather, the datum type of the validator includes the currency symbol (as well as token name). The description should be modified to reflect this.
+
+TODO: @bwbush will add text here.
+
+```console
+commit 1d16de1f1b7a167dc4eb4a057a3df2c24d0194c9
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 11:12:36 2023 -0700
+
+    PLT-4169 Fixed example call to `rolePayoutValidator`.
+    
+    This addresses the following audit finding:
+    
+    > File marlowe-cardano-specification.md, Section Plutus Validator
+    > for Marlowe Payouts The type signature of rolePayoutValidator
+    > is missing the datum argument. It should be: rolePayoutValidator
+    > :: CurrencySymbol -> TokenName -> () -> ScriptContext -> Bool
+```
 
 
 ### 2.5.8 Unspecified initial state *(Severity: Low)*
@@ -1013,6 +1395,25 @@ TODO:
 > 
 > The specification should say what the initial state of a Marlowe contract should be. In particular, creating a contract requires giving the minimum Ada to some account in the Marlowe state. Otherwise, Constraint 5 will reject the transactions that try to spend the output.
 
+TODO: @bwbush will add text here.
+
+```console
+commit e150e30867dfa5466639f46bf39656aee2888e38
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 12:34:38 2023 -0700
+
+    PLT-4169 Elaborated in specification on the required initial state.
+    
+    This addresses the audit comment:
+    
+    > File marlowe-cardano-specification.md, Section Life Cycle of a
+    > Marlowe Contract The specification should say what the initial
+    > state of a Marlowe contract should be. In particular, creating
+    > a contract requires giving the minimum Ada to some account in
+    > the Marlowe state. Otherwise, Constraint 5 will reject the
+    > transactions that try to spend the output.
+```
+
 
 ### 2.5.9 Unspecified behavior when multiple cases can apply *(Severity: Low)*
 
@@ -1020,6 +1421,21 @@ TODO:
 > 
 > If multiple cases in a case list can apply, the first one is taken. This behavior should be better communicated in the specification.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 08d6f34ac91da7aa34e7414c5bae0e33e9235d74
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 12:06:10 2023 -0700
+
+    PLT-4169 Improved documentation of `applyCases`.
+    
+    This addresses the audit comment:
+    
+    > File Semantics.hs, Function applyCases, line 597 If multiple
+    > cases in a case list can apply, the first one is taken. This
+    > behavior should be better communicated in the specification.
+```
 
 ## 2.6 Haskell implementation
 
@@ -1030,12 +1446,21 @@ TODO:
 > 
 > The binding `cont` from the `Applied` constructor shadows the `cont` variable coming from the pattern match in an enclosing case expression. This makes the code error-prone to subsequent changes and refactorings.
 
+TODO: @bwbush will add text here.
+
+```console
+```
 
 ### 2.6.2 Non-isomorphic types in `playTraceAux` *(Severity: Medium)*
 
 > **File `Semantics.hs`, Function `playTraceAux`, line *710***
 > 
 > The function in the Isabelle code takes a `TransactionOutputRecord` while the Haskell version takes a `TransactionOutput`. This means `TransactionError` cannot be an input to `playTraceAux` in Isabelle, possibly invalidating proofs about its properties.
+
+TODO: @bwbush will add text here.
+
+```console
+```
 
 
 ### 2.6.3 Variable names differ from Isabelle code *(Severity: Low)*
@@ -1053,6 +1478,16 @@ TODO:
 > -   Line 439, function `refundOne` uses a variable `balance` where the Isabelle code uses `money`.
 > -   Line 463, function `addMoneyToAccount` uses variable `accounts` where the Isabelle code uses `accountsV`.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 1c96edfe7e22ecc499ed75dd175490a4f2427bdc
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 13:24:06 2023 -0700
+
+    PLT-4169 Renamed functions, per audit recommendations.
+```
+
 
 ### 2.6.4 Naming of functions and variables *(Severity: Low)*
 
@@ -1066,6 +1501,16 @@ TODO:
 > -   `Semantics.hs:597`: the binding `tailCase` should rather be named `tailCases`.
 
 
+TODO: @bwbush will add text here.
+
+```console
+commit 1c96edfe7e22ecc499ed75dd175490a4f2427bdc
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 13:24:06 2023 -0700
+
+    PLT-4169 Renamed functions, per audit recommendations.
+```
+
 ### 2.6.5 Unused functions *(Severity: Low)*
 
 > **File `Several files`, `several functions`** 
@@ -1075,6 +1520,11 @@ TODO:
 > -   `Semantics.hs:680`: `isClose` is not used in the rest of the codebase (besides checking its behavior via testing). It should either be removed, or comments justifying its existence should be included.
 > 
 > In addition to that, the functions `validateBalances` and `totalBalance` (defined at `Semantics.hs:755` and `:762`) are only used in `Scripts.hs` and never reused, so they should probably be moved to `Scripts.hs`.
+
+TODO: @bwbush will add text here.
+
+```console
+```
 
 
 ### 2.6.6 Comments *(Severity: Low)*
@@ -1087,12 +1537,22 @@ TODO:
 > 
 > There is a typo in the comment: `accoun` is written instead of `account`.
 
+TODO: @bwbush will add text here.
+
+```console
+```
+
 
 ### 2.6.7 Record updates in `playTraceAux` *(Severity: Low)*
 
 > **File `Semantics.hs`, Function `playTraceAux`, line *710***
 > 
 > The function could have followed the Isabelle code more closely if it used a record update instead of creating a new `TransactionOutput` record from scratch.
+
+TODO: @bwbush will add text here.
+
+```console
+```
 
 
 ### 2.6.8 Potential simplifications *(Severity: Low)*
@@ -1105,31 +1565,79 @@ TODO:
 > 
 > The equality of cases for the `When` constructor would be simplified by using `cases1 == cases2`. If there is a reason for the more verbose equality condition, it should be outlined in a comment.
 
+TODO: @bwbush will add text here.
+
+```console
+```
+
 
 ### 2.6.9 `computeTransaction` differs from the Isabelle implementation *(Severity: Low)*
 
 > **Helper function `evalValue, evalObservation`, lines *391 (Semantics.hs), 34 (Semantics.thy)***
 > 
 > `evalValue` and `evalObservation` differ from the Isabelle implementation in the introduction of auxiliary variables to abbreviate the recursive calls. The comparison would be simpler if both definitions were consolidated.
-> 
+ 
 > **Helper function `evalValue`, lines *395 (Semantics.hs), 35 (Semantics.thy)***
 > 
 > The Isabelle implementation should use the helper function `moneyInAccount` instead of inlining its definition, so as to maintain consistency with the Haskell implementation.
-> 
+ 
 > **Helper function `applyCases`, lines *596 (Semantics.hs), 498 (Semantics.thy)***
 > 
 > The structure of function `applyCases` differs between the Haskell and Isabelle files. Specifically, the Haskell implementation has an additional function `applyAction` where the Isabelle implementation does not. A comment motivating the discrepancy would be needed. This is likely due to the lack of Merkleization in the Isabelle implementation.
-> 
+
+TODO: @bwbush will add text here.
+
+```console
+commit d0a3834ae8484bb6c7d0ecd3aeec60871b3fd165
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 13:00:28 2023 -0700
+
+    PLT-4169 Added comment about merkleization to `applyCases`.
+    
+    This addresses the audit comment:
+    
+    > Helper function applyCases, lines 596 (Semantics.hs), 498
+    > (Semantics.thy) The structure of function applyCases differs
+    > between the Haskell and Isabelle files. Specifically, the
+    > Haskell implementation has an additional function applyAction
+    > where the Isabelle implementation does not. A comment
+    > motivating the discrepancy would be needed. This is likely
+    > due to the lack of Merkleization in the Isabelle implementation.
+```
+ 
 > **Helper function `convertReduceWarnings`, lines *617 (Semantics.hs), 537 (Semantics.thy)***
 > 
 > The Haskell function is implemented using `foldr`, while the Isabelle function uses explicit recursion, making a one-to-one comparison less obvious. If there is a reason for this discrepancy, such as `foldr` yielding some optimizations, this should be outlined in a comment.
 
+TODO: @bwbush will add text here.
+
+```console
+commit d14776101c22eac7fbc67893020f37cbc2a9e339
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 13:02:40 2023 -0700
+
+    PLT-4169 Added note on use of `foldr` in semantics.
+    
+    This addresses the audit comment:
+    
+    > Helper function convertReduceWarnings, lines 617 (Semantics.hs),
+    > 537 (Semantics.thy) The Haskell function is implemented using
+    > foldr, while the Isabelle function uses explicit recursion,
+    > making a oneto-one comparison less obvious. If there is a
+    > reason for this discrepancy, such as foldr yielding some
+    > optimizations, this should be outlined in a comment.
+```
 
 ### 2.6.10 Constraint implementations differ from description *(Severity: Low)*
 
 > **File `marlowe-cardano-specification.md`, Section `Plutus Validator for Marlowe Semantics`** 
 > 
 > Some constraints mentioned in the specification are written in a different structure than the corresponding constraint in `Scripts.hs`. While such a discrepancy may be useful to minimize verbosity, a unified structure when possible would alleviate a side-by-side comparison. Examples of these differing structures include Constraint 6 and Constraint 14.
+
+TODO: @bwbush will add text here.
+
+```console
+```
 
 
 ### 2.6.11 Missing argument of `computeTransaction` *(Severity: Low)*
@@ -1138,12 +1646,44 @@ TODO:
 > 
 > The specification mentions the output datum as the (fifth) argument for the `computeTransaction` function, while it is not an argument to it.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 00a0c2406665f06753aecf6dbb63933edb275436
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 12:39:22 2023 -0700
+
+    PLT-4169 Fixed correspondence between semantics and validator.
+    
+    This addresses the audit comment:
+    
+    > File marlowe-cardano-specification.md, Section Relationship
+    > between Marlowe Validator and Semantics The specification
+    > mentions the output datum as the (fifth) argument for the
+    > computeTransaction function, while it is not an argument to it.
+```
 
 ### 2.6.12 Missing `smallMarloweValidator` *(Severity: Low)*
 
 > **File `marlowe-cardano-specification.md`, Various sections ``** 
 > 
 > The specification mentions `smallMarloweValidator` in a few places, but it is never mentioned in the source code.
+
+TODO: @bwbush will add text here.
+
+```console
+commit 87cf548d9ae7934a702ea1a1c85d7d9bd4993aa9
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 12:37:21 2023 -0700
+
+    PLT-4169 Fixed references to `smallMarloweValidator`.
+    
+    This addresses the audit comment:
+    
+    > File marlowe-cardano-specification.md, Various sections
+    > The specification mentions smallMarloweValidator in a few
+    > places, but it is never mentioned in the source code.
+```
 
 
 ### 2.6.13 Incorrect constraint reference *(Severity: Low)*
@@ -1152,6 +1692,21 @@ TODO:
 > 
 > This line should refer to Constraint 17 rather than Constraint 16.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 3fac0d1749d107f13743756aa50c9723e776e391
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 12:42:01 2023 -0700
+
+    PLT-4169 Fixed incorrect constraint reference.
+    
+    This addresses the audit comment:
+    
+    > File Scripts.hs, Function mkRolePayoutValidator, line 150 This line should refer to Constraint 17
+    rather than Constraint 16.
+```
+
 
 ### 2.6.14 `MarloweParams` differs from the specification *(Severity: Low)*
 
@@ -1159,6 +1714,22 @@ TODO:
 > 
 > The specification defines `MarloweParams` to contain just the payout validator hash, while the definition in the Haskell code contains just the roles currency symbol.
 
+TODO: @bwbush will add text here.
+
+```console
+commit 8691f3351e55758cc750eee0800b1458f0a8c554
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 12:44:53 2023 -0700
+
+    PLT-4169 Fixed `MarloweParams` in specification.
+    
+    This addresses the audit comment:
+    
+    > File Semantics.hs, type MarloweParams, line 355 The specification
+    > defines MarloweParams to contain just the payout validator hash,
+    > while the definition in the Haskell code contains just the roles
+    > currency symbol.
+```
 
 ### 2.6.15 Timeout boundary differs from the specification *(Severity: Low)*
 
@@ -1170,6 +1741,10 @@ TODO:
 > 
 > where "bigger" implies strict inequality, while the code makes non-strict comparison. This difference needs to be acknowledged and further explained in the specification.
 
+TODO: @bwbush will add text here.
+
+```console
+```
 
 ## 2.7 Haskell tests
 
@@ -1182,6 +1757,10 @@ TODO:
 > 
 > The absence of this information makes it easier to accidentally produce a test that is not testing what is intended.
 
+TODO: @bwbush will add text here.
+
+```console
+```
 
 ### 2.7.2 Missing tests *(Severity: Medium)*
 
@@ -1195,12 +1774,95 @@ TODO:
 > -   the hash of a successfully applied merkleized input matches the hash of the merkleized case.
 > 
 > Some of these are tested in `Spec/Marlowe/Semantics/Functions.hs` already for auxiliary functions.
-> 
+
+TODO: @bwbush will add text here.
+
+```console
+commit ee2e52220e25736af29a1f01144d5fafbe9eed76
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 07:36:59 2023 -0700
+
+    PLT-4168 Tests that choice and deposit continue as expected.
+
+commit 333eee293aa3afe95d0aa7f678c7e7b7bad660ea
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 07:18:27 2023 -0700
+
+    PLT-4168 Test that choice produces expected continuation.
+
+commit 477284c78095482eba63adc2e6090ea68553db9d
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 06:54:14 2023 -0700
+
+    PLT-4168 Tested that deposits add to account.
+
+commit d241669bfb7ec8dad1cc92a7ca6185d08229817e
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Mon Mar 6 14:38:09 2023 -0700
+
+    PLT-4168 Tested that payout substracts from account.
+
+commit f33fc7206522031c93253323f3b8ca083d8ca8c7
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Tue Mar 7 09:56:30 2023 -0700
+
+    PLT-4168 Tested that Merkleization continues as expected.
+```
+ 
 > **File `Spec/Marlowe/Semantics/Functions.hs`, `Missing merkleization tests`** 
 > 
 > The properties in this module do not seem to be tested with merkleized contracts or inputs except for `checkGetContinuation`. More merkleization tests should be added.
-> 
+
+TODO: @bwbush will add text here.
+
+```console
+commit 2a936bf1bbb890cc811b966b46a10fd38314dc25
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Mon Mar 6 11:40:56 2023 -0700
+
+    PLT-4168 Increased coverage of merkleization in validator tests.
+    
+    This addresses the following audit finding:
+    
+    > File Spec/Marlowe/Semantics/Functions.hs, Missing
+    > merkleization tests The properties in this module
+    > do not seem to be tested with merkleized contracts
+    > or inputs except for checkGetContinuation, and
+    > they probably should.
+
+commit 8f8183d7f14c6bdc3841a1999077ef01ebac4144
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Mon Mar 6 11:40:56 2023 -0700
+
+    PLT-4168 Increased coverage of merkleization in validator tests.
+    
+    This addresses the following audit finding:
+    
+    > File Spec/Marlowe/Semantics/Functions.hs, Missing
+    > merkleization tests The properties in this module
+    > do not seem to be tested with merkleized contracts
+    > or inputs except for checkGetContinuation, and
+    > they probably should.
+```
+ 
 > **File `Spec/Marlowe/Semantics/Compute.hs`, function `checkFixInterval`, lines *100-102***
 > 
 > The test `checkFixInterval` is never instantiated with an invalid interval that is in the past, meaning the function `fixInterval` is never tested for that case.
+
+TODO: @bwbush will add text here.
+
+```console
+commit 811f048ba93db10972641c0c235864db1d6014e7
+Author: Brian W Bush <brian.bush@iohk.io>
+Date:   Mon Mar 6 10:16:08 2023 -0700
+
+    PLT-4168 Added test for invalid interval in past.
+    
+    This addresses the following audit finding:
+    
+    > File Spec/Marlowe/Semantics/Compute.hs, function checkFixInterval,
+    > lines 100-102 The test checkFixInterval is never instantiated
+    > with an invalid interval that is in the past, meaning the function
+    > fixInterval is never tested for that case.
+```
 

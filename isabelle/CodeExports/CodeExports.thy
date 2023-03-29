@@ -16,7 +16,7 @@ imports
   Examples.Swap
   "HOL-Library.Code_Target_Numeral"
   HOL.String
-
+  Core.TimeRange
 begin
 
 text \<open>We provide some Serialization options to use Haskell native \<^term>\<open>String\<close> instead of our logical

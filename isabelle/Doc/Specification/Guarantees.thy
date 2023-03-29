@@ -18,19 +18,6 @@ text \<open>We can also use the Isabelle proof assistant to prove that the Marlo
 desirable properties, such as that assets are preserved and anything unspent is returned to users by
 the end of the execution of any contract.\<close>
 
-subsubsection \<open>Auxillary Functions\label{sec:playTrace}\<close>
-
-text \<open>Many of the proofs in this chapter rely on function @{const playTrace} and
-@{const playTraceAux} that execute a sequence of transactions using the Marlowe semantics defined in
-@{const computeTransaction}. They also rely on starting from a valid and positive contract state,
-@{const validAndPositive_state} and a function @{const maxTimeContract} that extracts the latest
-timeout from the contract.\<close>
-
-text \<open>@{const playTrace} :: @{typeof playTrace}\<close>
-text \<open>@{const playTraceAux} :: @{typeof playTraceAux}\<close>
-text \<open>@{const validAndPositive_state} :: @{typeof validAndPositive_state}\<close>
-text \<open>@{const maxTimeContract} :: @{typeof maxTimeContract}\<close>
-
 section \<open>Assets Preservation\<close>
 
 text \<open>
@@ -98,9 +85,9 @@ text \<open>
 
 The following always produce quiescent contracts:
 \begin{itemize}
-\item reductionLoop \secref{sec:reductionloop}
+\item reduceContractStep \secref{sec:reduceContractStep}
 \item reduceContractUntilQuiescent \secref{sec:reduceContractUntilQuiescent}
-\item applyAllInputs  \secref{sec:applyAllInputs}
+\item applyAllInputs  \secref{sec:applyInputs}
 \item computeTransaction  \secref{sec:computeTransaction}
 \item playTrace  \secref{sec:playTrace}
 \end{itemize}

@@ -465,7 +465,7 @@ proof (cases "val = 0")
   ultimately show ?thesis
     (* TODO: this should be easier, we should unify
        positiveMoneyInAccountOrNoAccount and allAccountsPositive to avoid unecesary conversion *)
-    by (metis MList_delete_preserves_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount delete_valid positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive)
+    by (metis MList.delete_valid MList_delete_preserves_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive)    
 next
   note assms
   moreover assume "val \<noteq> 0"

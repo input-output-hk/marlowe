@@ -3,24 +3,21 @@
 theory SemanticsTypes
   imports
     BlockchainTypes
-    ListTools
     Util.ByteString
     "Util.SpecificationLatexSugar"
 begin
 (*>*)
 
-section \<open>Types\<close>
+section \<open>Types\label{sec:core-types}\<close>
 
-text \<open>This section introduces the data types of \<^emph>\<open>Marlowe Core\<close>, which are composed by the Marlowe DSL
-and also the types required to compute a \<^term>\<open>Transaction\<close>.\<close>
+text \<open>This section introduces the data types of \<^emph>\<open>Marlowe Core\<close>, which encompass both the Marlowe DSL
+and the types needed to call \<^term>\<open>computeTransaction\<close>\secref{sec:computeTransaction} .\<close>
 
-\<comment> \<open>TODO: See if we want to separate this theory in DSL and Execution types. As a benefit, the
-actual language DSL would be clearer, as a drawback, certain definitions like Input-Action would
-be split and kind of redundant.\<close>
-
-text \<open>Because of the literate programming nature of Isabelle \secref{sec:generation-nomenclature},
-the types are defined bottom-up. To follow just the DSL, a reader can start by looking at a \<^term>\<open>Contract\<close>
-definition \secref{sec:contracts}.\<close>
+text \<open>
+Marlowe uses a literate programming approach in which the types are defined from the bottom up,
+as explained in  \secref{sec:generation-nomenclature}.
+However, readers who prefer a top-down approach can also start with the Contract definition in \secref{sec:contracts}.
+\<close>
 
 subsection \<open>Participants, roles and addresses \label{sec:participants-roles-and-addresses}\<close>
 
@@ -83,7 +80,7 @@ accounts are local: they only exist (and are accessible) within the contract.
 \<close>
 
 
-\<comment> \<open>TODO: Should we chage int for nat, we shouldn't be able to have negative accounts.\<close>
+\<comment> \<open>TODO: Should we change int for nat, we shouldn't be able to have negative accounts.\<close>
 type_synonym Accounts = "((AccountId \<times> Token) \<times> int) list"
 
 text \<open>
@@ -93,8 +90,9 @@ During its execution, the contract can invite parties to deposit assets into an 
  the term "\<^term>\<open>Pay accountId payee token value continuation\<close>'', where \<^term>\<open>Payee\<close> is:
 \<close>
 
-datatype Payee = Account AccountId
-               | Party Party
+datatype Payee 
+  = Account AccountId
+  | Party Party
 
 
 text \<open>
@@ -126,14 +124,14 @@ subsection \<open>Values and Observations\label{sec:values-and-observations} \<c
 
 text \<open>
 
-We can store a \<^term>\<open>Value\<close> in the Marlowe State \secref{sec:state-and-env} using the \<^term>\<open>Let\<close>
+We can store a \<^term>\<open>Value\<close> in the Marlowe State \secref{sec:state} using the \<^term>\<open>Let\<close>
  construct \secref{sec:contracts}, and we use a \<^term>\<open>ValueId\<close> to referrence it\<close>
 
 datatype ValueId = ValueId ByteString
 
 text \<open>\<^term>\<open>Value\<close>s and \<^term>\<open>Observation\<close>s are language terms that interact with most of the other constructs.
 \<^term>\<open>Value\<close> evaluates to an integer and @{term Observation} evaluates to a boolean using \<^term>\<open>evalValue\<close>
-\secref{sec:evalvalue} and \<^term>\<open>evalObservation\<close> \secref{sec:evalobservation} respectively.
+ and \<^term>\<open>evalObservation\<close> \secref{sec:evalValueObservation} respectively.
 \<close>
 
 text \<open>They are defined in a mutually recursive way as follows:\<close>
@@ -195,14 +193,18 @@ and @{term "x = y"} are represented by @{term "ValueLT x y"}, @{term "ValueLE x 
 
 
 subsection \<open>Actions and inputs\label{sec:actions-and-inputs}\<close>
-text \<open>
-@{term "Action"}s and @{term "Input"}s are closely related. When we design the contract we
-can declare that an external @{term "Action"} is needed to advance to a particular path. 
-These actions can only be present in a @{term "Case"} of the @{term "When"} contract \secref{sec:contracts}
-\<close>
 
 text \<open>
-The different types of external actions are:
+We use @{term "Action"}s while designing a contract, which have a counterpart called
+ @{term "Input"}s during execution. An @{term "Action"} can only appear in a
+ @{term "Case"} statement together with a continuation. In turn, a  @{term "Case"}
+ can only appear inside a  @{term "When"} statement, and is the only way to declare
+that an external  @{term "Input"} is expected. When an  @{term "Input"} is applied to
+the contract, it is matched against the list of expected @{term "Action"} and the
+first match is applied \secref{sec:applyInputs}.\<close>
+
+text \<open>
+The different types of actions are:
 \<close>
 
 datatype Action = Deposit AccountId Party Token Value
@@ -213,30 +215,39 @@ datatype Action = Deposit AccountId Party Token Value
 text \<open>A @{term "Deposit a p t v"} makes a deposit of \#@{term v} @{term Token}s @{term t} from @{term "Party p"}
  into account @{term a}.\<close>
 
-text \<open>A choice @{term "Choice i bs"} is made for a particular choice identified by the ChoiceId
-\secref{sec:choices} @{term i}  with a list of inclusive bounds @{term bs} on the values that are
- acceptable. For example,
-@{text "[Bound 0 0, Bound 3 5]"} offers the choice of one of 0, 3, 4 and 5.
+text \<open>A @{term "Choice i bs"} can be made for a particular option identified by the @{term ChoiceId}
+ @{term i} \secref{sec:choices}  with a list of inclusive bounds @{term bs} that indicates acceptable values.
+For example, @{term "Choice (ChoiceId name party) [Bound 0 0, Bound 3 5]"} allows @{term party} to
+choose either 0, 3, 4 or 5 in the @{term name} option.
 \<close>
+
+text \<open>To give integers a semantic meaning in the context of Choices, we make use of
+the type synonym @{term ChosenNum}. To determine if a @{term ChosenNum} is within the
+inclusive bounds list, we use the "inBounds" function. Note that the Isabelle function
+ \<^emph>\<open>list\_ex\<close> is the same as the \<^emph>\<open>any\<close> function in other functional
+languages\<close>
+
+type_synonym ChosenNum = int
+
+fun inBounds :: "ChosenNum \<Rightarrow> Bound list \<Rightarrow> bool" where
+"inBounds num = list_ex (\<lambda> (Bound l u) \<Rightarrow> num \<ge> l \<and> num \<le> u)"
 
 text \<open>A notification can be triggered by anyone as long as the \<^term>\<open>Observation\<close> evaluates
 to \<^term>\<open>true\<close>. If multiple @{term "Notify"} are present in the \<^term>\<open>Case\<close> list, the first one with a \<^term>\<open>true\<close>
 observation is matched.\<close>
 
 text \<open>For each @{term "Action"}, there is a corresponding @{term "Input"} that can be included inside
-a @{term "Transaction"} \<close>
-
-type_synonym ChosenNum = int
+a @{term "Transaction"} \secref{sec:transaction}\<close>
 
 datatype Input = IDeposit AccountId Party Token int
                | IChoice ChoiceId ChosenNum
                | INotify
 
-text \<open>The differences between them are:
-\<^item> \<^term>\<open>Deposit\<close> uses a \<^term>\<open>Value\<close> while \<^term>\<open>IDeposit\<close> has the \<^term>\<open>int\<close> it was evaluated to with \<^term>\<open>evalValue\<close> \secref{sec:evalvalue}.
+text \<open>The differences between the @{term Actions} and @{term Inputs} are:
+\<^item> \<^term>\<open>Deposit\<close> uses a \<^term>\<open>Value\<close> while \<^term>\<open>IDeposit\<close> has the \<^term>\<open>int\<close> it was evaluated to with \<^term>\<open>evalValue\<close> \secref{sec:evalValueObservation}.
 \<^item> \<^term>\<open>Choice\<close> defines a list of valid \<^term>\<open>Bound\<close>s while \<^term>\<open>IChoice\<close> has the actual \<^term>\<open>ChosenNum\<close>.
 \<^item> \<^term>\<open>Notify\<close> has an \<^term>\<open>Observation\<close> while \<^term>\<open>INotify\<close> does not have arguments, the
- \<^term>\<open>Observation\<close> must evaluate to true inside the \<^term>\<open>Transaction\<close>
+ \<^term>\<open>Observation\<close> must evaluate to true inside the \<^term>\<open>Transaction\<close> \secref{sec:transaction}
 \<close>
 
 
@@ -300,32 +311,154 @@ in a given point of the contract, since static analysis will fail if any executi
 warning. The @{term Assert} term might be removed from future on-chain versions of Marlowe.\<close>
 
 
-subsection \<open>State and Environment \label{sec:state-and-env}\<close>
+subsection \<open>State \label{sec:state}\<close>
 
-text \<open>The internal state of a Marlowe contract consists of the current balances in each party's
-account, a record of the most recent value of each type of choice, a record of the most recent
-value of each variable, and the lower bound for the current time that is used to refine time intervals
-and ensure @{term TimeIntervalStart} never decreases. The
-data for accounts, choices, and bound values are stored as association lists.\<close>
+text \<open>
+While executing a Marlowe contract, we keep track of the following information:
+\<close>
 
-record State = accounts :: Accounts
-               choices :: "(ChoiceId \<times> ChosenNum) list"
-               boundValues :: "(ValueId \<times> int) list"
-               minTime :: POSIXTime
+record State 
+    \<comment> \<open>How many tokens each participant has inside the contract\<close>
+  = accounts :: Accounts
+    \<comment> \<open>A record of choices made by participants through the Choice Action\<close>
+    choices :: "(ChoiceId \<times> ChosenNum) list"
+    \<comment> \<open>Values stored by Let bindings\<close>
+    boundValues :: "(ValueId \<times> int) list"
+    \<comment> \<open>A low boundary on known real time\<close>
+    minTime :: POSIXTime
 
-text \<open>The execution environment of a Marlowe contract simply consists of the (inclusive) time
-interval within which the transaction is occurring.\<close>
+text \<open>
+The accounts, choices and boundValues are actually Map's but they are represented 
+here as association lists. Each blockchain have different capabilities to represent 
+data structutres, the most suitable one should be used in each case.
+\<close>
 
+text \<open>
+The accounts should only have positive values. If a transaction ask to pay more assets 
+than available to the account, a partial payment warning is raised and the entry is 
+removed from the Map.
+\<close>
+
+text \<open>
+Transactions are computed within a time interval @{term "(startTime, endTime)"} which
+ give us a proxy for real time. It is up to the blockchain implementation to make sure
+ that @{term startTime} \le @{term now} \le  @{term endTime}. The variable @{term minTime}
+ is the biggest known @{term startTime}. That allow us to trim a time interval and 
+ensure that @{term startTime} does not decrease between transactions.
+\<close>
+
+subsection \<open>Payment \label{sec:payment}\<close>
+
+text \<open>
+
+The \<^emph>\<open>Payment\<close> type represents the intention to transfer funds from the internal
+ \<^emph>\<open>AccountId\<close> to a \<^emph>\<open>Payee\<close> \secref{sec:internal-accounts}. This type is created as a 
+result of executing a \<^emph>\<open>Pay\<close> statement and is included as part of the output of computing a 
+transaction.
+\<close>
+
+text \<open>
+The \<^emph>\<open>Payee\<close> indicates whether the recipient of the payment is an internal account or 
+external participant. When we call \<^emph>\<open>computeTransaction\<close>, if the payment is internal, 
+the funds are transferred between internal state accounts and no further action is 
+required. In this case, the \<^emph>\<open>Payment\<close> type serves as an information of what has 
+happened. However, if the payment is external, the funds are removed from the state 
+account, but the actual transfer is expected to occur outside of the semantics 
+defined in this document.
+\<close>
+
+datatype Payment = Payment AccountId Payee Token int
+
+subsection \<open>Transaction \label{sec:transaction}\<close>
+
+text \<open>We use transactions to move contracts forward. Transactions are comprised of a 
+list of inputs (possibly empty) to be applied within a TimeInterval\<close>
+record Transaction 
+  = interval :: TimeInterval
+    inputs :: "Input list"
+
+text \<open>
+
+From the transaction we can extract the validity interval as its own type, which is 
+useful for functions like evalValue and evalObservation, which only depends on the interval.
+\<close>
+(* TODO: See if it makes sense to just use TimeInterval and to upgrade to Environment
+         once we know more data should be present here *)
 record Environment = timeInterval :: TimeInterval
 
-(* TODO: see if we want to add data types of Semantic here (Transaction, etc) or if we want to
-move this types to Semantic *)
-(* Processing of time interval *)
-datatype IntervalError = InvalidInterval TimeInterval
-                       | IntervalInPastError POSIXTime TimeInterval
+text \<open>The rest of this section introduces the types used to represent the output of 
+\<^emph>\<open>computeTransaction\<close>.\<close>
 
-datatype IntervalResult = IntervalTrimmed Environment State
-                        | IntervalError IntervalError
+text \<open>The following warnings are issues that can happen while executing a transaction.
+They doesn't prevent the transaction from being completed, but they may indicate a poorly
+ designed contract. To ensure that no execution path results in a warning, Marlowe 
+contracts can be analyzed statically.\<close>
+
+datatype TransactionWarning 
+  \<comment> \<open>A Deposit of a value lower or equal to 0 was asked\<close>
+  \<comment> \<open>The contract will need an empty Deposit to advance\<close>
+  = TransactionNonPositiveDeposit Party AccountId Token int
+  \<comment> \<open>A Pay of a value lower or equal to 0 was asked\<close>
+  \<comment> \<open>The contract won't produce any payment and continue\<close>
+  | TransactionNonPositivePay AccountId Payee Token int
+  \<comment> \<open>A payment is partially fullfilled as more assets \<close>
+  \<comment> \<open>than available were asked\<close> 
+  | TransactionPartialPay AccountId Payee Token int int
+  \<comment> \<open>A variable already bound in the state is being overwritten\<close>
+  \<comment> \<open>This doesn't necessarily indicate a problem as it is the only\<close>
+  \<comment> \<open>way to model mutable variables\<close>
+  | TransactionShadowing ValueId int int
+  \<comment> \<open>A custom Assert observation evaluates to False\<close>
+  | TransactionAssertionFailed
+
+text \<open>
+The \<^emph>\<open>IntervalError\<close> type describes possible problems in the Transaction
+ \<^emph>\<open>TimeInterval\<close> 
+\<close>
+
+datatype IntervalError 
+  \<comment> \<open>A TimeInterval is invalid if it ends before it starts\<close>
+  = InvalidInterval TimeInterval
+  \<comment> \<open>The interval is in the past if the endTime is bigger than\<close>
+  \<comment> \<open>the last observed minTime\<close>
+  | IntervalInPastError POSIXTime TimeInterval
+
+
+text \<open>The following errors are issues that can happen while executing a transaction.
+Unlike the warnings, they do prevent a transaction from being executed.\<close>
+
+datatype TransactionError
+  \<comment> \<open>A When's timeout is ambiguous w.r.t. the transaction time interval\<close>
+  = TEAmbiguousTimeIntervalError
+  \<comment> \<open>No Case matched the provided Input\<close>
+  | TEApplyNoMatchError
+  \<comment> \<open>The transaction's TimeInterval has one of the problems described before\<close>
+  | TEIntervalError IntervalError
+  \<comment> \<open>The transaction does not modify neither the State nor the continuation\<close>
+  | TEUselessTransaction
+
+text \<open>In a time interval @{term "(startTime, endTime)"}, a When's @{term timeout} is 
+ambiguous iff @{term startTime} < @{term timeout} \le @{term endTime}. \<close>
+
+text \<open>If a transaction is computed correctly it will yield a new state and contract
+continuation with optional warnings and payments.\<close>
+
+record TransactionOutputRecord 
+  = txOutWarnings :: "TransactionWarning list"
+    txOutPayments :: "Payment list"
+    txOutState :: State
+    txOutContract :: Contract
+
+text 
+\<open>
+Finally, the \<^emph>\<open>TransactionOutput\<close> type captures the results of calling computeTransaction
+\<close>
+datatype TransactionOutput 
+  = TransactionOutput TransactionOutputRecord
+  | TransactionError TransactionError
+
+
+
 
 
 (*<*)

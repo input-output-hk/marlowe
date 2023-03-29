@@ -1,12 +1,11 @@
 
-# DRAFT Response to Audit Report
+# Response to Audit Report
 
-TODO:
+**TODO:**
 
-- [ ] Add prefatory text.
+- [ ] Add prefatory text and executive summary.
 - [ ] Add responses and mitigation commits to Isabelle-related findings.
-- [ ] Add responses and mitigation commits to Haskell-related findings.
-    - [ ] Convert the commit messages to narrative, and just link to the commit.
+- [x] Add responses and mitigation commits to Haskell-related findings.
 - [ ] Fix display of equations or replace ones that cannot be fixed with ellipses ("...").
 - [ ] Replace broken links and cross references, or use elipses ("...").
 - [ ] Verify the section numbering is correct.
@@ -14,26 +13,51 @@ TODO:
 - [ ] Proofread.
 
 
+## Executive Summary
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @bwbush will add text here after everything else is written.
+
+
+## Acknowledgement
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @bwbush will add text thanking the audit team.
+
+
 ## Overview of Isabelle Changes
 
-
-## Overview of Marlowe-Cardano Specification and Haskell (Plutus) Implementation
-
-TODO: @bwbush will add text here.
-
-```console
-commit fca49124f9ebad285bb08d643a3c5fcf5e1df618
-Merge: 27a3e32bb 6a0517770
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 15 13:50:51 2023 -0600
-
-    Merge pull request #524 from input-output-hk/PLT-3064
-    
-    PLT-3064 Cumulative validator changes based on audit report
-```
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here.
 
 
-# 2 Findings
+## Overview of Changes to Marlowe-Cardano Specification and Haskell (Plutus) Implementation
+
+The audit report's main and high-severity concerns for the Plutus validators for Marlowe on Cardano fell into to four clusters:
+
+1. Incorrect handling of negative deposits
+    - "2.1.1 Negative deposits allow stealing funds"
+2. Incomplete prevention of double satisfaction
+    - "2.1.2 Contracts vulnerable to double satisfaction attacks"
+3. Lax enforcement of invariants in Marlowe state
+    - "2.1.7 Positive balances are not checked for the output state"
+    - "2.1.8 Non-validated Marlowe states"
+    - "2.1.9 Total balance of ending state uncomputed"
+    - "2.1.10 Unchecked ending balance"
+4. Difference semantics of association lists in Isabelle and Plutus
+    - "2.1.12 Different insertion functions used in Isabelle and Haskell code"
+
+Incorrect handling of negative deposits (item 1 above) was mitigated by the addition of a guard against this in Marlowe's Plutus validator so that its behavior was consistent with Marlowe semantics. Property-based tests were also added to check the correctness of the mitigation.
+
+Although the Marlowe validator had prevented double-satisfaction among multiple copies of the Marlowe validator script running in the same transaction, it did not prevent double-satisfaction in cases where the Marlowe validator run alongside another Plutus validator in the same transaction (item 2 above). Double satisfaction has now been prevented by enforcing that the Marlowe validator is the only Plutus script that runs in transactions that make payments to parties. This allows Marlowe contracts to coordinate with other Plutus scripts, but only under conditions where double satisfaction is impossible. Once again, property-based tests were added to check the correctness of this mitigation.
+
+The Marlowe validator had made optimistic assumptions about its own correct operation and hence did not check certain invariants in order to save on Plutus execution costs (item 3 above). The Marlowe semantics validator has now been thoroughly hardened against corruption of initial or final state so that it ensures that the three state-invariants of positive accounts, non-duplication of state entries (accounts, choices, and bound values), and a total internal value matching the script UTxO's value. This hardening was completed without unduly increasing the size (in bytes) of the validator or its Plutus execution cost: such was verified with simulated and on-chain measurement of execution costs for a library of real-life Marlowe contracts. Notably, the enforcement of the final invariants protects against funds becoming permanently locked in a Marlowe contract due to a garbled state: even in cases where the implementation of Marlowe semantics or parts of the Plutus validator are flawed, at least some of the execution paths of a Marlowe contract remain viable, so funds could be released even under nominally impossible but catastrophic difficulties. The property-based test suite was significantly enhanced to 
+
+Mitigation of the difference between association lists (item 4 above) in Isabelle (`MList`) and Plutus (`AssocMap`) was handled by the aforementioned enforcement of invariants, by line-by-line code inspection and annotation, and by thoroughly enhanced property-based testing. Work is in progress on a formal proof of the equivalence of `MList` and `AssocMap` under pre-conditions that hold within Marlowe semantics. Note that porting Isabelle's `MList` implementation to Plutus would have enlarged the Marlowe semantics validator by at least 2000 bytes and rendered it too costly to execute within the Cardano ledger's present execution-cost limits.
+
+The audit report for Marlowe on Cardano was based on the commit hash [523f3d56](https://github.com/input-output-hk/marlowe-cardano/commit/523f3d56f22bf992ddb0b0c8a52bb7a5a188f9e9). The revisions and mitigations discussed here apply to [69468d66](https://github.com/input-output-hk/marlowe-cardano/commit/69468d6623e24a4ccd6659e378ae012c38ca01ce) of that repository. The appendix to this report list the differences between pre- and post-audit validator code for Marlowe on Cardano.
+
+The medium-severity concerns in the audit report center around missing tests or name shadowing. With the exception of "2.7.1 More precise failure checks", these have all been remedied either by code changes (in the case of the shadowing) or by the addition of a significant augmentation of the property-based test suite. The audit's low-severity concerns generally relate to insufficiently detailed text in the Marlowe Cardano specification, the need for more elaborate comments in the code, naming of variable bindings, or typographical errors. Nearly all of these finds have been addressed, with only the exception of a few cosmetic recommendations that were not adopted.
+
+
+# 2 Responses to Specific Findings
 
 
 ## 2.1 Main concerns
@@ -45,114 +69,26 @@ Date:   Wed Mar 15 13:50:51 2023 -0600
 >
 > The income from deposits is computed by adding up the deposit inputs, regardless of whether they are negative, while the semantics considers them as zero deposits. Combined with the absence of a balance check on the ending Marlowe state, this allows the ending balance to differ from the value paid to the Marlowe validator.
 > 
-> This disagreement can be exploited to steal money from a flawed Marlowe contract that allows a negative deposit. The issue is demonstrated in ….
+> This disagreement can be exploited to steal money from a flawed Marlowe contract that allows a negative deposit. The issue is demonstrated in […].
 
-TODO: @bwbush will add text here.
+This vulnerability was mitigated in commit [68791fac](https://github.com/input-output-hk/marlowe-cardano/commit/68791facc195068717cbc6e55d1e4fdbe1f4a521) by adding a guard against negative deposits in the Marlowe semantics validator. That guard ensures that the validator's semantics for negative deposits matches Marlowe's Isabelle semantics: namely a deposit of a negative quantity is treated as a deposit of zero. Thus a negative deposit will not decrement any of the account balances in the Plutus datum and the total of the internal balances will match the value held in the UTxO output to the Marlowe semantics script address.
 
-```console
-commit 15446073131c4098fed781cdcc701b89b77f6bd0
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 16:56:31 2023 -0700
-
-    SCP-5123 Property-based tests for contracts with negative deposits.
-
-commit 4b81ee96b1e7c74c4964cf25f6bb599c80d07a52
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 16:56:31 2023 -0700
-
-    SCP-5123 Property-based tests for contracts with negative deposits.
-
-commit 9d5443c5e9306eaf49ac5389df455e07555c9e04
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 2 10:54:48 2023 -0700
-
-    SCP-5123 Improved negative-deposit test case.
-
-commit 20bf9f13fe33acf9612ec26fe640d27975b0dc59
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 17:10:11 2023 -0700
-
-    SCP-5123 Rephrased comment.
-
-commit bbb9b8fc21ad93b7bcdb3b60be0f2f9c921f6bec
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 16:56:31 2023 -0700
-
-    SCP-5123 Property-based tests for contracts with negative deposits.
-
-commit 597281c176bcb1f326329ba40b0d968d5e7eb84b
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 11:36:56 2023 -0700
-
-    SCP-5123 Updated validator script size and hash tests.
-
-commit 68791facc195068717cbc6e55d1e4fdbe1f4a521
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 11:20:27 2023 -0700
-
-    SCP-5123 Ensured that negative deposits do not corrupt accounting equation.
-```
+A new golden test for negative deposits was added in commit [bbb9b8fc](https://github.com/input-output-hk/marlowe-cardano/commit/bbb9b8fc21ad93b7bcdb3b60be0f2f9c921f6bec) and property-based tests for negative deposits were added in commits [bbb9b8fc](https://github.com/input-output-hk/marlowe-cardano/commit/bbb9b8fc21ad93b7bcdb3b60be0f2f9c921f6bec), [9d5443c5](https://github.com/input-output-hk/marlowe-cardano/commit/9d5443c5e9306eaf49ac5389df455e07555c9e04), [4b81ee96](https://github.com/input-output-hk/marlowe-cardano/commit/4b81ee96b1e7c74c4964cf25f6bb599c80d07a52), and [15446073](https://github.com/input-output-hk/marlowe-cardano/commit/15446073131c4098fed781cdcc701b89b77f6bd0).
 
 
 ### 2.1.2 Contracts vulnerable to double satisfaction attacks *(Severity: High)*
 
 > **File `marlowe-cardano-specification.md`, `Constraint 15`**
 > 
-> No datum is required for outputs fulfilling payments to addresses generated by the evaluation of a Marlowe contract. This implies that these outputs are vulnerable to double satisfaction in transactions involving other contracts that pay to the same wallets. An example is discussed in .
+> No datum is required for outputs fulfilling payments to addresses generated by the evaluation of a Marlowe contract. This implies that these outputs are vulnerable to double satisfaction in transactions involving other contracts that pay to the same wallets. An example is discussed in […].
 > 
 > One way to strengthen the implementation is for the Marlowe validator to demand that outputs paid to addresses contain a datum that identifies the contract instance, like the `TxOutRef` of the validator UTxO being spent. Then cooperation with other contracts is possible without double satisfaction if the validators of the other contracts demand a different datum for their outputs.
 
-TODO: @bwbush will add text here.
+The Marlowe semantics validator had prevented a limited form of double-satisfaction attack by preventing two Marlowe validators to execute in the same transaction. The audit report correctly highlights that such an attack could be feasible in cases where another Plutus validator (not the same version of the Marlowe semantics validator) executes in a transactions where a payment to an address or to the Marlowe role-payout validator satisfies both the Marlowe semantics validator and the other validator.
 
-```console
-commit 0bf75ac775e53507db4e313f705a7a667f98aac1
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Sat Mar 4 09:46:24 2023 -0700
+Although the audit report's suggestion of including a unique datum (such as that identifying the contract instance) in any output payment from the contract would likely prevent double satisfaction, implementing such a change in the Marlowe validators would have entailed such extensive changes to the specification and implementation that the overall applicability of the audit findings might subsequently be called into question. Instead, a minimal change to the specification and implementation mitigates this vulnerability: the specification was amended with a "Constraint 20. Single satisfaction" that requires the Marlowe semantics validator be the only Plutus script running in the transaction *if payments to parties are being made in the transaction*. Thus, only allowing one script to validate in case of external payments completely eliminates the possibility that one payment would satisfy two scripts. Other contracts are permitted to cooperate with Marlowe in cases such as deposits, choices, and notifications where Marlowe is not making payments.
 
-    SCP-5125 Added property-based tests for multiple validators.
-
-commit 9f4fc9cde581b6dbbb939ec9d8e6303b8b67350e
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Fri Mar 3 08:54:31 2023 -0700
-
-    SCP-5141 Property-based tests for duplicate detection in validator.
-
-commit 435ac680eb8119db1c43ec968cf8ea4ef08158b6
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Sat Mar 4 09:46:24 2023 -0700
-
-    SCP-5125 Added property-based tests for multiple validators.
-
-commit 39fcc8aa9d61ed97dfa56e7ce078bf5e4c4cd6cc
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Fri Mar 3 08:54:31 2023 -0700
-
-    SCP-5141 Property-based tests for duplicate detection in validator.
-
-commit 6f6331b463e7f2fddce7ec0f64b37b030f2f795b
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Fri Mar 3 08:54:31 2023 -0700
-
-    SCP-5141 Property-based tests for duplicate detection in validator.
-
-commit 3f222bc363fcf3e9cd2fa0cb5206933ef597a619
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Sat Mar 4 09:46:24 2023 -0700
-
-    SCP-5125 Added property-based tests for multiple validators.
-
-commit 5f673c477ccc9b38626dca505a399962b22c2675
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Sat Mar 4 09:45:32 2023 -0700
-
-    SCP-5125 Included implicit close payments in satisfaction restriction.
-
-commit 4adf115dbf795e4b014eb6ccab0acb20a73e74ed
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Fri Mar 3 13:54:52 2023 -0700
-
-    SCP-5125 Prevented double-satisfaction.
-```
+Commits [4adf115d](https://github.com/input-output-hk/marlowe-cardano/commit/4adf115dbf795e4b014eb6ccab0acb20a73e74ed) and [5f673c47](https://github.com/input-output-hk/marlowe-cardano/commit/5f673c477ccc9b38626dca505a399962b22c2675) augment the Marlowe-Cardano specification and the implementation of the Marlowe semantics validator. Commits [3f222bc3](https://github.com/input-output-hk/marlowe-cardano/commit/3f222bc363fcf3e9cd2fa0cb5206933ef597a619), [6f6331b4](https://github.com/input-output-hk/marlowe-cardano/commit/6f6331b463e7f2fddce7ec0f64b37b030f2f795b), [39fcc8aa](https://github.com/input-output-hk/marlowe-cardano/commit/39fcc8aa9d61ed97dfa56e7ce078bf5e4c4cd6cc), [435ac680](https://github.com/input-output-hk/marlowe-cardano/commit/435ac680eb8119db1c43ec968cf8ea4ef08158b6), and [9f4fc9cd](https://github.com/input-output-hk/marlowe-cardano/commit/9f4fc9cde581b6dbbb939ec9d8e6303b8b67350e) implement property-based tests for the new single-satisfaction constraint.
 
 
 ### 2.1.3 Missing constructor in equality instance *(Severity: High)*
@@ -161,24 +97,8 @@ Date:   Fri Mar 3 13:54:52 2023 -0700
 > 
 > The constructor `ReduceAssertionFailed` is not mentioned and compares `False` against itself. This might cause validators to fail checking the presence of this particular warning.
 
-TODO: @bwbush will add text here.
+Although this `Eq` instance is not used by the Marlowe validators (so it does not have implications for validator security), the equality test has been fixed because it is a liability for off-chain code and for potential future versions of validators that might perform such an equality test. Commit [84d65a70](https://github.com/input-output-hk/marlowe-cardano/commit/84d65a70c29320fab501ad759bbc71855d1b63fc) fixes this and commit [04805a39](https://github.com/input-output-hk/marlowe-cardano/commit/04805a393c0815fe0f2a1a6d7f76d9867ffe0c14) hardens all of the other `Eq` instances to prevent similar problems re-arising if sum types are augmented in the future.
 
-```console
-commit 04805a393c0815fe0f2a1a6d7f76d9867ffe0c14
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 2 08:27:25 2023 -0700
-
-    SCP-5129 Hardened `Eq` instances in validator files.
-    
-    See https://github.com/input-output-hk/marlowe-cardano/pull/513#discussion_r1123062500
-    for motivation.
-
-commit 84d65a70c29320fab501ad759bbc71855d1b63fc
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 17:21:39 2023 -0700
-
-    SCP-5129 Fixed `(==)` for `ReduceAssertionFailed`.
-```
 
 ### 2.1.4 Inaccurate formulation of Money preservation *(Severity: High)*
 
@@ -188,12 +108,16 @@ Date:   Wed Mar 1 17:21:39 2023 -0700
 > 
 > Money preservation is a property stated with an equality. The left hand side is the sum of the deposits done by a list of transactions. The right hand side of the equality is the sum of all the payments done in the same list of transactions. Each sum, in turn, is represented as a single integer which aggregates the amounts of the various payments and deposits, irrespective of what currencies correspond to these amounts.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.1.5 Insufficient documentation of Money preservation *(Severity: Medium)*
 
 > **File `specification-v3-rc1.pdf`, Section `3.1 Money preservation`, page *29***
 > 
 > Money preservation is formulated in terms of functions that are not discussed in the specification. It is necessary to explain the meaning of these functions in sufficient detail so readers can understand the property.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.1.6 Missing description of Merkleization *(Severity: High)*
@@ -208,6 +132,8 @@ Date:   Wed Mar 1 17:21:39 2023 -0700
 > 2.  If a merkleized case input is applied successfully, it implies that the contract hash in the input corresponds to the continuation of the contract.
 > 3.  Merkleizing and unmerkleizing a contract gives back the original contract.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.1.7 Positive balances are not checked for the output state *(Severity: High)*
 
@@ -217,21 +143,9 @@ Date:   Wed Mar 1 17:21:39 2023 -0700
 > 
 > If such a transaction is accepted, no further evaluation will be possible since all subsequent transactions will be rejected due to the very same Constraint 13. This is an hypothetical attack vector, where a malicious actor could send a transaction to block a contract.
 
-TODO: @bwbush will add text here.
+The Plutus code for the Marlowe semantics validator had been implemented with the optimistic assumption that semantics would not be flawed and that the additional execution cost of checking the output state was not warranted. However, as the audit report points out, such a flaw would result in the contract being forever blocked from further execution. Adding a check on the final output's validity would prevent a contract from ever reaching a fully blocked state. Even if the semantics or Plutus code were flawed, at least some execution paths in the contract would remain viable, so that the contract could eventually terminate and would not permanently lock funds.
 
-```console
-commit 8855feae473882b82643db792327423152e45b5c
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 2 15:27:42 2023 -0700
-
-    SCP-5141 SCP-5142 Enforced initial and final state validity in validator.
-
-commit ebab31d9ba6dd322d374b34cad3995050a0e476e
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 2 11:52:04 2023 -0700
-
-    SCP-5124 Added property-based test for new final-balance constraint.
-```
+Commits [0a890845](https://github.com/input-output-hk/marlowe-cardano/commit/0a890845c44ccfe4df97e765e9b9eb743ce7d580), [8855feae](https://github.com/input-output-hk/marlowe-cardano/commit/8855feae473882b82643db792327423152e45b5c), [26f024e8](https://github.com/input-output-hk/marlowe-cardano/commit/26f024e80cea0dd4ebf8bff0f1a10b97aea87894), and [201c5df9](https://github.com/input-output-hk/marlowe-cardano/commit/201c5df9de29b3b142be5ff7d0a9b56d1b378204) augment the Marlowe Cardano specification to require positive balances upon output and implements the corresponding check in the Marlowe Semantics validator.  Commit [d514bcd0](https://github.com/input-output-hk/marlowe-cardano/commit/d514bcd075732b07e1c6a73e2e3c68afa01acf2c), [7f562545](https://github.com/input-output-hk/marlowe-cardano/commit/7f562545d013dd17472b692b550ffdc7f8a383f3), and [ebab31d9](https://github.com/input-output-hk/marlowe-cardano/commit/ebab31d9ba6dd322d374b34cad3995050a0e476e) adds a property-based test for this.
 
 
 ### 2.1.8 Non-validated Marlowe states *(Severity: High)*
@@ -242,25 +156,13 @@ Date:   Thu Mar 2 11:52:04 2023 -0700
 > 
 > It also could be possible for the Marlowe state to be invalid if someone pays an output to the Marlowe validator with an invalid Marlowe state. Though this problem could be addressed with off-chain checks that prevent sending transactions that spend outputs with invalid Marlowe states. If off-chain checks are used, a note in the specification about how this is handled would be helpful.
 > 
-> An example showing betrayed user expectations is discussed in .
+> An example showing betrayed user expectations is discussed in […].
 > 
 > For a valid Marlowe state, the association lists for bound values, accounts, and choices have keys sorted and without duplicates.
 
-TODO: @bwbush will add text here.
+Prompted on this finding in the audit report, the Marlowe semantics validator has been altered to enforce all invariants (positive accounts; non-duplication of accounts, choices, and bound values; a total internal account balance that exactly matches the value in the script's UTxO) on both the initial and final states. This prevents execution of a Marlowe contract that was inadvertently or purposefully created by off-chain code with an invalid initial state. It also prevents transactions that corrupt the final state; such corruption could only happen if there were a flaw in the Plutus validator or Marlowe semantics implementation, in which case that execution-path of the contract would be blocked. The [Marlowe Best Practices Guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/best-practices.md) and [Marlowe Security Guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/security.md) warn of the importance of off-chain code creating valid initial state for Marlowe contracts.
 
-```console
-commit 8855feae473882b82643db792327423152e45b5c
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 2 15:27:42 2023 -0700
-
-    SCP-5141 SCP-5142 Enforced initial and final state validity in validator.
-
-commit ebab31d9ba6dd322d374b34cad3995050a0e476e
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 2 11:52:04 2023 -0700
-
-    SCP-5124 Added property-based test for new final-balance constraint.
-```
+Commits [0a890845](https://github.com/input-output-hk/marlowe-cardano/commit/0a890845c44ccfe4df97e765e9b9eb743ce7d580), [8855feae](https://github.com/input-output-hk/marlowe-cardano/commit/8855feae473882b82643db792327423152e45b5c), [26f024e8](https://github.com/input-output-hk/marlowe-cardano/commit/26f024e80cea0dd4ebf8bff0f1a10b97aea87894), and [201c5df9](https://github.com/input-output-hk/marlowe-cardano/commit/201c5df9de29b3b142be5ff7d0a9b56d1b378204) enforce that both the initial and final states in the respective incoming and outgoing datum obey the aforementioned three invariants of total value, non-duplication, and positivity. That commit also adds "Constraint 19. No duplicates" to the Marlowe Cardano specification. Property-based tests in commit [d514bcd0](https://github.com/input-output-hk/marlowe-cardano/commit/d514bcd075732b07e1c6a73e2e3c68afa01acf2c), [7f562545](https://github.com/input-output-hk/marlowe-cardano/commit/7f562545d013dd17472b692b550ffdc7f8a383f3), and [ebab31d9](https://github.com/input-output-hk/marlowe-cardano/commit/ebab31d9ba6dd322d374b34cad3995050a0e476e) check the implementation.
 
 
 ### 2.1.9 Total balance of ending state uncomputed *(Severity: High)*
@@ -273,64 +175,22 @@ Date:   Thu Mar 2 11:52:04 2023 -0700
 > 
 > However, the Marlowe validator never computes the total balance of the accounts in the ending Marlowe state. Instead, the ending balance is assumed to be whatever value is paid by the transaction to the Marlowe validator. The natural language should describe precisely what is being checked.
 
-TODO: @bwbush will add text here.
+The mitigation of the previous audit-report finding ("2.1.8 Non-validated Marlowe states") also mitigates this finding: in the validator, `checkOwnOutputConstraint marloweData finalBalance` ensures that the computed final balance of accounts matches the value output to the script's UTxO and `checkState "o" finalBalance txOutState` ensures that it matches the sum of value in the internal accounts.
 
-```console
-commit 8855feae473882b82643db792327423152e45b5c
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 2 15:27:42 2023 -0700
-
-    SCP-5141 SCP-5142 Enforced initial and final state validity in validator.
-
-commit ebab31d9ba6dd322d374b34cad3995050a0e476e
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 2 11:52:04 2023 -0700
-
-    SCP-5124 Added property-based test for new final-balance constraint.
-
-commit d514bcd075732b07e1c6a73e2e3c68afa01acf2c
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 2 11:52:04 2023 -0700
-
-    SCP-5124 Added property-based test for new final-balance constraint.
-
-commit 7f562545d013dd17472b692b550ffdc7f8a383f3
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 2 11:52:04 2023 -0700
-
-    SCP-5124 Added property-based test for new final-balance constraint.
-```
+Again as previously, the relevant commits are [0a890845](https://github.com/input-output-hk/marlowe-cardano/commit/0a890845c44ccfe4df97e765e9b9eb743ce7d580), [8855feae](https://github.com/input-output-hk/marlowe-cardano/commit/8855feae473882b82643db792327423152e45b5c), [26f024e8](https://github.com/input-output-hk/marlowe-cardano/commit/26f024e80cea0dd4ebf8bff0f1a10b97aea87894), and [201c5df9](https://github.com/input-output-hk/marlowe-cardano/commit/201c5df9de29b3b142be5ff7d0a9b56d1b378204) for specification and implementation and [d514bcd0](https://github.com/input-output-hk/marlowe-cardano/commit/d514bcd075732b07e1c6a73e2e3c68afa01acf2c), [7f562545](https://github.com/input-output-hk/marlowe-cardano/commit/7f562545d013dd17472b692b550ffdc7f8a383f3), and [ebab31d9](https://github.com/input-output-hk/marlowe-cardano/commit/ebab31d9ba6dd322d374b34cad3995050a0e476e) for property-based tests.
 
 
 ### 2.1.10 Unchecked ending balance *(Severity: High)*
 
 > **File `marlowe-cardano-specification.md`, `Constraint 5`** 
 > 
-> The balance of the starting Marlowe state is checked to match the value in the input. However, the validator does not check that the ending balance matches the value in the output paid to the Marlowe validator. Similarly to Issue [\[main:positive-balances-unchecked\]](#main:positive-balances-unchecked){reference-type="ref" reference="main:positive-balances-unchecked"}, if there are flaws in the semantics that cause the ending balance to differ from the actual value paid to the validator, this constraint would prevent any transaction from spending the output.
+> The balance of the starting Marlowe state is checked to match the value in the input. However, the validator does not check that the ending balance matches the value in the output paid to the Marlowe validator. Similarly to Issue […], if there are flaws in the semantics that cause the ending balance to differ from the actual value paid to the validator, this constraint would prevent any transaction from spending the output.
 > 
 > The specification should at least discuss why the check is absent together with the other similar checks that are not implemented (checking that ending accounts have positive balances, checking that the ending Marlowe state is valid).
 
-```console
-commit 0a890845c44ccfe4df97e765e9b9eb743ce7d580
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 2 09:32:09 2023 -0700
+As the audit report recognizes, this concern is closely related to the three previous concerns. The revised validator's enforcement that of the three invariants for the final state ensures that the ending balance of the internal accounts in the state matches the actual output paid to the script.
 
-    SCP-5124 Ensured script output is consistent with output state.
-
-commit 201c5df9de29b3b142be5ff7d0a9b56d1b378204
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 13:35:40 2023 -0700
-
-    PLT-4169 Optimized checking of script output in validator.
-
-commit 26f024e80cea0dd4ebf8bff0f1a10b97aea87894
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Thu Mar 9 12:43:12 2023 -0700
-
-    PLT-3064 Made suggested changes to `examineScripts` in validator.
-    
-    See https://github.com/input-output-hk/marlowe-cardano/pull/524#discussion_r1127270744.
-```
+Again as previously, the relevant commits are [0a890845](https://github.com/input-output-hk/marlowe-cardano/commit/0a890845c44ccfe4df97e765e9b9eb743ce7d580), [8855feae](https://github.com/input-output-hk/marlowe-cardano/commit/8855feae473882b82643db792327423152e45b5c), [26f024e8](https://github.com/input-output-hk/marlowe-cardano/commit/26f024e80cea0dd4ebf8bff0f1a10b97aea87894), and [201c5df9](https://github.com/input-output-hk/marlowe-cardano/commit/201c5df9de29b3b142be5ff7d0a9b56d1b378204) for specification and implementation and [d514bcd0](https://github.com/input-output-hk/marlowe-cardano/commit/d514bcd075732b07e1c6a73e2e3c68afa01acf2c), [7f562545](https://github.com/input-output-hk/marlowe-cardano/commit/7f562545d013dd17472b692b550ffdc7f8a383f3), and [ebab31d9](https://github.com/input-output-hk/marlowe-cardano/commit/ebab31d9ba6dd322d374b34cad3995050a0e476e) for property-based tests.
 
 
 ### 2.1.11 Partial functions used outside their domain *(Severity: Medium)*
@@ -340,6 +200,8 @@ Date:   Thu Mar 9 12:43:12 2023 -0700
 > `moneyInRefundOneResult`, `moneyInApplyResult`, `moneyInApplyAllResult`, `moneyInTransactionOutput`, and `moneyInPlayTraceResult` have strange meanings when the result is an error. Arguably, on error there is no money to retrieve, so the return type should be `(Token \times int) option` instead.
 > 
 > Some lemmas rely on this behavior to have equalities hold even in cases of errors, but the cost is that the meaning is so surprising that the reader may be confused by it. It would be more reliable to have explicit and weaker lemmas that assert equalities only when there are no errors.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.1.12 Different insertion functions used in Isabelle and Haskell code *(Severity: High)*
@@ -386,45 +248,9 @@ Date:   Thu Mar 9 12:43:12 2023 -0700
 > -   Line 482, function `reduceContractStep` relies on `AssocMap.insert`.
 > -   Line 567, function `applyAction` relies on `AssocMap.insert`.
 
-TODO: @bwbush will add text here.
+The porting of `MList` from Isabelle to Plutus would have increased the size and execution cost of the Marlowe semantics validator beyond the present limits of the Cardano ledger. Work is underway to modify the Isabelle semantics and proofs to use a data structure similar to Plutus's `AssocMap`. Instead of modifying the Marlowe semantics validator, all usages of `AssocMap` were manually reviewed to verify that no vulnerability was introduced by its use (as compared to `MList`) *provided that the precondition of no duplicate entries in the `AssocMap` held*: the source code was annotated with informal reasoning documenting the safety of `AssocMap`'s use. That manual review was augmented by a comprehensive set of property-based tests to check the behavior of `MList` (under the precondition that it was ordered and contained no duplicates) against `AssocMap` (under the precondition that it contained not duplicates) for all functions used in Marlowe semantics or in the Marlowe validator.
 
-```console
-commit 9e068b6a60103f2a40604a7eaea57c5f29b59180
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 11:00:45 2023 -0700
-
-    SCP-5126 Aligned `Gen MList` with semantics.
-
-commit b65ccfec3708484ff52514671e0e227c13f084f3
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 10:52:17 2023 -0700
-
-    SCP-5126 Hardened equivalence testing for `MList` vs `AssocMap`.
-
-commit a95a616aca59bc7159d3ffa92487f8f021820bff
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 10:28:54 2023 -0700
-
-    SCP-5126 Elaborated comments on `MList` property tests.
-
-commit e2277677987f359dcd8754275eccd5b7c9a880a7
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 10:23:16 2023 -0700
-
-    SCP-5126 Added note on invariants in unpack and repacking `AssocMap`.
-
-commit af380a292c0369bcc77d8584d81ea80a31326b61
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Feb 28 13:49:44 2023 -0700
-
-    SCP-5126 Property-based tests for `MList` vs `AssocMap`.
-
-commit a2ff6aa334efb7b7955408d29cf0e2edf06bca08
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Feb 28 12:05:32 2023 -0700
-
-    SCP-5126 Annotated Marlowe validator regarding association lists.
-```
+Commit [a2ff6aa3](https://github.com/input-output-hk/marlowe-cardano/commit/a2ff6aa334efb7b7955408d29cf0e2edf06bca08) annotates the Marlowe semantics validator with reasoning as to the safe use of `AssocMap`. Commits [af380a29](https://github.com/input-output-hk/marlowe-cardano/commit/af380a292c0369bcc77d8584d81ea80a31326b61), [e2277677](https://github.com/input-output-hk/marlowe-cardano/commit/e2277677987f359dcd8754275eccd5b7c9a880a7), [a95a616a](https://github.com/input-output-hk/marlowe-cardano/commit/a95a616aca59bc7159d3ffa92487f8f021820bff), [b65ccfec](https://github.com/input-output-hk/marlowe-cardano/commit/b65ccfec3708484ff52514671e0e227c13f084f3), and [9e068b6a](https://github.com/input-output-hk/marlowe-cardano/commit/9e068b6a60103f2a40604a7eaea57c5f29b59180) implement the property-based tests for the behavior of the Plutus `AssocMap` against the Isabelle `MList`.
 
 
 ### 2.1.13 Missing specification tests *(Severity: Medium)*
@@ -433,7 +259,7 @@ Date:   Tue Feb 28 12:05:32 2023 -0700
 > 
 > There are no tests for the properties in Section 3 of `specification-v3-rc1.pdf`. Besides checking that there are no translation mistakes, these properties would also help contrasting the assumptions in the Isabelle and the Haskell sides, like the meaning of validity of an association list, which is focused in the previous issue.
 
-TODO: @bwbush will add text here.
+Subsequent to the commencement of the audit, a "test oracle" was developed that checks implementations of Marlowe semantics (such as the Plutus validator) against a reference implementation generated directly from the Isabelle specification. That generated Haskell implementation is backed by Isabelle proofs of the correctness of Haskell code generation by Isabelle. The test oracle is now applied to the Marlowe semantics implementation in Plutus that the validator use. The test oracle uses the refference implementation to generates test cases to challenge the Plutus implementation and then it checks the Plutus results against its own. This oracle provides sufficient coverage to address the audit-reports concerns regarding the lack of property-based tests for Section 3 of the Marlowe specification.
 
 
 ## 2.2 Marlowe specification
@@ -445,6 +271,8 @@ TODO: @bwbush will add text here.
 > 
 > Choices can only be changed when evaluating `When` statements. This is something only evident after looking at the implementation of `computeTransaction`. It needs to be discussed when first introducing choices and the `When` contract.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.2 Undefined reference *(Severity: Low)*
 
@@ -452,12 +280,16 @@ TODO: @bwbush will add text here.
 > 
 > There is an undefined reference.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.3 Lack of explanation for necessity of `Environment` type *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.1.8 State and Environment`, page *14***
 > 
 > An `Environment` type is introduced, but it is unclear why it is needed as it is defined as a synonym for time intervals.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.2.4 Unclear meaning of execution environment *(Severity: Low)*
@@ -472,12 +304,16 @@ TODO: @bwbush will add text here.
 > 
 > One has to infer that evaluating a Marlowe contract is undefined if it does not happen within a transaction, as otherwise the description of the execution environment would not make sense. It would be necessary to establish more explicitly the relationship between the contract evaluation and the notion of transaction.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.5 Unexplained interval data types *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.1.8 State and Environment`, page *14***
 > 
 > The meaning of the data types `IntervalError` and `IntervalResult` needs to be explained.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.2.6 Incomplete explanation for `TransactionOutput` *(Severity: Low)*
@@ -488,12 +324,16 @@ TODO: @bwbush will add text here.
 > 
 > The purpose of these types needs to be made explicit so it can be checked if the code is doing what is intended.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.7 Code snippets switch languages *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.1 Compute Transaction`, page *15***
 > 
 > The specification changes from using Isabelle to using Haskell henceforth. Making the reader aware of the criteria for the language change would help maintaining the document.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.2.8 Repeated definition of `IntervalResult` *(Severity: Low)*
@@ -502,6 +342,8 @@ TODO: @bwbush will add text here.
 > 
 > The `IntervalResult` type is defined twice in the specification. One should be removed.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.9 Poorly named variable `newAccount` *(Severity: Low)*
 
@@ -509,12 +351,16 @@ TODO: @bwbush will add text here.
 > 
 > In the implementation of the function `reduceContractStep`, the variable `newAccount` should be named `newAccounts`.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.10 Poorly named variable `acc` in specification *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.8 Apply Cases`, page *22***
 > 
 > On the last equation of `applyCases`, `acc` should be named `input`.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.2.11 Inaccurate specification of `giveMoney` *(Severity: Low)*
@@ -531,12 +377,16 @@ TODO: @bwbush will add text here.
 > 
 > This function is confusing in that it takes the account identifier of the paying account which is not used for anything other than filling a field in the returned value.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.12 Redundant evaluation in `addMoneyToAccount` *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.9 Utilities`, page *22***
 > 
 > `addMoneyToAccount` is redundantly evaluating `money <= 0` when invoking `updateMoneyInAccount`. The else branch could be replaced instead with `insert (accId, token) money accountsV`.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.2.13 Redundant statement regarding addition *(Severity: Low)*
@@ -549,6 +399,8 @@ TODO: @bwbush will add text here.
 > 
 > or remove the redundant statement.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.14 Missing implementation for negation case of `evalValue` *(Severity: Low)*
 
@@ -556,12 +408,16 @@ TODO: @bwbush will add text here.
 > 
 > Negation for `evalValue` does not show the implementation, just one lemma about `NegValue`, which is inconsistent with how other operations are presented.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.15 Missing parentheses in `div` specification *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.10 Evaluate Value`, page *25***
 > 
 > On page 25 formula $$c \neq 0 \Rightarrow c \mathbin{∗} a \mathbin{\mathrm{div}} (c \mathbin{∗} b) = a \mathbin{\mathrm{div}} b$$ needs additional parentheses around the term $c \mathbin{∗} a$, otherwise it can be parsed as $$c \neq 0 \Rightarrow c \mathbin{∗} (a \mathbin{\mathrm{div}} (c \mathbin{∗} b)) = a \mathbin{\mathrm{div}} b$$ which does not hold (Counter-example: $c=2, a=3, b=2$). The lemma `divMultiply` in the file `Semantics.thy` does use extra parentheses around $c \mathbin{∗} a$.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.2.16 Unclear division explanation *(Severity: Low)*
@@ -574,6 +430,8 @@ TODO: @bwbush will add text here.
 > 
 > The meaning of this statement needs to be further explained, since the arguments of `DivValue` could evaluate to negative numbers.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.17 Discrepancy with `evalValue` *(Severity: Low)*
 
@@ -583,12 +441,16 @@ TODO: @bwbush will add text here.
 > 
 > Moreover, the definition of `evalValue` is juxtaposed with some lemmas about its behavior (for example, `AddValue` being associative and commutative), making it harder to match the specification text with the Isabelle code.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.18 Missing `evalValue` lemmas in specification *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `2.2.10 Evaluate Value`, pages *23--26***
 > 
 > Not all lemmas about `evalValue` are listed in the specification. The absent lemmas include `evalDoubleNegValue`, `evalMulValue`, `evalSubValue`, and all division lemmas.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.2.19 Typo in **Use Value** case of `evalValue` *(Severity: Low)*
@@ -597,6 +459,8 @@ TODO: @bwbush will add text here.
 > 
 > The **Use Value** case mentions `TimeIntervalEnd` instead of `UseValue`.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.20 Unexplained parameters of `playTrace` *(Severity: Low)*
 
@@ -604,12 +468,16 @@ TODO: @bwbush will add text here.
 > 
 > The parameters of the function `playTrace` need to be explained.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.21 Type parameter discrepancy in `playTrace` *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `3 Marlowe Guarantees`, page *28***
 > 
 > The first parameter of `playTrace` in the specification is `int`, while it is `POSIXTime` in the code. Even though the latter is an alias for the former, it is beneficial to use the `POSIXTime` name both for consistency and readability.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.2.22 Money preservation on failing transactions not specified *(Severity: Low)*
@@ -620,12 +488,16 @@ TODO: @bwbush will add text here.
 > 
 > This is not a concern in practice because the lists of transactions that fail to evaluate are not accepted in the blockchain. However, this should be made explicit in the explanation of the property.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.23 Complicated definition of `allAccountsPositive` *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `3.3 Possitive Accounts`, page *30***
 > 
 > The definition of\ `allAccountsPositive` is complicated and can be refactored as `all ((_, money) -> money > 0)`.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.2.24 Discrepancy with Isabelle code for `allAccountsPositive` *(Severity: Low)*
@@ -634,12 +506,16 @@ TODO: @bwbush will add text here.
 > 
 > The `allAccountsPositive` function is defined differently in the specification and in the Isabelle code, although both definitions show the same behavior. These definitions need to be consolidated.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.25 Misleading or incorrect formula for contract not holding funds *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `3.6.3 Contract Does Not Hold Funds After it Closes`, page *32***
 > 
 > The statement in natural language looks unconnected from the proposed formula. Otherwise, it is unclear how not holding funds forever is a consequence of producing no warnings.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.2.26 Different format for lemma statement *(Severity: Low)*
@@ -648,12 +524,16 @@ TODO: @bwbush will add text here.
 > 
 > The lemma is stated using the proof derivation tree format as opposed to the rest of the specification and the Isabelle code.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.27 Function `isClosedAndEmpty` is unexplained *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Section `3.6.2 All Contracts Have a Maximum Time`, page *32***
 > 
 > The function `isClosedAndEmpty` needs to be explained.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.2.28 Top-down definitions *(Severity: Low)*
@@ -662,12 +542,16 @@ TODO: @bwbush will add text here.
 > 
 > In Section 2, the order of definitions is reversed, and the reader is thus faced with functions which call other functions that have not been introduced yet, despite the claim in Section 1.3 that the definitions will be presented bottom-up.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.2.29 No mention of Isabelle lemmas in specification *(Severity: Low)*
 
 > **File `specification-v3-rc1.pdf`, Multiple sections ``** 
 > 
 > Generally, readability can be improved by mentioning the Isabelle lemma names alongside their statements. This way, it would be much easier to search for the actual Isabelle code and proofs matching the informal specification text, and compare the two.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ## 2.3 Lemmas and proofs
@@ -689,6 +573,8 @@ TODO: @bwbush will add text here.
 > -   in `MoneyPreservation.thy`, lemmas `reduceContractStep_preserves_money` and\ `reductionLoop_preserves_money`
 > -   in `SingleInputTransactions.thy`, lemmas `applyAllInputsPrefix_aux`,\ `computeTransactionIterative`, and `computeTransactionStepEquivalence_error`
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.2 Long lines in lemmas *(Severity: Low)*
 
@@ -705,6 +591,8 @@ TODO: @bwbush will add text here.
 > -   in `TimeRange.thy`, lemmas `reduceStep_ifCaseLtCt` and `reduceLoop_ifCaseLtCt`
 > -   in `ValidState.thy`, lemma `reductionLoop_preserves_valid_state_aux`
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.3 Confusing auxiliary lemmas *(Severity: Low)*
 
@@ -716,6 +604,8 @@ TODO: @bwbush will add text here.
 > -   in `QuiescentResult.thy`, lemmas `reduceContractStepPayIsQuiescent`, `reductionLoopIsQuiescent_aux`, and `applyAllInputsLoopIsQuiescent_loop`
 > -   in `PositiveAccounts.thy`, lemma `positiveMoneyInAccountOrNoAccountImpliesAllPositive_aux2`
 > -   in `SingleInputTransactions.thy`, lemma `applyAllInputsPrefix_aux`
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.4 Undescriptive variable names *(Severity: Low)*
@@ -729,6 +619,8 @@ TODO: @bwbush will add text here.
 > -   in `SingleInputTransactions.thy`, lemmas `beforeApplyAllLoopIsUseless` and\ `applyAllInputsPrefix_aux`
 > -   in `ValidState.thy`, lemma `reductionLoop_preserves_valid_state_aux`
 > -   in `TimeRange.thy`, lemmas `resultOfReduceIsCompatibleToo`, `resultOfReductionLoopIsCompatibleToo`, `resultOfReduceUntilQuiescentIsCompatibleToo`, `reduceLoop_ifCaseLtCt`, and\ `reduceContractUntilQuiescent_ifCaseLtCt`
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.5 Involved proof of `insert_valid` *(Severity: Low)*
@@ -761,7 +653,9 @@ TODO: @bwbush will add text here.
 >     using insert_sorted[of c a b] insert_distinct[of c a b] by fastforce
 > ```
 > 
-> The proofs of the lemmas can be found in .
+> The proofs of the lemmas can be found in […].
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.6 Repeated verbose expression *(Severity: Low)*
@@ -781,12 +675,16 @@ TODO: @bwbush will add text here.
 > 
 > is large and used in other lemmas as well. It would need to be moved to a separate function to save the effort of reading it repeteadly.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.7 Inconsistent variable name `valTrans` *(Severity: Low)*
 
 > **File `MoneyPreservation.thy`, lemma `transferMoneyBetweenAccounts_preserves_aux`, line *257***
 > 
 > The lemma uses a variable `valTrans` where other proofs use the name `paidMoney`. To convey the meaning of the variable faster, the same name should be used consistently in all places.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.8 Unused binding `interAccs` *(Severity: Low)*
@@ -795,12 +693,16 @@ TODO: @bwbush will add text here.
 > 
 > The binding `interAccs` was probably intended to be used on this line. It should either be used or removed from the premise.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.9 Undescriptive variable name `acc` *(Severity: Low)*
 
 > **File `MoneyPreservation.thy`, lemma `transferMoneyBetweenAccounts_preserves`, line *295***
 > 
 > This lemma has a variable `acc` that is used together with `tok2`. It would be more descriptive to call it `accId2`.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.10 Misleading indentation *(Severity: Low)*
@@ -809,12 +711,16 @@ TODO: @bwbush will add text here.
 > 
 > The indentation is misleading: the premises on these lines are indented as if they are a part of the previous functional premise.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.11 Missing theorem regarding `playTrace` *(Severity: Low)*
 
 > **File `PositiveAccounts.thy`, `playTrace preserves valid and positive state`** 
 > 
 > There is no theorem that `playTrace` keeps the state valid and positive when given a state which is valid and positive. This trivially follows from `playTraceAux_preserves_validAndPositive_state` but no such theorem is present.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.12 Unconcise goal in `reduceContractStepPayIsQuiescent` *(Severity: Low)*
@@ -823,6 +729,8 @@ TODO: @bwbush will add text here.
 > 
 > This lemma does not express its goal concisely, as it makes no mention of `reduceContractStep` in the formulation. Changing the first assumption to $\texttt{reduceContractStep}\ \mathit{env}\ \mathit{sta}\ (\texttt{Pay}\ \mathit{x21}\ \mathit{x22}\ \mathit{tok}\ \mathit{x23}\ \mathit{x24})$ makes more explicit in which contexts this lemma can be useful. Modifying this assumption requires an additional `apply simp` to be added to the proof (before line 30) for the lemma to go through. Further, an additional `apply simp` will need to be added in lemmas `reduceContractStepIsQuiescent` (before line 44) and `timedOutReduce_only_quiescent_in_close` (`Timeout.thy`, before line 128) as well.
 
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 ### 2.3.13 Misleading lemma names *(Severity: Low)*
 
@@ -838,12 +746,16 @@ TODO: @bwbush will add text here.
 > 
 > This lemma should be renamed as `applyAllInputs_decreases_maxTransactions` or `applyAllInputs_reduced_decreases_maxTransactions`.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.14 Misleading variable name `reduced` *(Severity: Low)*
 
 > **File `QuiescentResult.thy`, lemmas `reductionLoop_reduce_monotonic, reduceContractUntilQuiescent_ifDifferentReduced`, lines *138, 153***
 > 
 > The boolean variable name `reduce` would be better named `reduced` as it is signifying that the contract has been reduced.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.15 Undescriptive name `beforeApplyAllLoopIsUseless` *(Severity: Low)*
@@ -853,6 +765,8 @@ TODO: @bwbush will add text here.
 > This lemma seems to say that `reduceContractUntilQuiescent` has no effect when composed with `applyAllLoop`, because `applyAllLoop` evaluates `reduceContractUntilQuiescent`, and `reduceContractUntilQuiescent` is idempotent.
 > 
 > A more descriptive name for this lemma could be `reduceContractUntilQuiescent_hasNoEffect_before_applyAllLoop`
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.16 Unused and undocumented lemmas *(Severity: Low)*
@@ -870,12 +784,16 @@ TODO: @bwbush will add text here.
 >     2.  Line 13, lemma `valid_state_valid_valueBounds`
 > 5.  In file `SingleInputTransactions.thy`, line 1214, lemma `traceListToSingleInput_isSingleInput`. It is mentioned in a commented out line in `StaticAnalysis.thy`. Furthermore, the lemma can be expressed more concisely as $$\llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = \mathit{inp\_h}\ \#\ \mathit{inp\_t} \rrparenthesis\ \#\ t = \mathit{traceListToSingleInput}\ \mathit{t2} % \mathrel{% \mbox{\fontfamily{cmr}\fontencoding{OT1}\selectfont=}}% \joinrel\Rightarrow\mathit{inp\_t} = []$$
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.17 Redundant `reduceContractStep` lemmas *(Severity: Low)*
 
 > **File `MoneyPreservation.thy`, lemma `reduceContractStep_preserves_money_acc_to_acc_aux`, line *310***
 > 
 > This lemma is weaker than `transferMoneyBetweenAccounts_preserves`. If we replace its usage at line 351 with `transferMoneyBetweenAccounts_preserves`, the proof goes through.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.18 Redundant `transferMoneyBetweenAccounts_preserves` *(Severity: Low)*
@@ -897,6 +815,8 @@ TODO: @bwbush will add text here.
 >   using transferMoneyBetweenAccounts_preserves validAndPositive_state.simps by auto
 > ```
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.19 Duplicated lemmas *(Severity: Low)*
 
@@ -908,12 +828,16 @@ TODO: @bwbush will add text here.
 > 
 > This lemma is defined twice, once in each of these files. One of them should be removed.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.20 Redundant `computeTransaction` lemmas *(Severity: Low)*
 
 > **File `ValidState.thy`, lemmas `computeTransaction_preserves_valid_state_aux, computeTransaction_preserve_valid_state`, lines *160, 176***
 > 
 > If `computeTransaction_preserves_valid_state_aux` is rewritten to have the same formulation as `computeTransaction_preserves_valid_state`, then the lemma (with the exact same proof) is still accepted, and these lemmas become duplicates of each other. Thus, no auxiliary lemma is needed.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.21 Complicated formulation of `updateMoneyInAccount_money2_aux` *(Severity: Low)*
@@ -939,6 +863,8 @@ TODO: @bwbush will add text here.
 > ``` {.text escapeinside="||" mathescape="true"}
 >   cases "moneyInAccount accId tok ((thisAccIdTok, money) # tail) |$\leq$| 0"
 > ```
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.22 Complicated proofs that can be simplified *(Severity: Low)*
@@ -991,12 +917,16 @@ TODO: @bwbush will add text here.
 > 
 > This pattern appears many times in this file. For example, in the `Party` instantation alone, it is present on lines 51 -- 53, 56 -- 57, 77 -- 80, and 83 -- 84.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.23 Inconsistent style when applying constructor *(Severity: Low)*
 
 > **File `SingleInputTransactions.thy`, lemmas `beforeApplyAllLoopIsUseless, fixIntervalOnlySummary`, lines *275, 398***
 > 
 > The lines mentioned in these lemmas display the resulting constructor before the function application, which differs from the general style in the rest of the codebase.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.24 Unsimplified boolean formulas *(Severity: Low)*
@@ -1005,12 +935,16 @@ TODO: @bwbush will add text here.
 > 
 > In multiple places, this lemma formulation includes top-level negation in front of nontrivial conjunctions and disjunctions. These negations should be distributed. Otherwise, the reader is taxed with the chore to mentally distribute the negation to understand the lemma.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.25 Typo with "independet" in multiple lemmas *(Severity: Low)*
 
 > **File `SingleInputTransactions.thy`, lemmas `applyAllLoop_independet_of_acc_error1, applyAllLoop_independet_of_acc_error2`, lines *977, 987***
 > 
 > In both of these lemmas, there is a typo with the word "independet".
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.26 Poorly named `acc` lemmas *(Severity: Low)*
@@ -1019,12 +953,16 @@ TODO: @bwbush will add text here.
 > 
 > It is unclear what `acc` refers to in these lemma names, as the lemmas are about the independence of warnings and payments, not accounts.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.27 Verbose lemma statement `playTraceAuxIterative_base_case` *(Severity: Low)*
 
 > **File `SingleInputTransactions.thy`, lemma `playTraceAuxIterative_base_case`, line *1063***
 > 
 > The statement of this lemma is very verbose. A more natural (and slightly stronger) formulation could be $$\begin{aligned} &\mathit{playTraceAux}\ \mathit{txOut}\ [\ \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = [h] \rrparenthesis, \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = t \rrparenthesis \ ] \\ =\ &\mathit{playTraceAux}\ \mathit{txOut}\ [\ \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = h\ \#\ t \rrparenthesis \ ]\end{aligned}$$
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.28 `playTrace_only_accepts_maxTransactionsInitialState` not written as `theorem` *(Severity: Low)*
@@ -1033,12 +971,16 @@ TODO: @bwbush will add text here.
 > 
 > This lemma seems like the main result of this file. Assuming it is an important result, we recommend writing it as a `theorem` rather than a `lemma`.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.29 Inconsistent style with assumptions *(Severity: Low)*
 
 > **File `Timeout.thy`, lemmas `timedOutReduceContractUntilQuiescent_closes_contract, timedOutReduceContractStep_empties_accounts`, lines *201/204, 211/214***
 > 
 > These lemmas use the hypothesis $\mathit{minTime}\ \mathit{sta} \leq \mathit{iniTime}$ and build a state $\mathit{sta}\ \llparenthesis \mathit{minTime} := \mathit{iniTime} \rrparenthesis)$ while other lemmas simply say $\mathit{minTime}\ \mathit{sta} = \mathit{iniTime}$. Readability would be improved by presenting these lemmas in the same style as the others, or documenting the need for these distinct presentations via code comments.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.30 Function `validTimeInterval` unnecessarily unfolded in lemma *(Severity: Low)*
@@ -1047,6 +989,8 @@ TODO: @bwbush will add text here.
 > 
 > For consistency, $a \leq b$ should be replaced by $\texttt{validTimeInterval}$.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.31 Overly specific auxiliary lemma *(Severity: Low)*
 
@@ -1054,12 +998,16 @@ TODO: @bwbush will add text here.
 > 
 > This lemma on its own is very specific, and is only used in `reductionLoop_preserves_valid_state`. If possible, we recommend this lemma to be generalized or broken down into smaller lemmas, in order to present the arguments to the reader in smaller pieces.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.3.32 `playTrace_preserves_valid_state` not written as `theorem` *(Severity: Low)*
 
 > **File `ValidState.thy`, lemma `playTrace_preserves_valid_state`, line *194***
 > 
 > This lemma seems like the main result of this file. Assuming it is an important result, we recommend writing it as a `theorem` instead.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.3.33 Unnecessary assumptions *(Severity: Low)*
@@ -1110,12 +1058,16 @@ TODO: @bwbush will add text here.
 
 ## 2.4 Isabelle implementation
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.4.1 Variable shadowing in `applyAllLoop` *(Severity: Medium)*
 
 > **File `Semantics.thy`, function `applyAllLoop`, line *575***
 > 
 > The $\texttt{cont}$ variable introduced by the pattern match shadows another $\texttt{cont}$ variable, coming from the pattern match of an outer case expression, making the function harder to follow while also making it more error-prone to future changes.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.4.2 Undescriptive name `moneyInPayment` *(Severity: Low)*
@@ -1124,12 +1076,16 @@ TODO: @bwbush will add text here.
 > 
 > The name of the function can be more precise. Perhaps `moneyInPaymentToParty` or `moneyInExternalPayment` would work.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.4.3 Typo in section name *(Severity: Low)*
 
 > **File `OptBoundTimeInterval.thy`, line `37`** 
 > 
 > Typo in section name: "Interval intesection".
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.4.4 Typo in comment *(Severity: Low)*
@@ -1138,12 +1094,16 @@ TODO: @bwbush will add text here.
 > 
 > Typo in comment: "endpoits".
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.4.5 Unclear need for multiple formulations for positive accounts *(Severity: Low)*
 
 > **File `PositiveAccounts.thy`, `Throughout`** 
 > 
 > It is unclear what the use is for multiple formulations (and lemmas about) positive accounts. The first formulation (with the theorems `playTraceAux_gtZero` and `playTrace_gtZero`) is not used in any other modules but the alternative formulation is used instead. If both formulations are relevant, then it should be explained why.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.4.6 Variable name discrepancy in `reductionLoop` *(Severity: Low)*
@@ -1152,6 +1112,8 @@ TODO: @bwbush will add text here.
 > 
 > When comparing this function against `specification-v3-rc1.pdf`, different names are used for a let-bound variable. It is `a` in the pdf and `newPayments` in the file `Semantics.thy`. There are similar issues in the function `reduceContractStep` in the equation for the `If` case, and in the function `giveMoney`.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.4.7 Typo in constructor *(Severity: Low)*
 
@@ -1159,12 +1121,16 @@ TODO: @bwbush will add text here.
 > 
 > Apparent typo in the error message constructor: the party mentioned should be $\texttt{party2}$.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.4.8 Unclear function name `calculateNonAmbiguousInterval` *(Severity: Low)*
 
 > **File `Semantics.thy`, function `calculateNonAmbiguousInterval`, line *725***
 > 
 > The meaning of the function is not obvious. It needs a comment to explain it.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.4.9 Non-modularized file `SingleInputTransactions.thy` *(Severity: Low)*
@@ -1174,6 +1140,8 @@ TODO: @bwbush will add text here.
 > This file is very long, and it covers more than just single-input transactions. For instance, about 530 lines at the beginning are rather dedicated to idempotence of certain operations. Then, the lemmas around lines 530 -- 700 focus on "well-foundedness" of the recursion on contract steps. Then there is also a clear block of lemmas about "distributivity" of semantics over transaction lists.
 > 
 > Splitting the module, grouping the related lemmas, would help understanding the relationships between the groups.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ### 2.4.10 Misleading function names *(Severity: Low)*
@@ -1192,6 +1160,8 @@ TODO: @bwbush will add text here.
 > 
 > This function should be renamed or repurposed. If renamed, `allAreSingleInput` more accurately reflects the meaning of the function. If repurposed, it should check that a single transaction has a single input, and `all isSingleInput` can be used to express the current behavior.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.4.11 Unused parameter in `maxTransactionCaseList` *(Severity: Low)*
 
@@ -1199,12 +1169,16 @@ TODO: @bwbush will add text here.
 > 
 > This function has a parameter of type `State` that is completely unused and can be removed.
 
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+
 
 ### 2.4.12 Duplicated `isValidInterval` function *(Severity: Low)*
 
 > **File `TimeRange.thy`, function `isValidInterval`, line *231***
 > 
 > This function duplicates $\texttt{validTimeInterval}$ from $\texttt{OptBoundTimeInterval.thy}$, and the latter has certain additional properties proven about it specifically, so it makes sense to use the latter in both cases.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
 
 ## 2.5 marlowe-cardano specification
@@ -1220,31 +1194,7 @@ TODO: @bwbush will add text here.
 > 
 > Another alternative would be to demand other contracts' outputs to use datums that are different from the roles used by the Marlowe contract for payments.
 
-TODO: @bwbush will add text here.
-
-```console
-commit 00010ea48439892ff9eec54fb93929f56bcb6c7b
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 11:20:14 2023 -0700
-
-    PLT-4169 Added text on running Plutus with Marlowe to specification doc.
-    
-    This addresses the following audit comment:
-    
-    > File marlowe-cardano-specification.md, Section Life Cycle of a
-    > Marlowe Contract Given that transactions are expected to work
-    > with Marlowe and non-Marlowe contracts simultaneously, it would
-    > be helpful to offer some guidelines for other contracts to avoid
-    > double satisfaction. Some degree of cooperation between the
-    > contracts that can appear in the same transaction is unavoidable.
-    >
-    > One measure could be to ask every cooperating contract to refrain
-    > from paying to the payout validator. In this way, double satisfaction
-    > can not affect the payments of the Marlowe contract. Another
-    > alternative would be to demand other contracts’ outputs to use datums
-    > that are different from the roles used by the Marlowe contract for
-    > payments.
-```
+Commit [00010ea4](https://github.com/input-output-hk/marlowe-cardano/commit/00010ea48439892ff9eec54fb93929f56bcb6c7b) adds a paragraph of guidance to the Marlowe Cardano specification. The mitigation above for "2.1.2 Contracts vulnerable to double satisfaction attacks" implements validator changes to address this.
 
 
 ### 2.5.2 No reference to creating a minting policy *(Severity: Low)*
@@ -1253,21 +1203,7 @@ Date:   Tue Mar 7 11:20:14 2023 -0700
 > 
 > The minting policy is not specified, but a reference needs to be offered to explain how to create one.
 
-TODO: @bwbush will add text here.
-
-```console
-commit fe00af7d622bbd17c3327363d4650ee544d1fff7
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 11:25:09 2023 -0700
-
-    PLT-4169 Added text to specification on how to mint role tokens.
-    
-    This addresses the audit comment:
-    
-    > File marlowe-cardano-specification.md, Section Monetary Policy
-    > for Role Tokens The minting policy is not specified, but a
-    > reference needs to be offered to explain how to create one.
-```
+The monetary policy is not a concern of the Marlowe validator, but commit [fe00af7d](https://github.com/input-output-hk/marlowe-cardano/commit/fe00af7d622bbd17c3327363d4650ee544d1fff7) adds a sentance referencing the discussion of monetary policies for role tokens in the [Marlowe Best Practices Guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/best-practices.md).
 
 
 ### 2.5.3 Argument for Contract in `txInfoData` not specified *(Severity: Low)*
@@ -1276,21 +1212,7 @@ Date:   Tue Mar 7 11:25:09 2023 -0700
 > 
 > The argument by which the `Contract` in the `txInfoData` list corresponds to the given hash needs to be made explicit.
 
-TODO: @bwbush will add text here.
-
-```console
-commit b6366efc9f8df38bfe9232f81e6caf2c7f11ffa8
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 11:31:11 2023 -0700
-
-    PLT-4169 Made explicit the relationship between continuation and its hash.
-    
-    This addresses the audit comment:
-    
-    > File marlowe-cardano-specification.md, Section Types The argument
-    > by which the Contract in the txInfoData list corresponds to the
-    > given hash needs to be made explicit.
-```
+Commit [b6366efc](https://github.com/input-output-hk/marlowe-cardano/commit/b6366efc9f8df38bfe9232f81e6caf2c7f11ffa8) makes this hash correspondence explicit in the Marlowe Cardano specification and adds a code snippet concretizing it, namely that the hash and continuation must be present in the script context datum map.
 
 
 ### 2.5.4 Merkleization section not detailed enough *(Severity: Low)*
@@ -1301,25 +1223,7 @@ Date:   Tue Mar 7 11:31:11 2023 -0700
 > 
 > When explaining how it works, it needs to make explicit that only the `Case` type is modified, and that in the semantics, only the `Input` type is modified. It needs to explain why the `Input` type needs to carry a hash and a contract, and why the evaluation of the contract is changed as described.
 
-TODO: @bwbush will add text here.
-
-```console
-commit a9d4043230cb4f240fab2d816bed6a3cab4f5053
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 11:44:32 2023 -0700
-
-    PLT-4169 Elaborated explanation of and motivation for merkleization.
-    
-    This addresses the audit comment:
-    
-    > File marlowe-cardano-specification.md, Section Merkleization
-    > This section is too terse. It needs to explain what Merkleization
-    > is, and to motivate why it is needed. When explaining how it works,
-    > it needs to make explicit that only the Case type is modified, and
-    > that in the semantics, only the Input type is modified. It needs
-    > to explain why the Input type needs to carry a hash and a contract,
-    > and why the evaluation of the contract is changed as described.
-```
+Commit [a9d40432](https://github.com/input-output-hk/marlowe-cardano/commit/a9d4043230cb4f240fab2d816bed6a3cab4f5053) adds to the Marlowe Cardano specification a paragraph elaborating on mechanics and motivation for Merkleization, namely the ability to handle Marlowe contract that are too large to store in a datum.
 
 
 ### 2.5.5 Unnecessary constraint *(Severity: Low)*
@@ -1328,25 +1232,7 @@ Date:   Tue Mar 7 11:44:32 2023 -0700
 > 
 > This constraint is unnecessary to have in the Marlowe validator, since the construction of the arguments for evaluation of the Marlowe contract would fail. However, it would be useful to have it appear in the specification for users to be aware of it when crafting transactions. A note to motivate the presence of the constraint could be helpful.
 
-TODO: @bwbush will add text here.
-
-```console
-commit fda1d3e862fc8f8c31ff479fbd338226e661eb0b
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 11:50:20 2023 -0700
-
-    PLT-4169 Clarified nature of Constraint 12 in specification.
-    
-    This addresses the auditor comment:
-    
-    > File marlowe-cardano-specification.md, Constraint 12. Merkleized
-    > continuations This constraint is unnecessary to have in the
-    > Marlowe validator, since the construction of the arguments for
-    > evaluation of the Marlowe contract would fail. However, it would
-    > be useful to have it appear in the specification, for users to
-    > be made aware of it when crafting transactions. A note to motivate
-    > the presence of the constraint could be helpful.
-```
+Commit [fda1d3e8](https://github.com/input-output-hk/marlowe-cardano/commit/fda1d3e862fc8f8c31ff479fbd338226e661eb0b) to the Marlowe Cardano specification clarifies that the constraint is supplementary (informational) in nature.
 
 
 ### 2.5.6 Asymmetry between role and wallet payouts *(Severity: Low)*
@@ -1355,15 +1241,8 @@ Date:   Tue Mar 7 11:50:20 2023 -0700
 > 
 > The marlowe validator allows multiple outputs to be paid to a wallet, but it demands that a single output exists when paying to a role instead. The motivation to use different approaches needs to be documented. This is implemented in `Scripts.hs` at line 371, in function `payoutConstraints`.
 
-TODO: @bwbush will add text here.
+The asymmetric is a convenience and practicality related to the manner in which coin selection and transaction balancing typically occurs nowadays in wallets. Commit [4e81470d](https://github.com/input-output-hk/marlowe-cardano/commit/4e81470de90ddd6858c3ad8aace96e90df5a86ae) adds to the Marlowe Cardano specification a paragraph justifying this asymmetry in payout style and a comment to the Marlowe semantics validator along the same lines.
 
-```console
-commit 4e81470de90ddd6858c3ad8aace96e90df5a86ae
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Wed Mar 1 17:40:38 2023 -0700
-
-    SCP-5128 Commented on rationale for allowing multiple outputs to an address.
-```
 
 ### 2.5.7 Incorrect description of `rolePayoutValidator` *(Severity: Low)*
 
@@ -1371,22 +1250,7 @@ Date:   Wed Mar 1 17:40:38 2023 -0700
 > 
 > The description of the Marlowe payout validator in the specification states that it is parameterized by the currency symbol. However, this is not correct as the validator is unparameterized; rather, the datum type of the validator includes the currency symbol (as well as token name). The description should be modified to reflect this.
 
-TODO: @bwbush will add text here.
-
-```console
-commit 1d16de1f1b7a167dc4eb4a057a3df2c24d0194c9
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 11:12:36 2023 -0700
-
-    PLT-4169 Fixed example call to `rolePayoutValidator`.
-    
-    This addresses the following audit finding:
-    
-    > File marlowe-cardano-specification.md, Section Plutus Validator
-    > for Marlowe Payouts The type signature of rolePayoutValidator
-    > is missing the datum argument. It should be: rolePayoutValidator
-    > :: CurrencySymbol -> TokenName -> () -> ScriptContext -> Bool
-```
+This incorrect signature is fixed in commit [1d16de1f](https://github.com/input-output-hk/marlowe-cardano/commit/1d16de1f1b7a167dc4eb4a057a3df2c24d0194c9).
 
 
 ### 2.5.8 Unspecified initial state *(Severity: Low)*
@@ -1395,24 +1259,7 @@ Date:   Tue Mar 7 11:12:36 2023 -0700
 > 
 > The specification should say what the initial state of a Marlowe contract should be. In particular, creating a contract requires giving the minimum Ada to some account in the Marlowe state. Otherwise, Constraint 5 will reject the transactions that try to spend the output.
 
-TODO: @bwbush will add text here.
-
-```console
-commit e150e30867dfa5466639f46bf39656aee2888e38
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 12:34:38 2023 -0700
-
-    PLT-4169 Elaborated in specification on the required initial state.
-    
-    This addresses the audit comment:
-    
-    > File marlowe-cardano-specification.md, Section Life Cycle of a
-    > Marlowe Contract The specification should say what the initial
-    > state of a Marlowe contract should be. In particular, creating
-    > a contract requires giving the minimum Ada to some account in
-    > the Marlowe state. Otherwise, Constraint 5 will reject the
-    > transactions that try to spend the output.
-```
+Commit [e150e308](https://github.com/input-output-hk/marlowe-cardano/commit/e150e30867dfa5466639f46bf39656aee2888e38) details the three invariants that the initial state must satisfy: positivity of accounts, non-duplication of state entries (accounts, choices, bound values), and matching the total value in the internal state to the value of the script's UTxO.
 
 
 ### 2.5.9 Unspecified behavior when multiple cases can apply *(Severity: Low)*
@@ -1421,21 +1268,8 @@ Date:   Tue Mar 7 12:34:38 2023 -0700
 > 
 > If multiple cases in a case list can apply, the first one is taken. This behavior should be better communicated in the specification.
 
-TODO: @bwbush will add text here.
+Although this behavior is required by the Isabelle specification and implemented in the Plutus validator, the comment on `applyCases` has been editing in commit [08d6f34a](https://github.com/input-output-hk/marlowe-cardano/commit/08d6f34ac91da7aa34e7414c5bae0e33e9235d74) to reinforce that the first applicable `Case` is taken for a `When`.
 
-```console
-commit 08d6f34ac91da7aa34e7414c5bae0e33e9235d74
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 12:06:10 2023 -0700
-
-    PLT-4169 Improved documentation of `applyCases`.
-    
-    This addresses the audit comment:
-    
-    > File Semantics.hs, Function applyCases, line 597 If multiple
-    > cases in a case list can apply, the first one is taken. This
-    > behavior should be better communicated in the specification.
-```
 
 ## 2.6 Haskell implementation
 
@@ -1446,10 +1280,8 @@ Date:   Tue Mar 7 12:06:10 2023 -0700
 > 
 > The binding `cont` from the `Applied` constructor shadows the `cont` variable coming from the pattern match in an enclosing case expression. This makes the code error-prone to subsequent changes and refactorings.
 
-TODO: @bwbush will add text here.
+The binding of `cont` has been renamed to `cont'` in commit [1c96edfe](https://github.com/input-output-hk/marlowe-cardano/commit/1c96edfe7e22ecc499ed75dd175490a4f2427bdc).
 
-```console
-```
 
 ### 2.6.2 Non-isomorphic types in `playTraceAux` *(Severity: Medium)*
 
@@ -1457,10 +1289,7 @@ TODO: @bwbush will add text here.
 > 
 > The function in the Isabelle code takes a `TransactionOutputRecord` while the Haskell version takes a `TransactionOutput`. This means `TransactionError` cannot be an input to `playTraceAux` in Isabelle, possibly invalidating proofs about its properties.
 
-TODO: @bwbush will add text here.
-
-```console
-```
+The `playTrace` and `playTraceAux` functions are not used by the Marlowe validators, so no mitigation was made for this audit-report finding.
 
 
 ### 2.6.3 Variable names differ from Isabelle code *(Severity: Low)*
@@ -1478,15 +1307,7 @@ TODO: @bwbush will add text here.
 > -   Line 439, function `refundOne` uses a variable `balance` where the Isabelle code uses `money`.
 > -   Line 463, function `addMoneyToAccount` uses variable `accounts` where the Isabelle code uses `accountsV`.
 
-TODO: @bwbush will add text here.
-
-```console
-commit 1c96edfe7e22ecc499ed75dd175490a4f2427bdc
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 13:24:06 2023 -0700
-
-    PLT-4169 Renamed functions, per audit recommendations.
-```
+These cosmetic recommendations of the audit report have not been implemented in the Marlowe semantics validator, as the discrepancies do not strongly impact comparison.
 
 
 ### 2.6.4 Naming of functions and variables *(Severity: Low)*
@@ -1500,16 +1321,8 @@ Date:   Tue Mar 7 13:24:06 2023 -0700
 > -   `Semantics.hs:439`: `refundOne` is named somewhat confusingly, and understanding the name requires the context of `reduceContractStep` where the function is called. Perhaps a better name would be `dropWhileNonPositiveAndUncons`.
 > -   `Semantics.hs:597`: the binding `tailCase` should rather be named `tailCases`.
 
+The aforementioned bindings `validateBalances`, `validateInputs`, and `tailCase` have been renamed to `allBalancesArePositive`, `allInputsAreAuthorized`, and `tailCases` in commit [1c96edfe](https://github.com/input-output-hk/marlowe-cardano/commit/1c96edfe7e22ecc499ed75dd175490a4f2427bdc). For historical reasons, `refundOne` has not been renamed. The function `checkScriptOutputAny` is no longer present due to other mitigations made to the validator.
 
-TODO: @bwbush will add text here.
-
-```console
-commit 1c96edfe7e22ecc499ed75dd175490a4f2427bdc
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 13:24:06 2023 -0700
-
-    PLT-4169 Renamed functions, per audit recommendations.
-```
 
 ### 2.6.5 Unused functions *(Severity: Low)*
 
@@ -1521,10 +1334,7 @@ Date:   Tue Mar 7 13:24:06 2023 -0700
 > 
 > In addition to that, the functions `validateBalances` and `totalBalance` (defined at `Semantics.hs:755` and `:762`) are only used in `Scripts.hs` and never reused, so they should probably be moved to `Scripts.hs`.
 
-TODO: @bwbush will add text here.
-
-```console
-```
+Although the validator does not use these functions, off-chain code in other Haskell modules does. For the time being, the `contractLifespanUpperBound` and `isClose` have been retained in `Language.Marlowe.Core.V1.Semantics`. They will be relocated in the future if validator and non-validator code is separated into different modules.
 
 
 ### 2.6.6 Comments *(Severity: Low)*
@@ -1537,10 +1347,7 @@ TODO: @bwbush will add text here.
 > 
 > There is a typo in the comment: `accoun` is written instead of `account`.
 
-TODO: @bwbush will add text here.
-
-```console
-```
+Commit [1c96edfe](https://github.com/input-output-hk/marlowe-cardano/commit/1c96edfe7e22ecc499ed75dd175490a4f2427bdc) fixes this typo.
 
 
 ### 2.6.7 Record updates in `playTraceAux` *(Severity: Low)*
@@ -1549,10 +1356,7 @@ TODO: @bwbush will add text here.
 > 
 > The function could have followed the Isabelle code more closely if it used a record update instead of creating a new `TransactionOutput` record from scratch.
 
-TODO: @bwbush will add text here.
-
-```console
-```
+The `playTrace` and `playTraceAux` functions are not used by the Marlowe validators, so no mitigation was made for this audit-report finding.
 
 
 ### 2.6.8 Potential simplifications *(Severity: Low)*
@@ -1561,14 +1365,13 @@ TODO: @bwbush will add text here.
 > 
 > The function uses `foldMap f . AssocMap.toList`. Here, `AssocMap.toList` is redundant.
 
+Actually, the `PlutusTx.AssocMap.Map`'s implementation of `foldMap` does not permit this: type checking fails for this proposed change.
+
 > **File `Types.hs`, Class instance `Eq Contract`, line *873***
 > 
 > The equality of cases for the `When` constructor would be simplified by using `cases1 == cases2`. If there is a reason for the more verbose equality condition, it should be outlined in a comment.
 
-TODO: @bwbush will add text here.
-
-```console
-```
+A comment explaining the rationale for this equality test has been added in commit [faaae175](https://github.com/input-output-hk/marlowe-cardano/commit/faaae1751957b4f750e3c11ffdc946de07baf0cd).
 
 
 ### 2.6.9 `computeTransaction` differs from the Isabelle implementation *(Severity: Low)*
@@ -1576,57 +1379,27 @@ TODO: @bwbush will add text here.
 > **Helper function `evalValue, evalObservation`, lines *391 (Semantics.hs), 34 (Semantics.thy)***
 > 
 > `evalValue` and `evalObservation` differ from the Isabelle implementation in the introduction of auxiliary variables to abbreviate the recursive calls. The comparison would be simpler if both definitions were consolidated.
+
+The Plutus implementation differs slightly from the Isabelle for efficiency and to conform to Plutus's different restrictions on recursive calls.
  
 > **Helper function `evalValue`, lines *395 (Semantics.hs), 35 (Semantics.thy)***
 > 
 > The Isabelle implementation should use the helper function `moneyInAccount` instead of inlining its definition, so as to maintain consistency with the Haskell implementation.
+
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here.
  
 > **Helper function `applyCases`, lines *596 (Semantics.hs), 498 (Semantics.thy)***
 > 
 > The structure of function `applyCases` differs between the Haskell and Isabelle files. Specifically, the Haskell implementation has an additional function `applyAction` where the Isabelle implementation does not. A comment motivating the discrepancy would be needed. This is likely due to the lack of Merkleization in the Isabelle implementation.
 
-TODO: @bwbush will add text here.
-
-```console
-commit d0a3834ae8484bb6c7d0ecd3aeec60871b3fd165
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 13:00:28 2023 -0700
-
-    PLT-4169 Added comment about merkleization to `applyCases`.
-    
-    This addresses the audit comment:
-    
-    > Helper function applyCases, lines 596 (Semantics.hs), 498
-    > (Semantics.thy) The structure of function applyCases differs
-    > between the Haskell and Isabelle files. Specifically, the
-    > Haskell implementation has an additional function applyAction
-    > where the Isabelle implementation does not. A comment
-    > motivating the discrepancy would be needed. This is likely
-    > due to the lack of Merkleization in the Isabelle implementation.
-```
+Commit [d0a3834a](https://github.com/input-output-hk/marlowe-cardano/commit/d0a3834ae8484bb6c7d0ecd3aeec60871b3fd165) adds a comment that the Plutus implementation differs from the Isabelle one due to the former's support for merkleization.
  
 > **Helper function `convertReduceWarnings`, lines *617 (Semantics.hs), 537 (Semantics.thy)***
 > 
 > The Haskell function is implemented using `foldr`, while the Isabelle function uses explicit recursion, making a one-to-one comparison less obvious. If there is a reason for this discrepancy, such as `foldr` yielding some optimizations, this should be outlined in a comment.
 
-TODO: @bwbush will add text here.
+Commit [d1477610](https://github.com/input-output-hk/marlowe-cardano/commit/d14776101c22eac7fbc67893020f37cbc2a9e339) adds a comment that the use of `foldr` in the Plutus implementation is for efficiency.
 
-```console
-commit d14776101c22eac7fbc67893020f37cbc2a9e339
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 13:02:40 2023 -0700
-
-    PLT-4169 Added note on use of `foldr` in semantics.
-    
-    This addresses the audit comment:
-    
-    > Helper function convertReduceWarnings, lines 617 (Semantics.hs),
-    > 537 (Semantics.thy) The Haskell function is implemented using
-    > foldr, while the Isabelle function uses explicit recursion,
-    > making a oneto-one comparison less obvious. If there is a
-    > reason for this discrepancy, such as foldr yielding some
-    > optimizations, this should be outlined in a comment.
-```
 
 ### 2.6.10 Constraint implementations differ from description *(Severity: Low)*
 
@@ -1634,10 +1407,7 @@ Date:   Tue Mar 7 13:02:40 2023 -0700
 > 
 > Some constraints mentioned in the specification are written in a different structure than the corresponding constraint in `Scripts.hs`. While such a discrepancy may be useful to minimize verbosity, a unified structure when possible would alleviate a side-by-side comparison. Examples of these differing structures include Constraint 6 and Constraint 14.
 
-TODO: @bwbush will add text here.
-
-```console
-```
+The discrepancies of implementation between the constraints in the specification and the Plutus code result from the emphasis on readability in the specification and of efficiency in the implementation. The need to minimize of validator size and execution cost in the implementation has sometimes resulted in less consise or readible code. The Plutus compile can be quite sensitive to the precise expression of a constraint as Haskell code.
 
 
 ### 2.6.11 Missing argument of `computeTransaction` *(Severity: Low)*
@@ -1646,22 +1416,8 @@ TODO: @bwbush will add text here.
 > 
 > The specification mentions the output datum as the (fifth) argument for the `computeTransaction` function, while it is not an argument to it.
 
-TODO: @bwbush will add text here.
+Commit [00a0c240](https://github.com/input-output-hk/marlowe-cardano/commit/00a0c2406665f06753aecf6dbb63933edb275436) moves the comment about the non-existant fifth argument to a separate sentance following the list of arguments.
 
-```console
-commit 00a0c2406665f06753aecf6dbb63933edb275436
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 12:39:22 2023 -0700
-
-    PLT-4169 Fixed correspondence between semantics and validator.
-    
-    This addresses the audit comment:
-    
-    > File marlowe-cardano-specification.md, Section Relationship
-    > between Marlowe Validator and Semantics The specification
-    > mentions the output datum as the (fifth) argument for the
-    > computeTransaction function, while it is not an argument to it.
-```
 
 ### 2.6.12 Missing `smallMarloweValidator` *(Severity: Low)*
 
@@ -1669,21 +1425,7 @@ Date:   Tue Mar 7 12:39:22 2023 -0700
 > 
 > The specification mentions `smallMarloweValidator` in a few places, but it is never mentioned in the source code.
 
-TODO: @bwbush will add text here.
-
-```console
-commit 87cf548d9ae7934a702ea1a1c85d7d9bd4993aa9
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 12:37:21 2023 -0700
-
-    PLT-4169 Fixed references to `smallMarloweValidator`.
-    
-    This addresses the audit comment:
-    
-    > File marlowe-cardano-specification.md, Various sections
-    > The specification mentions smallMarloweValidator in a few
-    > places, but it is never mentioned in the source code.
-```
+This reference is changed to `marloweValidator` in commit [87cf548d](https://github.com/input-output-hk/marlowe-cardano/commit/87cf548d9ae7934a702ea1a1c85d7d9bd4993aa9).
 
 
 ### 2.6.13 Incorrect constraint reference *(Severity: Low)*
@@ -1692,20 +1434,7 @@ Date:   Tue Mar 7 12:37:21 2023 -0700
 > 
 > This line should refer to Constraint 17 rather than Constraint 16.
 
-TODO: @bwbush will add text here.
-
-```console
-commit 3fac0d1749d107f13743756aa50c9723e776e391
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 12:42:01 2023 -0700
-
-    PLT-4169 Fixed incorrect constraint reference.
-    
-    This addresses the audit comment:
-    
-    > File Scripts.hs, Function mkRolePayoutValidator, line 150 This line should refer to Constraint 17
-    rather than Constraint 16.
-```
+This incorrect reference is fixed in commit [3fac0d17](https://github.com/input-output-hk/marlowe-cardano/commit/3fac0d1749d107f13743756aa50c9723e776e391).
 
 
 ### 2.6.14 `MarloweParams` differs from the specification *(Severity: Low)*
@@ -1714,22 +1443,8 @@ Date:   Tue Mar 7 12:42:01 2023 -0700
 > 
 > The specification defines `MarloweParams` to contain just the payout validator hash, while the definition in the Haskell code contains just the roles currency symbol.
 
-TODO: @bwbush will add text here.
+This mistatement is remedied in commit [8691f335](https://github.com/input-output-hk/marlowe-cardano/commit/8691f3351e55758cc750eee0800b1458f0a8c554).
 
-```console
-commit 8691f3351e55758cc750eee0800b1458f0a8c554
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 12:44:53 2023 -0700
-
-    PLT-4169 Fixed `MarloweParams` in specification.
-    
-    This addresses the audit comment:
-    
-    > File Semantics.hs, type MarloweParams, line 355 The specification
-    > defines MarloweParams to contain just the payout validator hash,
-    > while the definition in the Haskell code contains just the roles
-    > currency symbol.
-```
 
 ### 2.6.15 Timeout boundary differs from the specification *(Severity: Low)*
 
@@ -1741,10 +1456,8 @@ Date:   Tue Mar 7 12:44:53 2023 -0700
 > 
 > where "bigger" implies strict inequality, while the code makes non-strict comparison. This difference needs to be acknowledged and further explained in the specification.
 
-TODO: @bwbush will add text here.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
-```console
-```
 
 ## 2.7 Haskell tests
 
@@ -1757,10 +1470,8 @@ TODO: @bwbush will add text here.
 > 
 > The absence of this information makes it easier to accidentally produce a test that is not testing what is intended.
 
-TODO: @bwbush will add text here.
+A future version of the Marlowe test suite for `checkSemanticsTransaction` and `checkPayoutTransaction` will instrumenting Plutus scripts for the Marlowe validators so that the precise cause of the test failure can be verified.
 
-```console
-```
 
 ### 2.7.2 Missing tests *(Severity: Medium)*
 
@@ -1775,94 +1486,934 @@ TODO: @bwbush will add text here.
 > 
 > Some of these are tested in `Spec/Marlowe/Semantics/Functions.hs` already for auxiliary functions.
 
-TODO: @bwbush will add text here.
-
-```console
-commit ee2e52220e25736af29a1f01144d5fafbe9eed76
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 07:36:59 2023 -0700
-
-    PLT-4168 Tests that choice and deposit continue as expected.
-
-commit 333eee293aa3afe95d0aa7f678c7e7b7bad660ea
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 07:18:27 2023 -0700
-
-    PLT-4168 Test that choice produces expected continuation.
-
-commit 477284c78095482eba63adc2e6090ea68553db9d
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 06:54:14 2023 -0700
-
-    PLT-4168 Tested that deposits add to account.
-
-commit d241669bfb7ec8dad1cc92a7ca6185d08229817e
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Mon Mar 6 14:38:09 2023 -0700
-
-    PLT-4168 Tested that payout substracts from account.
-
-commit f33fc7206522031c93253323f3b8ca083d8ca8c7
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Tue Mar 7 09:56:30 2023 -0700
-
-    PLT-4168 Tested that Merkleization continues as expected.
-```
+Commit [ee2e5222](https://github.com/input-output-hk/marlowe-cardano/commit/ee2e52220e25736af29a1f01144d5fafbe9eed76) adds a property-based test that choice and deposit continue as expected; commit [333eee29](https://github.com/input-output-hk/marlowe-cardano/commit/333eee293aa3afe95d0aa7f678c7e7b7bad660ea) tests that choice produces expected continuation; commit [477284c7](https://github.com/input-output-hk/marlowe-cardano/commit/477284c78095482eba63adc2e6090ea68553db9d) tests that that deposits add to an account; commit [d241669b](https://github.com/input-output-hk/marlowe-cardano/commit/d241669bfb7ec8dad1cc92a7ca6185d08229817e) tests that payout substracts from an account; and commit [f33fc720](https://github.com/input-output-hk/marlowe-cardano/commit/f33fc7206522031c93253323f3b8ca083d8ca8c7) tests that Merkleization continues as expected.
  
 > **File `Spec/Marlowe/Semantics/Functions.hs`, `Missing merkleization tests`** 
 > 
 > The properties in this module do not seem to be tested with merkleized contracts or inputs except for `checkGetContinuation`. More merkleization tests should be added.
 
-TODO: @bwbush will add text here.
-
-```console
-commit 2a936bf1bbb890cc811b966b46a10fd38314dc25
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Mon Mar 6 11:40:56 2023 -0700
-
-    PLT-4168 Increased coverage of merkleization in validator tests.
-    
-    This addresses the following audit finding:
-    
-    > File Spec/Marlowe/Semantics/Functions.hs, Missing
-    > merkleization tests The properties in this module
-    > do not seem to be tested with merkleized contracts
-    > or inputs except for checkGetContinuation, and
-    > they probably should.
-
-commit 8f8183d7f14c6bdc3841a1999077ef01ebac4144
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Mon Mar 6 11:40:56 2023 -0700
-
-    PLT-4168 Increased coverage of merkleization in validator tests.
-    
-    This addresses the following audit finding:
-    
-    > File Spec/Marlowe/Semantics/Functions.hs, Missing
-    > merkleization tests The properties in this module
-    > do not seem to be tested with merkleized contracts
-    > or inputs except for checkGetContinuation, and
-    > they probably should.
-```
+Commits [2a936bf1](https://github.com/input-output-hk/marlowe-cardano/commit/2a936bf1bbb890cc811b966b46a10fd38314dc25) and [8f8183d7](https://github.com/input-output-hk/marlowe-cardano/commit/8f8183d7f14c6bdc3841a1999077ef01ebac4144) significantly increase the coverage of merkleization in validator tests by utilizing a much larger set of test contracts and adding a probability that almost any test will involve a merkleized contract.
  
 > **File `Spec/Marlowe/Semantics/Compute.hs`, function `checkFixInterval`, lines *100-102***
 > 
 > The test `checkFixInterval` is never instantiated with an invalid interval that is in the past, meaning the function `fixInterval` is never tested for that case.
 
-TODO: @bwbush will add text here.
+Commit [811f048b](https://github.com/input-output-hk/marlowe-cardano/commit/811f048ba93db10972641c0c235864db1d6014e7) adds a property-based test for an invalid in terval in the past.
 
-```console
-commit 811f048ba93db10972641c0c235864db1d6014e7
-Author: Brian W Bush <brian.bush@iohk.io>
-Date:   Mon Mar 6 10:16:08 2023 -0700
 
-    PLT-4168 Added test for invalid interval in past.
-    
-    This addresses the following audit finding:
-    
-    > File Spec/Marlowe/Semantics/Compute.hs, function checkFixInterval,
-    > lines 100-102 The test checkFixInterval is never instantiated
-    > with an invalid interval that is in the past, meaning the function
-    > fixInterval is never tested for that case.
+## Appendix: Post-Audit Changes in Marlowe Validator
+
+```bash
+git diff 523f3d56f22bf992ddb0b0c8a52bb7a5a188f9e9 69468d6623e24a4ccd6659e378ae012c38ca01ce marlowe/src/Language/Marlowe/{Core/V1/Semantics*,Scripts.hs}
 ```
 
+```diff
+diff --git a/marlowe/src/Language/Marlowe/Core/V1/Semantics.hs b/marlowe/src/Language/Marlowe/Core/V1/Semantics.hs
+index e31b8c478..82b57b903 100644
+--- a/marlowe/src/Language/Marlowe/Core/V1/Semantics.hs
++++ b/marlowe/src/Language/Marlowe/Core/V1/Semantics.hs
+@@ -94,12 +94,12 @@ module Language.Marlowe.Core.V1.Semantics
+   , TransactionError(..)
+   , TransactionWarning(..)
+     -- * Utility Functions
++  , allBalancesArePositive
+   , contractLifespanUpperBound
+   , isClose
+   , notClose
+   , paymentMoney
+   , totalBalance
+-  , validateBalances
+     -- * Serialisation
+   , currencySymbolFromJSON
+   , currencySymbolToJSON
+@@ -217,6 +217,26 @@ import Text.PrettyPrint.Leijen (comma, hang, lbrace, line, rbrace, space, text,
+ data Payment = Payment AccountId Payee Token Integer
+   deriving stock (Haskell.Eq, Haskell.Show)
+ 
++instance ToJSON Payment where
++  toJSON (Payment accountId payee token amount) =
++    object
++      [
++        "payment_from" .= accountId
++      , "to" .= payee
++      , "token" .= token
++      , "amount" .= amount
++      ]
++
++instance FromJSON Payment where
++  parseJSON =
++    withObject "Payment"
++      $ \o ->
++        Payment
++          <$> o .: "payment_from"
++          <*> o .: "to"
++          <*> o .: "token"
++          <*> o .: "amount"
++
+ 
+ -- | Extract the money value from a payment.
+ paymentMoney :: Payment -> Money
+@@ -293,7 +313,28 @@ data TransactionError = TEAmbiguousTimeIntervalError
+                       | TEUselessTransaction
+                       | TEHashMismatch
+   deriving stock (Haskell.Show, Generic, Haskell.Eq)
+-  deriving anyclass (ToJSON, FromJSON)
++
++instance ToJSON TransactionError where
++  toJSON TEAmbiguousTimeIntervalError = JSON.String "TEAmbiguousTimeIntervalError"
++  toJSON TEApplyNoMatchError = JSON.String "TEApplyNoMatchError"
++  toJSON (TEIntervalError intervalError) = object ["error" .= JSON.String "TEIntervalError", "context" .= intervalError]
++  toJSON TEUselessTransaction = JSON.String "TEUselessTransaction"
++  toJSON TEHashMismatch = JSON.String "TEHashMismatch"
++
++instance FromJSON TransactionError where
++  parseJSON (JSON.String s) =
++    case s of
++      "TEAmbiguousTimeIntervalError" -> return TEAmbiguousTimeIntervalError
++      "TEApplyNoMatchError" -> return TEApplyNoMatchError
++      "TEUselessTransaction" -> return TEUselessTransaction
++      "TEHashMismatch" -> return TEHashMismatch
++      _ -> Haskell.fail "Failed parsing TransactionError"
++  parseJSON (JSON.Object o) = do
++                                err <- o .: "error"
++                                if err Haskell.== ("TEIntervalError" :: Haskell.String)
++                                  then TEIntervalError <$> o .: "context"
++                                  else Haskell.fail "Failed parsing TransactionError"
++  parseJSON _ = Haskell.fail "Failed parsing TransactionError"
+ 
+ 
+ -- | Marlowe transaction input.
+@@ -319,6 +360,31 @@ data TransactionOutput =
+     | Error TransactionError
+   deriving stock (Haskell.Show)
+ 
++instance ToJSON TransactionOutput where
++  toJSON TransactionOutput{..} =
++    object
++      [
++        "warnings" .= txOutWarnings
++      , "payments" .= txOutPayments
++      , "state" .= txOutState
++      , "contract" .= txOutContract
++      ]
++  toJSON (Error err) = object ["transaction_error" .= err]
++
++instance FromJSON TransactionOutput where
++  parseJSON =
++    withObject "TransactionOutput"
++      $ \o ->
++        let
++          asTransactionOutput =
++            TransactionOutput
++              <$> o .: "warnings"
++              <*> o .: "payments"
++              <*> o .: "state"
++              <*> o .: "contract"
++          asError = Error <$> o .: "transaction_error"
++        in
++          asTransactionOutput <|> asError
+ 
+ -- | Parse a validator hash from JSON.
+ validatorHashFromJSON :: JSON.Value -> Parser ValidatorHash
+@@ -404,12 +470,22 @@ evalValue env state value = let
+                                    then 0
+                                    else n `Builtins.quotientInteger` d
+         ChoiceValue choiceId ->
++            -- SCP-5126: Given the precondition that `choices` contains no
++            -- duplicate entries, this lookup behaves identically to
++            -- Marlowe's Isabelle semantics given the precondition that
++            -- the initial state's `choices` in Isabelle was sorted and
++            -- did not contain duplicate entries.
+             case Map.lookup choiceId (choices state) of
+                 Just x  -> x
+                 Nothing -> 0
+         TimeIntervalStart    -> getPOSIXTime (fst (timeInterval env))
+         TimeIntervalEnd      -> getPOSIXTime (snd (timeInterval env))
+         UseValue valId       ->
++            -- SCP-5126: Given the precondition that `boundValues` contains
++            -- no duplicate entries, this lookup behaves identically to
++            -- Marlowe's Isabelle semantics given the precondition that
++            -- the initial state's `boundValues` in Isabelle was sorted
++            -- and did not contain duplicate entries.
+             case Map.lookup valId (boundValues state) of
+                 Just x  -> x
+                 Nothing -> 0
+@@ -425,6 +501,11 @@ evalObservation env state obs = let
+         AndObs lhs rhs          -> evalObs lhs && evalObs rhs
+         OrObs lhs rhs           -> evalObs lhs || evalObs rhs
+         NotObs subObs           -> not (evalObs subObs)
++                                   -- SCP-5126: Given the precondition that `choices` contains no
++                                   -- duplicate entries, this membership test behaves identically
++                                   -- to Marlowe's Isabelle semantics given the precondition that
++                                   -- the initial state's `choices` in Isabelle was sorted and did
++                                   -- not contain duplicate entries.
+         ChoseSomething choiceId -> choiceId `Map.member` choices state
+         ValueGE lhs rhs         -> evalVal lhs >= evalVal rhs
+         ValueGT lhs rhs         -> evalVal lhs > evalVal rhs
+@@ -439,6 +520,12 @@ evalObservation env state obs = let
+ refundOne :: Accounts -> Maybe ((Party, Token, Integer), Accounts)
+ refundOne accounts = case Map.toList accounts of
+     [] -> Nothing
++    -- SCP-5126: The return value of this function differs from
++    -- Isabelle semantics in that it returns the least-recently
++    -- added account-token combination rather than the first
++    -- lexicographically ordered one. Also, the sequence
++    -- `Map.fromList . tail . Map.toList` preserves the
++    -- invariants of order and non-duplication.
+     ((accId, token), balance) : rest ->
+         if balance > 0
+         then Just ((accId, token, balance), Map.fromList rest)
+@@ -447,18 +534,30 @@ refundOne accounts = case Map.toList accounts of
+ 
+ -- | Obtains the amount of money available an account.
+ moneyInAccount :: AccountId -> Token -> Accounts -> Integer
+-moneyInAccount accId token accounts = case Map.lookup (accId, token) accounts of
+-    Just x  -> x
+-    Nothing -> 0
++moneyInAccount accId token accounts =
++    -- SCP-5126: Given the precondition that `accounts` contains
++    -- no duplicate entries, this lookup behaves identically to
++    -- Marlowe's Isabelle semantics given the precondition that
++    -- the initial state's `accounts` in Isabelle was sorted and
++    -- did not contain duplicate entries.
++    case Map.lookup (accId, token) accounts of
++      Just x  -> x
++      Nothing -> 0
+ 
+ 
+ -- | Sets the amount of money available in an account.
+ updateMoneyInAccount :: AccountId -> Token -> Integer -> Accounts -> Accounts
+ updateMoneyInAccount accId token amount =
++    -- SCP-5126: Given the precondition that `accounts` contains
++    -- no duplicate entries, this deletion or insertion behaves
++    -- identically (aside from internal ordering) to Marlowe's
++    -- Isabelle semantics given the precondition that the initial
++    -- state's `accounts` in Isabelle was sorted and did not
++    -- contain duplicate entries.
+     if amount <= 0 then Map.delete (accId, token) else Map.insert (accId, token) amount
+ 
+ 
+--- | Add the given amount of money to an accoun (only if it is positive).
++-- | Add the given amount of money to an account (only if it is positive).
+ --   Return the updated Map.
+ addMoneyToAccount :: AccountId -> Token -> Integer -> Accounts -> Accounts
+ addMoneyToAccount accId token amount accounts = let
+@@ -482,6 +581,14 @@ giveMoney accountId payee token amount accounts = let
+ reduceContractStep :: Environment -> State -> Contract -> ReduceStepResult
+ reduceContractStep env state contract = case contract of
+ 
++    -- SCP-5126: Although `refundOne` refunds accounts-token combinations
++    -- in least-recently-added order and Isabelle semantics requires that
++    -- they be refunded in lexicographic order, `reduceContractUntilQuiescent`
++    -- ensures that the `Close` pattern will be executed until `accounts`
++    -- is empty. Thus, the net difference between the behavior here and the
++    -- Isabelle semantics is that the `ContractQuiescent` resulting from
++    -- `reduceContractUntilQuiescent` will contain payments in a different
++    -- order.
+     Close -> case refundOne (accounts state) of
+         Just ((party, token, amount), newAccounts) -> let
+             newState = state { accounts = newAccounts }
+@@ -522,7 +629,17 @@ reduceContractStep env state contract = case contract of
+     Let valId val cont -> let
+         evaluatedValue = evalValue env state val
+         boundVals = boundValues state
++        -- SCP-5126: Given the precondition that `boundValues` contains
++        -- no duplicate entries, this insertion behaves identically
++        -- (aside from internal ordering) to Marlowe's Isabelle semantics
++        -- given the precondition that the initial state's `boundValues`
++        -- in Isabelle was sorted and did not contain duplicate entries.
+         newState = state { boundValues = Map.insert valId evaluatedValue boundVals }
++        -- SCP-5126: Given the precondition that `boundValues` contains
++        -- no duplicate entries, this lookup behaves identically to
++        -- Marlowe's Isabelle semantics given the precondition that the
++        -- initial state's `boundValues` in Isabelle was sorted and did
++        -- not contain duplicate entries.
+         warn = case Map.lookup valId boundVals of
+               Just oldVal -> ReduceShadowing valId oldVal evaluatedValue
+               Nothing     -> ReduceNoWarning
+@@ -575,6 +692,11 @@ applyAction env state (IDeposit accId1 party1 tok1 amount) (Deposit accId2 party
+     else NotAppliedAction
+ applyAction _ state (IChoice choId1 choice) (Choice choId2 bounds) =
+     if choId1 == choId2 && inBounds choice bounds
++    -- SCP-5126: Given the precondition that `choices` contains no
++    -- duplicate entries, this insertion behaves identically (aside
++    -- from internal ordering) to Marlowe's Isabelle semantics
++    -- given the precondition that the initial state's `choices`
++    -- in Isabelle was sorted and did not contain duplicate entries.
+     then let newState = state { choices = Map.insert choId1 choice (choices state) }
+          in AppliedAction ApplyNoWarning newState
+     else NotAppliedAction
+@@ -592,18 +714,20 @@ getContinuation (MerkleizedInput _ inputContinuationHash continuation) (Merkleiz
+     else Nothing
+ getContinuation _ _ = Nothing
+ 
+--- | Try to apply an input to a list of cases.
++-- | Try to apply an input to a list of cases, accepting the first match.
+ applyCases :: Environment -> State -> Input -> [Case Contract] -> ApplyResult
+-applyCases env state input (headCase : tailCase) =
++applyCases env state input (headCase : tailCases) =
+     let inputContent = getInputContent input :: InputContent
+         action = getAction headCase :: Action
+         maybeContinuation = getContinuation input headCase :: Maybe Contract
+     in case applyAction env state inputContent action of
+          AppliedAction warning newState ->
++           -- Note that this differs from Isabelle semantics because
++           -- the Cardano semantics includes merkleization.
+            case maybeContinuation of
+              Just continuation -> Applied warning newState continuation
+              Nothing           -> ApplyHashMismatch
+-         NotAppliedAction -> applyCases env state input tailCase
++         NotAppliedAction -> applyCases env state input tailCases
+ applyCases _ _ _ [] = ApplyNoMatchError
+ 
+ 
+@@ -615,7 +739,7 @@ applyInput _ _ _ _                          = ApplyNoMatchError
+ 
+ -- | Propagate 'ReduceWarning' to 'TransactionWarning'.
+ convertReduceWarnings :: [ReduceWarning] -> [TransactionWarning]
+-convertReduceWarnings = foldr (\warn acc -> case warn of
++convertReduceWarnings = foldr (\warn acc -> case warn of  -- Note that `foldr` is used here for efficiency, differing from Isabelle.
+     ReduceNoWarning -> acc
+     ReduceNonPositivePay accId payee tok amount ->
+         TransactionNonPositivePay accId payee tok amount : acc
+@@ -655,12 +779,12 @@ applyAllInputs env state contract inputs = let
+                     curState
+                     cont
+                 (input : rest) -> case applyInput env curState input cont of
+-                    Applied applyWarn newState cont ->
++                    Applied applyWarn newState cont' ->
+                         applyAllLoop
+                             True
+                             env
+                             newState
+-                            cont
++                            cont'
+                             rest
+                             (warnings' ++ convertApplyWarning applyWarn)
+                             payments'
+@@ -759,8 +883,8 @@ totalBalance accounts = foldMap
+ 
+ 
+ -- | Check that all accounts have positive balance.
+-validateBalances :: State -> Bool
+-validateBalances State{..} = all (\(_, balance) -> balance > 0) (Map.toList accounts)
++allBalancesArePositive :: State -> Bool
++allBalancesArePositive State{..} = all (\(_, balance) -> balance > 0) (Map.toList accounts)
+ 
+ 
+ instance FromJSON TransactionInput where
+@@ -845,20 +969,26 @@ instance Eq Payment where
+ instance Eq ReduceWarning where
+     {-# INLINABLE (==) #-}
+     ReduceNoWarning == ReduceNoWarning = True
+-    (ReduceNonPositivePay acc1 p1 tn1 a1) == (ReduceNonPositivePay acc2 p2 tn2 a2) =
++    ReduceNoWarning == _ = False
++    ReduceNonPositivePay acc1 p1 tn1 a1 == ReduceNonPositivePay acc2 p2 tn2 a2 =
+         acc1 == acc2 && p1 == p2 && tn1 == tn2 && a1 == a2
+-    (ReducePartialPay acc1 p1 tn1 a1 e1) == (ReducePartialPay acc2 p2 tn2 a2 e2) =
++    ReduceNonPositivePay{} == _ = False
++    ReducePartialPay acc1 p1 tn1 a1 e1 == ReducePartialPay acc2 p2 tn2 a2 e2 =
+         acc1 == acc2 && p1 == p2 && tn1 == tn2 && a1 == a2 && e1 == e2
+-    (ReduceShadowing v1 old1 new1) == (ReduceShadowing v2 old2 new2) =
++    ReducePartialPay{} == _ = False
++    ReduceShadowing v1 old1 new1 == ReduceShadowing v2 old2 new2 =
+         v1 == v2 && old1 == old2 && new1 == new2
+-    _ == _ = False
++    ReduceShadowing{} == _ = False
++    ReduceAssertionFailed == ReduceAssertionFailed = True
++    ReduceAssertionFailed == _ = False
+ 
+ 
+ instance Eq ReduceEffect where
+     {-# INLINABLE (==) #-}
+     ReduceNoPayment == ReduceNoPayment           = True
++    ReduceNoPayment == _                         = False
+     ReduceWithPayment p1 == ReduceWithPayment p2 = p1 == p2
+-    _ == _                                       = False
++    ReduceWithPayment _ == _                     = False
+ 
+ 
+ -- Lifting data types to Plutus Core
+diff --git a/marlowe/src/Language/Marlowe/Core/V1/Semantics/Types.hs b/marlowe/src/Language/Marlowe/Core/V1/Semantics/Types.hs
+index a333b8fbb..bf495773b 100644
+--- a/marlowe/src/Language/Marlowe/Core/V1/Semantics/Types.hs
++++ b/marlowe/src/Language/Marlowe/Core/V1/Semantics/Types.hs
+@@ -108,7 +108,7 @@ import PlutusTx.Lift (makeLift)
+ import PlutusTx.Prelude hiding (encodeUtf8, mapM, (<$>), (<*>), (<>))
+ import Prelude (mapM, (<$>))
+ import qualified Prelude as Haskell
+-import Text.PrettyPrint.Leijen (text)
++import Text.PrettyPrint.Leijen (parens, text)
+ 
+ 
+ -- Functions that used in Plutus Core must be inlinable,
+@@ -126,8 +126,8 @@ data Party =
+   deriving stock (Generic,Haskell.Eq,Haskell.Ord)
+ 
+ instance Pretty Party where
+-  prettyFragment (Address network address) = text $ "Address " ++ Haskell.show (serialiseAddressBech32 network address)
+-  prettyFragment (Role role)               = text $ "Role "    ++ Haskell.show role
++  prettyFragment (Address network address) = parens $ text "Address " Haskell.<> prettyFragment (serialiseAddressBech32 network address)
++  prettyFragment (Role role)               = parens $ text "Role "    Haskell.<> prettyFragment role
+ 
+ instance Haskell.Show Party where
+   showsPrec _ (Address network address) = Haskell.showsPrec 11 $ Haskell.show (serialiseAddressBech32 network address)
+@@ -307,6 +307,13 @@ data State = State { accounts    :: Accounts
+ newtype Environment = Environment { timeInterval :: TimeInterval }
+   deriving stock (Haskell.Show,Haskell.Eq,Haskell.Ord)
+ 
++instance FromJSON Environment where
++  parseJSON = withObject "Environment"
++    (\v -> Environment <$> (posixIntervalFromJSON =<< v .: "timeInterval"))
++
++instance ToJSON Environment where
++  toJSON Environment{..} = object
++    [ "timeInterval" .= posixIntervalToJSON timeInterval]
+ 
+ -- | Input for a Marlowe contract. Correspond to expected 'Action's.
+ data InputContent = IDeposit AccountId Party Token Integer
+@@ -389,23 +396,24 @@ data IntervalError = InvalidInterval TimeInterval
+                    | IntervalInPastError POSIXTime TimeInterval
+   deriving stock (Haskell.Show, Generic, Haskell.Eq)
+ 
++
+ instance ToJSON IntervalError where
+   toJSON (InvalidInterval (s, e)) = A.object
+-    [ ("invalidInterval", toJSON (posixTimeToJSON s, posixTimeToJSON e)) ]
++    [ ("invalidInterval", A.object [("from", posixTimeToJSON s), ("to", posixTimeToJSON e)]) ]
+   toJSON (IntervalInPastError t (s, e)) = A.object
+-    [ ("intervalInPastError", toJSON (posixTimeToJSON t, posixTimeToJSON s, posixTimeToJSON e)) ]
++    [ ("intervalInPastError", A.object [("minTime", posixTimeToJSON t), ("from", posixTimeToJSON s), ("to", posixTimeToJSON e)]) ]
+ 
+ instance FromJSON IntervalError where
+   parseJSON (JSON.Object v) =
+     let
+       parseInvalidInterval = do
+-        (s, e) <- v .: "invalidInterval"
+-        InvalidInterval <$> ((,) <$> posixTimeFromJSON s <*> posixTimeFromJSON e)
++        o <- v .: "invalidInterval"
++        InvalidInterval <$> posixIntervalFromJSON o
+       parseIntervalInPastError = do
+-        (t, s, e) <- v .: "intervalInPastError"
++        o <- v .: "intervalInPastError"
+         IntervalInPastError
+-          <$> posixTimeFromJSON t
+-          <*> ((,) <$> posixTimeFromJSON s <*> posixTimeFromJSON e)
++          <$> (posixTimeFromJSON =<< o .: "minTime")
++          <*> posixIntervalFromJSON o
+     in
+       parseIntervalInPastError <|> parseInvalidInterval
+   parseJSON invalid =
+@@ -422,11 +430,18 @@ posixTimeFromJSON = \case
+   invalid ->
+       JSON.prependFailure "parsing POSIXTime failed, " (JSON.typeMismatch "Number" invalid)
+ 
++posixIntervalFromJSON :: A.Object -> Parser TimeInterval
++posixIntervalFromJSON o = (,) <$> (posixTimeFromJSON =<< o .: "from") <*> (posixTimeFromJSON =<< o .: "to")
+ 
+ -- | Serialise time as a JSON value.
+ posixTimeToJSON :: POSIXTime -> JSON.Value
+ posixTimeToJSON (POSIXTime n) = JSON.Number $ scientific n 0
+ 
++posixIntervalToJSON :: TimeInterval -> JSON.Value
++posixIntervalToJSON (from, to) = object
++  [ "from" .= posixTimeToJSON from
++  , "to" .= posixTimeToJSON to
++  ]
+ 
+ -- | Result of 'fixInterval'
+ data IntervalResult = IntervalTrimmed Environment State
+@@ -778,23 +793,24 @@ instance ToJSON Contract where
+ instance Eq Party where
+     {-# INLINABLE (==) #-}
+     Address n1 a1 == Address n2 a2 = n1 == n2 && a1 == a2
++    Address _ _   == _             = False
+     Role r1       == Role r2       = r1 == r2
+-    _             == _             = False
++    Role _        == _             = False
+ 
+ 
+ instance Eq ChoiceId where
+     {-# INLINABLE (==) #-}
+-    (ChoiceId n1 p1) == (ChoiceId n2 p2) = n1 == n2 && p1 == p2
++    ChoiceId n1 p1 == ChoiceId n2 p2 = n1 == n2 && p1 == p2
+ 
+ 
+ instance Eq Token where
+     {-# INLINABLE (==) #-}
+-    (Token n1 p1) == (Token n2 p2) = n1 == n2 && p1 == p2
++    Token n1 p1 == Token n2 p2 = n1 == n2 && p1 == p2
+ 
+ 
+ instance Eq ValueId where
+     {-# INLINABLE (==) #-}
+-    (ValueId n1) == (ValueId n2) = n1 == n2
++    ValueId n1 == ValueId n2 = n1 == n2
+ 
+ 
+ instance Pretty ValueId where
+@@ -804,78 +820,107 @@ instance Pretty ValueId where
+ instance Eq Payee where
+     {-# INLINABLE (==) #-}
+     Account acc1 == Account acc2 = acc1 == acc2
++    Account{}    == _            = False
+     Party p1 == Party p2         = p1 == p2
+-    _ == _                       = False
++    Party{}  == _                = False
+ 
+ instance Eq a => Eq (Value a) where
+     {-# INLINABLE (==) #-}
+-    AvailableMoney acc1 tok1 == AvailableMoney acc2 tok2 =
+-        acc1 == acc2 && tok1 == tok2
++    AvailableMoney acc1 tok1 == AvailableMoney acc2 tok2 = acc1 == acc2 && tok1 == tok2
++    AvailableMoney _    _    == _                        = False
+     Constant i1 == Constant i2 = i1 == i2
++    Constant{}  == _           = False
+     NegValue val1 == NegValue val2 = val1 == val2
++    NegValue{}    == _             = False
+     AddValue val1 val2 == AddValue val3 val4 = val1 == val3 && val2 == val4
++    AddValue{}         == _                  = False
+     SubValue val1 val2 == SubValue val3 val4 = val1 == val3 && val2 == val4
++    SubValue{}         == _                  = False
+     MulValue val1 val2 == MulValue val3 val4 = val1 == val3 && val2 == val4
++    MulValue{}         == _                  = False
+     DivValue val1 val2 == DivValue val3 val4 = val1 == val3 && val2 == val4
++    DivValue{}         == _                  = False
+     ChoiceValue cid1 == ChoiceValue cid2 = cid1 == cid2
++    ChoiceValue{}    == _                = False
+     TimeIntervalStart == TimeIntervalStart = True
+-    TimeIntervalEnd   == TimeIntervalEnd   = True
++    TimeIntervalStart == _                 = False
++    TimeIntervalEnd == TimeIntervalEnd = True
++    TimeIntervalEnd == _               = False
+     UseValue val1 == UseValue val2 = val1 == val2
+-    Cond obs1 thn1 els1 == Cond obs2 thn2 els2 =  obs1 == obs2 && thn1 == thn2 && els1 == els2
+-    _ == _ = False
++    UseValue{}    == _             = False
++    Cond obs1 thn1 els1 == Cond obs2 thn2 els2 = obs1 == obs2 && thn1 == thn2 && els1 == els2
++    Cond{}              == _                   = False
+ 
+ 
+ instance Eq Observation where
+     {-# INLINABLE (==) #-}
+     AndObs o1l o2l == AndObs o1r o2r           = o1l == o1r && o2l == o2r
++    AndObs{}       == _                        = False
+     OrObs  o1l o2l == OrObs  o1r o2r           = o1l == o1r && o2l == o2r
++    OrObs{}        == _                        = False
+     NotObs ol == NotObs or                     = ol == or
++    NotObs{}  == _                             = False
+     ChoseSomething cid1 == ChoseSomething cid2 = cid1 == cid2
++    ChoseSomething _    == _                   = False
+     ValueGE v1l v2l == ValueGE v1r v2r         = v1l == v1r && v2l == v2r
++    ValueGE{}       == _                       = False
+     ValueGT v1l v2l == ValueGT v1r v2r         = v1l == v1r && v2l == v2r
++    ValueGT{}       == _                       = False
+     ValueLT v1l v2l == ValueLT v1r v2r         = v1l == v1r && v2l == v2r
++    ValueLT{}       == _                       = False
+     ValueLE v1l v2l == ValueLE v1r v2r         = v1l == v1r && v2l == v2r
++    ValueLE{}       == _                       = False
+     ValueEQ v1l v2l == ValueEQ v1r v2r         = v1l == v1r && v2l == v2r
++    ValueEQ{}       == _                       = False
+     TrueObs  == TrueObs                        = True
++    TrueObs  == _                              = False
+     FalseObs == FalseObs                       = True
+-    _ == _                                     = False
++    FalseObs == _                              = False
+ 
+ 
+ instance Eq Action where
+     {-# INLINABLE (==) #-}
+     Deposit acc1 party1 tok1 val1 == Deposit acc2 party2 tok2 val2 =
+         acc1 == acc2 && party1 == party2 && tok1 == tok2 && val1 == val2
++    Deposit{}       == _ = False
+     Choice cid1 bounds1 == Choice cid2 bounds2 =
+         cid1 == cid2 && length bounds1 == length bounds2 && let
+             bounds = zip bounds1 bounds2
+             checkBound (Bound low1 high1, Bound low2 high2) = low1 == low2 && high1 == high2
+             in all checkBound bounds
++    Choice{}   == _ = False
+     Notify obs1 == Notify obs2 = obs1 == obs2
+-    _ == _ = False
++    Notify{} == _ = False
+ 
+ 
+ instance Eq a => Eq (Case a) where
+     {-# INLINABLE (==) #-}
+     Case acl cl == Case acr cr                       = acl == acr && cl == cr
++    Case{}      == _                                 = False
+     MerkleizedCase acl bsl == MerkleizedCase acr bsr = acl == acr && bsl == bsr
+-    _ == _                                           = False
++    MerkleizedCase{}       == _                      = False
+ 
+ 
+ instance Eq Contract where
+     {-# INLINABLE (==) #-}
+     Close == Close = True
++    Close == _ = False
+     Pay acc1 payee1 tok1 value1 cont1 == Pay acc2 payee2 tok2 value2 cont2 =
+         acc1 == acc2 && payee1 == payee2 && tok1 == tok2 && value1 == value2 && cont1 == cont2
++    Pay{} == _ = False
+     If obs1 cont1 cont2 == If obs2 cont3 cont4 =
+         obs1 == obs2 && cont1 == cont3 && cont2 == cont4
+-    When cases1 timeout1 cont1 == When cases2 timeout2 cont2 =
++    If{} == _ = False
++    When cases1 timeout1 cont1 == When cases2 timeout2 cont2 =  -- The sequences of tests are ordered for efficiency.
+         timeout1 == timeout2 && cont1 == cont2
+         && length cases1 == length cases2
+         && and (zipWith (==) cases1 cases2)
++    When{} == _ = False
+     Let valId1 val1 cont1 == Let valId2 val2 cont2 =
+         valId1 == valId2 && val1 == val2 && cont1 == cont2
++    Let{} == _ = False
+     Assert obs1 cont1 == Assert obs2 cont2 = obs1 == obs2 && cont1 == cont2
+-    _ == _ = False
++    Assert{}  == _ = False
+ 
+ 
+ instance Eq State where
+diff --git a/marlowe/src/Language/Marlowe/Scripts.hs b/marlowe/src/Language/Marlowe/Scripts.hs
+index 6027202b5..aa397d5fa 100644
+--- a/marlowe/src/Language/Marlowe/Scripts.hs
++++ b/marlowe/src/Language/Marlowe/Scripts.hs
+@@ -47,7 +47,9 @@ module Language.Marlowe.Scripts
+   , alternateMarloweValidator
+   , alternateMarloweValidatorHash
+   , marloweValidator
++  , marloweValidatorCompiled
+   , marloweValidatorHash
++  , mkMarloweValidator
+     -- * Payout Validator
+   , TypedRolePayoutValidator
+   , rolePayoutValidator
+@@ -61,8 +63,9 @@ import GHC.Generics (Generic)
+ import Language.Marlowe.Core.V1.Semantics as Semantics
+ import Language.Marlowe.Core.V1.Semantics.Types as Semantics
+ import Language.Marlowe.Pretty (Pretty(..))
++import Ledger.Typed.Scripts (unsafeMkTypedValidator)
+ import qualified Plutus.Script.Utils.Typed as Scripts
+-import Plutus.Script.Utils.V2.Typed.Scripts (mkTypedValidator, mkUntypedValidator)
++import Plutus.Script.Utils.V2.Typed.Scripts (mkTypedValidator)
+ import qualified Plutus.Script.Utils.V2.Typed.Scripts as Scripts
+ import qualified Plutus.V1.Ledger.Address as Address (scriptHashAddress)
+ import qualified Plutus.V1.Ledger.Value as Val
+@@ -92,11 +95,22 @@ import PlutusTx (makeIsDataIndexed, makeLift)
+ import qualified PlutusTx
+ import qualified PlutusTx.AssocMap as AssocMap
+ import PlutusTx.Plugin ()
+-import PlutusTx.Prelude as PlutusTxPrelude
++import PlutusTx.Prelude as PlutusTxPrelude hiding (traceError, traceIfFalse)
+ import qualified Prelude as Haskell
+ import Unsafe.Coerce (unsafeCoerce)
+ 
+ 
++-- Suppress traces, in order to save bytes.
++
++{-# INLINABLE traceError #-}
++traceError :: BuiltinString -> a
++traceError _ = error ()
++
++{-# INLINABLE traceIfFalse #-}
++traceIfFalse :: BuiltinString -> a -> a
++traceIfFalse _ = id
++
++
+ -- | Input to a Marlowe transaction.
+ type MarloweInput = [MarloweTxInput]
+ 
+@@ -136,7 +150,7 @@ rolePayoutValidator = mkTypedValidator @TypedRolePayoutValidator
+   $$(PlutusTx.compile [|| mkRolePayoutValidator ||])
+   $$(PlutusTx.compile [|| wrap ||])
+   where
+-    wrap = Scripts.mkUntypedValidator @(CurrencySymbol, TokenName) @()
++    wrap = Scripts.mkUntypedValidator @_ @(CurrencySymbol, TokenName) @()
+ 
+ 
+ {-# INLINABLE rolePayoutValidator #-}
+@@ -147,7 +161,7 @@ mkRolePayoutValidator :: (CurrencySymbol, TokenName)  -- ^ The datum is the curr
+                       -> Bool                         -- ^ Whether the transaction validated.
+ mkRolePayoutValidator (currency, role) _ ctx =
+     -- The role token for the correct currency must be present.
+-    -- [Marlowe-Cardano Specification: "16. Payment authorized".]
++    -- [Marlowe-Cardano Specification: "17. Payment authorized".]
+     Val.singleton currency role 1 `Val.leq` valueSpent (scriptContextTxInfo ctx)
+ 
+ 
+@@ -188,12 +202,10 @@ mkMarloweValidator
+             case closeInterval $ txInfoValidRange scriptContextTxInfo of
+                 Just interval' -> interval'
+                 Nothing        -> traceError "a"
+-    -- The incoming balance of each account must be positive.
+-    -- [Marlowe-Cardano Specification: "Constraint 13. Positive balances".]
+-    let positiveBalances = traceIfFalse "b" $ validateBalances marloweState
+ 
+     -- Find Contract continuation in TxInfo datums by hash or fail with error.
+     let inputs = fmap marloweTxInputToInput marloweTxInputs
++
+     {-  We do not check that a transaction contains exact input payments.
+         We only require an evidence from a party, e.g. a signature for PubKey party,
+         or a spend of a 'party role' token.  This gives huge flexibility by allowing
+@@ -201,22 +213,19 @@ mkMarloweValidator
+         Then, we check scriptOutput to be correct.
+      -}
+     let inputContents = fmap getInputContent inputs
++
+     -- Check that the required signatures and role tokens are present.
+     -- [Marlowe-Cardano Specification: "Constraint 14. Inputs authorized".]
+-    let inputsOk = validateInputs inputContents
+-
+-    -- Since individual balances were validated to be positive,
+-    -- the total balance is also positive.
+-    let inputBalance = totalBalance (accounts marloweState)
++    let inputsOk = allInputsAreAuthorized inputContents
+ 
+     -- [Marlowe-Cardano Specification: "Constraint 5. Input value from script".]
+-    -- The total incoming balance must match the actual script value being spent.
+-    let balancesOk = traceIfFalse "v" $ inputBalance == scriptInValue
+-
+-    let preconditionsOk = positiveBalances && balancesOk
++    -- [Marlowe-Cardano Specification: "Constraint 13. Positive balances".]
++    -- [Marlowe-Cardano Specification: "Constraint 19. No duplicates".]
++    -- Check that the initial state obeys the Semantic's invariants.
++    let preconditionsOk = checkState "i" scriptInValue marloweState
+ 
+-    -- Package the inputs to be applied in the semantics.
+     -- [Marlowe-Cardano Specification: "Constraint 0. Input to semantics".]
++    -- Package the inputs to be applied in the semantics.
+     let txInput = TransactionInput {
+             txInterval = interval,
+             txInputs = inputs }
+@@ -246,16 +255,25 @@ mkMarloweValidator
+ 
+                 checkContinuation = case txOutContract of
+                     -- [Marlowe-Cardano Specification: "Constraint 4. No output to script on close".]
+-                    Close -> traceIfFalse "c" checkScriptOutputAny
++                    Close -> traceIfFalse "c" hasNoOutputToOwnScript
+                     _ -> let
+                         totalIncome = foldMap collectDeposits inputContents
+                         totalPayouts = foldMap snd payoutsByParty
+-                        finalBalance = inputBalance + totalIncome - totalPayouts
+-                        -- The total account balance must be paid to a single output to the script.
+-                        -- [Marlowe-Cardano Specification: "Constraint 3. Single Marlowe output".]
+-                        -- [Marlowe-Cardano Specification: "Constraint 6. Output value to script."]
+-                        in checkOwnOutputConstraint marloweData finalBalance
++                        finalBalance = scriptInValue + totalIncome - totalPayouts
++                        in
++                             -- [Marlowe-Cardano Specification: "Constraint 3. Single Marlowe output".]
++                             -- [Marlowe-Cardano Specification: "Constraint 6. Output value to script."]
++                             -- Check that the single Marlowe output has the correct datum and value.
++                             checkOwnOutputConstraint marloweData finalBalance
++                             -- [Marlowe-Cardano Specification: "Constraint 18. Final balance."]
++                             -- [Marlowe-Cardano Specification: "Constraint 13. Positive balances".]
++                             -- [Marlowe-Cardano Specification: "Constraint 19. No duplicates".]
++                             -- Check that the final state obeys the Semantic's invariants.
++                          && checkState "o" finalBalance txOutState
+             preconditionsOk && inputsOk && payoutsOk && checkContinuation
++              -- [Marlowe-Cardano Specification: "20. Single satsifaction".]
++              -- Either there must be no payouts, or there must be no other validators.
++              && traceIfFalse "z" (null payoutsByParty || noOthers)
+         Error TEAmbiguousTimeIntervalError -> traceError "i"
+         Error TEApplyNoMatchError -> traceError "n"
+         Error (TEIntervalError (InvalidInterval _)) -> traceError "j"
+@@ -274,24 +292,73 @@ mkMarloweValidator
+         find (\TxInInfo{txInInfoOutRef} -> txInInfoOutRef == txOutRef) txInfoInputs
+     findOwnInput _ = Nothing
+ 
+-    -- The inputs being spent by this script.
+     -- [Marlowe-Cardano Specification: "2. Single Marlowe script input".]
++    -- The inputs being spent by this script, and whether other validators are present.
+     ownInput :: TxInInfo
+-    ownInput@TxInInfo{txInInfoResolved=TxOut{txOutAddress=ownAddress}} =
++    noOthers :: Bool
++    (ownInput@TxInInfo{txInInfoResolved=TxOut{txOutAddress=ownAddress}}, noOthers) =
+         case findOwnInput ctx of
+-            Just ownTxInInfo ->
+-                case filter (sameValidatorHash ownTxInInfo) (txInfoInputs scriptContextTxInfo) of
+-                    [i] -> i
+-                    _   -> traceError "w" -- Multiple Marlowe contract inputs with the same address are forbidden.
++            Just ownTxInInfo -> examineScripts (sameValidatorHash ownTxInInfo) Nothing True (txInfoInputs scriptContextTxInfo)
+             _ -> traceError "x" -- Input to be validated was not found.
+ 
++    -- Check for the presence of multiple Marlowe validators or other Plutus validators.
++    examineScripts
++      :: (ValidatorHash -> Bool)  -- Test for this validator.
++      -> Maybe TxInInfo           -- The input for this validator, if found so far.
++      -> Bool                     -- Whether no other validator has been found so far.
++      -> [TxInInfo]               -- The inputs remaining to be examined.
++      -> (TxInInfo, Bool)         -- The input for this validator and whehter no other validators are present.
++    -- This validator has not been found.
++    examineScripts _ Nothing _ [] = traceError "x"
++    -- This validator has been found, and other validators may have been found.
++    examineScripts _ (Just self) noOthers [] = (self, noOthers)
++    -- Found both this validator and another script, so we short-cut.
++    examineScripts _ (Just self) False _ = (self, False)
++     -- Found one script.
++    examineScripts f mSelf noOthers (tx@TxInInfo{txInInfoResolved=TxOut{txOutAddress=Ledger.Address (ScriptCredential vh) _}} : txs)
++      -- The script is this validator.
++      | f vh = case mSelf of
++                 -- We hadn't found it before, so we save it in `mSelf`.
++                 Nothing -> examineScripts f (Just tx) noOthers txs
++                 -- We already had found this validator before
++                 Just _ -> traceError "w"
++      -- The script is something else, so we set `noOther` to `False`.
++      | otherwise = examineScripts f mSelf False txs
++    -- An input without a validator is encountered.
++    examineScripts f self others (_ : txs) = examineScripts f self others txs
++
+     -- Check if inputs are being spent from the same script.
+-    sameValidatorHash:: TxInInfo -> TxInInfo -> Bool
+-    sameValidatorHash
+-        TxInInfo{txInInfoResolved=TxOut{txOutAddress=Ledger.Address (ScriptCredential vh1) _}}
+-        TxInInfo{txInInfoResolved=TxOut{txOutAddress=Ledger.Address (ScriptCredential vh2) _}} = vh1 == vh2
++    sameValidatorHash:: TxInInfo -> ValidatorHash -> Bool
++    sameValidatorHash TxInInfo{txInInfoResolved=TxOut{txOutAddress=Ledger.Address (ScriptCredential vh1) _}} vh2 = vh1 == vh2
+     sameValidatorHash _ _ = False
+ 
++    -- Check a state for the correct value, positive accounts, and no duplicates.
++    checkState :: BuiltinString -> Val.Value -> State -> Bool
++    checkState tag expected State{..} =
++      let
++        positiveBalance :: (a, Integer) -> Bool
++        positiveBalance (_, balance) = balance > 0
++        noDuplicates :: Eq k => AssocMap.Map k v -> Bool
++        noDuplicates am =
++          let
++            test [] = True           -- An empty list has no duplicates.
++            test (x : xs)            -- Look for a duplicate of the head in the tail.
++              | elem x xs = False    -- A duplicate is present.
++              | otherwise = test xs  -- Continue searching for a duplicate.
++          in
++            test $ AssocMap.keys am
++      in
++           -- [Marlowe-Cardano Specification: "Constraint 5. Input value from script".]
++           -- and/or
++           -- [Marlowe-Cardano Specification: "Constraint 18. Final balance."]
++           traceIfFalse ("v"  <> tag) (totalBalance accounts == expected)
++           -- [Marlowe-Cardano Specification: "Constraint 13. Positive balances".]
++        && traceIfFalse ("b"  <> tag) (all positiveBalance $ AssocMap.toList accounts)
++           -- [Marlowe-Cardano Specification: "Constraint 19. No duplicates".]
++        && traceIfFalse ("ea" <> tag) (noDuplicates accounts)
++        && traceIfFalse ("ec" <> tag) (noDuplicates choices)
++        && traceIfFalse ("eb" <> tag) (noDuplicates boundValues)
++
+     -- Look up the Datum hash for specific data.
+     findDatumHash' :: PlutusTx.ToData o => o -> Maybe DatumHash
+     findDatumHash' datum = findDatumHash (Datum $ PlutusTx.toBuiltinData datum) scriptContextTxInfo
+@@ -301,7 +368,7 @@ mkMarloweValidator
+     checkOwnOutputConstraint ocDatum ocValue =
+         let hsh = findDatumHash' ocDatum
+         in traceIfFalse "d" -- "Output constraint"
+-        $ checkScriptOutput ownAddress hsh ocValue getContinuingOutput
++        $ checkScriptOutput (==) ownAddress hsh ocValue getContinuingOutput
+ 
+     getContinuingOutput :: TxOut
+     getContinuingOutput = case filter (\TxOut{txOutAddress} -> ownAddress == txOutAddress) allOutputs of
+@@ -309,20 +376,14 @@ mkMarloweValidator
+         _     -> traceError "o" -- No continuation or multiple Marlowe contract outputs is forbidden.
+ 
+     -- Check that address, value, and datum match the specified.
+-    checkScriptOutput :: Ledger.Address -> Maybe DatumHash -> Val.Value -> TxOut -> Bool
+-    checkScriptOutput addr hsh value TxOut{txOutAddress, txOutValue, txOutDatum=OutputDatumHash svh} =
+-                    txOutValue == value && hsh == Just svh && txOutAddress == addr
+-    checkScriptOutput _ _ _ _ = False
+-
+-    -- Check that address and datum match the specified, and that value is at least that required.
+-    checkScriptOutputRelaxed :: Ledger.Address -> Maybe DatumHash -> Val.Value -> TxOut -> Bool
+-    checkScriptOutputRelaxed addr hsh value TxOut{txOutAddress, txOutValue, txOutDatum=OutputDatumHash svh} =
+-                    txOutValue `Val.geq` value && hsh == Just svh && txOutAddress == addr
+-    checkScriptOutputRelaxed _ _ _ _ = False
++    checkScriptOutput :: (Val.Value -> Val.Value -> Bool) -> Ledger.Address -> Maybe DatumHash -> Val.Value -> TxOut -> Bool
++    checkScriptOutput comparison addr hsh value TxOut{txOutAddress, txOutValue, txOutDatum=OutputDatumHash svh} =
++                    txOutValue `comparison` value && hsh == Just svh && txOutAddress == addr
++    checkScriptOutput _ _ _ _ _ = False
+ 
+     -- Check for any output to the script address.
+-    checkScriptOutputAny :: Bool
+-    checkScriptOutputAny = all ((/= ownAddress) . txOutAddress) allOutputs
++    hasNoOutputToOwnScript :: Bool
++    hasNoOutputToOwnScript = all ((/= ownAddress) . txOutAddress) allOutputs
+ 
+     -- All of the script outputs.
+     allOutputs :: [TxOut]
+@@ -339,8 +400,8 @@ mkMarloweValidator
+     marloweTxInputToInput (Input input) = NormalInput input
+ 
+     -- Check that inputs are authorized.
+-    validateInputs :: [InputContent] -> Bool
+-    validateInputs = all validateInputWitness
++    allInputsAreAuthorized :: [InputContent] -> Bool
++    allInputsAreAuthorized = all validateInputWitness
+       where
+         validateInputWitness :: InputContent -> Bool
+         validateInputWitness input =
+@@ -356,8 +417,10 @@ mkMarloweValidator
+ 
+     -- Tally the deposits in the input.
+     collectDeposits :: InputContent -> Val.Value
+-    collectDeposits (IDeposit _ _ (Token cur tok) amount) = Val.singleton cur tok amount
+-    collectDeposits _                                     = zero
++    collectDeposits (IDeposit _ _ (Token cur tok) amount)
++      | amount > 0    = Val.singleton cur tok amount  -- SCP-5123: Semantically negative deposits
++      | otherwise     = zero                          -- do not remove funds from the script's UTxO.
++    collectDeposits _ = zero
+ 
+     -- Extract the payout to a party.
+     payoutByParty :: Payment -> AssocMap.Map Party Val.Value
+@@ -374,12 +437,17 @@ mkMarloweValidator
+       where
+         payoutToTxOut :: (Party, Val.Value) -> Bool
+         payoutToTxOut (party, value) = case party of
++            -- [Marlowe-Cardano Specification: "Constraint 15. Sufficient Payment".]
++            -- SCP-5128: Note that the payment to an address may be split into several outputs but the payment to a role must be
++            -- a single output. The flexibily of multiple outputs accommodates wallet-related practicalities such as the change and
++            -- the return of the role token being in separate UTxOs in situations where a contract is also paying to the address
++            -- where that change and that role token are sent.
+             Address _ address  -> traceIfFalse "p" $ value `Val.leq` valuePaidToAddress address  -- At least sufficient value paid.
+             Role role -> let
+                 hsh = findDatumHash' (rolesCurrency, role)
+                 addr = Address.scriptHashAddress rolePayoutValidatorHash
+                 -- Some output must have the correct value and datum to the role-payout address.
+-                in traceIfFalse "r" $ any (checkScriptOutputRelaxed addr hsh value) allOutputs
++                in traceIfFalse "r" $ any (checkScriptOutput Val.geq addr hsh value) allOutputs
+ 
+     -- The key for the address must have signed.
+     txSignedByAddress :: Ledger.Address -> Bool
+@@ -402,7 +470,7 @@ marloweValidator :: Scripts.TypedValidator TypedMarloweValidator
+ marloweValidator =
+   let
+     mkUntypedMarloweValidator :: ValidatorHash -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+-    mkUntypedMarloweValidator rp = mkUntypedValidator (mkMarloweValidator rp)
++    mkUntypedMarloweValidator rp = Scripts.mkUntypedValidator (mkMarloweValidator rp)
+ 
+     untypedValidator :: Scripts.Validator
+     untypedValidator = mkValidatorScript $
+@@ -410,10 +478,20 @@ marloweValidator =
+         `PlutusTx.applyCode` PlutusTx.liftCode rolePayoutValidatorHash
+ 
+     typedValidator :: Scripts.TypedValidator Scripts.Any
+-    typedValidator = Scripts.unsafeMkTypedValidator untypedValidator
++    typedValidator = unsafeMkTypedValidator (Scripts.Versioned untypedValidator Scripts.PlutusV2)
+   in
+     unsafeCoerce typedValidator
+ 
++
++marloweValidatorCompiled :: PlutusTx.CompiledCode (ValidatorHash -> PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> ())
++marloweValidatorCompiled =
++  let
++    mkUntypedMarloweValidator :: ValidatorHash -> PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> ()
++    mkUntypedMarloweValidator rp = Scripts.mkUntypedValidator (mkMarloweValidator rp)
++  in
++    $$(PlutusTx.compile [|| mkUntypedMarloweValidator ||])
++
++
+ -- | The hash of the Marlowe semantics validator.
+ marloweValidatorHash :: ValidatorHash
+ marloweValidatorHash = Scripts.validatorHash marloweValidator
+@@ -432,7 +510,7 @@ alternateMarloweValidator = Scripts.mkTypedValidator
+           $$(PlutusTx.compile [|| mkMarloweValidator ||])
+             `PlutusTx.applyCode`
+               PlutusTx.liftCode rolePayoutValidatorHash
+-        mkArgsValidator = mkUntypedValidator @MarloweData @MarloweInput
++        mkArgsValidator = Scripts.mkUntypedValidator @_ @MarloweData @MarloweInput
+         compiledArgsValidator =
+           $$(PlutusTx.compile [|| mkArgsValidator ||])
+```

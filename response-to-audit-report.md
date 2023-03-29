@@ -1,7 +1,7 @@
 
 # Response to Audit Report
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO:
+**TODO:**
 
 - [ ] Add prefatory text and executive summary.
 - [ ] Add responses and mitigation commits to Isabelle-related findings.
@@ -1470,7 +1470,7 @@ This mistatement is remedied in commit [8691f335](https://github.com/input-outpu
 > 
 > The absence of this information makes it easier to accidentally produce a test that is not testing what is intended.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @bwbush will add text here.
+A future version of the Marlowe test suite for `checkSemanticsTransaction` and `checkPayoutTransaction` will instrumenting Plutus scripts for the Marlowe validators so that the precise cause of the test failure can be verified.
 
 
 ### 2.7.2 Missing tests *(Severity: Medium)*

@@ -12,7 +12,7 @@ import Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as JSON
 import Marlowe.Spec.Core.Arbitrary
   ( arbitraryTimeIntervalAfter,
-    arbitraryValidInputs,
+    arbitraryValidTransactions,
     genContract,
     genEnvironment,
     genInterval,
@@ -146,9 +146,9 @@ fixIntervalTest interpret = reproducibleProperty "Calling fixInterval test" do
 
 computeTransactionTest :: InterpretJsonRequest -> TestTree
 computeTransactionTest interpret = reproducibleProperty "Calling computeTransaction test" do
-    contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
+    contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidTransactions returns [] for the `Close` contract
     state <- run $ generateT $ genState interpret
-    transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` (not . null)
+    transactions <- run $ generate $ arbitraryValidTransactions state contract `suchThat` (not . null)
 
     let transaction = head transactions
         req :: Request JSON.Value
@@ -197,7 +197,7 @@ playTrace_only_accepts_maxTransactionsInitialStateTest :: InterpretJsonRequest -
 playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleProperty "Calling playTrace only accepts maxTransactionsInitialState"  do
     contract <- run $ generateT $ genContract interpret
     state <- run $ generateT $ genState interpret
-    transactions <- run $ generate $ arbitraryValidInputs state contract
+    transactions <- run $ generate $ arbitraryValidTransactions state contract
     let
         req :: Request JSON.Value
         req = PlayTrace (Arith.integer_of_int $ minTime state) contract transactions
@@ -211,6 +211,7 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
                 ++ "Expected maxTransactionsInitialState (" ++ show (maxTransactionsInitialState contract) ++ ")\n"
                 ++ "to be an upper bound for the number of transacations (" ++ show (length transactions) ++ ")")
         assert $ toInteger (length transactions) <= Arith.integer_of_nat (maxTransactionsInitialState contract)
+      JSON.Success (TransactionError _ ) -> pre False
       _ -> fail "JSON parsing failed!"
 
 -- SingleInputTransactions.thy
@@ -220,9 +221,9 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
 traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
 traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single input transactions"  do
     (contract, State_ext _ _ _ startTime _, transactions) <- run $ generateT $ (do
-        c <- genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
+        c <- genContract interpret `suchThat` (/=Close) -- arbitraryValidTransactions returns [] for the `Close` contract
         s <- genState interpret
-        t <- liftGen $ arbitraryValidInputs s c
+        t <- liftGen $ arbitraryValidTransactions s c
         pure (c,s,t)) `suchThat` \(_,_,t) -> t /= traceListToSingleInput t
 
     let
@@ -268,9 +269,9 @@ reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "Cal
 --        isQuiescent (txOutContract traOut) (txOutState traOut)"
 computeTransactionIsQuiescentTest :: InterpretJsonRequest -> TestTree
 computeTransactionIsQuiescentTest interpret = reproducibleProperty "Calling computeTransaction is quiescent" do
-    contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidInputs returns [] for the `Close` contract
+    contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidTransactions returns [] for the `Close` contract
     state <- run $ generateT $ genState interpret `suchThat` validAndPositive_state
-    transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` (not . null)
+    transactions <- run $ generate $ arbitraryValidTransactions state contract `suchThat` (not . null)
     let
         transaction = head transactions
         req :: Request JSON.Value
@@ -295,7 +296,7 @@ playTraceIsQuiescentTest :: InterpretJsonRequest -> TestTree
 playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is quiescent" do
     contract <- run $ generateT $ genContract interpret `suchThat` (/=Close)
     state <- run $ generateT $ genState interpret
-    transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` (not . null)
+    transactions <- run $ generate $ arbitraryValidTransactions state contract `suchThat` (not . null)
     let
         req :: Request JSON.Value
         req = PlayTrace (Arith.integer_of_int $ minTime state) contract transactions

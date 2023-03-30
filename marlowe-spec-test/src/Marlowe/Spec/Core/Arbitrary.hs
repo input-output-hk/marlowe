@@ -28,8 +28,8 @@ module Marlowe.Spec.Core.Arbitrary
   , genIntervalError
   , genTransactionError
   , genTransactionOutput
-  , arbitraryValidInputs
-  , arbitraryValidStep
+  , arbitraryValidTransaction
+  , arbitraryValidTransactions
   , arbitraryNonnegativeInteger
   , arbitraryFibonacci
   , arbitraryPositiveInteger
@@ -517,11 +517,11 @@ genEnvironment :: Gen (Environment_ext ())
 genEnvironment = Environment_ext <$> genInterval <*> pure ()
 
 -- | Generate a random step for a contract.
-arbitraryValidStep :: State_ext ()             -- ^ The state of the contract.
-                   -> Contract                 -- ^ The contract.
-                   -> Gen (Transaction_ext ()) -- ^ Generator for a transaction input for a single step.
-arbitraryValidStep _ (When [] timeout _) = Transaction_ext <$> arbitraryTimeIntervalAfter timeout <*> pure [] <*> pure ()
-arbitraryValidStep state (When cases timeout _) =
+arbitraryValidTransaction :: State_ext ()             -- ^ The state of the contract.
+                          -> Contract                 -- ^ The contract.
+                          -> Gen (Transaction_ext ()) -- ^ Generator for a transaction input for a single step.
+arbitraryValidTransaction _ (When [] timeout _) = Transaction_ext <$> arbitraryTimeIntervalAfter timeout <*> pure [] <*> pure ()
+arbitraryValidTransaction state (When cases timeout _) =
   do
     let
       isEmptyChoice (Choice _ []) = True
@@ -543,13 +543,13 @@ arbitraryValidStep state (When cases timeout _) =
                  Notify _        -> pure INotify
           case cont of
             Close -> pure $ Transaction_ext times [i] ()
-            _ -> do Transaction_ext _ inputs _ <- arbitraryValidStep state cont
+            _ -> do Transaction_ext _ inputs _ <- arbitraryValidTransaction state cont
                     pure $ Transaction_ext times (i:inputs) ()
   where
     getAction :: Case -> Action
     getAction (Case a _) = a
 
-arbitraryValidStep state contract =
+arbitraryValidTransaction state contract =
   let
     nextTimeout Close                                    = minTime state
     nextTimeout (Pay _ _ _ _ continuation)               = nextTimeout continuation
@@ -563,16 +563,16 @@ arbitraryValidStep state contract =
   maximum' = foldl1 Orderings.max
 
 -- | Generate a random path through a contract.
-arbitraryValidInputs :: State_ext ()             -- ^ The state of the contract.
-                     -> Contract                 -- ^ The contract.
-                     -> Gen [Transaction_ext ()] -- ^ Generator for a transaction inputs.
-arbitraryValidInputs _ Close = pure []
-arbitraryValidInputs state contract =
+arbitraryValidTransactions :: State_ext ()             -- ^ The state of the contract.
+                           -> Contract                 -- ^ The contract.
+                           -> Gen [Transaction_ext ()] -- ^ Generator for a transaction inputs.
+arbitraryValidTransactions _ Close = pure []
+arbitraryValidTransactions state contract =
   do
-    txIn <- arbitraryValidStep state contract
+    txIn <- arbitraryValidTransaction state contract
     case computeTransaction txIn state contract of  -- FIXME: It is tautological to use `computeTransaction` to filter test cases.
       TransactionError _ -> pure []
-      TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _) -> (txIn :) <$> arbitraryValidInputs txOutState txOutContract
+      TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _) -> (txIn :) <$> arbitraryValidTransactions txOutState txOutContract
 
 -- | Generate a random case, weighted towards different contract constructs.
 arbitraryCaseWeighted :: [(Int, Int, Int, Int, Int, Int)] -- ^ The weights for contract terms.

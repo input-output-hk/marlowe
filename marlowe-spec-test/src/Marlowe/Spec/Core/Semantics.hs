@@ -253,7 +253,7 @@ reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "Cal
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
-                ++ "Expected: ContractQuiescent"
+                ++ "Expected: ContractQuiescent with reduced False and state and contract not changed"
           )
         assert $ case reduceContractUntilQuiescent env nsta ncont of
           ContractQuiescent False [] [] nsta' ncont' -> nsta == nsta' && ncont == ncont'

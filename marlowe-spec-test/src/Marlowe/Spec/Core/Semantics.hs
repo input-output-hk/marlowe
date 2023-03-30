@@ -15,7 +15,6 @@ import Marlowe.Spec.Core.Arbitrary
     arbitraryValidTransactions,
     genContract,
     genEnvironment,
-    genInterval,
     genState,
     genTransaction,
     genValue,
@@ -39,17 +38,14 @@ import Orderings (Ord (..))
 import PositiveAccounts (validAndPositive_state)
 import QuickCheck.GenT (suchThat, liftGen)
 import Semantics
-  ( ReduceResult (..),
-    TransactionOutput (..),
+  ( TransactionOutput (..),
     TransactionOutputRecord_ext (TransactionOutputRecord_ext),
     TransactionWarning,
     Transaction_ext (..),
     computeTransaction,
     evalValue,
     evalObservation,
-    fixInterval,
     isQuiescent,
-    reduceContractUntilQuiescent,
     txOutWarnings,
     maxTimeContract,
   )
@@ -72,7 +68,6 @@ tests i = testGroup "Semantics"
     [ evalValueTest i
     , evalObservationTest i
     , divisionRoundsTowardsZeroTest i
-    , fixIntervalTest i
     , computeTransactionTest i
     --
     -- Property based test correponding to theorems defined
@@ -82,7 +77,6 @@ tests i = testGroup "Semantics"
     , playTrace_only_accepts_maxTransactionsInitialStateTest i
     -- SingleInputTransactions.thy
     , traceToSingleInputIsEquivalentTest i
-    , reduceContractUntilQuiescentIdempotentTest i
     -- QuiescentResults.thy
     , computeTransactionIsQuiescentTest i
     , playTraceIsQuiescentTest i
@@ -132,16 +126,6 @@ divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division roundin
         req :: Request JSON.Value
         req = EvalValue env state (DivValue numerator denominator)
         successResponse = RequestResponse $ toJSON (0 :: Int)
-    assertResponse interpret req successResponse
-
-fixIntervalTest :: InterpretJsonRequest -> TestTree
-fixIntervalTest interpret = reproducibleProperty "Calling fixInterval test" do
-    i@(Arith.Int_of_integer a, Arith.Int_of_integer b) <- run $ generate genInterval
-    state <- run $ generateT $ genState interpret
-    let
-        req :: Request JSON.Value
-        req = FixInterval (a, b) state
-        successResponse = RequestResponse $ toJSON $ fixInterval i state
     assertResponse interpret req successResponse
 
 computeTransactionTest :: InterpretJsonRequest -> TestTree
@@ -234,32 +218,6 @@ traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single inpu
     RequestResponse resSingletonInput <- run $ liftIO $ interpret singletonInput
 
     assert $ resMultipleInputs == resSingletonInput
-
--- lemma reduceContractUntilQuiescentIdempotent :
---    "reduceContractUntilQuiescent env state contract = ContractQuiescent reducedAfter wa pa nsta ncont ⟹
---       reduceContractUntilQuiescent env nsta ncont = ContractQuiescent False [] [] nsta ncont"
-reduceContractUntilQuiescentIdempotentTest :: InterpretJsonRequest -> TestTree
-reduceContractUntilQuiescentIdempotentTest interpret = reproducibleProperty "Calling is reduceContractUntilQuiescent idempotent" do
-    env <- run $ generate genEnvironment
-    state <- run $ generateT $ genState interpret
-    contract <- run $ generateT $ genContract interpret
-
-    let req :: Request JSON.Value
-        req = ReduceContractUntilQuiescent env state contract
-    RequestResponse res <- run $ liftIO $ interpret req
-
-    case JSON.fromJSON res of
-      JSON.Success (ContractQuiescent _ _ _ nsta ncont) -> do
-        monitor
-          ( counterexample $
-              "Request: " ++ showAsJson req ++ "\n"
-                ++ "Expected: ContractQuiescent with reduced False and state and contract not changed"
-          )
-        assert $ case reduceContractUntilQuiescent env nsta ncont of
-          ContractQuiescent False [] [] nsta' ncont' -> nsta == nsta' && ncont == ncont'
-          _ -> False
-      JSON.Success _ -> pre False
-      _ -> fail "JSON parsing failed!"
 
 -- QuiescentResults.thy
 --

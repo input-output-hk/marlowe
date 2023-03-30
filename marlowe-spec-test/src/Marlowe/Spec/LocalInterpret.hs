@@ -25,9 +25,7 @@ import Marlowe.Spec.Core.Arbitrary
   )
 import qualified Marlowe.Spec.Core.Arbitrary as RandomResponse
 import Semantics
-  ( fixInterval,
-    reduceContractUntilQuiescent,
-    playTrace,
+  ( playTrace,
     computeTransaction,
     evalValue,
     evalObservation
@@ -66,21 +64,11 @@ interpretLocal (EvalObservation env state obs) =
     $ RequestResponse
     $ JSON.toJSON
     $ evalObservation env state obs
-interpretLocal (ReduceContractUntilQuiescent e s c) =
-  pure
-    $ RequestResponse
-    $ JSON.toJSON
-    $ reduceContractUntilQuiescent e s c
 interpretLocal (ComputeTransaction t s c) =
   pure
     $ RequestResponse
     $ JSON.toJSON
     $ computeTransaction t s c
-interpretLocal (FixInterval (a, b) s) =
-  pure
-    $ RequestResponse
-    $ JSON.toJSON
-    $ fixInterval (Arith.Int_of_integer a, Arith.Int_of_integer b) s
 interpretLocal (GenerateRandomValue t@(TypeId name _) size seed) =
   pure
     $ RequestResponse

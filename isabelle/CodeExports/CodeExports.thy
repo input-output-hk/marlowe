@@ -59,7 +59,6 @@ export_code
     \<close>
   evalValue
   evalObservation
-  fixInterval
   reductionLoop
   reduceContractUntilQuiescent
   applyAllInputs
@@ -121,15 +120,6 @@ export_code
 
   \<comment> \<open>Force export of Payment constructor\<close>
   Payment
-
-  \<comment> \<open>Force the export of the reduce contract constructors\<close>
-  ContractQuiescent
-  RRAmbiguousTimeIntervalError
-  ReduceNoWarning
-  ReduceNonPositivePay
-  ReducePartialPay
-  ReduceShadowing
-  ReduceAssertionFailed
 
   \<comment> \<open>Force the export of the transaction record\<close>
   Transaction_ext

@@ -18,6 +18,7 @@ module Marlowe.Spec.Core.Arbitrary
   , genState
   , genEnvironment
   , genContract
+  , genContract'
   , genGoldenContract
   , genInterval
   , genTransaction
@@ -244,7 +245,10 @@ genParty interpret = do
       Right (RandomValue t) -> pure t
 
 genContract :: InterpretJsonRequest -> GenT IO Contract
-genContract interpret = frequency [(90, gen =<< liftGen arbitrary), (10, genGoldenContract interpret)]
+genContract interpret = snd <$> genContract' interpret
+
+genContract' :: InterpretJsonRequest -> GenT IO (Bool, Contract)
+genContract' interpret = frequency [(98, ((,) <$> pure True <*> (gen =<< liftGen arbitrary))), (2, ((,) <$> pure False <*> genGoldenContract interpret))]
   where gen context = sized \size -> arbitraryContractSized (min (size `div` 6) 5) context interpret -- Keep tests from growing too large to execute by capping the maximum contract depth at 5 (default size is 30)
 
 genGoldenContract :: InterpretJsonRequest -> GenT IO Contract
@@ -604,7 +608,7 @@ arbitraryContractWeighted [] _ _ = pure Close
 
 -- | Default weights for contract terms.
 defaultContractWeights :: (Int, Int, Int, Int, Int, Int)
-defaultContractWeights = (35, 20, 10, 15, 20, 5)
+defaultContractWeights = (25, 20, 10, 30, 20, 5)
 
 -- | Generate a semi-random contract of a given depth.
 arbitraryContractSized :: Int           -- ^ The maximum depth.

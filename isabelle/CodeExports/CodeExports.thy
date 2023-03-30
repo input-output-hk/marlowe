@@ -107,6 +107,7 @@ export_code
 
   \<comment> \<open>Force export of Arith.Int constructor\<close>
   int_of_integer
+  integer_of_int
   integer_of_nat
 
   \<comment> \<open>Force export of TransactionOutput constructors\<close>

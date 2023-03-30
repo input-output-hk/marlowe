@@ -1,9 +1,10 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Arith(Int(..), equal_int, less_eq_int, less_int, Nat, integer_of_nat, Num(..),
-         One, Zero, Zero_neq_one, suc, uminus_int, zero_int, abs_int, one_int,
-         plus_int, zero_nat, minus_int, times_int, of_bool, divide_int)
+  Arith(Int(..), integer_of_int, equal_int, less_eq_int, less_int, Nat,
+         integer_of_nat, Num(..), One, Zero, Zero_neq_one, suc, uminus_int,
+         zero_int, abs_int, one_int, plus_int, zero_nat, minus_int, times_int,
+         of_bool, divide_int)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),

@@ -200,7 +200,7 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
     transactions <- run $ generate $ arbitraryValidInputs state contract
     let
         req :: Request JSON.Value
-        req = PlayTrace (integer_of_int $ minTime state) contract transactions
+        req = PlayTrace (Arith.integer_of_int $ minTime state) contract transactions
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
@@ -226,16 +226,13 @@ traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single inpu
         pure (c,s,t)) `suchThat` \(_,_,t) -> t /= traceListToSingleInput t
 
     let
-        multipleInputs = PlayTrace (integer_of_int startTime) contract transactions
-        singletonInput = PlayTrace (integer_of_int startTime) contract (traceListToSingleInput transactions)
+        multipleInputs = PlayTrace (Arith.integer_of_int startTime) contract transactions
+        singletonInput = PlayTrace (Arith.integer_of_int startTime) contract (traceListToSingleInput transactions)
 
     RequestResponse resMultipleInputs <- run $ liftIO $ interpret multipleInputs
     RequestResponse resSingletonInput <- run $ liftIO $ interpret singletonInput
 
     assert $ resMultipleInputs == resSingletonInput
-
-integer_of_int :: Arith.Int -> Integer
-integer_of_int (Arith.Int_of_integer k) = k
 
 -- lemma reduceContractUntilQuiescentIdempotent :
 --    "reduceContractUntilQuiescent env state contract = ContractQuiescent reducedAfter wa pa nsta ncont ⟹
@@ -301,7 +298,7 @@ playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is 
     transactions <- run $ generate $ arbitraryValidInputs state contract `suchThat` (not . null)
     let
         req :: Request JSON.Value
-        req = PlayTrace (integer_of_int $ minTime state) contract transactions
+        req = PlayTrace (Arith.integer_of_int $ minTime state) contract transactions
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of

@@ -208,9 +208,9 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
-                ++ "Expected reponse to be quiescent" )
+                ++ "Expected maxTransactionsInitialState (" ++ show (maxTransactionsInitialState contract) ++ ")\n"
+                ++ "to be an upper bound for the number of transacations (" ++ show (length transactions) ++ ")")
         assert $ toInteger (length transactions) <= Arith.integer_of_nat (maxTransactionsInitialState contract)
-      JSON.Success _ -> pre False
       _ -> fail "JSON parsing failed!"
 
 -- SingleInputTransactions.thy

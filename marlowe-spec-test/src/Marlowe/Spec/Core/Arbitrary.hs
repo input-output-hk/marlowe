@@ -30,16 +30,16 @@ module Marlowe.Spec.Core.Arbitrary
   , genIntervalError
   , genTransactionError
   , genTransactionOutput
-  , arbitraryValidTransaction
-  , arbitraryValidTransactions
-  , arbitraryNonnegativeInteger
-  , arbitraryFibonacci
-  , arbitraryPositiveInteger
   , arbitraryChoiceName
+  , arbitraryFibonacci
+  , arbitraryNonnegativeInteger
+  , arbitraryPositiveInteger
+  , arbitraryTransaction
   , arbitraryTimeInterval
   , arbitraryTimeIntervalAfter
   , arbitraryTimeIntervalBefore
   , arbitraryTimeIntervalAround
+  , arbitraryValidTransactions
   , shrinkChoiceName
   , shrinkTimeInterval
   , RandomResponse (..)
@@ -522,11 +522,11 @@ genEnvironment :: Gen (Environment_ext ())
 genEnvironment = Environment_ext <$> genInterval <*> pure ()
 
 -- | Generate a random step for a contract.
-arbitraryValidTransaction :: State_ext ()             -- ^ The state of the contract.
-                          -> Contract                 -- ^ The contract.
-                          -> Gen (Transaction_ext ()) -- ^ Generator for a transaction input for a single step.
-arbitraryValidTransaction _ (When [] timeout _) = Transaction_ext <$> arbitraryTimeIntervalAfter timeout <*> pure [] <*> pure ()
-arbitraryValidTransaction state (When cases timeout _) =
+arbitraryTransaction :: State_ext ()             -- ^ The state of the contract.
+                     -> Contract                 -- ^ The contract.
+                     -> Gen (Transaction_ext ()) -- ^ Generator for a transaction input for a single step.
+arbitraryTransaction _ (When [] timeout _) = Transaction_ext <$> arbitraryTimeIntervalAfter timeout <*> pure [] <*> pure ()
+arbitraryTransaction state (When cases timeout _) =
   do
     let
       isEmptyChoice (Choice _ []) = True
@@ -548,13 +548,13 @@ arbitraryValidTransaction state (When cases timeout _) =
                  Notify _        -> pure INotify
           case cont of
             Close -> pure $ Transaction_ext times [i] ()
-            _ -> do Transaction_ext _ inputs _ <- arbitraryValidTransaction state cont
+            _ -> do Transaction_ext _ inputs _ <- arbitraryTransaction state cont
                     pure $ Transaction_ext times (i:inputs) ()
   where
     getAction :: Case -> Action
     getAction (Case a _) = a
 
-arbitraryValidTransaction state contract =
+arbitraryTransaction state contract =
   let
     nextTimeout Close                                    = minTime state
     nextTimeout (Pay _ _ _ _ continuation)               = nextTimeout continuation
@@ -574,7 +574,7 @@ arbitraryValidTransactions :: State_ext ()             -- ^ The state of the con
 arbitraryValidTransactions _ Close = pure []
 arbitraryValidTransactions state contract =
   do
-    txIn <- arbitraryValidTransaction state contract
+    txIn <- arbitraryTransaction state contract
     case computeTransaction txIn state contract of  -- FIXME: It is tautological to use `computeTransaction` to filter test cases.
       TransactionError _ -> pure []
       TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _) -> (txIn :) <$> arbitraryValidTransactions txOutState txOutContract

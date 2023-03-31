@@ -4,6 +4,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TupleSections     #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -248,7 +249,7 @@ genContract :: InterpretJsonRequest -> GenT IO Contract
 genContract interpret = snd <$> genContract' interpret
 
 genContract' :: InterpretJsonRequest -> GenT IO (Bool, Contract)
-genContract' interpret = frequency [(98, ((,) <$> pure True <*> (gen =<< liftGen arbitrary))), (2, ((,) <$> pure False <*> genGoldenContract interpret))]
+genContract' interpret = frequency [(98, (True,) <$> (gen =<< liftGen arbitrary)), (2, (False,) <$> genGoldenContract interpret)]
   where gen context = sized \size -> arbitraryContractSized (min (size `div` 6) 5) context interpret -- Keep tests from growing too large to execute by capping the maximum contract depth at 5 (default size is 30)
 
 genGoldenContract :: InterpretJsonRequest -> GenT IO Contract

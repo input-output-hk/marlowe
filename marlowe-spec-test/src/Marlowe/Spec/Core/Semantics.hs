@@ -121,7 +121,7 @@ divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division roundin
     numerator <- run $ generateT $ genValue interpret
     denominator <- run $ generateT
         (genValue interpret
-          `suchThat` (\d -> (Arith.abs_int $ evalValue env state numerator) `Arith.less_int` (Arith.abs_int $ evalValue env state d))
+          `suchThat` (\d -> Arith.abs_int (evalValue env state numerator) `Arith.less_int` Arith.abs_int (evalValue env state d))
         )
     let
         req :: Request JSON.Value
@@ -170,8 +170,8 @@ txOutEquals a b = a == b
 
 setEquals :: Eq a => [a] -> [a] -> Bool
 setEquals l1 l2 =
-    all (flip elem l2) l1
-    && all (flip elem l1) l2
+    all (`elem` l2) l1
+    && all (`elem` l1) l2
 
 -- TransactionBound.thy
 --

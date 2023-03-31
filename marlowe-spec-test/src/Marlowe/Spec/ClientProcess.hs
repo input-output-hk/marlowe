@@ -75,7 +75,7 @@ parseJsonResponse cp = do
           Nothing -> ResponseFailure  "Could not parse response from the client cli"
           Just r -> r
 
-    debug debugH $ show pid ++ " - Parse JSON response: " ++ (C.unpack $ JSON.encode res)
+    debug debugH $ show pid ++ " - Parse JSON response: " ++ C.unpack (JSON.encode res)
     return res
 
 
@@ -155,7 +155,6 @@ withClientProcess testCreator =
           askOption
             (\poolSize ->
               withClientProcess' traceOpt cliPathOpt poolSize
-
             )
         )
     )

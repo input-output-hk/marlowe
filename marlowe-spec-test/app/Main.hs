@@ -20,7 +20,7 @@ main = do
       , Option (Proxy @PoolSize)
       ]
     tastyIngredients = defaultIngredients <> [includingOptions tastyOptions]
-    testsCP = withClientProcess (\getCP -> tests $ eval getCP)
+    testsCP = withClientProcess (tests . eval)
   optSet <- parseOptions tastyIngredients testsCP
   case lookupOption optSet of
     UndefinedCliPath -> do

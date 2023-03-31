@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Main where
 
 import Test.Tasty (defaultMain)

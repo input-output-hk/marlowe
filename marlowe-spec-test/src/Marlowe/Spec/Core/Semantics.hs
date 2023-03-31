@@ -11,7 +11,8 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as JSON
 import Marlowe.Spec.Core.Arbitrary
-  ( arbitraryTimeIntervalAfter,
+  ( arbitraryTransaction,
+    arbitraryTimeIntervalAfter,
     arbitraryValidTransactions,
     genContract,
     genContract',
@@ -58,24 +59,30 @@ import SemanticsTypes
   )
 import SingleInputTransactions (traceListToSingleInput)
 import Test.QuickCheck (cover, withMaxSuccess)
-import Test.QuickCheck.Monadic (assert, monitor, pre, run)
+import Test.QuickCheck.Monadic (assert, monitor, pre, run, PropertyM)
 import Test.QuickCheck.Property (counterexample)
 import Test.Tasty (TestTree, testGroup)
 import Timeout (isClosedAndEmpty)
 import TransactionBound (maxTransactionsInitialState)
 
 tests :: InterpretJsonRequest -> TestTree
-tests i = testGroup "Semantics"
+tests i = testGroup "Semantics" [ testSemantics i , testGuarantees i ]
+
+testSemantics :: InterpretJsonRequest -> TestTree
+testSemantics i = testGroup "Core"
     [ evalValueTest i
     , evalObservationTest i
     , divisionRoundsTowardsZeroTest i
     , computeTransactionTest i
-    --
-    -- Property based test correponding to theorems defined
-    -- in Isabelle:
-    --
+    , computeTransactionForValidTransactionTest i
+    ]
+
+-- Property based tests correponding to theorems defined in Isabelle.
+testGuarantees :: InterpretJsonRequest -> TestTree
+testGuarantees i = testGroup "Guarantees"
+    [
     -- TransactionBound.thy
-    , playTrace_only_accepts_maxTransactionsInitialStateTest i
+      playTrace_only_accepts_maxTransactionsInitialStateTest i
     -- SingleInputTransactions.thy
     , traceToSingleInputIsEquivalentTest i
     -- QuiescentResults.thy
@@ -131,17 +138,26 @@ divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division roundin
 
 computeTransactionTest :: InterpretJsonRequest -> TestTree
 computeTransactionTest interpret = reproducibleProperty "Calling computeTransaction test" do
+    contract <- run $ generateT $ genContract interpret
+    state <- run $ generateT $ genState interpret
+    transaction <- run $ generate $ arbitraryTransaction state contract
+    checkComputeTransactionResult interpret contract state transaction
+
+computeTransactionForValidTransactionTest :: InterpretJsonRequest -> TestTree
+computeTransactionForValidTransactionTest interpret = reproducibleProperty "Calling computeTransaction (only valid transactions) test" do
     contract <- run $ generateT $ genContract interpret `suchThat` (/=Close) -- arbitraryValidTransactions returns [] for the `Close` contract
     state <- run $ generateT $ genState interpret
     transactions <- run $ generate $ arbitraryValidTransactions state contract `suchThat` (not . null)
+    checkComputeTransactionResult interpret contract state (head transactions)
 
-    let transaction = head transactions
-        req :: Request JSON.Value
+checkComputeTransactionResult :: MonadIO m => InterpretJsonRequest -> Contract -> State_ext () -> Transaction_ext () -> PropertyM m ()
+checkComputeTransactionResult interpret contract state transaction = do
+    let req :: Request JSON.Value
         req = ComputeTransaction transaction state contract
 
     RequestResponse res <- run $ liftIO $ interpret req
     case JSON.fromJSON res of
-      JSON.Success transactionOutput  -> do
+      JSON.Success transactionOutput -> do
         let expected = computeTransaction transaction state contract
         monitor
           ( counterexample $

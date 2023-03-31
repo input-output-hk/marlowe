@@ -43,7 +43,7 @@ import Marlowe.Spec.Reproducible
 import Marlowe.Utils (showAsJson)
 import Orderings (Ord (..))
 import PositiveAccounts (validAndPositive_state)
-import QuickCheck.GenT (suchThat, liftGen, GenT)
+import QuickCheck.GenT (frequency, suchThat, liftGen, GenT)
 import Semantics
   ( TransactionOutput (..),
     TransactionOutputRecord_ext (TransactionOutputRecord_ext),
@@ -68,7 +68,6 @@ import Test.QuickCheck.Property (counterexample)
 import Test.Tasty (TestTree, testGroup)
 import Timeout (isClosedAndEmpty)
 import TransactionBound (maxTransactionsInitialState)
-import QuickCheck.GenT (frequency)
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics" [ testSemantics i , testGuarantees i ]
@@ -296,8 +295,7 @@ playTraceIsQuiescentTest :: InterpretJsonRequest -> TestTree
 playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is quiescent" do
     (contract, State_ext _ _ _ (Int_of_integer startTime) _, transactions) <- run $ generateT $
         frequency
-          [ (5, genContractStateAndValidTransactions interpret)
-          , (40, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> not (null l))
+          [ (45, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> not (null l))
           , (55, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> length l > 1)
           ]
     let
@@ -327,10 +325,10 @@ playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is 
 --       ⟹  isClosedAndEmpty (computeTransaction ⦇ interval = (iniTime, endTime), inputs = [] ⦈ sta cont)"
 timedOutTransaction_closes_contractTest :: InterpretJsonRequest -> TestTree
 timedOutTransaction_closes_contractTest interpret = reproducibleProperty "Timed-out transaction closes contract"  do
-    (contract, state@(State_ext _ _ _ minTime' _)) <- run $ generateT $ do
-      c <- genContract interpret `suchThat` (/=Close)
+    (contract, state@(State_ext _ _ _ minTime' _)) <- run $ generateT $ (do
+      c <- genContract interpret
       s <- genState interpret `suchThat` validAndPositive_state
-      pure (c,s) `suchThat` \(contract, State_ext accounts _ _ _ _) -> null accounts || contract /= Close
+      pure (c,s)) `suchThat` \(contract, State_ext accounts _ _ _ _) -> not (null accounts) || contract /= Close
     interval <- run $ generate $ arbitraryTimeIntervalAfter minTime' `suchThat` \(iniTime, endTime) ->
            (iniTime `greater_eq` minTime')
         && (iniTime `greater_eq` maxTimeContract contract)
@@ -343,14 +341,12 @@ timedOutTransaction_closes_contractTest interpret = reproducibleProperty "Timed-
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
-      JSON.Success txOut@(TransactionOutput trec) -> do
-        let expected :: [TransactionWarning]
-            expected = mempty
+      JSON.Success txOut@(TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _)) -> do
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
-                ++ "Expected: " ++ show expected ++ "\n"
-                ++ "Actual: " ++ show (txOutWarnings trec))
+                ++ "txOutContract: " ++ show txOutContract
+                ++ "txOutState: " ++ show txOutState)
         assert $ isClosedAndEmpty txOut
       JSON.Success (TransactionError _ ) -> pre False
       _ -> fail "JSON parsing failed!"

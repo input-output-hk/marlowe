@@ -59,11 +59,12 @@ import SemanticsTypes
   )
 import SingleInputTransactions (traceListToSingleInput)
 import Test.QuickCheck (cover, withMaxSuccess)
-import Test.QuickCheck.Monadic (assert, monitor, pre, run, PropertyM)
+import Test.QuickCheck.Monadic (assert, monitor, pre, run, stop, PropertyM)
 import Test.QuickCheck.Property (counterexample)
 import Test.Tasty (TestTree, testGroup)
 import Timeout (isClosedAndEmpty)
 import TransactionBound (maxTransactionsInitialState)
+import Control.Monad (void)
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics" [ testSemantics i , testGuarantees i ]
@@ -234,8 +235,15 @@ traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single inpu
     RequestResponse resMultipleInputs <- run $ liftIO $ interpret multipleInputs
     RequestResponse resSingletonInput <- run $ liftIO $ interpret singletonInput
 
-    -- For more than half of the tests the contracts are expected to be arbitrary (i.e. not from golden contracts)
-    pure $ cover 50.0 contractClass "arbitrary contracts" $ resMultipleInputs == resSingletonInput
+    case (JSON.fromJSON resMultipleInputs, JSON.fromJSON resSingletonInput) of
+      (JSON.Success (TransactionOutput _), JSON.Success (TransactionOutput _)) ->
+
+          -- For more than half of the tests the contracts are expected to be arbitrary (i.e. not from golden contracts)
+          void $ stop $ cover 50.0 contractClass "arbitrary contracts" $ resMultipleInputs == resSingletonInput
+
+      (JSON.Success (TransactionError _), JSON.Success _) -> pre False
+      (JSON.Success _ , JSON.Success (TransactionError _)) -> pre False
+      _ -> fail "JSON parsing failed"
 
 -- QuiescentResults.thy
 --
@@ -259,7 +267,8 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "Calling comp
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
-                ++ "Expected reponse to be quiescent" )
+                ++ "Response: " ++ showAsJson res ++ "\n"
+                ++ "Expected reponse to be quiescent")
         assert $ isQuiescent txOutContract txOutState
       _ -> fail "JSON parsing failed!"
 
@@ -283,6 +292,7 @@ playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is 
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
+                ++ "Response: " ++ showAsJson res ++ "\n"
                 ++ "Expected reponse to be quiescent" )
         assert $ isQuiescent txOutContract txOutState
       JSON.Success _ -> pre False

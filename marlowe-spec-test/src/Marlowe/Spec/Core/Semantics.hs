@@ -14,6 +14,7 @@ import Marlowe.Spec.Core.Arbitrary
   ( arbitraryTimeIntervalAfter,
     arbitraryValidTransactions,
     genContract,
+    genContract',
     genEnvironment,
     genState,
     genTransaction,
@@ -56,7 +57,7 @@ import SemanticsTypes
     minTime,
   )
 import SingleInputTransactions (traceListToSingleInput)
-import Test.QuickCheck (withMaxSuccess)
+import Test.QuickCheck (cover, withMaxSuccess)
 import Test.QuickCheck.Monadic (assert, monitor, pre, run)
 import Test.QuickCheck.Property (counterexample)
 import Test.Tasty (TestTree, testGroup)
@@ -204,11 +205,11 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
 --    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
 traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
 traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single input transactions"  do
-    (contract, State_ext _ _ _ startTime _, transactions) <- run $ generateT $ (do
-        c <- genContract interpret `suchThat` (/=Close) -- arbitraryValidTransactions returns [] for the `Close` contract
+    (contractClass, contract, State_ext _ _ _ startTime _, transactions) <- run $ generateT $ (do
+        (b,c) <- genContract' interpret `suchThat` (\(_,c) ->  Arith.integer_of_nat (maxTransactionsInitialState c) > 2)
         s <- genState interpret
         t <- liftGen $ arbitraryValidTransactions s c
-        pure (c,s,t)) `suchThat` \(_,_,t) -> t /= traceListToSingleInput t
+        pure (b,c,s,t)) `suchThat` \(_,_,_,t) -> t /= traceListToSingleInput t
 
     let
         multipleInputs = PlayTrace (Arith.integer_of_int startTime) contract transactions
@@ -217,7 +218,8 @@ traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single inpu
     RequestResponse resMultipleInputs <- run $ liftIO $ interpret multipleInputs
     RequestResponse resSingletonInput <- run $ liftIO $ interpret singletonInput
 
-    assert $ resMultipleInputs == resSingletonInput
+    -- For more than half of the tests the contracts are expected to be arbitrary (i.e. not from golden contracts)
+    pure $ cover 50.0 contractClass "arbitrary contracts" $ resMultipleInputs == resSingletonInput
 
 -- QuiescentResults.thy
 --

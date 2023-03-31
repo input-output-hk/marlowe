@@ -6,7 +6,12 @@ module Marlowe.Spec.Core.Semantics
   )
   where
 
-import qualified Arith
+import Arith
+  ( Int (..),
+    less_int,
+    abs_int,
+    integer_of_nat
+  )
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as JSON
@@ -38,7 +43,7 @@ import Marlowe.Spec.Reproducible
 import Marlowe.Utils (showAsJson)
 import Orderings (Ord (..))
 import PositiveAccounts (validAndPositive_state)
-import QuickCheck.GenT (suchThat, liftGen)
+import QuickCheck.GenT (suchThat, liftGen, GenT)
 import Semantics
   ( TransactionOutput (..),
     TransactionOutputRecord_ext (TransactionOutputRecord_ext),
@@ -54,8 +59,7 @@ import Semantics
 import SemanticsTypes
   ( Contract (..),
     State_ext (..),
-    Value (..),
-    minTime,
+    Value (..)
   )
 import SingleInputTransactions (traceListToSingleInput)
 import Test.QuickCheck (cover, withMaxSuccess)
@@ -64,7 +68,7 @@ import Test.QuickCheck.Property (counterexample)
 import Test.Tasty (TestTree, testGroup)
 import Timeout (isClosedAndEmpty)
 import TransactionBound (maxTransactionsInitialState)
-import Control.Monad (void)
+import QuickCheck.GenT (frequency)
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics" [ testSemantics i , testGuarantees i ]
@@ -129,12 +133,12 @@ divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division roundin
     numerator <- run $ generateT $ genValue interpret
     denominator <- run $ generateT
         (genValue interpret
-          `suchThat` (\d -> Arith.abs_int (evalValue env state numerator) `Arith.less_int` Arith.abs_int (evalValue env state d))
+          `suchThat` (\d -> abs_int (evalValue env state numerator) `less_int` abs_int (evalValue env state d))
         )
     let
         req :: Request JSON.Value
         req = EvalValue env state (DivValue numerator denominator)
-        successResponse = RequestResponse $ toJSON (0 :: Int)
+        successResponse = RequestResponse $ toJSON (0 :: Prelude.Int)
     assertResponse interpret req successResponse
 
 computeTransactionTest :: InterpretJsonRequest -> TestTree
@@ -197,12 +201,15 @@ setEquals l1 l2 =
 --      length l ≤ maxTransactionsInitialState c"
 playTrace_only_accepts_maxTransactionsInitialStateTest :: InterpretJsonRequest -> TestTree
 playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleProperty "Calling playTrace only accepts maxTransactionsInitialState"  do
-    contract <- run $ generateT $ genContract interpret
-    state <- run $ generateT $ genState interpret
-    transactions <- run $ generate $ arbitraryValidTransactions state contract
+    (contract, State_ext _ _ _ (Int_of_integer startTime) _, transactions) <- run $ generateT $
+        frequency
+          [ (5, genContractStateAndValidTransactions interpret)
+          , (40, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> not (null l))
+          , (55, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> length l > 1)
+          ]
     let
         req :: Request JSON.Value
-        req = PlayTrace (Arith.integer_of_int $ minTime state) contract transactions
+        req = PlayTrace startTime contract transactions
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
@@ -211,10 +218,17 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
                 ++ "Expected maxTransactionsInitialState (" ++ show (maxTransactionsInitialState contract) ++ ")\n"
-                ++ "to be an upper bound for the number of transacations (" ++ show (length transactions) ++ ")")
-        assert $ toInteger (length transactions) <= Arith.integer_of_nat (maxTransactionsInitialState contract)
+                ++ "to be an upper bound for the number of transactions (" ++ show (length transactions) ++ ")")
+        stop $ cover 50.0 (length transactions > 1) "more than one transaction" $ toInteger (length transactions) <= integer_of_nat (maxTransactionsInitialState contract)
       JSON.Success (TransactionError _ ) -> pre False
       _ -> fail "JSON parsing failed!"
+
+genContractStateAndValidTransactions :: InterpretJsonRequest -> GenT IO (Contract, State_ext (), [Transaction_ext ()])
+genContractStateAndValidTransactions interpret = do
+    c <- genContract interpret `suchThat` (/=Close)
+    s <- genState interpret
+    t <- liftGen $ arbitraryValidTransactions s c
+    pure (c,s,t)
 
 -- SingleInputTransactions.thy
 --
@@ -222,15 +236,15 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
 --    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
 traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
 traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single input transactions"  do
-    (contractClass, contract, State_ext _ _ _ startTime _, transactions) <- run $ generateT $ (do
-        (b,c) <- genContract' interpret `suchThat` (\(_,c) ->  Arith.integer_of_nat (maxTransactionsInitialState c) > 2)
+    (contractClass, contract, State_ext _ _ _ (Int_of_integer startTime) _, transactions) <- run $ generateT $ (do
+        (b,c) <- genContract' interpret `suchThat` (\(_,c) -> integer_of_nat (maxTransactionsInitialState c) > 2)
         s <- genState interpret
         t <- liftGen $ arbitraryValidTransactions s c
         pure (b,c,s,t)) `suchThat` \(_,_,_,t) -> t /= traceListToSingleInput t
 
     let
-        multipleInputs = PlayTrace (Arith.integer_of_int startTime) contract transactions
-        singletonInput = PlayTrace (Arith.integer_of_int startTime) contract (traceListToSingleInput transactions)
+        multipleInputs = PlayTrace startTime contract transactions
+        singletonInput = PlayTrace startTime contract (traceListToSingleInput transactions)
 
     RequestResponse resMultipleInputs <- run $ liftIO $ interpret multipleInputs
     RequestResponse resSingletonInput <- run $ liftIO $ interpret singletonInput
@@ -239,7 +253,7 @@ traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "Single inpu
       (JSON.Success (TransactionOutput _), JSON.Success (TransactionOutput _)) ->
 
           -- For more than half of the tests the contracts are expected to be arbitrary (i.e. not from golden contracts)
-          void $ stop $ cover 50.0 contractClass "arbitrary contracts" $ resMultipleInputs == resSingletonInput
+          stop $ cover 50.0 contractClass "arbitrary contracts" $ resMultipleInputs == resSingletonInput
 
       (JSON.Success (TransactionError _), JSON.Success _) -> pre False
       (JSON.Success _ , JSON.Success (TransactionError _)) -> pre False
@@ -270,6 +284,7 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "Calling comp
                 ++ "Response: " ++ showAsJson res ++ "\n"
                 ++ "Expected reponse to be quiescent")
         assert $ isQuiescent txOutContract txOutState
+      JSON.Success (TransactionError _ ) -> pre False
       _ -> fail "JSON parsing failed!"
 
 -- QuiescentResults.thy
@@ -279,12 +294,15 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "Calling comp
 --      isQuiescent (txOutContract traOut) (txOutState traOut)"
 playTraceIsQuiescentTest :: InterpretJsonRequest -> TestTree
 playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is quiescent" do
-    contract <- run $ generateT $ genContract interpret `suchThat` (/=Close)
-    state <- run $ generateT $ genState interpret
-    transactions <- run $ generate $ arbitraryValidTransactions state contract `suchThat` (not . null)
+    (contract, State_ext _ _ _ (Int_of_integer startTime) _, transactions) <- run $ generateT $
+        frequency
+          [ (5, genContractStateAndValidTransactions interpret)
+          , (40, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> not (null l))
+          , (55, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> length l > 1)
+          ]
     let
         req :: Request JSON.Value
-        req = PlayTrace (Arith.integer_of_int $ minTime state) contract transactions
+        req = PlayTrace startTime contract transactions
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
@@ -295,7 +313,7 @@ playTraceIsQuiescentTest interpret = reproducibleProperty "Calling playTrace is 
                 ++ "Response: " ++ showAsJson res ++ "\n"
                 ++ "Expected reponse to be quiescent" )
         assert $ isQuiescent txOutContract txOutState
-      JSON.Success _ -> pre False
+      JSON.Success (TransactionError _ ) -> pre False
       _ -> fail "JSON parsing failed!"
 
 -- Timeout.thy
@@ -334,7 +352,7 @@ timedOutTransaction_closes_contractTest interpret = reproducibleProperty "Timed-
                 ++ "Expected: " ++ show expected ++ "\n"
                 ++ "Actual: " ++ show (txOutWarnings trec))
         assert $ isClosedAndEmpty txOut
-      JSON.Success _ -> pre False
+      JSON.Success (TransactionError _ ) -> pre False
       _ -> fail "JSON parsing failed!"
 
 -- CloseIsSafe.thy
@@ -343,8 +361,8 @@ timedOutTransaction_closes_contractTest interpret = reproducibleProperty "Timed-
 --    "computeTransaction tra sta Close = TransactionOutput trec ⟹  txOutWarnings trec = []"
 closeIsSafeTest :: InterpretJsonRequest -> TestTree
 closeIsSafeTest interpret = reproducibleProperty "Close is safe" do
-    state <- run $ generateT $ genState interpret
-    transaction <- run $ generateT $ genTransaction interpret `suchThat` \(Transaction_ext (_,upper) _ _) -> minTime state `less_eq` upper
+    state@(State_ext _ _ _ startTime _) <- run $ generateT $ genState interpret
+    transaction <- run $ generateT $ genTransaction interpret `suchThat` \(Transaction_ext (_,upper) _ _) -> startTime `less_eq` upper
     let req :: Request JSON.Value
         req = ComputeTransaction transaction state Close
 
@@ -360,5 +378,5 @@ closeIsSafeTest interpret = reproducibleProperty "Close is safe" do
                 ++ "Expected: " ++ show expected ++ "\n"
                 ++ "Actual: " ++ show (txOutWarnings trec))
         assert (txOutWarnings trec == expected)
-      JSON.Success _ -> pre False
+      JSON.Success (TransactionError _ ) -> pre False
       _ -> fail "JSON parsing failed!"

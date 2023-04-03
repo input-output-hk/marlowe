@@ -88,6 +88,7 @@ abbreviation
 (*Small Step Induction from FaustusSemantics*)
 thm small_step_reduce.induct
 lemmas small_step_reduce_induct = small_step_reduce.induct[split_format(complete)]
+thm small_step_reduce_induct
 declare small_step_reduce.intros[simp,intro]
 
 (*Needed to use Elimination rules for smallStepReductionImpReduceStep lemma*)
@@ -105,68 +106,16 @@ inductive_cases AssertE[elim!]: "(Assert obs cont, s, env, warns, payments) \<ri
 thm AssertE
 
 (*Warning Lemmas*)
+
+
+text \<open>If we have a valid transition, the warnings doesn't have an effect on the other components 
+of the configuration\<close>
 lemma smallStepWarningsAreArbitrary:
-"(c,  s, e, w, p) \<rightarrow> (c', s', e', w', p') \<Longrightarrow>
+"(c, s, e, w, p) \<rightarrow> (c', s', e', w', p') \<Longrightarrow>
   (\<forall>w'' . \<exists>w''' . (c, s, e, w'', p) \<rightarrow> (c', s', e', w''', p'))"
-proof (induction c s e w p c' s' e' w' p' rule: small_step_reduce_induct)
-  case (CloseRefund s party token money newAccount env warns payments)
-  then show ?case by auto
-next
-  case (PayNonPositive env s val accId payee token cont warns payments)
-  then show ?case by auto
-next
-  case (PayPositivePartialWithPayment env s val accId token newAccs moneyToPay payee payment finalAccs somePayment cont warns payments)
-  then show ?case apply auto
-    apply (cases "lookup (accId, token) (accounts s)", auto)
-    sorry
-(*
-     apply fastforce
-    by fastforce*)
-next
-  case (PayPositivePartialWithoutPayment env s val accId token newAccs moneyToPay payee payment finalAccs cont warns payments)
-  then show ?case apply auto
-    sorry
-    (*apply (cases "lookup (accId, token) (accounts s)", auto)
-     apply fastforce
-    by fastforce*)
-next
-  case (PayPositiveFullWithPayment env s val accId token moneyInAcc newBalance newAccs payee payment finalAccs somePayment cont warns payments)
-  then show ?case apply auto
-    apply (cases "lookup (accId, token) (accounts s)", auto)
-    apply (cases "moneyInAcc = evalValue env s val", auto)
-     apply fastforce
-    by fastforce
-next
-  case (PayPositiveFullWithoutPayment env s val accId token moneyInAcc newBalance newAccs payee payment finalAccs cont warns payments)
-  then show ?case apply auto
-    sorry
-    (*
-    apply (cases "lookup (accId, token) (accounts s)", auto)
-    apply (cases "moneyInAcc = evalValue env s val", auto)
-     apply fastforce
-    by fastforce*)
-next
-  case (IfTrue env s obs cont1 cont2 warns payments)
-  then show ?case by auto
-next
-  case (IfFalse env s obs cont1 cont2 warns payments)
-  then show ?case by auto
-next
-  case (WhenTimeout env startSlot endSlot timeout cases cont s warns payments)
-  then show ?case by auto
-next
-  case (LetShadow valId s oldVal val cont env warns payments)
-  then show ?case by auto
-next
-  case (LetNoShadow valId s val cont env warns payments)
-  then show ?case by auto
-next
-  case (AssertTrue env s obs cont warns payments)
-  then show ?case by auto
-next
-  case (AssertFalse env s obs cont warns payments)
-  then show ?case by auto
-qed
+  apply (induction c s e w p c' s' e' w' p' rule: small_step_reduce_induct)
+  by (blast | auto)+
+
 
 lemma smallStepStarWarningsAreArbitrary:
   "(c, s, e, w, p) \<rightarrow>* (c', s', e', w'', p') \<Longrightarrow>
@@ -174,12 +123,13 @@ lemma smallStepStarWarningsAreArbitrary:
 apply (induction rule: star.induct[of "small_step_reduce", split_format(complete)], auto)
   by (meson smallStepWarningsAreArbitrary star.step)
 
-definition "finalMarlowe cs \<longleftrightarrow> \<not>(\<exists>cs'. cs \<rightarrow> cs')"
+text "A configuration cs is final if there is no transition that can be made."
+definition "finalConfiguration cs \<longleftrightarrow> \<not>(\<exists>cs'. cs \<rightarrow> cs')"
 
 lemma finalD:
-"finalMarlowe (contract, s, e, w, p) \<Longrightarrow>
+"finalConfiguration (contract, s, e, w, p) \<Longrightarrow>
   contract = Close \<or> (\<exists> cases timeout continue . contract = When cases timeout continue)"
-  apply (auto simp add: finalMarlowe_def)
+  apply (auto simp add: finalConfiguration_def)
   apply (cases contract, auto)
      apply (meson PayNonPositive PayPositiveFullWithPayment PayPositiveFullWithoutPayment PayPositivePartialWithPayment PayPositivePartialWithoutPayment giveMoney.elims not_less)
     apply (meson IfFalse IfTrue)

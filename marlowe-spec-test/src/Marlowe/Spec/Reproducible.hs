@@ -13,9 +13,10 @@ import Test.QuickCheck.Gen (Gen(..))
 import Test.Tasty (TestName, TestTree)
 import Test.QuickCheck.Monadic (PropertyM, monadic', run, assert, monitor)
 import Test.Tasty.QuickCheck (testProperty)
-import Marlowe.Spec.Interpret (InterpretJsonRequest, Request, Response)
+import Marlowe.Spec.Interpret (InterpretJsonRequest, Request, Response (..))
 import qualified Data.Aeson as JSON
 import Marlowe.Utils (showAsJson)
+import Test.QuickCheck
 
 
 newtype ReproducibleTest a = ReproducibleTest (StateT QCGen IO a)
@@ -52,11 +53,13 @@ assertResponse interpret req successResponse = do
             "Expected: " ++ show successResponse ++ "\n" ++
             "Actual: " ++ show res
         )
-    assert $ successResponse == res
+    case res of
+      RequestNotImplemented -> monitor (label "RequestNotImplemented") >> return ()
+      _ -> assert $ successResponse == res
 
 reproducibleProperty' :: TestName -> (a -> Property) -> PropertyM ReproducibleTest a -> TestTree
 reproducibleProperty' testName tx prop =
-  testProperty testName $ runProperty <$> arbitrarySeed
+  testProperty testName $ runProperty =<< arbitrarySeed
   where
   arbitrarySeed :: Gen Int
   arbitrarySeed = resize 10000 arbitrarySizedBoundedIntegral

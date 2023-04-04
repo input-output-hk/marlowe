@@ -39,10 +39,12 @@ library
         Arith
         ArithNumInstance
         MList
+        AssetsPreservation
         CoreOrphanEq
         Examples.Escrow
         Examples.Swap
         MarloweCoreJson
+        MultiAssets
         Orderings
         PositiveAccounts
         Semantics

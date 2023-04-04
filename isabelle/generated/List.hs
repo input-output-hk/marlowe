@@ -1,6 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module List(foldl, distinct, sorted_wrt) where {
+module List(foldl, foldr, distinct, sorted_wrt) where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -12,6 +12,10 @@ import qualified Prelude;
 foldl :: forall a b. (a -> b -> a) -> a -> [b] -> a;
 foldl f a [] = a;
 foldl f a (x : xs) = foldl f (f a x) xs;
+
+foldr :: forall a b. (a -> b -> b) -> [a] -> b -> b;
+foldr f [] = id;
+foldr f (x : xs) = f x . foldr f xs;
 
 member :: forall a. (Eq a) => [a] -> a -> Bool;
 member [] y = False;

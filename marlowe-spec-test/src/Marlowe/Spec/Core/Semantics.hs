@@ -12,6 +12,7 @@ import Arith
     abs_int,
     integer_of_nat
   )
+import AssetsPreservation (assetsInTransactions, assetsInState, assetsInExternalPayments)
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as JSON
@@ -41,6 +42,7 @@ import Marlowe.Spec.Reproducible
     reproducibleProperty', ReproducibleTest,
   )
 import Marlowe.Utils (showAsJson)
+import MultiAssets (plus_Assets, Assets, assetValue)
 import Orderings (Ord (..))
 import PositiveAccounts (validAndPositive_state)
 import QuickCheck.GenT (frequency, suchThat, liftGen, GenT)
@@ -60,7 +62,7 @@ import Semantics
 import SemanticsTypes
   ( Contract (..),
     State_ext (..),
-    Value (..)
+    Value (..), Token, Case (..), Action (..)
   )
 import SingleInputTransactions (traceListToSingleInput)
 import Test.QuickCheck (cover, withMaxSuccess)
@@ -69,6 +71,7 @@ import Test.QuickCheck.Property (counterexample)
 import Test.Tasty (TestTree, testGroup)
 import Timeout (isClosedAndEmpty)
 import TransactionBound (maxTransactionsInitialState)
+import Control.Monad (join)
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics" [ testSemantics i , testGuarantees i ]
@@ -101,6 +104,8 @@ testGuarantees i = testGroup "Guarantees"
     , timedOutTransaction_closes_contractTest i
     -- CloseIsSafe.thy
     , closeIsSafeTest i
+    -- AssetsPreservation.thy
+    , playTrace_preserves_assets i
     ]
 
 -- The default maxSuccess is 100 and this tests modifies that to 500 as it was empirically found that 10 out of 10 times
@@ -405,3 +410,51 @@ closeIsSafeTest interpret = reproducibleProperty "theorem closeIsSafe" do
              :: PropertyM ReproducibleTest Bool
       JSON.Success (TransactionError err ) -> fail $ "Unexpected Transaction Error: " ++ show err
       _ -> fail "JSON parsing failed!"
+
+-- AssetsPreservation.thy
+--
+-- theorem playTrace_preserves_assets :
+--   assumes "playTrace slot contract txs = TransactionOutput out"
+--     shows "assetsInTransactions txs
+--          = assetsInState (txOutState out) + assetsInExternalPayments (txOutPayments out)"
+playTrace_preserves_assets :: InterpretJsonRequest -> TestTree
+playTrace_preserves_assets interpret = reproducibleProperty "Calling playTrace is quiescent" do
+    (contract, State_ext _ _ _ (Int_of_integer startTime) _, transactions) <- run $ generateT $
+        frequency
+          [ (45, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> not (null l))
+          , (55, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> length l > 1)
+          ]
+    let
+        req :: Request JSON.Value
+        req = PlayTrace startTime contract transactions
+    RequestResponse res <- run $ liftIO $ interpret req
+
+    case JSON.fromJSON res of
+      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ txOutPayments txOutState txOutContract _)) -> do
+        monitor
+          ( counterexample $
+              "Request: " ++ showAsJson req ++ "\n"
+                ++ "Response: " ++ showAsJson res ++ "\n"
+                ++ "Expected reponse to be quiescent" )
+        let tokens = tokensInContract contract
+        assert $ equals_Assets tokens (assetsInTransactions transactions) (assetsInState txOutState `plus_Assets` assetsInExternalPayments txOutPayments)
+      JSON.Success (TransactionError _ ) -> pre False
+      _ -> fail "JSON parsing failed!"
+
+  where
+    equals_Assets :: [Token] -> Assets -> Assets -> Bool
+    equals_Assets tokens assets1 assets2 = all (==True) $
+      map (\tok -> integer_of_nat (assetValue tok assets1) == integer_of_nat (assetValue tok assets2)) tokens
+
+    tokensInContract :: Contract -> [Token]
+    tokensInContract Close = []
+    tokensInContract (Pay _ _ token _ cont) = token : tokensInContract cont
+    tokensInContract (If _ cont1 cont2) = tokensInContract cont1 ++ tokensInContract cont2
+    tokensInContract (When cases _ cont) = tokensInContract cont ++ join (map tokensInCases cases)
+    tokensInContract (Let _ _ cont) = tokensInContract cont
+    tokensInContract (Assert _ cont) = tokensInContract cont
+
+    tokensInCases :: Case -> [Token]
+    tokensInCases (Case (Deposit _ _ token _) cont) = token : tokensInContract cont
+    tokensInCases (Case (Choice _ _ ) cont) = tokensInContract cont
+    tokensInCases (Case (Notify _ ) cont) = tokensInContract cont

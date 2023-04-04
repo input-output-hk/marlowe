@@ -10,8 +10,10 @@ text \<open>We start by importing the theories we want to export and a translati
 theory CodeExports
 
 imports
+  Core.AssetsPreservation
   Core.Semantics
   Core.SingleInputTransactions
+  Core.MultiAssets
   Examples.Escrow
   Examples.Swap
   "HOL-Library.Code_Target_Numeral"
@@ -40,7 +42,6 @@ code_printing
   \<comment> \<open>generation of String.implode\<close>
   | constant "BS :: string \<Rightarrow> ByteString"
       \<rightharpoonup> (Haskell) "Stringa.implode"
-
 
 text \<open>With a \<^bold>\<open>code\_identifier\<close> we hint what the name of the module should be.\<close>
 
@@ -75,6 +76,10 @@ export_code
   isClosedAndEmpty
   maxTransactionsInitialState
   traceListToSingleInput
+  assetsInTransactions
+  assetsInState
+  assetsInExternalPayments
+  assetValue
 
   \<comment> \<open> Export examples to be used as oracle specification tests\<close>
   escrow

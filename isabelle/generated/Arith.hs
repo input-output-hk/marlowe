@@ -2,9 +2,9 @@
 
 module
   Arith(Int(..), integer_of_int, equal_int, less_eq_int, less_int, Nat,
-         integer_of_nat, Num(..), One, Zero, Zero_neq_one, suc, uminus_int,
-         zero_int, abs_int, one_int, plus_int, zero_nat, minus_int, times_int,
-         of_bool, divide_int)
+         integer_of_nat, Num(..), One, Zero, Zero_neq_one, nat, plus_nat, suc,
+         uminus_int, zero_int, abs_int, one_int, plus_int, zero_nat, minus_int,
+         times_int, of_bool, divide_int)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -76,11 +76,19 @@ instance Zero Integer where {
   zero = (0 :: Integer);
 };
 
+instance Orderings.Ord Integer where {
+  less_eq = (\ a b -> a <= b);
+  less = (\ a b -> a < b);
+};
+
 class (One a, Zero a) => Zero_neq_one a where {
 };
 
 instance Zero_neq_one Integer where {
 };
+
+nat :: Int -> Nat;
+nat k = Nat (Orderings.max (0 :: Integer) (integer_of_int k));
 
 plus_nat :: Nat -> Nat -> Nat;
 plus_nat m n = Nat (integer_of_nat m + integer_of_nat n);

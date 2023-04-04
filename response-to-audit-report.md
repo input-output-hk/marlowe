@@ -3,11 +3,11 @@
 
 **TODO:**
 
-- [ ] Add prefatory text and executive summary.
+- [x] Add prefatory text and executive summary.
 - [ ] Add responses and mitigation commits to Isabelle-related findings.
 - [x] Add responses and mitigation commits to Haskell-related findings.
 - [ ] Fix display of equations or replace ones that cannot be fixed with ellipses ("...").
-- [ ] Replace broken links and cross references, or use elipses ("...").
+- [ ] Replace broken links and cross references, or use ellipses ("...").
 - [ ] Verify the section numbering is correct.
 - [ ] Add table of contents.
 - [ ] Proofread.
@@ -15,12 +15,20 @@
 
 ## Executive Summary
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @bwbush will add text here after everything else is written.
+Marlowe consists of a domain-specific language (DSL) for the financial industry and for peer-to-peer financial contracts, with a reference semantics written in the Isabelle theorem-proving language and an implementation for the Cardano blockchain written in the Haskell/Plutus programming language. Early in 2023 the Marlowe specifications, on-chain implementation, and validator-test suite were audited by Tweag's High Assurance Software Group: their report is available online and it categorizes findings as either high, medium, or low severity. The present document summarizes the subsequent changes, made in response to the audit's findings, to the Marlowe specifications, its implementation as a Plutus smart-contract validator, and the property-based tests for that validator. All of the high-severity findings have been remedied or mitigated through changes to specifications, proofs, or implementation. Nearly all of the medium- and low-severity ones have also been addressed; justification for not addressing the remainder has been provided.
+
+The high-severity findings related to handling of negative deposits, prevention of "double satisfaction", enforcement of state invariants, an implementation difference between the formal specification and the Plutus implementation, and the Isabelle proof of money preservation. Marlowe's Plutus validator has been altered to resolve these first three findings so that it correctly prevents negative deposits from altering the balance of internal accounts, it only allows other Plutus scripts to run during transactions that do not make Marlowe payments, and it rigorously enforces invariants for initial and final states. The fourth finding regarding the Plutus implementation was mitigated to code analysis and property-based testing. The fifth finding about the money-preservation proof was remedied by revising the proof.
+
+The medium-severity findings typically suggested improvements to the Isabelle proofs, addition of more extensive property-based testing, correction of infelicities in the implementation, or safe-coding improvements. The low-severity findings generally centered on the usefulness of code comments, naming of variable bindings, omissions in specifications, and correction of typographical errors. All of the findings that affect the clarity of the specifications, the coverage of testing, or the robustness of implementation were made. Numerous additional property-based tests were added to the test suite as a result of audit findings.
+
+The changes outlined here have not been re-audited. The alterations to Marlowe's Plutus validator (detailed in the Appendix) have been kept to the minimum needed to address the audit findings, but avoiding extensive changes that would might have lessened the relevance of the audit.
+
+Finally, please note that the audit's scope included the Marlowe language and its Plutus interpreter, but not individual Marlowe contracts. Although the Marlowe language and its implementation on Cardano aim to make smart contracts safer, it is nevertheless still possible to design individual instances of Marlowe contracts that exhibit unwanted behavior. Such undesirable behavior may result either from poor contract design or lack of testing and analysis of the contract. [A best-practices guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/best-practices.md) and [a security guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/security.md) provide advice for the safe and secure design and testing of individual Marlowe contracts, which can themselves be subject to audit or certification.
 
 
 ## Acknowledgement
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @bwbush will add text thanking the audit team.
+We thank the High Assurance Software Group at Tweag for their diligent and expert analyses of the Marlowe specifications, proofs, implementations, and tests and their clear and thorough communication of their findings.
 
 
 ## Overview of Isabelle Changes
@@ -52,7 +60,7 @@ The Marlowe validator had made optimistic assumptions about its own correct oper
 
 Mitigation of the difference between association lists (item 4 above) in Isabelle (`MList`) and Plutus (`AssocMap`) was handled by the aforementioned enforcement of invariants, by line-by-line code inspection and annotation, and by thoroughly enhanced property-based testing. Work is in progress on a formal proof of the equivalence of `MList` and `AssocMap` under pre-conditions that hold within Marlowe semantics. Note that porting Isabelle's `MList` implementation to Plutus would have enlarged the Marlowe semantics validator by at least 2000 bytes and rendered it too costly to execute within the Cardano ledger's present execution-cost limits.
 
-The audit report for Marlowe on Cardano was based on the commit hash [523f3d56](https://github.com/input-output-hk/marlowe-cardano/commit/523f3d56f22bf992ddb0b0c8a52bb7a5a188f9e9). The revisions and mitigations discussed here apply to [69468d66](https://github.com/input-output-hk/marlowe-cardano/commit/69468d6623e24a4ccd6659e378ae012c38ca01ce) of that repository. The appendix to this report list the differences between pre- and post-audit validator code for Marlowe on Cardano.
+The audit report for Marlowe on Cardano was based on the commit hash [523f3d56](https://github.com/input-output-hk/marlowe-cardano/commit/523f3d56f22bf992ddb0b0c8a52bb7a5a188f9e9). The revisions and mitigations discussed here apply to [ac65eba1](https://github.com/input-output-hk/marlowe-cardano/commit/) of that repository. The appendix to this report list the differences between pre- and post-audit validator code for Marlowe on Cardano.
 
 The medium-severity concerns in the audit report center around missing tests or name shadowing. With the exception of "2.7.1 More precise failure checks", these have all been remedied either by code changes (in the case of the shadowing) or by the addition of a significant augmentation of the property-based test suite. The audit's low-severity concerns generally relate to insufficiently detailed text in the Marlowe Cardano specification, the need for more elaborate comments in the code, naming of variable bindings, or typographical errors. Nearly all of these finds have been addressed, with only the exception of a few cosmetic recommendations that were not adopted.
 
@@ -1319,7 +1327,7 @@ Although the validator does not use these functions, off-chain code in other Has
 > 
 > The comment describing the function is overly concise, as it does not mention the function removing all non-positive accounts before the first positive one, and effectively `uncons`-ing the list.
 
-Commit [47c9deb2](https://github.com/input-output-hk/marlowe-cardano/commit/47c9deb2047a240d78eaf62306278ecfbe624bea) elaborates the documentation for `refundOne`.
+Commit [ac65eba1](https://github.com/input-output-hk/marlowe-cardano/commit/ac65eba119b4eec8febc3723527edcd99914fdac) elaborates the documentation for `refundOne`.
 
 > **File `Semantics.hs`, Function `addMoneyToAccount`, line *461***
 > 
@@ -1482,7 +1490,7 @@ Commit [811f048b](https://github.com/input-output-hk/marlowe-cardano/commit/811f
 ## Appendix: Post-Audit Changes in Marlowe Validator
 
 ```bash
-git diff 523f3d56f22bf992ddb0b0c8a52bb7a5a188f9e9 47c9deb2047a240d78eaf62306278ecfbe624bea marlowe/src/Language/Marlowe/{Core/V1/Semantics*,Scripts.hs}
+git diff 523f3d56f22bf992ddb0b0c8a52bb7a5a188f9e9 ac65eba119b4eec8febc3723527edcd99914fdac marlowe/src/Language/Marlowe/{Core/V1/Semantics*,Scripts.hs}
 ```
 
 ```diff

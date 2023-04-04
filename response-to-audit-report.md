@@ -3,11 +3,11 @@
 
 **TODO:**
 
-- [ ] Add prefatory text and executive summary.
+- [x] Add prefatory text and executive summary.
 - [ ] Add responses and mitigation commits to Isabelle-related findings.
 - [x] Add responses and mitigation commits to Haskell-related findings.
 - [ ] Fix display of equations or replace ones that cannot be fixed with ellipses ("...").
-- [ ] Replace broken links and cross references, or use elipses ("...").
+- [ ] Replace broken links and cross references, or use ellipses ("...").
 - [ ] Verify the section numbering is correct.
 - [ ] Add table of contents.
 - [ ] Proofread.
@@ -15,12 +15,20 @@
 
 ## Executive Summary
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @bwbush will add text here after everything else is written.
+Marlowe consists of a domain-specific language (DSL) for the financial industry and for peer-to-peer financial contracts, with a reference semantics written in the Isabelle theorem-proving language and an implementation for the Cardano blockchain written in the Haskell/Plutus programming language. Early in 2023 the Marlowe specifications, on-chain implementation, and validator-test suite were audited by Tweag's High Assurance Software Group: their report is available online and it categorizes findings as either high, medium, or low severity. The present document summarizes the subsequent changes, made in response to the audit's findings, to the Marlowe specifications, its implementation as a Plutus smart-contract validator, and the property-based tests for that validator. All of the high-severity findings have been remedied or mitigated through changes to specifications, proofs, or implementation. Nearly all of the medium- and low-severity ones have also been addressed; justification for not addressing the remainder has been provided.
+
+The high-severity findings related to handling of negative deposits, prevention of "double satisfaction", enforcement of state invariants, an implementation difference between the formal specification and the Plutus implementation, and the Isabelle proof of money preservation. Marlowe's Plutus validator has been altered to resolve these first three findings so that it correctly prevents negative deposits from altering the balance of internal accounts, it only allows other Plutus scripts to run during transactions that do not make Marlowe payments, and it rigorously enforces invariants for initial and final states. The fourth finding regarding the Plutus implementation was mitigated to code analysis and property-based testing. The fifth finding about the money-preservation proof was remedied by revising the proof.
+
+The medium-severity findings typically suggested improvements to the Isabelle proofs, addition of more extensive property-based testing, correction of infelicities in the implementation, or safe-coding improvements. The low-severity findings generally centered on the usefulness of code comments, naming of variable bindings, omissions in specifications, and correction of typographical errors. All of the findings that affect the clarity of the specifications, the coverage of testing, or the robustness of implementation were made. Numerous additional property-based tests were added to the test suite as a result of audit findings.
+
+The changes outlined here have not been re-audited. The alterations to Marlowe's Plutus validator (detailed in the Appendix) have been kept to the minimum needed to address the audit findings, but avoiding extensive changes that would might have lessened the relevance of the audit.
+
+Finally, please note that the audit's scope included the Marlowe language and its Plutus interpreter, but not individual Marlowe contracts. Although the Marlowe language and its implementation on Cardano aim to make smart contracts safer, it is nevertheless still possible to design individual instances of Marlowe contracts that exhibit unwanted behavior. Such undesirable behavior may result either from poor contract design or lack of testing and analysis of the contract. [A best-practices guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/best-practices.md) and [a security guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/security.md) provide advice for the safe and secure design and testing of individual Marlowe contracts, which can themselves be subject to audit or certification.
 
 
 ## Acknowledgement
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @bwbush will add text thanking the audit team.
+We thank the High Assurance Software Group at Tweag for their diligent and expert analyses of the Marlowe specifications, proofs, implementations, and tests and their clear and thorough communication of their findings.
 
 
 ## Overview of Isabelle Changes
@@ -44,15 +52,15 @@ The audit report's main and high-severity concerns for the Plutus validators for
 4. Difference semantics of association lists in Isabelle and Plutus
     - "2.1.12 Different insertion functions used in Isabelle and Haskell code"
 
-Incorrect handling of negative deposits (item 1 above) was mitigated by the addition of a guard against this in Marlowe's Plutus validator so that its behavior was consistent with Marlowe semantics. Property-based tests were also added to check the correctness of the mitigation.
+Incorrect handling of negative deposits (item 1 above) was mitigated by the addition of a guard against this behavior in Marlowe's Plutus validator so that its behavior is consistent with Marlowe semantics. Property-based tests were also added to check the correctness of the mitigation.
 
-Although the Marlowe validator had prevented double-satisfaction among multiple copies of the Marlowe validator script running in the same transaction, it did not prevent double-satisfaction in cases where the Marlowe validator run alongside another Plutus validator in the same transaction (item 2 above). Double satisfaction has now been prevented by enforcing that the Marlowe validator is the only Plutus script that runs in transactions that make payments to parties. This allows Marlowe contracts to coordinate with other Plutus scripts, but only under conditions where double satisfaction is impossible. Once again, property-based tests were added to check the correctness of this mitigation.
+Although the Marlowe validator had prevented double-satisfaction among multiple copies of the Marlowe validator script running in the same transaction, it did not prevent double-satisfaction in cases where the Marlowe validator ran alongside another Plutus validator in the same transaction (item 2 above). Double satisfaction is now prevented by enforcing that the Marlowe validator is the only Plutus script that runs during transactions that make payments to parties. This allows Marlowe contracts to coordinate with other Plutus scripts, but only under conditions where double satisfaction is impossible. Once again, property-based tests were added to check the correctness of this mitigation.
 
-The Marlowe validator had made optimistic assumptions about its own correct operation and hence did not check certain invariants in order to save on Plutus execution costs (item 3 above). The Marlowe semantics validator has now been thoroughly hardened against corruption of initial or final state so that it ensures that the three state-invariants of positive accounts, non-duplication of state entries (accounts, choices, and bound values), and a total internal value matching the script UTxO's value. This hardening was completed without unduly increasing the size (in bytes) of the validator or its Plutus execution cost: such was verified with simulated and on-chain measurement of execution costs for a library of real-life Marlowe contracts. Notably, the enforcement of the final invariants protects against funds becoming permanently locked in a Marlowe contract due to a garbled state: even in cases where the implementation of Marlowe semantics or parts of the Plutus validator are flawed, at least some of the execution paths of a Marlowe contract remain viable, so funds could be released even under nominally impossible but catastrophic difficulties. The property-based test suite was significantly enhanced to 
+The Marlowe validator had made optimistic assumptions about its own correct operation and hence did not check certain invariants in order to save on Plutus execution costs (item 3 above). The Marlowe semantics validator has now been thoroughly hardened against corruption of initial or final state so that it ensures that the three state-invariants of positive accounts, non-duplication of state entries (accounts, choices, and bound values), and a total internal value matching the script UTxO's value. This hardening was completed without unduly increasing the size (in bytes) of the validator or its Plutus execution cost: such was verified with simulated and on-chain measurement of execution costs for a library of real-life Marlowe contracts. Notably, the enforcement of the final invariants protects against funds becoming permanently locked in a Marlowe contract due to a garbled state: even in cases where the implementation of Marlowe semantics or parts of the Plutus validator were flawed, at least some of the execution paths of a Marlowe contract remain viable, so funds could be released even under nominally impossible but catastrophic difficulties. The property-based test suite was significantly enhanced to check double-satisfaction situations.
 
 Mitigation of the difference between association lists (item 4 above) in Isabelle (`MList`) and Plutus (`AssocMap`) was handled by the aforementioned enforcement of invariants, by line-by-line code inspection and annotation, and by thoroughly enhanced property-based testing. Work is in progress on a formal proof of the equivalence of `MList` and `AssocMap` under pre-conditions that hold within Marlowe semantics. Note that porting Isabelle's `MList` implementation to Plutus would have enlarged the Marlowe semantics validator by at least 2000 bytes and rendered it too costly to execute within the Cardano ledger's present execution-cost limits.
 
-The audit report for Marlowe on Cardano was based on the commit hash [523f3d56](https://github.com/input-output-hk/marlowe-cardano/commit/523f3d56f22bf992ddb0b0c8a52bb7a5a188f9e9). The revisions and mitigations discussed here apply to [69468d66](https://github.com/input-output-hk/marlowe-cardano/commit/69468d6623e24a4ccd6659e378ae012c38ca01ce) of that repository. The appendix to this report list the differences between pre- and post-audit validator code for Marlowe on Cardano.
+The audit report for Marlowe on Cardano was based on the commit hash [523f3d56](https://github.com/input-output-hk/marlowe-cardano/commit/523f3d56f22bf992ddb0b0c8a52bb7a5a188f9e9). The revisions and mitigations discussed here apply to [ac65eba1](https://github.com/input-output-hk/marlowe-cardano/commit/) of that repository. The appendix to this report list the differences between pre- and post-audit validator code for Marlowe on Cardano.
 
 The medium-severity concerns in the audit report center around missing tests or name shadowing. With the exception of "2.7.1 More precise failure checks", these have all been remedied either by code changes (in the case of the shadowing) or by the addition of a significant augmentation of the property-based test suite. The audit's low-severity concerns generally relate to insufficiently detailed text in the Marlowe Cardano specification, the need for more elaborate comments in the code, naming of variable bindings, or typographical errors. Nearly all of these finds have been addressed, with only the exception of a few cosmetic recommendations that were not adopted.
 
@@ -84,7 +92,7 @@ A new golden test for negative deposits was added in commit [bbb9b8fc](https://g
 > 
 > One way to strengthen the implementation is for the Marlowe validator to demand that outputs paid to addresses contain a datum that identifies the contract instance, like the `TxOutRef` of the validator UTxO being spent. Then cooperation with other contracts is possible without double satisfaction if the validators of the other contracts demand a different datum for their outputs.
 
-The Marlowe semantics validator had prevented a limited form of double-satisfaction attack by preventing two Marlowe validators to execute in the same transaction. The audit report correctly highlights that such an attack could be feasible in cases where another Plutus validator (not the same version of the Marlowe semantics validator) executes in a transactions where a payment to an address or to the Marlowe role-payout validator satisfies both the Marlowe semantics validator and the other validator.
+The Marlowe semantics validator had prevented a limited form of double-satisfaction attack by preventing two Marlowe validators to execute in the same transaction. The audit report correctly highlights that such an attack could be feasible in cases where another Plutus validator (not the selfsame version of the Marlowe semantics validator) executes in a transactions where a payment to an address or to the Marlowe role-payout validator satisfies both the Marlowe semantics validator and the other validator.
 
 Although the audit report's suggestion of including a unique datum (such as that identifying the contract instance) in any output payment from the contract would likely prevent double satisfaction, implementing such a change in the Marlowe validators would have entailed such extensive changes to the specification and implementation that the overall applicability of the audit findings might subsequently be called into question. Instead, a minimal change to the specification and implementation mitigates this vulnerability: the specification was amended with a "Constraint 20. Single satisfaction" that requires the Marlowe semantics validator be the only Plutus script running in the transaction *if payments to parties are being made in the transaction*. Thus, only allowing one script to validate in case of external payments completely eliminates the possibility that one payment would satisfy two scripts. Other contracts are permitted to cooperate with Marlowe in cases such as deposits, choices, and notifications where Marlowe is not making payments.
 
@@ -143,7 +151,7 @@ Although this `Eq` instance is not used by the Marlowe validators (so it does no
 > 
 > If such a transaction is accepted, no further evaluation will be possible since all subsequent transactions will be rejected due to the very same Constraint 13. This is an hypothetical attack vector, where a malicious actor could send a transaction to block a contract.
 
-The Plutus code for the Marlowe semantics validator had been implemented with the optimistic assumption that semantics would not be flawed and that the additional execution cost of checking the output state was not warranted. However, as the audit report points out, such a flaw would result in the contract being forever blocked from further execution. Adding a check on the final output's validity would prevent a contract from ever reaching a fully blocked state. Even if the semantics or Plutus code were flawed, at least some execution paths in the contract would remain viable, so that the contract could eventually terminate and would not permanently lock funds.
+The Plutus code for the Marlowe semantics validator had been implemented with the optimistic assumption that semantics would not be flawed and that the additional execution cost of checking the output state was not warranted. However, as the audit report points out, such a flaw would result in the contract being forever blocked from further execution. Adding a check on the final output's validity now prevents a contract from ever reaching a fully blocked state. Even if the semantics or Plutus code were flawed, at least some execution paths in the contract would remain viable, so that the contract could eventually terminate and would not permanently lock funds.
 
 Commits [0a890845](https://github.com/input-output-hk/marlowe-cardano/commit/0a890845c44ccfe4df97e765e9b9eb743ce7d580), [8855feae](https://github.com/input-output-hk/marlowe-cardano/commit/8855feae473882b82643db792327423152e45b5c), [26f024e8](https://github.com/input-output-hk/marlowe-cardano/commit/26f024e80cea0dd4ebf8bff0f1a10b97aea87894), and [201c5df9](https://github.com/input-output-hk/marlowe-cardano/commit/201c5df9de29b3b142be5ff7d0a9b56d1b378204) augment the Marlowe Cardano specification to require positive balances upon output and implements the corresponding check in the Marlowe Semantics validator.  Commit [d514bcd0](https://github.com/input-output-hk/marlowe-cardano/commit/d514bcd075732b07e1c6a73e2e3c68afa01acf2c), [7f562545](https://github.com/input-output-hk/marlowe-cardano/commit/7f562545d013dd17472b692b550ffdc7f8a383f3), and [ebab31d9](https://github.com/input-output-hk/marlowe-cardano/commit/ebab31d9ba6dd322d374b34cad3995050a0e476e) adds a property-based test for this.
 
@@ -160,7 +168,7 @@ Commits [0a890845](https://github.com/input-output-hk/marlowe-cardano/commit/0a8
 > 
 > For a valid Marlowe state, the association lists for bound values, accounts, and choices have keys sorted and without duplicates.
 
-Prompted on this finding in the audit report, the Marlowe semantics validator has been altered to enforce all invariants (positive accounts; non-duplication of accounts, choices, and bound values; a total internal account balance that exactly matches the value in the script's UTxO) on both the initial and final states. This prevents execution of a Marlowe contract that was inadvertently or purposefully created by off-chain code with an invalid initial state. It also prevents transactions that corrupt the final state; such corruption could only happen if there were a flaw in the Plutus validator or Marlowe semantics implementation, in which case that execution-path of the contract would be blocked. The [Marlowe Best Practices Guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/best-practices.md) and [Marlowe Security Guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/security.md) warn of the importance of off-chain code creating valid initial state for Marlowe contracts.
+Prompted by this finding in the audit report, the Marlowe semantics validator has been altered to enforce all invariants (positive accounts; non-duplication of accounts, choices, and bound values; a total internal account balance that exactly matches the value in the script's UTxO) on both the initial and final states. This prevents execution of a Marlowe contract that was inadvertently or purposefully created by off-chain code with an invalid initial state. It also prevents transactions that corrupt the final state; such corruption could only happen if there were a flaw in the Plutus validator or Marlowe semantics implementation, in which case that particular execution-path of the contract would be blocked. The [Marlowe Best Practices Guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/best-practices.md) and [Marlowe Security Guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/security.md) warn of the importance of off-chain code creating valid initial state for Marlowe contracts.
 
 Commits [0a890845](https://github.com/input-output-hk/marlowe-cardano/commit/0a890845c44ccfe4df97e765e9b9eb743ce7d580), [8855feae](https://github.com/input-output-hk/marlowe-cardano/commit/8855feae473882b82643db792327423152e45b5c), [26f024e8](https://github.com/input-output-hk/marlowe-cardano/commit/26f024e80cea0dd4ebf8bff0f1a10b97aea87894), and [201c5df9](https://github.com/input-output-hk/marlowe-cardano/commit/201c5df9de29b3b142be5ff7d0a9b56d1b378204) enforce that both the initial and final states in the respective incoming and outgoing datum obey the aforementioned three invariants of total value, non-duplication, and positivity. That commit also adds "Constraint 19. No duplicates" to the Marlowe Cardano specification. Property-based tests in commit [d514bcd0](https://github.com/input-output-hk/marlowe-cardano/commit/d514bcd075732b07e1c6a73e2e3c68afa01acf2c), [7f562545](https://github.com/input-output-hk/marlowe-cardano/commit/7f562545d013dd17472b692b550ffdc7f8a383f3), and [ebab31d9](https://github.com/input-output-hk/marlowe-cardano/commit/ebab31d9ba6dd322d374b34cad3995050a0e476e) check the implementation.
 
@@ -206,39 +214,15 @@ Again as previously, the relevant commits are [0a890845](https://github.com/inpu
 
 ### 2.1.12 Different insertion functions used in Isabelle and Haskell code *(Severity: High)*
 
-> **File `Semantics.hs`, Several functions ``** 
+> **File `Semantics.hs`, Several functions** 
 > 
-> Where `MList.insert` is used in the Isabelle semantics, [AssocMap.insert](https://github.com/input-output-hk/plutus/blob/v1.0.0/plutus-tx/src/PlutusTx/AssocMap.hs#L147-L148) is used in the Cardano implementation. However, the functions are not equivalent as demonstrated by the following examples:
-> 
-> ``` text
-> AssocMap.insert 'a' 1 [('b', 0)] == [('b', 0), ('a', 1)]
-> -- whereas
-> MList.insert 'a' 1 [('b', 0)] == [('a', 1), ('b', 0)]
-> ```
-> 
-> ``` text
-> AssocMap.insert 'b' 1 [('a', 0), (‘b’, 0), (‘b’, 0)] == [('a', 0), ('b', 1), (‘b’, 1)]
-> -- whereas
-> MList.insert 'b' 1 [(‘a’, 0), ('b', 0), ('b', 0)] == [('a', 0), ('b', 1), ('b', 0)]
-> ```
+> Where `MList.insert` is used in the Isabelle semantics, [AssocMap.insert](https://github.com/input-output-hk/plutus/blob/v1.0.0/plutus-tx/src/PlutusTx/AssocMap.hs#L147-L148) is used in the Cardano implementation. However, the functions are not equivalent as demonstrated by the following examples: […]
 > 
 > This renders the Isabelle lemmas inapplicable for the Cardano integration. The lemmas need to demand some properties of an `insert` function without fully spelling it out, or the Cardano integration needs to use `MList.insert` instead of `AssocMap.insert`.
 > 
-> Similarly, functions `AssocMap.delete` and `MList.delete` differ in behavior when the input map is not sorted:
+> Similarly, functions `AssocMap.delete` and `MList.delete` differ in behavior when the input map is not sorted: […]
 > 
-> ``` text
-> AssocMap.delete 'a' [(‘b’, 0), (‘a’, 0)] == [('b', 0)]
-> -- whereas
-> MList.delete 'a' [(‘b’, 0), ('a', 0)] == [('b', 0), ('a', 0)]
-> ```
-> 
-> Functions `AssocMap.lookup` and `MList.lookup` also differ in behavior when the input map is not sorted:
-> 
-> ``` text
-> AssocMap.lookup 'a' [(‘b’, 0), (‘a’, 0)] == Just 0
-> -- whereas
-> MList.lookup 'a' [(‘b’, 0), ('a', 0)] == Nothing
-> ```
+> Functions `AssocMap.lookup` and `MList.lookup` also differ in behavior when the input map is not sorted: […]
 > 
 > The following usage places were found:
 > -   Line 395, `evalValue` depends on `moneyInAccount` which depends on `AssocMap.lookup`.
@@ -248,18 +232,18 @@ Again as previously, the relevant commits are [0a890845](https://github.com/inpu
 > -   Line 482, function `reduceContractStep` relies on `AssocMap.insert`.
 > -   Line 567, function `applyAction` relies on `AssocMap.insert`.
 
-The porting of `MList` from Isabelle to Plutus would have increased the size and execution cost of the Marlowe semantics validator beyond the present limits of the Cardano ledger. Work is underway to modify the Isabelle semantics and proofs to use a data structure similar to Plutus's `AssocMap`. Instead of modifying the Marlowe semantics validator, all usages of `AssocMap` were manually reviewed to verify that no vulnerability was introduced by its use (as compared to `MList`) *provided that the precondition of no duplicate entries in the `AssocMap` held*: the source code was annotated with informal reasoning documenting the safety of `AssocMap`'s use. That manual review was augmented by a comprehensive set of property-based tests to check the behavior of `MList` (under the precondition that it was ordered and contained no duplicates) against `AssocMap` (under the precondition that it contained not duplicates) for all functions used in Marlowe semantics or in the Marlowe validator.
+The porting of `MList` from Isabelle to Plutus would have increased the size and execution cost of the Marlowe semantics validator beyond the present limits of the Cardano ledger. Work is underway to modify the Isabelle semantics and proofs to use a data structure similar to Plutus's `AssocMap`. Instead of modifying the Marlowe semantics validator to address this finding, all usages of `AssocMap` were manually reviewed to verify that no vulnerability was introduced by its use (as compared to `MList`) *provided that the precondition of no duplicate entries in the `AssocMap` held*: the source code was annotated with informal reasoning documenting the safety of `AssocMap`'s use. That manual review was augmented by a comprehensive set of property-based tests to check the behavior of `MList` (under the precondition that it was ordered and contained no duplicates) against `AssocMap` (under the precondition that it contained not duplicates) for all functions used in Marlowe semantics or in the Marlowe validator.
 
 Commit [a2ff6aa3](https://github.com/input-output-hk/marlowe-cardano/commit/a2ff6aa334efb7b7955408d29cf0e2edf06bca08) annotates the Marlowe semantics validator with reasoning as to the safe use of `AssocMap`. Commits [af380a29](https://github.com/input-output-hk/marlowe-cardano/commit/af380a292c0369bcc77d8584d81ea80a31326b61), [e2277677](https://github.com/input-output-hk/marlowe-cardano/commit/e2277677987f359dcd8754275eccd5b7c9a880a7), [a95a616a](https://github.com/input-output-hk/marlowe-cardano/commit/a95a616aca59bc7159d3ffa92487f8f021820bff), [b65ccfec](https://github.com/input-output-hk/marlowe-cardano/commit/b65ccfec3708484ff52514671e0e227c13f084f3), and [9e068b6a](https://github.com/input-output-hk/marlowe-cardano/commit/9e068b6a60103f2a40604a7eaea57c5f29b59180) implement the property-based tests for the behavior of the Plutus `AssocMap` against the Isabelle `MList`.
 
 
 ### 2.1.13 Missing specification tests *(Severity: Medium)*
 
-> **File `Spec/Marlowe/Semantics/Compute.hs`, ``** 
+> **File `Spec/Marlowe/Semantics/Compute.hs`** 
 > 
 > There are no tests for the properties in Section 3 of `specification-v3-rc1.pdf`. Besides checking that there are no translation mistakes, these properties would also help contrasting the assumptions in the Isabelle and the Haskell sides, like the meaning of validity of an association list, which is focused in the previous issue.
 
-Subsequent to the commencement of the audit, a "test oracle" was developed that checks implementations of Marlowe semantics (such as the Plutus validator) against a reference implementation generated directly from the Isabelle specification. That generated Haskell implementation is backed by Isabelle proofs of the correctness of Haskell code generation by Isabelle. The test oracle is now applied to the Marlowe semantics implementation in Plutus that the validator use. The test oracle uses the refference implementation to generates test cases to challenge the Plutus implementation and then it checks the Plutus results against its own. This oracle provides sufficient coverage to address the audit-reports concerns regarding the lack of property-based tests for Section 3 of the Marlowe specification.
+Subsequent to the commencement of the audit, a "test oracle" was developed that checks implementations of Marlowe semantics (such as the Plutus validator) against a reference implementation generated directly from the Isabelle specification. That generated Haskell implementation is backed by Isabelle proofs of the correctness of Haskell code generation by Isabelle. The test oracle is now applied to the Marlowe semantics implementation in Plutus that the validator use. The test oracle uses the reference implementation to generate test cases to challenge the Plutus implementation and then it checks the Plutus result against its own result. This oracle provides sufficient coverage to address this audit-reports concern regarding the lack of property-based tests for Section 3 of the Marlowe specification.
 
 
 ## 2.2 Marlowe specification
@@ -782,7 +766,7 @@ Subsequent to the commencement of the audit, a "test oracle" was developed that 
 > 4.  In file `ValidState.thy`
 >     1.  Line 9, lemma `valid_state_valid_choices`
 >     2.  Line 13, lemma `valid_state_valid_valueBounds`
-> 5.  In file `SingleInputTransactions.thy`, line 1214, lemma `traceListToSingleInput_isSingleInput`. It is mentioned in a commented out line in `StaticAnalysis.thy`. Furthermore, the lemma can be expressed more concisely as $$\llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = \mathit{inp\_h}\ \#\ \mathit{inp\_t} \rrparenthesis\ \#\ t = \mathit{traceListToSingleInput}\ \mathit{t2} % \mathrel{% \mbox{\fontfamily{cmr}\fontencoding{OT1}\selectfont=}}% \joinrel\Rightarrow\mathit{inp\_t} = []$$
+> 5.  In file `SingleInputTransactions.thy`, line 1214, lemma `traceListToSingleInput_isSingleInput`. It is mentioned in a commented out line in `StaticAnalysis.thy`. Furthermore, the lemma can be expressed more concisely as `$$\llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = \mathit{inp\_h}\ \#\ \mathit{inp\_t} \rrparenthesis\ \#\ t = \mathit{traceListToSingleInput}\ \mathit{t2} % \mathrel{% \mbox{\fontfamily{cmr}\fontencoding{OT1}\selectfont=}}% \joinrel\Rightarrow\mathit{inp\_t} = []$$`
 
 ![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
@@ -960,7 +944,7 @@ Subsequent to the commencement of the audit, a "test oracle" was developed that 
 
 > **File `SingleInputTransactions.thy`, lemma `playTraceAuxIterative_base_case`, line *1063***
 > 
-> The statement of this lemma is very verbose. A more natural (and slightly stronger) formulation could be $$\begin{aligned} &\mathit{playTraceAux}\ \mathit{txOut}\ [\ \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = [h] \rrparenthesis, \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = t \rrparenthesis \ ] \\ =\ &\mathit{playTraceAux}\ \mathit{txOut}\ [\ \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = h\ \#\ t \rrparenthesis \ ]\end{aligned}$$
+> The statement of this lemma is very verbose. A more natural (and slightly stronger) formulation could be `$$\begin{aligned} &\mathit{playTraceAux}\ \mathit{txOut}\ [\ \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = [h] \rrparenthesis, \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = t \rrparenthesis \ ] \\ =\ &\mathit{playTraceAux}\ \mathit{txOut}\ [\ \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = h\ \#\ t \rrparenthesis \ ]\end{aligned}$$`
 
 ![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
@@ -978,7 +962,7 @@ Subsequent to the commencement of the audit, a "test oracle" was developed that 
 
 > **File `Timeout.thy`, lemmas `timedOutReduceContractUntilQuiescent_closes_contract, timedOutReduceContractStep_empties_accounts`, lines *201/204, 211/214***
 > 
-> These lemmas use the hypothesis $\mathit{minTime}\ \mathit{sta} \leq \mathit{iniTime}$ and build a state $\mathit{sta}\ \llparenthesis \mathit{minTime} := \mathit{iniTime} \rrparenthesis)$ while other lemmas simply say $\mathit{minTime}\ \mathit{sta} = \mathit{iniTime}$. Readability would be improved by presenting these lemmas in the same style as the others, or documenting the need for these distinct presentations via code comments.
+> These lemmas use the hypothesis `$\mathit{minTime}\ \mathit{sta} \leq \mathit{iniTime}$` and build a state `$\mathit{sta}\ \llparenthesis \mathit{minTime} := \mathit{iniTime} \rrparenthesis)$` while other lemmas simply say `$\mathit{minTime}\ \mathit{sta} = \mathit{iniTime}$`. Readability would be improved by presenting these lemmas in the same style as the others, or documenting the need for these distinct presentations via code comments.
 
 ![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
 
@@ -1014,7 +998,7 @@ Subsequent to the commencement of the audit, a "test oracle" was developed that 
 
 > **File `PositiveAccounts.thy`, lemmas `addMoneyToAccountPositive_match, addMoneyToAccountPositive_noMatch`, lines *12, 23***
 > 
-> The assumptions $$\forall x\ \mathit{tok}.\ \mathit{positiveMoneyInAccountOrNoAccount}\ x\ \mathit{tok}\ \mathit{accs}$$ in `addMoneyToAccountPositive_match` and $$\mathit{money > 0}$$ in `addMoneyToAccountPositive_noMatch` are unnecessary.
+> The assumptions `$$\forall x\ \mathit{tok}.\ \mathit{positiveMoneyInAccountOrNoAccount}\ x\ \mathit{tok}\ \mathit{accs}$$` in `addMoneyToAccountPositive_match` and `$$\mathit{money > 0}$$` in `addMoneyToAccountPositive_noMatch` are unnecessary.
 > 
 > **File `PositiveAccounts.thy`, lemma `reduceContractStep_gtZero_Refund`, line *93***
 > 
@@ -1053,7 +1037,7 @@ Subsequent to the commencement of the audit, a "test oracle" was developed that 
 > 
 > **File `ValidState.thy`, lemma `reductionStep_preserves_valid_state_Refund`, line *29***
 > 
-> The assumption $$\begin{aligned} \mathit{newState} = \llparenthesis &\mathit{accounts} = \mathit{newAccounts}, \mathit{choices} = \mathit{newChoices}, \\ &\mathit{boundValues} = \mathit{newBoundValues}, \mathit{minTime} = \mathit{newMinTime} \rrparenthesis\end{aligned}$$ is unnecessary.
+> The assumption `$$\begin{aligned} \mathit{newState} = \llparenthesis &\mathit{accounts} = \mathit{newAccounts}, \mathit{choices} = \mathit{newChoices}, \\ &\mathit{boundValues} = \mathit{newBoundValues}, \mathit{minTime} = \mathit{newMinTime} \rrparenthesis\end{aligned}$$` is unnecessary.
 
 
 ## 2.4 Isabelle implementation
@@ -1294,7 +1278,7 @@ The `playTrace` and `playTraceAux` functions are not used by the Marlowe validat
 
 ### 2.6.3 Variable names differ from Isabelle code *(Severity: Low)*
 
-> **File `Semantics.hs`, Several functions ``** 
+> **File `Semantics.hs`, Several functions** 
 > 
 > Different variable names in Isabelle and Haskell make comparison harder. It is less of an issue when only one variable has been renamed in a function, but multiple variable renames require carefully mapping between the names to avoid confusion. For example, the code of `reduceContractStep` in line 482 (`Pay` case) is hard to compare.
 > 
@@ -1312,7 +1296,7 @@ These cosmetic recommendations of the audit report have not been implemented in 
 
 ### 2.6.4 Naming of functions and variables *(Severity: Low)*
 
-> **File `Several files`, `several functions`** 
+> **File `Several files`, Several functions** 
 > 
 > Several functions or variables could have more descriptive or precise names, for example:
 > -   `Scripts.hs:193`: `validateBalances` could be called `allBalancesArePositive`.
@@ -1326,7 +1310,7 @@ The aforementioned bindings `validateBalances`, `validateInputs`, and `tailCase`
 
 ### 2.6.5 Unused functions *(Severity: Low)*
 
-> **File `Several files`, `several functions`** 
+> **File `Several files`, Several functions** 
 > 
 > Several functions are unused and perhaps should be removed:
 > -   `Semantics.hs:741`: `contractLifespanUpperBound` does not seem to be used anywhere, including tests.
@@ -1342,7 +1326,9 @@ Although the validator does not use these functions, off-chain code in other Has
 > **File `Semantics.hs`, Function `refundOne`, line *439***
 > 
 > The comment describing the function is overly concise, as it does not mention the function removing all non-positive accounts before the first positive one, and effectively `uncons`-ing the list.
-> 
+
+Commit [ac65eba1](https://github.com/input-output-hk/marlowe-cardano/commit/ac65eba119b4eec8febc3723527edcd99914fdac) elaborates the documentation for `refundOne`.
+
 > **File `Semantics.hs`, Function `addMoneyToAccount`, line *461***
 > 
 > There is a typo in the comment: `accoun` is written instead of `account`.
@@ -1407,7 +1393,7 @@ Commit [d1477610](https://github.com/input-output-hk/marlowe-cardano/commit/d147
 > 
 > Some constraints mentioned in the specification are written in a different structure than the corresponding constraint in `Scripts.hs`. While such a discrepancy may be useful to minimize verbosity, a unified structure when possible would alleviate a side-by-side comparison. Examples of these differing structures include Constraint 6 and Constraint 14.
 
-The discrepancies of implementation between the constraints in the specification and the Plutus code result from the emphasis on readability in the specification and of efficiency in the implementation. The need to minimize of validator size and execution cost in the implementation has sometimes resulted in less consise or readible code. The Plutus compile can be quite sensitive to the precise expression of a constraint as Haskell code.
+The discrepancies of implementation between the constraints in the specification and the Plutus code result from the emphasis on readability in the specification and of efficiency in the implementation. The need to minimize of validator size and execution cost in the implementation has sometimes resulted in less concise or less readable code. Note that the Plutus compiler can be quite sensitive to the precise expression of a constraint as Haskell code.
 
 
 ### 2.6.11 Missing argument of `computeTransaction` *(Severity: Low)*
@@ -1416,12 +1402,12 @@ The discrepancies of implementation between the constraints in the specification
 > 
 > The specification mentions the output datum as the (fifth) argument for the `computeTransaction` function, while it is not an argument to it.
 
-Commit [00a0c240](https://github.com/input-output-hk/marlowe-cardano/commit/00a0c2406665f06753aecf6dbb63933edb275436) moves the comment about the non-existant fifth argument to a separate sentance following the list of arguments.
+Commit [00a0c240](https://github.com/input-output-hk/marlowe-cardano/commit/00a0c2406665f06753aecf6dbb63933edb275436) moves the comment about the non-existent fifth argument to a separate sentence following the list of arguments.
 
 
 ### 2.6.12 Missing `smallMarloweValidator` *(Severity: Low)*
 
-> **File `marlowe-cardano-specification.md`, Various sections ``** 
+> **File `marlowe-cardano-specification.md`, Various sections** 
 > 
 > The specification mentions `smallMarloweValidator` in a few places, but it is never mentioned in the source code.
 
@@ -1443,7 +1429,7 @@ This incorrect reference is fixed in commit [3fac0d17](https://github.com/input-
 > 
 > The specification defines `MarloweParams` to contain just the payout validator hash, while the definition in the Haskell code contains just the roles currency symbol.
 
-This mistatement is remedied in commit [8691f335](https://github.com/input-output-hk/marlowe-cardano/commit/8691f3351e55758cc750eee0800b1458f0a8c554).
+This misstatement is remedied in commit [8691f335](https://github.com/input-output-hk/marlowe-cardano/commit/8691f3351e55758cc750eee0800b1458f0a8c554).
 
 
 ### 2.6.15 Timeout boundary differs from the specification *(Severity: Low)*
@@ -1470,7 +1456,7 @@ This mistatement is remedied in commit [8691f335](https://github.com/input-outpu
 > 
 > The absence of this information makes it easier to accidentally produce a test that is not testing what is intended.
 
-A future version of the Marlowe test suite for `checkSemanticsTransaction` and `checkPayoutTransaction` will instrumenting Plutus scripts for the Marlowe validators so that the precise cause of the test failure can be verified.
+A future version of the Marlowe test suite for `checkSemanticsTransaction` and `checkPayoutTransaction` will instrument Plutus scripts for the Marlowe validators so that the precise cause of the test failure can be verified.
 
 
 ### 2.7.2 Missing tests *(Severity: Medium)*
@@ -1486,7 +1472,7 @@ A future version of the Marlowe test suite for `checkSemanticsTransaction` and `
 > 
 > Some of these are tested in `Spec/Marlowe/Semantics/Functions.hs` already for auxiliary functions.
 
-Commit [ee2e5222](https://github.com/input-output-hk/marlowe-cardano/commit/ee2e52220e25736af29a1f01144d5fafbe9eed76) adds a property-based test that choice and deposit continue as expected; commit [333eee29](https://github.com/input-output-hk/marlowe-cardano/commit/333eee293aa3afe95d0aa7f678c7e7b7bad660ea) tests that choice produces expected continuation; commit [477284c7](https://github.com/input-output-hk/marlowe-cardano/commit/477284c78095482eba63adc2e6090ea68553db9d) tests that that deposits add to an account; commit [d241669b](https://github.com/input-output-hk/marlowe-cardano/commit/d241669bfb7ec8dad1cc92a7ca6185d08229817e) tests that payout substracts from an account; and commit [f33fc720](https://github.com/input-output-hk/marlowe-cardano/commit/f33fc7206522031c93253323f3b8ca083d8ca8c7) tests that Merkleization continues as expected.
+Commit [ee2e5222](https://github.com/input-output-hk/marlowe-cardano/commit/ee2e52220e25736af29a1f01144d5fafbe9eed76) adds a property-based test that choice and deposit continue as expected; commit [333eee29](https://github.com/input-output-hk/marlowe-cardano/commit/333eee293aa3afe95d0aa7f678c7e7b7bad660ea) tests that choice produces expected continuation; commit [477284c7](https://github.com/input-output-hk/marlowe-cardano/commit/477284c78095482eba63adc2e6090ea68553db9d) tests that that deposits add to an account; commit [d241669b](https://github.com/input-output-hk/marlowe-cardano/commit/d241669bfb7ec8dad1cc92a7ca6185d08229817e) tests that payout subtracts from an account; and commit [f33fc720](https://github.com/input-output-hk/marlowe-cardano/commit/f33fc7206522031c93253323f3b8ca083d8ca8c7) tests that merkleization continues as expected.
  
 > **File `Spec/Marlowe/Semantics/Functions.hs`, `Missing merkleization tests`** 
 > 
@@ -1498,18 +1484,18 @@ Commits [2a936bf1](https://github.com/input-output-hk/marlowe-cardano/commit/2a9
 > 
 > The test `checkFixInterval` is never instantiated with an invalid interval that is in the past, meaning the function `fixInterval` is never tested for that case.
 
-Commit [811f048b](https://github.com/input-output-hk/marlowe-cardano/commit/811f048ba93db10972641c0c235864db1d6014e7) adds a property-based test for an invalid in terval in the past.
+Commit [811f048b](https://github.com/input-output-hk/marlowe-cardano/commit/811f048ba93db10972641c0c235864db1d6014e7) adds a property-based test for an invalid interval in the past.
 
 
 ## Appendix: Post-Audit Changes in Marlowe Validator
 
 ```bash
-git diff 523f3d56f22bf992ddb0b0c8a52bb7a5a188f9e9 69468d6623e24a4ccd6659e378ae012c38ca01ce marlowe/src/Language/Marlowe/{Core/V1/Semantics*,Scripts.hs}
+git diff 523f3d56f22bf992ddb0b0c8a52bb7a5a188f9e9 ac65eba119b4eec8febc3723527edcd99914fdac marlowe/src/Language/Marlowe/{Core/V1/Semantics*,Scripts.hs}
 ```
 
 ```diff
 diff --git a/marlowe/src/Language/Marlowe/Core/V1/Semantics.hs b/marlowe/src/Language/Marlowe/Core/V1/Semantics.hs
-index e31b8c478..82b57b903 100644
+index e31b8c478..0d7e94a20 100644
 --- a/marlowe/src/Language/Marlowe/Core/V1/Semantics.hs
 +++ b/marlowe/src/Language/Marlowe/Core/V1/Semantics.hs
 @@ -94,12 +94,12 @@ module Language.Marlowe.Core.V1.Semantics
@@ -1650,7 +1636,12 @@ index e31b8c478..82b57b903 100644
          ChoseSomething choiceId -> choiceId `Map.member` choices state
          ValueGE lhs rhs         -> evalVal lhs >= evalVal rhs
          ValueGT lhs rhs         -> evalVal lhs > evalVal rhs
-@@ -439,6 +520,12 @@ evalObservation env state obs = let
+@@ -435,10 +516,16 @@ evalObservation env state obs = let
+         FalseObs                -> False
+ 
+ 
+--- | Pick the first account with money in it.
++-- | Pick the first account with money in it, discarding any accounts prior to that if they have a non-positive balance.
  refundOne :: Accounts -> Maybe ((Party, Token, Integer), Accounts)
  refundOne accounts = case Map.toList accounts of
      [] -> Nothing
@@ -2416,4 +2407,4 @@ index 6027202b5..aa397d5fa 100644
 +        mkArgsValidator = Scripts.mkUntypedValidator @_ @MarloweData @MarloweInput
          compiledArgsValidator =
            $$(PlutusTx.compile [|| mkArgsValidator ||])
-```
+``` 

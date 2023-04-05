@@ -421,8 +421,9 @@ playTrace_preserves_assets :: InterpretJsonRequest -> TestTree
 playTrace_preserves_assets interpret = reproducibleProperty "Calling playTrace is quiescent" do
     (contract, State_ext _ _ _ (Int_of_integer startTime) _, transactions) <- run $ generateT $
         frequency
-          [ (45, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> not (null l))
-          , (55, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> length l > 1)
+          [ (5, genContractStateAndValidTransactions interpret)
+          , (45, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> not (null l))
+          , (50, genContractStateAndValidTransactions interpret `suchThat` \(_,_,l) -> length l > 1)
           ]
     let
         req :: Request JSON.Value
@@ -430,21 +431,24 @@ playTrace_preserves_assets interpret = reproducibleProperty "Calling playTrace i
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
-      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ txOutPayments txOutState txOutContract _)) -> do
+      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ txOutPayments txOutState _ _)) -> do
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
                 ++ "Response: " ++ showAsJson res ++ "\n"
                 ++ "Expected reponse to be quiescent" )
-        let tokens = tokensInContract contract
-        assert $ equals_Assets tokens (assetsInTransactions transactions) (assetsInState txOutState `plus_Assets` assetsInExternalPayments txOutPayments)
+        assert $ equals_Assets
+          (assetsInTransactions transactions)
+          (assetsInState txOutState `plus_Assets` assetsInExternalPayments txOutPayments)
+          (tokensInContract contract)
       JSON.Success (TransactionError _ ) -> pre False
       _ -> fail "JSON parsing failed!"
 
   where
-    equals_Assets :: [Token] -> Assets -> Assets -> Bool
-    equals_Assets tokens assets1 assets2 = all (==True) $
-      map (\tok -> integer_of_nat (assetValue tok assets1) == integer_of_nat (assetValue tok assets2)) tokens
+    -- TODO: export the function from Isabelle
+    equals_Assets :: Assets -> Assets -> [Token] -> Bool
+    equals_Assets assets1 assets2 = foldl (&&) True .
+      map (\tok -> integer_of_nat (assetValue tok assets1) == integer_of_nat (assetValue tok assets2))
 
     tokensInContract :: Contract -> [Token]
     tokensInContract Close = []

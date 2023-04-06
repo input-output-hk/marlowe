@@ -2,19 +2,11 @@
 theory ContractForDifference
   imports Core.Semantics Core.TransactionBound Core.Timeout
 begin
-
 (*>*)
 section \<open>ContractForDifference contract\<close>
 
-text \<open>A ContractForDifference (cfd)\<close>
-
 subsection \<open>Contract definition\<close>
 
-text \<open>The participants of the contract are:\<close>
-
-definition "party = Role (BS ''Party'')"
-definition "counterparty = Role (BS ''CounterParty'')"
-definition "oracle = Role (BS ''Oracle'')"
 definition "ada = Token (BS '''') (BS '''')"
 
 fun initialDeposit :: "Party \<Rightarrow> Value \<Rightarrow> Timeout \<Rightarrow> Contract \<Rightarrow> Contract \<Rightarrow> Contract" where
@@ -62,8 +54,8 @@ record CfdArgs =
   secondWindowBeginning       :: Timeout
   secondWindowDeadline        :: Timeout
 
-definition cfd :: "CfdArgs \<Rightarrow> Contract" where
-  "cfd args = (
+definition contractForDifference :: "CfdArgs \<Rightarrow> Contract" where
+  "contractForDifference args = (
       let decreaseInPrice = ValueId (BS ''Decrease in price'');
           increaseInPrice = ValueId (BS ''Increase in price'');
           party = partyParty args;
@@ -85,7 +77,13 @@ definition cfd :: "CfdArgs \<Rightarrow> Contract" where
                 Close)))))))
   "
 
-subsection \<open>Possible Outcomes\<close>
+subsection \<open>Example CFD\<close>
+
+text \<open>The participants in the example contract are:\<close>
+
+definition "party = Role (BS ''Party'')"
+definition "counterparty = Role (BS ''CounterParty'')"
+definition "oracle = Role (BS ''Oracle'')"
 
 definition "cfdExampleArgs =
   \<lparr> partyParty = party
@@ -101,7 +99,7 @@ definition "cfdExampleArgs =
   , secondWindowDeadline = 1664821520000
   \<rparr>"
 
-definition "cfdExample = cfd cfdExampleArgs"
+definition "cfdExample = contractForDifference cfdExampleArgs"
 
 definition
   "cfdExampleTransactions =
@@ -130,8 +128,6 @@ definition
     ]
   "
  
-(* value "playTrace 0 cfdExample cfdExampleTransactions" *)
-
 proposition
  "playTrace 0 cfdExample cfdExampleTransactions = TransactionOutput txOut
   \<Longrightarrow>
@@ -139,12 +135,11 @@ proposition
      \<and> txOutPayments txOut = cfdExamplePayments
      \<and> txOutWarnings txOut = []"
      apply (code_simp)
-     apply (auto simp add: ada_def cfdExamplePayments_def
-              cfd_def cfdExampleArgs_def cfdExampleTransactions_def
-              party_def counterparty_def oracle_def 
-              partyDeposit_def partyDepositDeadline_def 
-              priceBeginning_def 
-              priceEnd_def 
-              ) 
+     apply (auto simp add: ada_def contractForDifference_def
+              cfdExampleArgs_def cfdExampleTransactions_def cfdExamplePayments_def
+              party_def counterparty_def oracle_def)
      done
+
+(*<*)
 end
+(*>*)

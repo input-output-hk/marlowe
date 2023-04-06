@@ -90,7 +90,7 @@ export_code
   happyPathTransactions
   happyPathPayments
 
-  cfd
+  contractForDifference
 
   \<comment> \<open>Force the export of string implode (works together with the BS code\_printing hint) \<close>
   String.implode

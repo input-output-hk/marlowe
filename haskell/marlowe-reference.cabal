@@ -1,32 +1,31 @@
 name:                   marlowe-reference
 version:                0.3.0.0
 license:                BSD-3-Clause
-license-file:           ../LICENSE
+license-file:           LICENSE
 author:                 Alexander Nemish
 maintainer:             alexander.nemish@iohk.io
 build-type:             Simple
-extra-source-files:     ../README.md
 cabal-version:          >= 1.10
 
 executable marlowe
     default-language:   Haskell2010
-    build-depends:      base,
-                        base16-bytestring,
-                        bytestring,
-                        containers,
-                        cryptohash,
-                        QuickCheck,
-                        mtl,
-                        sbv,
-                        tasty,
-                        tasty-hunit,
-                        tasty-smallcheck,
-                        tasty-quickcheck,
-                        text,
-                        template-haskell,
-                        time,
-                        aeson,
-                        wl-pprint -any
+    build-depends:      base >= 4.9 && < 5,
+                        base16-bytestring >= 1 && < 2,
+                        bytestring >= 0.10.12 && < 0.12,
+                        containers >= 0.6.5 && < 0.7,
+                        cryptohash >= 0.11.9 && < 0.12,
+                        QuickCheck >= 2.14 && < 3,
+                        mtl >= 2.2 && < 3,
+                        sbv >= 9.0,
+                        tasty >= 1.4.2 && < 1.5,
+                        tasty-hunit >= 0.10 && < 0.11,
+                        tasty-smallcheck >= 0.8 && < 0.9,
+                        tasty-quickcheck >= 0.10 && < 0.11,
+                        text >= 1.2.4 && < 2,
+                        template-haskell >= 2.18 && < 3,
+                        time >= 1.11 && < 2,
+                        aeson >= 2 && < 3,
+                        wl-pprint >= 1.2 && < 2
     other-modules:
                         Language.Marlowe
                         Language.Marlowe.Pretty

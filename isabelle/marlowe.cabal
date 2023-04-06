@@ -29,7 +29,6 @@ library
         HOL
         List
         ListTools
-        MList
         Option
         OptBoundTimeInterval
         Product_Lexorder
@@ -39,6 +38,7 @@ library
     exposed-modules:
         Arith
         ArithNumInstance
+        MList
         CoreOrphanEq
         Examples.Escrow
         Examples.Swap

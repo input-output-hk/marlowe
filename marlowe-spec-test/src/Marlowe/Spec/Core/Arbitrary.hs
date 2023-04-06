@@ -17,6 +17,7 @@ module Marlowe.Spec.Core.Arbitrary
   , genChoiceId
   , genBound
   , genState
+  , genStateWithSize
   , genEnvironment
   , genContract
   , genContract'
@@ -70,7 +71,6 @@ import Semantics
     computeTransaction,
     evalValue,
   )
-import SemanticsGuarantees (valid_state)
 import SemanticsTypes
   ( Action (..),
     Bound (..),
@@ -95,6 +95,7 @@ import Test.QuickCheck.Gen (listOf)
 import qualified Test.QuickCheck.Gen as QC (chooseInteger, elements)
 import qualified Examples.Escrow as Escrow
 import qualified Examples.Swap as Swap
+import MList (valid_map)
 
 data RandomResponse a
   = RandomValue a
@@ -464,20 +465,30 @@ genPayment i = Payment <$> genParty i <*> genPayee i <*> genToken i <*> liftGen 
 (>*<) :: Monad m => GenT m a -> GenT m b -> GenT m (a, b)
 genA >*< genB = liftM2 (,) genA genB
 
-genState :: InterpretJsonRequest -> GenT IO (State_ext ())
-genState i = rawGen `suchThat` valid_state
-  where
-  rawGen = sized
-    (\n ->  do
-      accountSize <- liftGen $ chooseInt (0, min n 4)
-      choiceSize <- liftGen $ chooseInt (0, min n 4)
-      boundSize <- liftGen $ chooseInt (0, min n 4)
-      accounts <- vectorOf accountSize ((genParty i >*< genToken i) >*< liftGen arbitraryNonnegativeInteger)
+-- A type alias that holds a lower and upper bound for a Vector
+type VectorSizeBounds = (Int, Int)
+
+genStateWithSize :: (VectorSizeBounds, VectorSizeBounds, VectorSizeBounds) -- ^ Size bounds for account, choices and bound vectors respectively
+                 -> InterpretJsonRequest                                   -- ^ Function to interpret spec commands
+                 -> GenT IO (State_ext ())                                 -- ^ An arbitrary valid state with bounded sizes
+genStateWithSize (accountSizeLimit, choiceSizeLimit, boundSizeLimit) i =
+  sized
+    (\n -> do
+      accountSize <- liftGen $ chooseInt (fst accountSizeLimit, min n $ snd accountSizeLimit)
+      choiceSize <- liftGen $ chooseInt (fst choiceSizeLimit, min n $ snd choiceSizeLimit)
+      boundSize <- liftGen $ chooseInt (fst boundSizeLimit, min n $ snd boundSizeLimit)
+      accounts <- vectorOf accountSize ((genParty i >*< genToken i) >*< liftGen arbitraryPositiveInteger)
+                      `suchThat` valid_map
       choices <- vectorOf choiceSize (genChoiceId i >*< liftGen arbitraryInteger)
+                      `suchThat` valid_map
       bounds <- vectorOf boundSize (liftGen genValueId >*< liftGen arbitraryInteger)
+                      `suchThat` valid_map
       minTime' <- liftGen arbitraryNonnegativeInteger
       pure $ State_ext accounts choices bounds minTime' ()
     )
+
+genState :: InterpretJsonRequest -> GenT IO (State_ext ())
+genState = genStateWithSize ((0,4), (0, 4), (0, 4))
 
 genTransactionWarning :: InterpretJsonRequest -> GenT IO TransactionWarning
 genTransactionWarning i = frequency

@@ -109,6 +109,10 @@ export_code
   integer_of_int
   integer_of_nat
 
+  \<comment> \<open>Force export of Transaction constructors\<close>
+  inputs
+  interval
+
   \<comment> \<open>Force export of TransactionOutput constructors\<close>
   TransactionOutput
 

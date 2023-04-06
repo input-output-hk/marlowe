@@ -46,44 +46,65 @@ fun transferUpToDeposit :: "Party \<Rightarrow> Value \<Rightarrow> Party \<Righ
   "transferUpToDeposit from payerDeposit to amount =
     Pay from (Account to) ada (Cond (ValueLT amount payerDeposit) amount payerDeposit)"
 
-definition "partyDeposit = Constant 10"
-definition "partyDepositDeadline = 1664812800000"
+definition "priceBeginning = ChoiceId (BS ''Price in first window'')"
+definition "priceEnd = ChoiceId (BS ''Price in second window'')"
 
-definition "counterpartyDeposit = Constant 10"
-definition "counterpartyDepositDeadline = 1664816400000"
+record CfdArgs =
+  partyParty                  :: Party
+  counterpartyParty           :: Party
+  oracleParty                 :: Party
+  partyDeposit                :: Value
+  partyDepositDeadline        :: Timeout
+  counterpartyDeposit         :: Value
+  counterpartyDepositDeadline :: Timeout
+  firstWindowBeginning        :: Timeout
+  firstWindowDeadline         :: Timeout
+  secondWindowBeginning       :: Timeout
+  secondWindowDeadline        :: Timeout
 
-definition "firstWindowBeginning = 1664820420000"
-definition "firstWindowDeadline = 1664820520000"
-
-definition "secondWindowBeginning = 1664821420000"
-definition "secondWindowDeadline = 1664821520000"
-
-definition "priceBeginning = ChoiceId (BS ''Price in first window'') oracle"
-definition "priceEnd = ChoiceId (BS ''Price in second window'') oracle"
-
-definition "decreaseInPrice = ValueId (BS ''Decrease in price'')"
-definition "increaseInPrice = ValueId (BS ''Increase in price'')"
-
-definition cfd :: "Contract" where
-  "cfd = initialDeposit party partyDeposit partyDepositDeadline Close
-        (initialDeposit counterparty counterpartyDeposit counterpartyDepositDeadline Close
-        (wait firstWindowBeginning
-        (oracleInput priceBeginning firstWindowDeadline Close
-        (wait secondWindowBeginning
-        (oracleInput priceEnd secondWindowDeadline Close
-        (gtLtEq (ChoiceValue priceBeginning) (ChoiceValue priceEnd)
-                (recordDifference decreaseInPrice priceBeginning priceEnd
-                  (transferUpToDeposit counterparty counterpartyDeposit party (UseValue decreaseInPrice)
+definition cfd :: "CfdArgs \<Rightarrow> Contract" where
+  "cfd args = (
+      let decreaseInPrice = ValueId (BS ''Decrease in price'');
+          increaseInPrice = ValueId (BS ''Increase in price'');
+          party = partyParty args;
+          counterparty = counterpartyParty args;
+          oracle = oracleParty args
+      in initialDeposit party (partyDeposit args) (partyDepositDeadline args) Close
+        (initialDeposit counterparty (counterpartyDeposit args) (counterpartyDepositDeadline args) Close
+        (wait (firstWindowBeginning args)
+        (oracleInput (priceBeginning oracle) (firstWindowDeadline args) Close
+        (wait (secondWindowBeginning args)
+        (oracleInput (priceEnd oracle) (secondWindowDeadline args) Close
+        (gtLtEq (ChoiceValue (priceBeginning oracle)) (ChoiceValue (priceEnd oracle))
+                (recordDifference decreaseInPrice (priceBeginning oracle) (priceEnd oracle)
+                  (transferUpToDeposit counterparty (counterpartyDeposit args) party (UseValue decreaseInPrice)
                   (Close)))
-                (recordDifference increaseInPrice priceEnd priceBeginning
-                  (transferUpToDeposit party partyDeposit counterparty (UseValue increaseInPrice)
+                (recordDifference increaseInPrice (priceEnd oracle) (priceBeginning oracle)
+                  (transferUpToDeposit party (partyDeposit args) counterparty (UseValue increaseInPrice)
                   (Close)))
-                Close))))))
+                Close)))))))
   "
+
 subsection \<open>Possible Outcomes\<close>
 
+definition "cfdExampleArgs =
+  \<lparr> partyParty = party
+  , counterpartyParty = counterparty
+  , oracleParty = oracle
+  , partyDeposit = Constant 10
+  , partyDepositDeadline = 1664812800000
+  , counterpartyDeposit = Constant 10
+  , counterpartyDepositDeadline = 1664816400000
+  , firstWindowBeginning = 1664820420000
+  , firstWindowDeadline = 1664820520000
+  , secondWindowBeginning = 1664821420000
+  , secondWindowDeadline = 1664821520000
+  \<rparr>"
+
+definition "cfdExample = cfd cfdExampleArgs"
+
 definition
-  "everythingIsAlrightTransactions =
+  "cfdExampleTransactions =
     [
       \<comment> \<open>First party deposit\<close>
       \<lparr> interval = (1664812600000, 1664812700000)
@@ -93,45 +114,37 @@ definition
       , inputs = [ IDeposit counterparty counterparty ada 10 ]
       \<rparr>
    ,  \<lparr> interval = (1664820420001, 1664820500000)
-      , inputs = [ IChoice priceBeginning 2 ]
+      , inputs = [ IChoice (priceBeginning oracle) 2 ]
       \<rparr>
    ,  \<lparr> interval = (1664821420001, 1664821510000)
-      , inputs = [ IChoice priceEnd 4 ]
+      , inputs = [ IChoice (priceEnd oracle) 4 ]
       \<rparr>
     ]
   "
 
 definition
-  "everythingIsAlrightPayments =
+  "cfdExamplePayments =
     [ Payment party (Account counterparty) ada 2 
     , Payment counterparty (Party counterparty) ada 12 
     , Payment party (Party party) ada 8 
     ]
   "
  
-(*value "playTrace 0 cfd everythingIsAlrightTransactions"*)
+(* value "playTrace 0 cfdExample cfdExampleTransactions" *)
 
 proposition
- "playTrace 0 cfd everythingIsAlrightTransactions = TransactionOutput txOut
+ "playTrace 0 cfdExample cfdExampleTransactions = TransactionOutput txOut
   \<Longrightarrow>
      txOutContract txOut = Close
-     \<and> txOutPayments txOut = everythingIsAlrightPayments
+     \<and> txOutPayments txOut = cfdExamplePayments
      \<and> txOutWarnings txOut = []"
      apply (code_simp)
-     apply (auto simp add: everythingIsAlrightPayments_def
-              ada_def cfd_def
-              everythingIsAlrightTransactions_def
+     apply (auto simp add: ada_def cfdExamplePayments_def
+              cfd_def cfdExampleArgs_def cfdExampleTransactions_def
               party_def counterparty_def oracle_def 
               partyDeposit_def partyDepositDeadline_def 
-              counterpartyDeposit_def 
-              counterpartyDepositDeadline_def 
-              firstWindowBeginning_def 
-              firstWindowDeadline_def 
-              secondWindowBeginning_def 
-              secondWindowDeadline_def 
               priceBeginning_def 
               priceEnd_def 
-              decreaseInPrice_def 
-              increaseInPrice_def) 
+              ) 
      done
 end

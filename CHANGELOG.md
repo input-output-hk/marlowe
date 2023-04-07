@@ -13,10 +13,12 @@
 - [SCP-4698](https://github.com/input-output-hk/marlowe/pull/154) - Implement roundtrip test for all serialized types
 - [SCP-4901](https://github.com/input-output-hk/marlowe/pull/160) - Add tests to EvalValue
 - [PLT-4250](https://github.com/input-output-hk/marlowe/pull/170) - Add tests to EvalObservation
+- [PLT-3313](https://github.com/input-output-hk/marlowe/pull/167) - Add Semiarbitrary instances and property based tests for some of Isabelle theorems
 
 ## General
 - [SCP-4748](https://github.com/input-output-hk/marlowe/pull/155) - Fixed cabal packages.
 - [SCP-4848](https://github.com/input-output-hk/marlowe/pull/156) - Fix problem with `edit-marlowe-proofs` command.
+- [PR 175](https://github.com/input-output-hk/marlowe/pull/175) - Add version bounds to all libraries
 
 # Dec 2022 - Marlowe specification version 3, RC1
 Version `v3-rc1` was tagged on commit `c8c67ad6892ec68842461d2e66b02ca87f93f70c` on 19 Dec 2022 and submitted to the auditors. This marks the begining of the changelog.

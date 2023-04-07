@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 
@@ -20,7 +19,7 @@ instance Show TypeId where
   show (TypeId name _) = name
 
 instance Eq TypeId where
-  (TypeId t1 _) == (TypeId t2 _) = (t1 == t2)
+  (TypeId t1 _) == (TypeId t2 _) = t1 == t2
 
 fromTypeName :: String -> Maybe TypeId
 fromTypeName name = case name of

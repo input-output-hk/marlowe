@@ -17,7 +17,7 @@ tests i = testGroup "Swap"
 testHappyPath :: InterpretJsonRequest -> TestTree
 testHappyPath interpret = testCase "Happy path"
     ( do
-        res <- interpret $ PlayTrace 0 (Examples.Swap.swapExample) Examples.Swap.happyPathTransactions
+        res <- interpret $ PlayTrace 0 Examples.Swap.swapExample Examples.Swap.happyPathTransactions
         case parseValidResponse res of
             Left err -> assertFailure err
             Right (TransactionError err) -> assertFailure $ "Transaction error: " ++ show err

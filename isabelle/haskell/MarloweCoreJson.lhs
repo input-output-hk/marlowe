@@ -46,7 +46,7 @@ import qualified Data.Text as T
 import Data.Scientific (Scientific, floatingOrInteger)
 import qualified Examples.Swap
 import SemanticsTypes (Action(..), Case(..), Contract(..), Input(..), Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..), State_ext(..), IntervalError(..), Environment_ext(..))
-import Semantics (Transaction_ext(..), Payment(..), TransactionWarning(..), TransactionError(..), TransactionOutput(..), TransactionOutputRecord_ext(..), txOutWarnings, txOutPayments, txOutState, txOutContract, playTrace )
+import Semantics (Transaction_ext(..), Payment(..), TransactionWarning(..), TransactionError(..), TransactionOutput(..), TransactionOutputRecord_ext(..), txOutWarnings, txOutPayments, txOutState, txOutContract, playTrace)
 
 
 
@@ -1341,7 +1341,6 @@ instance ToJSON TransactionOutput where
         , "contract" .= toJSON (txOutContract out)
         ]
 
-
 instance FromJSON TransactionOutput where
   parseJSON = withObject "TransactionOutput"
                 (\v ->
@@ -1429,5 +1428,3 @@ instance FromJSON (Environment_ext ()) where
           <*> pure ()
       )
 \end{code}
-
-

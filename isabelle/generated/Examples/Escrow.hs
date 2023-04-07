@@ -1,11 +1,11 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Examples.Escrow(EscrowArgs_ext, escrowExample, confirmClaimPayments,
-                   dismissClaimPayments, confirmProblemPayments,
-                   confirmClaimTransactions, dismissClaimTransactions,
-                   confirmProblemTransactions, everythingIsAlrightPayments,
-                   everythingIsAlrightTransactions)
+  Examples.Escrow(EscrowArgs_ext(..), escrow, escrowExample,
+                   confirmClaimPayments, dismissClaimPayments,
+                   confirmProblemPayments, confirmClaimTransactions,
+                   dismissClaimTransactions, confirmProblemTransactions,
+                   everythingIsAlrightPayments, everythingIsAlrightTransactions)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -20,8 +20,9 @@ import qualified SemanticsTypes;
 import qualified Arith;
 
 data EscrowArgs_ext a =
-  EscrowArgs_ext SemanticsTypes.Value SemanticsTypes.Token Arith.Int Arith.Int
-    Arith.Int Arith.Int a
+  EscrowArgs_ext SemanticsTypes.Value SemanticsTypes.Token SemanticsTypes.Party
+    SemanticsTypes.Party SemanticsTypes.Party Arith.Int Arith.Int Arith.Int
+    Arith.Int a
   deriving (Prelude.Read, Prelude.Show);
 
 buyer :: SemanticsTypes.Party;
@@ -36,18 +37,20 @@ buyer =
 
 paymentDeadline :: forall a. EscrowArgs_ext a -> Arith.Int;
 paymentDeadline
-  (EscrowArgs_ext price token paymentDeadline complaintDeadline disputeDeadline
-    mediationDeadline more)
+  (EscrowArgs_ext price token buyerParty sellerParty mediatorParty
+    paymentDeadline complaintDeadline disputeDeadline mediationDeadline more)
   = paymentDeadline;
 
 token :: forall a. EscrowArgs_ext a -> SemanticsTypes.Token;
-token (EscrowArgs_ext price token paymentDeadline complaintDeadline
-        disputeDeadline mediationDeadline more)
+token (EscrowArgs_ext price token buyerParty sellerParty mediatorParty
+        paymentDeadline complaintDeadline disputeDeadline mediationDeadline
+        more)
   = token;
 
 price :: forall a. EscrowArgs_ext a -> SemanticsTypes.Value;
-price (EscrowArgs_ext price token paymentDeadline complaintDeadline
-        disputeDeadline mediationDeadline more)
+price (EscrowArgs_ext price token buyerParty sellerParty mediatorParty
+        paymentDeadline complaintDeadline disputeDeadline mediationDeadline
+        more)
   = price;
 
 seller :: SemanticsTypes.Party;
@@ -63,20 +66,20 @@ seller =
 
 complaintDeadline :: forall a. EscrowArgs_ext a -> Arith.Int;
 complaintDeadline
-  (EscrowArgs_ext price token paymentDeadline complaintDeadline disputeDeadline
-    mediationDeadline more)
+  (EscrowArgs_ext price token buyerParty sellerParty mediatorParty
+    paymentDeadline complaintDeadline disputeDeadline mediationDeadline more)
   = complaintDeadline;
 
 disputeDeadline :: forall a. EscrowArgs_ext a -> Arith.Int;
 disputeDeadline
-  (EscrowArgs_ext price token paymentDeadline complaintDeadline disputeDeadline
-    mediationDeadline more)
+  (EscrowArgs_ext price token buyerParty sellerParty mediatorParty
+    paymentDeadline complaintDeadline disputeDeadline mediationDeadline more)
   = disputeDeadline;
 
 mediationDeadline :: forall a. EscrowArgs_ext a -> Arith.Int;
 mediationDeadline
-  (EscrowArgs_ext price token paymentDeadline complaintDeadline disputeDeadline
-    mediationDeadline more)
+  (EscrowArgs_ext price token buyerParty sellerParty mediatorParty
+    paymentDeadline complaintDeadline disputeDeadline mediationDeadline more)
   = mediationDeadline;
 
 mediator :: SemanticsTypes.Party;
@@ -254,8 +257,8 @@ exampleArgs :: EscrowArgs_ext ();
 exampleArgs =
   EscrowArgs_ext
     (SemanticsTypes.Constant (Arith.Int_of_integer (10 :: Integer)))
-    (SemanticsTypes.Token (Stringa.implode []) (Stringa.implode []))
-    (Arith.Int_of_integer (1664812800000 :: Integer))
+    (SemanticsTypes.Token (Stringa.implode []) (Stringa.implode [])) buyer
+    seller mediator (Arith.Int_of_integer (1664812800000 :: Integer))
     (Arith.Int_of_integer (1664816400000 :: Integer))
     (Arith.Int_of_integer (1664820420000 :: Integer))
     (Arith.Int_of_integer (1664824440000 :: Integer)) ();

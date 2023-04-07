@@ -1,11 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Marlowe.Spec.Core.Serialization.Json where
 
@@ -238,12 +236,12 @@ arbitraryTransactionWarningTest i = reproducibleProperty "TransactionWarning" do
 
 arbitraryIntervalErrorTest :: InterpretJsonRequest -> TestTree
 arbitraryIntervalErrorTest i = reproducibleProperty "IntervalError" do
-  warning <- run $ generate $ genIntervalError
+  warning <- run $ generate genIntervalError
   propertyRoundtripTest i warning
 
 arbitraryTransactionErrorTest :: InterpretJsonRequest -> TestTree
 arbitraryTransactionErrorTest i = reproducibleProperty "TransactionError" do
-  txError <- run $ generate $ genTransactionError
+  txError <- run $ generate genTransactionError
   propertyRoundtripTest i txError
 
 arbitraryTransactionOutputTest :: InterpretJsonRequest -> TestTree

@@ -29,9 +29,7 @@ library
         HOL
         List
         ListTools
-        MList
         Option
-        Orderings
         OptBoundTimeInterval
         Product_Lexorder
         Product_Type
@@ -40,13 +38,19 @@ library
     exposed-modules:
         Arith
         ArithNumInstance
+        MList
         CoreOrphanEq
         Examples.Escrow
         Examples.Swap
         MarloweCoreJson
+        Orderings
+        PositiveAccounts
         Semantics
         SemanticsTypes
         SemanticsGuarantees
+        SingleInputTransactions
+        Timeout
+        TransactionBound
 
 test-suite marlowe-spec-test-suite
     default-language: Haskell2010

@@ -1,17 +1,17 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Semantics(Payment(..), equal_Payment, TransactionWarning(..),
-             equal_TransactionWarning, ReduceEffect, ReduceWarning,
-             ReduceResult, ApplyAllResult, ReduceStepResult,
-             TransactionError(..), TransactionOutputRecord_ext(..),
-             TransactionOutput(..), Transaction_ext(..), evalValue,
-             evalObservation, txOutWarnings, txOutPayments, reductionLoop,
+  Semantics(Payment(..), equal_Payment, ReduceWarning, TransactionWarning(..),
+             equal_TransactionWarning, ReduceEffect, ReduceResult,
+             ApplyAllResult, ReduceStepResult, TransactionError(..),
+             TransactionOutputRecord_ext(..), TransactionOutput(..),
+             Transaction_ext(..), evalValue, evalObservation, txOutWarnings,
+             txOutPayments, interval, inputs, reductionLoop,
              reduceContractUntilQuiescent, applyAllInputs, computeTransaction,
-             playTrace, getOutcomes, maxTimeContract, getSignatures,
-             calculateNonAmbiguousInterval, txOutState, txOutContract,
-             equal_TransactionError, equal_TransactionOutput,
-             equal_Transaction_ext)
+             playTrace, getOutcomes, isQuiescent, maxTimeContract,
+             getSignatures, calculateNonAmbiguousInterval, txOutState,
+             txOutContract, equal_ReduceResult, equal_TransactionError,
+             equal_TransactionOutput, equal_Transaction_ext)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -47,6 +47,70 @@ equal_Payment (Payment x1 x2 x3 x4) (Payment y1 y2 y3 y4) =
 
 instance Eq Payment where {
   a == b = equal_Payment a b;
+};
+
+data ReduceWarning = ReduceNoWarning
+  | ReduceNonPositivePay SemanticsTypes.Party SemanticsTypes.Payee
+      SemanticsTypes.Token Arith.Int
+  | ReducePartialPay SemanticsTypes.Party SemanticsTypes.Payee
+      SemanticsTypes.Token Arith.Int Arith.Int
+  | ReduceShadowing SemanticsTypes.ValueId Arith.Int Arith.Int
+  | ReduceAssertionFailed deriving (Prelude.Read, Prelude.Show);
+
+equal_ReduceWarning :: ReduceWarning -> ReduceWarning -> Bool;
+equal_ReduceWarning (ReduceShadowing x41 x42 x43) ReduceAssertionFailed = False;
+equal_ReduceWarning ReduceAssertionFailed (ReduceShadowing x41 x42 x43) = False;
+equal_ReduceWarning (ReducePartialPay x31 x32 x33 x34 x35) ReduceAssertionFailed
+  = False;
+equal_ReduceWarning ReduceAssertionFailed (ReducePartialPay x31 x32 x33 x34 x35)
+  = False;
+equal_ReduceWarning (ReducePartialPay x31 x32 x33 x34 x35)
+  (ReduceShadowing x41 x42 x43) = False;
+equal_ReduceWarning (ReduceShadowing x41 x42 x43)
+  (ReducePartialPay x31 x32 x33 x34 x35) = False;
+equal_ReduceWarning (ReduceNonPositivePay x21 x22 x23 x24) ReduceAssertionFailed
+  = False;
+equal_ReduceWarning ReduceAssertionFailed (ReduceNonPositivePay x21 x22 x23 x24)
+  = False;
+equal_ReduceWarning (ReduceNonPositivePay x21 x22 x23 x24)
+  (ReduceShadowing x41 x42 x43) = False;
+equal_ReduceWarning (ReduceShadowing x41 x42 x43)
+  (ReduceNonPositivePay x21 x22 x23 x24) = False;
+equal_ReduceWarning (ReduceNonPositivePay x21 x22 x23 x24)
+  (ReducePartialPay x31 x32 x33 x34 x35) = False;
+equal_ReduceWarning (ReducePartialPay x31 x32 x33 x34 x35)
+  (ReduceNonPositivePay x21 x22 x23 x24) = False;
+equal_ReduceWarning ReduceNoWarning ReduceAssertionFailed = False;
+equal_ReduceWarning ReduceAssertionFailed ReduceNoWarning = False;
+equal_ReduceWarning ReduceNoWarning (ReduceShadowing x41 x42 x43) = False;
+equal_ReduceWarning (ReduceShadowing x41 x42 x43) ReduceNoWarning = False;
+equal_ReduceWarning ReduceNoWarning (ReducePartialPay x31 x32 x33 x34 x35) =
+  False;
+equal_ReduceWarning (ReducePartialPay x31 x32 x33 x34 x35) ReduceNoWarning =
+  False;
+equal_ReduceWarning ReduceNoWarning (ReduceNonPositivePay x21 x22 x23 x24) =
+  False;
+equal_ReduceWarning (ReduceNonPositivePay x21 x22 x23 x24) ReduceNoWarning =
+  False;
+equal_ReduceWarning (ReduceShadowing x41 x42 x43) (ReduceShadowing y41 y42 y43)
+  = SemanticsTypes.equal_ValueId x41 y41 &&
+      Arith.equal_int x42 y42 && Arith.equal_int x43 y43;
+equal_ReduceWarning (ReducePartialPay x31 x32 x33 x34 x35)
+  (ReducePartialPay y31 y32 y33 y34 y35) =
+  SemanticsTypes.equal_Party x31 y31 &&
+    SemanticsTypes.equal_Payee x32 y32 &&
+      SemanticsTypes.equal_Token x33 y33 &&
+        Arith.equal_int x34 y34 && Arith.equal_int x35 y35;
+equal_ReduceWarning (ReduceNonPositivePay x21 x22 x23 x24)
+  (ReduceNonPositivePay y21 y22 y23 y24) =
+  SemanticsTypes.equal_Party x21 y21 &&
+    SemanticsTypes.equal_Payee x22 y22 &&
+      SemanticsTypes.equal_Token x23 y23 && Arith.equal_int x24 y24;
+equal_ReduceWarning ReduceAssertionFailed ReduceAssertionFailed = True;
+equal_ReduceWarning ReduceNoWarning ReduceNoWarning = True;
+
+instance Eq ReduceWarning where {
+  a == b = equal_ReduceWarning a b;
 };
 
 data TransactionWarning =
@@ -138,14 +202,6 @@ data ApplyResult =
 
 data ReduceEffect = ReduceNoPayment | ReduceWithPayment Payment
   deriving (Prelude.Read, Prelude.Show);
-
-data ReduceWarning = ReduceNoWarning
-  | ReduceNonPositivePay SemanticsTypes.Party SemanticsTypes.Payee
-      SemanticsTypes.Token Arith.Int
-  | ReducePartialPay SemanticsTypes.Party SemanticsTypes.Payee
-      SemanticsTypes.Token Arith.Int Arith.Int
-  | ReduceShadowing SemanticsTypes.ValueId Arith.Int Arith.Int
-  | ReduceAssertionFailed deriving (Prelude.Read, Prelude.Show);
 
 data ReduceResult =
   ContractQuiescent Bool [ReduceWarning] [Payment] (SemanticsTypes.State_ext ())
@@ -346,58 +402,6 @@ interval (Transaction_ext interval inputs more) = interval;
 
 inputs :: forall a. Transaction_ext a -> [SemanticsTypes.Input];
 inputs (Transaction_ext interval inputs more) = inputs;
-
-equal_ReduceWarning :: ReduceWarning -> ReduceWarning -> Bool;
-equal_ReduceWarning (ReduceShadowing x41 x42 x43) ReduceAssertionFailed = False;
-equal_ReduceWarning ReduceAssertionFailed (ReduceShadowing x41 x42 x43) = False;
-equal_ReduceWarning (ReducePartialPay x31 x32 x33 x34 x35) ReduceAssertionFailed
-  = False;
-equal_ReduceWarning ReduceAssertionFailed (ReducePartialPay x31 x32 x33 x34 x35)
-  = False;
-equal_ReduceWarning (ReducePartialPay x31 x32 x33 x34 x35)
-  (ReduceShadowing x41 x42 x43) = False;
-equal_ReduceWarning (ReduceShadowing x41 x42 x43)
-  (ReducePartialPay x31 x32 x33 x34 x35) = False;
-equal_ReduceWarning (ReduceNonPositivePay x21 x22 x23 x24) ReduceAssertionFailed
-  = False;
-equal_ReduceWarning ReduceAssertionFailed (ReduceNonPositivePay x21 x22 x23 x24)
-  = False;
-equal_ReduceWarning (ReduceNonPositivePay x21 x22 x23 x24)
-  (ReduceShadowing x41 x42 x43) = False;
-equal_ReduceWarning (ReduceShadowing x41 x42 x43)
-  (ReduceNonPositivePay x21 x22 x23 x24) = False;
-equal_ReduceWarning (ReduceNonPositivePay x21 x22 x23 x24)
-  (ReducePartialPay x31 x32 x33 x34 x35) = False;
-equal_ReduceWarning (ReducePartialPay x31 x32 x33 x34 x35)
-  (ReduceNonPositivePay x21 x22 x23 x24) = False;
-equal_ReduceWarning ReduceNoWarning ReduceAssertionFailed = False;
-equal_ReduceWarning ReduceAssertionFailed ReduceNoWarning = False;
-equal_ReduceWarning ReduceNoWarning (ReduceShadowing x41 x42 x43) = False;
-equal_ReduceWarning (ReduceShadowing x41 x42 x43) ReduceNoWarning = False;
-equal_ReduceWarning ReduceNoWarning (ReducePartialPay x31 x32 x33 x34 x35) =
-  False;
-equal_ReduceWarning (ReducePartialPay x31 x32 x33 x34 x35) ReduceNoWarning =
-  False;
-equal_ReduceWarning ReduceNoWarning (ReduceNonPositivePay x21 x22 x23 x24) =
-  False;
-equal_ReduceWarning (ReduceNonPositivePay x21 x22 x23 x24) ReduceNoWarning =
-  False;
-equal_ReduceWarning (ReduceShadowing x41 x42 x43) (ReduceShadowing y41 y42 y43)
-  = SemanticsTypes.equal_ValueId x41 y41 &&
-      Arith.equal_int x42 y42 && Arith.equal_int x43 y43;
-equal_ReduceWarning (ReducePartialPay x31 x32 x33 x34 x35)
-  (ReducePartialPay y31 y32 y33 y34 y35) =
-  SemanticsTypes.equal_Party x31 y31 &&
-    SemanticsTypes.equal_Payee x32 y32 &&
-      SemanticsTypes.equal_Token x33 y33 &&
-        Arith.equal_int x34 y34 && Arith.equal_int x35 y35;
-equal_ReduceWarning (ReduceNonPositivePay x21 x22 x23 x24)
-  (ReduceNonPositivePay y21 y22 y23 y24) =
-  SemanticsTypes.equal_Party x21 y21 &&
-    SemanticsTypes.equal_Payee x22 y22 &&
-      SemanticsTypes.equal_Token x23 y23 && Arith.equal_int x24 y24;
-equal_ReduceWarning ReduceAssertionFailed ReduceAssertionFailed = True;
-equal_ReduceWarning ReduceNoWarning ReduceNoWarning = True;
 
 refundOne ::
   [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)] ->
@@ -753,6 +757,14 @@ getOutcomes eff inp =
   List.foldl (\ acc (p, (_, m)) -> addOutcome p m acc) emptyOutcome
     (getPartiesFromReduceEffect eff ++ getPartiesFromInput inp);
 
+isQuiescent :: SemanticsTypes.Contract -> SemanticsTypes.State_ext () -> Bool;
+isQuiescent SemanticsTypes.Close state = null (SemanticsTypes.accounts state);
+isQuiescent (SemanticsTypes.When uu uv uw) ux = True;
+isQuiescent (SemanticsTypes.Pay v va vb vc vd) uz = False;
+isQuiescent (SemanticsTypes.If v va vb) uz = False;
+isQuiescent (SemanticsTypes.Let v va vb) uz = False;
+isQuiescent (SemanticsTypes.Assert v va) uz = False;
+
 maxTimeCase :: SemanticsTypes.Case -> Arith.Int;
 maxTimeCase (SemanticsTypes.Case vc contract) = maxTimeContract contract;
 
@@ -820,6 +832,21 @@ txOutContract
   (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
     txOutContract more)
   = txOutContract;
+
+equal_ReduceResult :: ReduceResult -> ReduceResult -> Bool;
+equal_ReduceResult (ContractQuiescent x11 x12 x13 x14 x15)
+  RRAmbiguousTimeIntervalError = False;
+equal_ReduceResult RRAmbiguousTimeIntervalError
+  (ContractQuiescent x11 x12 x13 x14 x15) = False;
+equal_ReduceResult (ContractQuiescent x11 x12 x13 x14 x15)
+  (ContractQuiescent y11 y12 y13 y14 y15) =
+  x11 == y11 &&
+    x12 == y12 &&
+      x13 == y13 &&
+        SemanticsTypes.equal_State_ext x14 y14 &&
+          SemanticsTypes.equal_Contract x15 y15;
+equal_ReduceResult RRAmbiguousTimeIntervalError RRAmbiguousTimeIntervalError =
+  True;
 
 equal_TransactionError :: TransactionError -> TransactionError -> Bool;
 equal_TransactionError (TEIntervalError x3) TEUselessTransaction = False;

@@ -59,7 +59,7 @@ definition less_eq_Token :: "Token \<Rightarrow> Token \<Rightarrow> bool" where
   "less_eq_Token a b = (case (a, b) of 
     (Token currencyA tokenA, Token currencyB tokenB) \<Rightarrow> 
       if currencyA < currencyB then True 
-      else if (currencyB < currencyA) then False 
+      else if currencyB < currencyA then False 
       else tokenA \<le> tokenB
     )
    "

@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE TupleSections     #-}
 
 module Marlowe.Spec.Core.Semantics
   ( tests
@@ -20,13 +21,14 @@ import Marlowe.Spec.Core.Arbitrary
     arbitraryTimeIntervalAfter,
     arbitraryValidTransactions,
     genContract,
-    genContract',
     genEnvironment,
     genState,
     genStateWithSize,
     genValue,
     genObservation,
-    greater_eq
+    greater_eq,
+    arbitraryContractWeighted,
+    genGoldenContract
   )
 import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
@@ -66,10 +68,11 @@ import SingleInputTransactions (traceListToSingleInput)
 import Test.QuickCheck (cover, withMaxSuccess)
 import Test.QuickCheck.Monadic (assert, monitor, pre, run, stop, PropertyM)
 import Test.QuickCheck.Property (counterexample)
+import Test.QuickCheck.Arbitrary (Arbitrary (..))
 import Test.Tasty (TestTree, testGroup)
 import Timeout (isClosedAndEmpty)
 import TransactionBound (maxTransactionsInitialState)
-
+import Debug.Trace
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics" [ testSemantics i , testGuarantees i ]
 
@@ -92,9 +95,9 @@ testGuarantees i = testGroup "Guarantees"
     -- playTrace_only_accepts_maxTransactionsInitialStateTest i
     -- SingleInputTransactions.thy
     -- TODO: Test skipped as it is currently taking too long
-    -- , traceToSingleInputIsEquivalentTest i
+    traceToSingleInputIsEquivalentTest i
     -- QuiescentResults.thy
-    computeTransactionIsQuiescentTest i
+    , computeTransactionIsQuiescentTest i
     -- TODO: Test skipped as it is currently taking too long
     -- , playTraceIsQuiescentTest i
     -- Timeout.thy
@@ -240,13 +243,28 @@ genContractStateAndValidTransactions interpret = do
 -- theorem traceToSingleInputIsEquivalent:
 --    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
 -- TODO: Test skipped as it is currently taking too long
-_traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
-_traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "theorem traceToSingleInputIsEquivalent"  do
-    (contractClass, contract, State_ext _ _ _ (Int_of_integer startTime) _, transactions) <- run $ generateT $ (do
-        (b,c) <- genContract' interpret `suchThat` (\(_,c) -> integer_of_nat (maxTransactionsInitialState c) > 2)
+traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
+traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "theorem traceToSingleInputIsEquivalent"  do
+    (contractClass, contract, State_ext _ _ _ (Int_of_integer startTime) _, transactions) <- run $ generateT do
+        (b,c) <- genContract'
         s <- genState interpret
+        -- This is currently getting stuck on combinations of contract and state that haven't possible actions
+        -- so the only transaction available is [].
+        -- We can put the `suchThat` for all the Gen as before, but is a waste of resources, as a perfectly valid
+        -- contract can be discarded because the state "doesnt fit".
+        -- As a first solution we should try to use a semiArbitrary version for genState. genContract' could
+        -- return as a third value the context for the contract it generates.
         t <- liftGen $ arbitraryValidTransactions s c
-        pure (b,c,s,t)) `suchThat` \(_,_,_,t) -> t /= traceListToSingleInput t
+          `suchThat` \t ->
+              let
+                t' = if (t /= traceListToSingleInput t)
+                  then
+                    trace ("Success: t = " ++ show t ++ "\ntraceListToSingleInput t = " ++ show (traceListToSingleInput t)) t
+                  else
+                    trace ("Fail: t = " ++ show t ++ "\ntraceListToSingleInput t = " ++ show (traceListToSingleInput t) ++ "\ncontract = " ++ showAsJson c) t
+              in
+                t' /= traceListToSingleInput t'
+        pure (b,c,s,t)
 
     let
         multipleInputs = PlayTrace startTime contract transactions
@@ -264,6 +282,21 @@ _traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "theorem tr
       (JSON.Success (TransactionError _), JSON.Success _) -> pre False
       (JSON.Success _ , JSON.Success (TransactionError _)) -> pre False
       _ -> fail "JSON parsing failed"
+  where
+  genContract' = frequency [(98, (True,) <$> genArbitraryContracts), (2, (False,) <$> genGoldenContract interpret)]
+  genArbitraryContracts = do
+    context <- liftGen arbitrary
+    arbitraryContractWeighted
+      [ (0, 5, 10, 70, 10, 5)    -- A good contract for this test should never start with Close
+      , (5, 10, 10, 60, 10, 5)
+      , (15, 15, 10, 35, 20, 5)
+      , (25, 20, 10, 30, 20, 5)
+      , (25, 20, 10, 30, 20, 5)
+      ]
+      context
+      interpret
+      `suchThat` (\c -> integer_of_nat (maxTransactionsInitialState c) >= 2)
+
 
 isWhen :: Contract -> Bool
 isWhen (When _ _ _) = True

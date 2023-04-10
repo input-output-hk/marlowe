@@ -21,6 +21,7 @@ module Marlowe.Spec.Core.Arbitrary
   , genEnvironment
   , genContract
   , genContract'
+  , arbitraryContractWeighted
   , genGoldenContract
   , genInterval
   , genTransaction

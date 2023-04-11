@@ -62,7 +62,10 @@ import Semantics
 import SemanticsTypes
   ( Contract (..),
     State_ext (..),
-    Value (..), Token, Case (..), Action (..)
+    Value (..),
+    Token,
+    Case (..),
+    Action (..), accounts
   )
 import SingleInputTransactions (traceListToSingleInput)
 import Test.QuickCheck (cover, withMaxSuccess)
@@ -418,7 +421,7 @@ closeIsSafeTest interpret = reproducibleProperty "theorem closeIsSafe" do
 --     shows "assetsInTransactions txs
 --          = assetsInState (txOutState out) + assetsInExternalPayments (txOutPayments out)"
 playTrace_preserves_assets :: InterpretJsonRequest -> TestTree
-playTrace_preserves_assets interpret = reproducibleProperty "Calling playTrace is quiescent" do
+playTrace_preserves_assets interpret = reproducibleProperty "Calling playTrace preserves assets" do
     (contract, State_ext _ _ _ (Int_of_integer startTime) _, transactions) <- run $ generateT $
         frequency
           [ (5, genContractStateAndValidTransactions interpret)
@@ -431,7 +434,7 @@ playTrace_preserves_assets interpret = reproducibleProperty "Calling playTrace i
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
-      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ txOutPayments txOutState _ _)) -> do
+      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ payments state _ _)) -> do
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
@@ -439,13 +442,13 @@ playTrace_preserves_assets interpret = reproducibleProperty "Calling playTrace i
                 ++ "Expected reponse to be quiescent" )
         assert $ equals_Assets
           (assetsInTransactions transactions)
-          (assetsInState txOutState `plus_Assets` assetsInExternalPayments txOutPayments)
-          (tokensInContract contract)
+          (assetsInState state `plus_Assets` assetsInExternalPayments payments)
+          (map (snd . fst) $ accounts state)
       JSON.Success (TransactionError _ ) -> pre False
       _ -> fail "JSON parsing failed!"
 
   where
-    -- TODO: export the function from Isabelle
+    -- FIXME: export the function from Isabelle
     equals_Assets :: Assets -> Assets -> [Token] -> Bool
     equals_Assets assets1 assets2 = foldl (&&) True .
       map (\tok -> integer_of_nat (assetValue tok assets1) == integer_of_nat (assetValue tok assets2))

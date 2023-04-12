@@ -5,6 +5,7 @@ module Marlowe.Spec.Interpret
   ( Request(..)
   , Response(..)
   , InterpretJsonRequest
+  , TestSpecException(..)
   , parseValidResponse
   , exactMatch
   , testResponse
@@ -13,9 +14,11 @@ module Marlowe.Spec.Interpret
 import qualified SemanticsTypes as C
 import qualified Semantics as C
 import Control.Applicative ((<|>))
+import Control.Exception.Base (Exception)
 import Data.Aeson (object, (.=), (.:), Result (..), fromJSON)
 import Data.Aeson.Types (ToJSON(..), FromJSON(..))
 import qualified Data.Aeson.Types as JSON
+import Data.Data (Typeable)
 import Marlowe.Spec.TypeId (TypeId (..))
 import Test.Tasty (TestName)
 import Test.Tasty.Providers (TestTree)
@@ -134,3 +137,6 @@ testResponse interpret testName req assertion =
 
 exactMatch :: InterpretJsonRequest -> TestName -> Request JSON.Value -> Response JSON.Value -> TestTree
 exactMatch interpret testName req expected = testResponse interpret testName req (\actual -> actual @?= expected)
+
+data TestSpecException = RequestNotImplementedException deriving (Show, Typeable)
+instance Exception TestSpecException

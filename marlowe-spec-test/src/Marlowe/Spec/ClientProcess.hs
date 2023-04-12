@@ -12,6 +12,7 @@ module Marlowe.Spec.ClientProcess
  )
 where
 
+import Control.Exception (throw)
 import Data.ByteString.Lazy.Char8 (hPutStrLn)
 import qualified Data.ByteString.Lazy.Char8 as C
 import System.Process (CreateProcess(..), StdStream(..), ProcessHandle, proc, createProcess)
@@ -20,7 +21,7 @@ import qualified Data.Aeson.Types as JSON
 import qualified Data.Aeson as JSON
 import GHC.IO.Handle (Handle)
 import Test.Tasty (TestTree, withResource, askOption)
-import Marlowe.Spec.Interpret (Request(..), Response(..))
+import Marlowe.Spec.Interpret (Request(..), Response(..), TestSpecException(..))
 import Data.Data (Typeable)
 import Test.Tasty.Options (IsOption(..), mkOptionCLParser, safeRead)
 import Options.Applicative (short)
@@ -73,6 +74,7 @@ parseJsonResponse cp = do
         Nothing -> RequestTimeOut
         Just line -> case JSON.decode $ C.pack line of
           Nothing -> ResponseFailure  "Could not parse response from the client cli"
+          Just RequestNotImplemented -> throw RequestNotImplementedException
           Just r -> r
 
     debug debugH $ show pid ++ " - Parse JSON response: " ++ C.unpack (JSON.encode res)

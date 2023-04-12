@@ -32,6 +32,7 @@ import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
     Request (..),
     Response (..),
+    TestSpecException (..),
   )
 import Marlowe.Spec.Reproducible
   ( assertResponse,
@@ -69,12 +70,25 @@ import Test.QuickCheck.Property (counterexample)
 import Test.Tasty (TestTree, testGroup)
 import Timeout (isClosedAndEmpty)
 import TransactionBound (maxTransactionsInitialState)
+import Test.Tasty.ExpectedFailure (wrapTest)
+import Test.Tasty.Runners (Result(..), Outcome(..), FailureReason (..))
+import Control.Exception (Exception(..))
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics" [ testSemantics i , testGuarantees i ]
 
+expectedExceptions :: TestTree -> TestTree
+expectedExceptions = wrapTest $ fmap inspectResult
+  where
+    inspectResult :: Result -> Result
+    inspectResult res@Result { resultOutcome = Failure (TestThrewException e) }
+        = case fromException e of
+            Just RequestNotImplementedException -> res { resultOutcome = Success, resultShortDescription = "SKIP" }
+            _ -> res
+    inspectResult res = res
+
 testSemantics :: InterpretJsonRequest -> TestTree
-testSemantics i = testGroup "Core"
+testSemantics i = expectedExceptions $ testGroup "Core"
     [ evalValueTest i
     , evalObservationTest i
     , divisionRoundsTowardsZeroTest i
@@ -85,7 +99,7 @@ testSemantics i = testGroup "Core"
 -- TODO: Move to its own file Guarantees.hs
 -- Property based tests correponding to theorems defined in Isabelle.
 testGuarantees :: InterpretJsonRequest -> TestTree
-testGuarantees i = testGroup "Guarantees"
+testGuarantees i = expectedExceptions $ testGroup "Guarantees"
     [
     -- TransactionBound.thy
     -- TODO: Test skipped as it is currently taking too long

@@ -13,9 +13,10 @@ import Test.QuickCheck.Gen (Gen(..))
 import Test.Tasty (TestName, TestTree)
 import Test.QuickCheck.Monadic (PropertyM, monadic', run, assert, monitor)
 import Test.Tasty.QuickCheck (testProperty)
-import Marlowe.Spec.Interpret (InterpretJsonRequest, Request, Response (..))
+import Marlowe.Spec.Interpret (InterpretJsonRequest, Request, Response)
 import qualified Data.Aeson as JSON
 import Marlowe.Utils (showAsJson)
+
 
 newtype ReproducibleTest a = ReproducibleTest (StateT QCGen IO a)
   deriving (Functor, Applicative, Monad, MonadState QCGen, MonadIO)
@@ -40,6 +41,7 @@ generateT gt = do
   let
     MkGen iog = runGenT gt
   liftIO $ iog oldGen 30
+
 
 assertResponse :: MonadIO m => InterpretJsonRequest -> Request JSON.Value -> Response JSON.Value -> PropertyM m ()
 assertResponse interpret req successResponse = do

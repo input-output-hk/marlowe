@@ -138,7 +138,7 @@ subsection \<open>All Contracts Have a Maximum Time\label{sec:max-time-guarantee
 text \<open>If one sends an empty transaction with time equal to @{const maxTimeContract}, then the
 contract will close.\<close>
 
-text \<open>@{thm [mode=Rule,names_short] timedOutTransaction_closes_contract}\<close>
+text \<open>@{thm [display,names_short, margin=40] timedOutTransaction_closes_contract}\<close>
 
 subsection \<open>Contract Does Not Hold Funds After it Closes\<close>
 

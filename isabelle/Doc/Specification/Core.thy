@@ -51,10 +51,6 @@ with the time interval of @{term Environment} \secref{sec:state-and-env} to yiel
 time for the new state that will result from applying the transaction. It throws an error if the
 interval is nonsensical or in the past.\<close>
 
-text \<open>
-@{datatype [display,names_short, margin=40]IntervalResult}
-\<close>
-
 (* FIXME: synonim are expanding *)
 text \<open>@{code_stmts fixInterval constant: fixInterval (Haskell)}\<close>
 
@@ -108,12 +104,21 @@ subsection \<open>Utilities\label{sec:accountutilities}\<close>
 
 text \<open>The @{const moneyInAccount}, @{const updateMoneyInAccount}, and @{const addMoneyToAccount}
 functions read, write, and increment the funds in a particular account of the @{term State},
-respectively. The @{const giveMoney} function transfer funds internally between accounts. The
-@{const refundOne} function finds the first account with funds in it.\<close>
+respectively.\<close>
 text \<open>@{code_stmts moneyInAccount constant: moneyInAccount (Haskell)}\<close>
 text \<open>@{code_stmts updateMoneyInAccount constant: updateMoneyInAccount (Haskell)}\<close>
 text \<open>@{code_stmts addMoneyToAccount constant: addMoneyToAccount (Haskell)}\<close>
+
+(* TODO: This will become clearer after refactoring the semantics as literal programming PLT-3761 *)
+text \<open>The @{const giveMoney} function is used in @{const reduceContractStep} to execute a Payment.
+It takes as arguments the Party to remove funds from, the Payee to pay to, the amount and token to pay 
+and the state accounts. It returns the Payment as a Reduce effect and the new state accounts.
+
+\<close>
 text \<open>@{code_stmts giveMoney constant: giveMoney (Haskell)}\<close>
+
+text \<open>The @{const refundOne} function is also used inside @{const reduceContractStep}. It receives
+the state accounts, and returns the first account with funds and the rest of the accounts.\<close>
 text \<open>@{code_stmts refundOne constant: refundOne (Haskell)}\<close>
 
 subsection \<open>Evaluate Value\label{sec:evalvalue}\<close>
@@ -153,9 +158,9 @@ text \<open>@{thm evalValue_SubValue}\<close>
 
 subsubsection \<open>Negation\<close>
 
-text \<open>For every value \<^emph>\<open>x\<close> there is the complement \<^emph>\<open>NegValue x\<close> so that\<close>
+text \<open>For the \<^emph>\<open>NegValue\<close> case, @{const evalValue} will evaluate the inner value and negate it\<close>
 
-text \<open>@{thm evalNegValue}\<close>
+text \<open>@{thm evalValue_NegValue}\<close>
 
 subsubsection \<open>Multiplication\<close>
 
@@ -165,7 +170,7 @@ text \<open>@{thm evalValue_MulValue}\<close>
 
 subsubsection \<open>Division\<close>
 
-text \<open>Division is a special case because we only evaluate to natural numbers:
+text \<open>Division is a special case because we only evaluate to integers:
 \<^item> If the denominator is 0, the result is also 0. Other languages uses NaN or Infinity to represent this case
 \<^item> The result will be rounded towards zero.\<close>
 
@@ -193,7 +198,7 @@ text \<open>@{thm evalValue_TimeIntervalEnd}\<close>
 
 subsubsection \<open>Use Value\<close>
 
-text \<open>For the \<^emph>\<open>TimeIntervalEnd\<close> case, @{const evalValue} will look in its state for a bound @{typ ValueId}.
+text \<open>For the \<^emph>\<open>UseValue\<close> case, @{const evalValue} will look in its state for a bound @{typ ValueId}.
 It will default to zero if it doesn't find it.\<close>
 
 text \<open>@{thm evalValue_UseValue}\<close>

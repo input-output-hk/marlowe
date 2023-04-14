@@ -6,14 +6,6 @@ lemma valid_state_valid_accounts : "valid_state state \<Longrightarrow> valid_ma
   apply (cases state)
   by simp
 
-lemma valid_state_valid_choices : "valid_state state \<Longrightarrow> valid_map (choices state)"
-  apply (cases state)
-  by simp
-
-lemma valid_state_valid_boundValues : "valid_state state \<Longrightarrow> valid_map (boundValues state)"
-  apply (cases state)
-  by simp
-
 lemma refundOne_preserves_valid_map_accounts :
   "valid_map oldAccounts \<Longrightarrow>
    refundOne oldAccounts = Some ((party, money), newAccounts)
@@ -25,8 +17,7 @@ lemma refundOne_preserves_valid_map_accounts :
 lemma reductionStep_preserves_valid_state_Refund :
   "valid_state state \<Longrightarrow>
    reduceContractStep env state Close = Reduced wa ef newState newCont \<Longrightarrow>
-   state = \<lparr>accounts = oldAccounts, choices = oldChoices, boundValues = oldBoundValues, minTime = oldMinTime\<rparr> \<Longrightarrow>
-   newState = \<lparr>accounts = newAccounts, choices = newChoices, boundValues = newBoundValues, minTime = newMinTime\<rparr> \<Longrightarrow>
+   state = \<lparr>accounts = oldAccounts, choices = oldChoices, boundValues = oldBoundValues, minTime = oldMinTime\<rparr> \<Longrightarrow>   
    valid_state newState"
   apply (cases "refundOne oldAccounts")
   using refundOne_preserves_valid_map_accounts by auto
@@ -157,25 +148,18 @@ lemma fixInterval_preserves_valid_state :
   apply (simp del:valid_state.simps add:Let_def)
   by auto
 
-lemma computeTransaction_preserves_valid_state_aux :
-  "valid_state state \<Longrightarrow>
-   computeTransaction  \<lparr>interval = intervalI, inputs = inputsI\<rparr> state cont
-      = TransactionOutput \<lparr>txOutWarnings = txOutWarningsO, txOutPayments = txOutPaymentsO, txOutState = txOutStateO, txOutContract = txOutContractO\<rparr> \<Longrightarrow>
-   valid_state (txOutStateO)"
+theorem computeTransaction_preserves_valid_state :
+   "valid_state state \<Longrightarrow> computeTransaction tran state cont = TransactionOutput out \<Longrightarrow> valid_state (txOutState out)"
   apply (simp only:computeTransaction.simps Let_def)
-  apply (cases "fixInterval (interval \<lparr>interval = intervalI, inputs = inputsI\<rparr>) state")
+  apply (cases "fixInterval (interval tran) state")
   apply (simp only:IntervalResult.case)
   subgoal for env sta
-    apply (cases "applyAllInputs env sta cont (inputs \<lparr>interval = intervalI, inputs = inputsI\<rparr>)")
+    apply (cases "applyAllInputs env sta cont (inputs tran)")
     apply (simp only:ApplyAllResult.case)
     apply (metis TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) applyAllInputs.simps applyAllLoop_preserves_valid_state fixInterval_preserves_valid_state small_lazy'.cases)
     apply simp
     by simp
   by simp
-
-lemma computeTransaction_preserves_valid_state :
-  "valid_state state \<Longrightarrow> computeTransaction tran state cont = TransactionOutput out \<Longrightarrow> valid_state (txOutState out) "
-  by (metis (full_types) Transaction.surjective TransactionOutputRecord.surjective computeTransaction_preserves_valid_state_aux old.unit.exhaust)
 
 lemma playTraceAux_preserves_valid_state :
   "valid_state (txOutState txIn) \<Longrightarrow>
@@ -191,7 +175,7 @@ lemma empty_state_valid_state :
   "valid_state (emptyState sl)"
   by (metis MList.valid_empty State.select_convs(1) State.select_convs(2) State.select_convs(3) emptyState.elims valid_state.simps)
 
-lemma playTrace_preserves_valid_state :
+theorem playTrace_preserves_valid_state :
   "playTrace sl c transList = TransactionOutput txOut \<Longrightarrow>
    valid_state (txOutState txOut)"
   apply (simp only:playTrace.simps)

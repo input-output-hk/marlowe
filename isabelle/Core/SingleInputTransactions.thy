@@ -35,11 +35,11 @@ lemma reductionLoopIdempotent :
     by simp
   done
 
-lemma reduceContractUntilQuiescentIdempotent :           
+lemma reduceContractUntilQuiescentIdempotent :
   "reduceContractUntilQuiescent env state contract = ContractQuiescent reducedAfter wa pa nsta ncont \<Longrightarrow>
    reduceContractUntilQuiescent env nsta ncont = ContractQuiescent False [] [] nsta ncont"
   apply (simp only:reduceContractUntilQuiescent.simps)
-  using reductionLoopIdempotent by blast 
+  using reductionLoopIdempotent by blast
 
 lemma applyAllLoopEmptyIdempotent :
   "applyAllLoop reducedBefore env sta cont [] a b = ApplyAllSuccess reducedAfter wa pa nsta ncont \<Longrightarrow>
@@ -124,7 +124,7 @@ lemma applyLoopIdempotent :
       using applyLoopIdempotent_base_case by auto
     by simp
   by simp
- 
+
  lemma applyLoopIdempotent_base_case2 :
    "applyAllLoop reducedBefore env sta cont [] twa tef = ApplyAllSuccess reducedAfter wa pa nsta ncont \<Longrightarrow>
    applyAllLoop reducedAfter env nsta ncont t [] [] = ApplyAllSuccess reducedAfter2 nwa npa fsta fcont \<Longrightarrow>
@@ -650,7 +650,7 @@ lemma applyAllLoop_longer_doesnt_grow :
   subgoal for reducedBefore env sta cont t wa pa reducedAfter1 cwa1 pa1 sta1 cont1 reducedAfter2 cwa2 pa2 sta2 cont2
   apply (subst (asm) applyAllLoop.simps)
   apply (subst (asm) applyAllLoop.simps[of reducedBefore env sta cont "[] @ t"])
-  apply (cases "reduceContractUntilQuiescent env sta cont")   
+  apply (cases "reduceContractUntilQuiescent env sta cont")
   apply (simp only:ReduceResult.case)
   apply (simp only:list.case append_Nil)
   subgoal for reducedAfter wa pa nsta ncont
@@ -659,7 +659,7 @@ lemma applyAllLoop_longer_doesnt_grow :
     apply blast
     apply (simp only:list.case)
     subgoal for head tail
-      apply (cases "applyInput env nsta head ncont")  
+      apply (cases "applyInput env nsta head ncont")
       apply (simp only:ApplyResult.case)
       apply (metis ApplyAllResult.inject applyAllLoop_only_makes_smaller applyInput_only_makes_smaller less_le_trans not_le_imp_less order.asym)
       by simp
@@ -858,7 +858,7 @@ lemma computeTransactionStepEquivalence :
             apply (simp only:IntervalResult.case Let_def)
             subgoal for fIenv3 fIsta3
               apply (cases "applyAllInputs fIenv3 fIsta3 icont rest")
-              apply (simp only:ApplyAllResult.case) 
+              apply (simp only:ApplyAllResult.case)
               subgoal for reducedAfter3 cwa3 pa3 sta3 con3
                 apply (cases "\<not> reducedAfter3 \<and> (icont \<noteq> Close \<or> accounts ista = [])")
                  apply (simp del:fixInterval.simps computeTransaction.simps applyAllInputs.simps only:refl if_False)
@@ -974,7 +974,7 @@ lemma fixInterval_idemp_after_computeTransaction :
    fixInterval interv ista = IntervalTrimmed env ista"
   by (simp add: applyInput_preserves_minTime fixInterval_idemp_on_same_minTime reductionLoop_preserves_minTime)
 
-lemma applyAllLoop_independet_of_acc_error1 :
+lemma applyAllLoop_independent_of_acc_error1 :
   "applyAllLoop reducedBefore env sta cont htail wa pa = ApplyAllNoMatchError \<Longrightarrow>
    applyAllLoop reducedBefore env sta cont htail wa2 pa2 = ApplyAllNoMatchError"
   apply (induction htail arbitrary: reducedBefore env sta cont wa pa wa2 pa2)
@@ -984,7 +984,7 @@ lemma applyAllLoop_independet_of_acc_error1 :
     by (auto split:ReduceResult.split ApplyResult.split simp del:applyAllLoop.simps)
   done
 
-lemma applyAllLoop_independet_of_acc_error2 :
+lemma applyAllLoop_independent_of_acc_error2 :
   "applyAllLoop reducedBefore env sta cont htail wa pa = ApplyAllAmbiguousTimeIntervalError \<Longrightarrow>
    applyAllLoop reducedBefore env sta cont htail wa2 pa2 = ApplyAllAmbiguousTimeIntervalError"
   apply (induction htail arbitrary: reducedBefore env sta cont wa pa wa2 pa2)
@@ -1051,8 +1051,8 @@ lemma computeTransactionStepEquivalence_error :
                   apply (smt ApplyAllResult.simps(8) ApplyResult.distinct(1) ApplyResult.simps(4) ReduceResult.simps(4) append.assoc append_self_conv applyAllInputsPrefix1 applyAllInputsPrefix2 applyAllLoop.simps applyAllLoopJustAppendsWarningsAndEffects applyInput.simps(2) list.simps(5) reduceContractUntilQuiescentIdempotent)
                  apply simp
                 by auto
-               apply (metis (no_types, lifting) ApplyAllResult.simps(9) ApplyResult.simps(4) ReduceResult.simps(4) applyAllLoop.simps applyAllLoop_independet_of_acc_error1 list.simps(5) reduceContractUntilQuiescentIdempotent)
-              by (metis (no_types, lifting) ApplyAllResult.simps(10) ApplyResult.simps(4) ReduceResult.simps(4) applyAllLoop.simps applyAllLoop_independet_of_acc_error2 list.simps(5) reduceContractUntilQuiescentIdempotent)
+               apply (metis (no_types, lifting) ApplyAllResult.simps(9) ApplyResult.simps(4) ReduceResult.simps(4) applyAllLoop.simps applyAllLoop_independent_of_acc_error1 list.simps(5) reduceContractUntilQuiescentIdempotent)
+              by (metis (no_types, lifting) ApplyAllResult.simps(10) ApplyResult.simps(4) ReduceResult.simps(4) applyAllLoop.simps applyAllLoop_independent_of_acc_error2 list.simps(5) reduceContractUntilQuiescentIdempotent)
             using reduceContractUntilQuiescentIdempotent by auto
           by simp
         by simp
@@ -1211,14 +1211,6 @@ lemma transactionPrefixForSingleInput : "h # t = traceListToSingleInput nt \<Lon
   done
 
 
-lemma traceListToSingleInput_isSingleInput : "\<lparr>interval = inte, inputs = inp_h # inp_t\<rparr> # t = traceListToSingleInput t2 \<Longrightarrow> inp_t \<noteq> [] \<Longrightarrow> False"
-  apply (induction t2 rule:traceListToSingleInput.induct)
-  apply simp_all
-  subgoal for si inps rest
-    apply (induction si inps rule:inputsToTransactions.induct)
-    by simp_all
-  done
-
 fun isSingleInput :: "Transaction list \<Rightarrow> bool" where
 "isSingleInput [] = True" |
 "isSingleInput (h # t) = (length (inputs h) \<le> 1 \<and> isSingleInput t)"
@@ -1234,5 +1226,5 @@ lemma inputToTransactions_isSingleInput : "isSingleInput (inputsToTransactions s
 lemma traceListToSingleInput_isSingleInput2 : "isSingleInput (traceListToSingleInput t)"
   apply (induction t rule:traceListToSingleInput.induct)
   by (simp_all add: inputToTransactions_isSingleInput isSingleInput_dist_with_append)
-    
+
 end

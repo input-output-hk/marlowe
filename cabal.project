@@ -10,6 +10,6 @@ test-show-details: streaming
 source-repository-package
   type: git
   location: https://github.com/yveshauser/tasty
-  tag: c0bfa0e80e7170ab1e1827f97e20584a977ed00a
-  --sha256: 0j82mm1xmwpwpyay3mwkw0fc3fq7j7hjpyjjk3wsl09g2mrmhgwd
+  tag: 532cd953571e1dd1192bdfece6ee1143ebe488e3
+  --sha256: 0n80kzna764kisw5h7a9llxxqm3gcj5sgika6gamnrhkmfg2bmaz
   subdir: quickcheck

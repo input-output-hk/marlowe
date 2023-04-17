@@ -1393,7 +1393,7 @@ Commit [d1477610](https://github.com/input-output-hk/marlowe-cardano/commit/d147
 > 
 > Some constraints mentioned in the specification are written in a different structure than the corresponding constraint in `Scripts.hs`. While such a discrepancy may be useful to minimize verbosity, a unified structure when possible would alleviate a side-by-side comparison. Examples of these differing structures include Constraint 6 and Constraint 14.
 
-The discrepancies of implementation between the constraints in the specification and the Plutus code result from the emphasis on readability in the specification and of efficiency in the implementation. The need to minimize of validator size and execution cost in the implementation has sometimes resulted in less concise or less readable code. Note that the Plutus compiler can be quite sensitive to the precise expression of a constraint as Haskell code.
+The discrepancies of implementation between the constraints in the specification and the Plutus code result from the emphasis on readability in the specification and of efficiency in the implementation. The need to minimize the validator size and execution cost in the implementation has sometimes resulted in less concise or less readable code. Note that the Plutus compiler can be quite sensitive to the precise expression of a constraint as Haskell code.
 
 
 ### 2.6.11 Missing argument of `computeTransaction` *(Severity: Low)*

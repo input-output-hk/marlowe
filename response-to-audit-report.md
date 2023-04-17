@@ -33,7 +33,7 @@ We thank the High Assurance Software Group at Tweag for their diligent and exper
 
 ## Overview of Isabelle Changes
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here.
 
 
 ## Overview of Changes to Marlowe-Cardano Specification and Haskell (Plutus) Implementation
@@ -116,7 +116,7 @@ Although this `Eq` instance is not used by the Marlowe validators (so it does no
 > 
 > Money preservation is a property stated with an equality. The left hand side is the sum of the deposits done by a list of transactions. The right hand side of the equality is the sum of all the payments done in the same list of transactions. Each sum, in turn, is represented as a single integer which aggregates the amounts of the various payments and deposits, irrespective of what currencies correspond to these amounts.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.1.5 Insufficient documentation of Money preservation *(Severity: Medium)*
@@ -125,7 +125,7 @@ Although this `Eq` instance is not used by the Marlowe validators (so it does no
 > 
 > Money preservation is formulated in terms of functions that are not discussed in the specification. It is necessary to explain the meaning of these functions in sufficient detail so readers can understand the property.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.1.6 Missing description of Merkleization *(Severity: High)*
@@ -140,7 +140,7 @@ Although this `Eq` instance is not used by the Marlowe validators (so it does no
 > 2.  If a merkleized case input is applied successfully, it implies that the contract hash in the input corresponds to the continuation of the contract.
 > 3.  Merkleizing and unmerkleizing a contract gives back the original contract.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.1.7 Positive balances are not checked for the output state *(Severity: High)*
@@ -209,7 +209,7 @@ Again as previously, the relevant commits are [0a890845](https://github.com/inpu
 > 
 > Some lemmas rely on this behavior to have equalities hold even in cases of errors, but the cost is that the meaning is so surprising that the reader may be confused by it. It would be more reliable to have explicit and weaker lemmas that assert equalities only when there are no errors.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.1.12 Different insertion functions used in Isabelle and Haskell code *(Severity: High)*
@@ -255,7 +255,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > Choices can only be changed when evaluating `When` statements. This is something only evident after looking at the implementation of `computeTransaction`. It needs to be discussed when first introducing choices and the `When` contract.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.2 Undefined reference *(Severity: Low)*
@@ -264,7 +264,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > There is an undefined reference.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.3 Lack of explanation for necessity of `Environment` type *(Severity: Low)*
@@ -273,7 +273,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > An `Environment` type is introduced, but it is unclear why it is needed as it is defined as a synonym for time intervals.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.4 Unclear meaning of execution environment *(Severity: Low)*
@@ -288,7 +288,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > One has to infer that evaluating a Marlowe contract is undefined if it does not happen within a transaction, as otherwise the description of the execution environment would not make sense. It would be necessary to establish more explicitly the relationship between the contract evaluation and the notion of transaction.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.5 Unexplained interval data types *(Severity: Low)*
@@ -297,7 +297,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The meaning of the data types `IntervalError` and `IntervalResult` needs to be explained.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.6 Incomplete explanation for `TransactionOutput` *(Severity: Low)*
@@ -308,7 +308,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The purpose of these types needs to be made explicit so it can be checked if the code is doing what is intended.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.7 Code snippets switch languages *(Severity: Low)*
@@ -317,7 +317,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The specification changes from using Isabelle to using Haskell henceforth. Making the reader aware of the criteria for the language change would help maintaining the document.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.8 Repeated definition of `IntervalResult` *(Severity: Low)*
@@ -326,7 +326,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The `IntervalResult` type is defined twice in the specification. One should be removed.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.9 Poorly named variable `newAccount` *(Severity: Low)*
@@ -335,7 +335,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > In the implementation of the function `reduceContractStep`, the variable `newAccount` should be named `newAccounts`.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.10 Poorly named variable `acc` in specification *(Severity: Low)*
@@ -344,7 +344,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > On the last equation of `applyCases`, `acc` should be named `input`.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.11 Inaccurate specification of `giveMoney` *(Severity: Low)*
@@ -361,7 +361,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This function is confusing in that it takes the account identifier of the paying account which is not used for anything other than filling a field in the returned value.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.12 Redundant evaluation in `addMoneyToAccount` *(Severity: Low)*
@@ -370,7 +370,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > `addMoneyToAccount` is redundantly evaluating `money <= 0` when invoking `updateMoneyInAccount`. The else branch could be replaced instead with `insert (accId, token) money accountsV`.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.13 Redundant statement regarding addition *(Severity: Low)*
@@ -383,7 +383,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > or remove the redundant statement.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.14 Missing implementation for negation case of `evalValue` *(Severity: Low)*
@@ -392,7 +392,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > Negation for `evalValue` does not show the implementation, just one lemma about `NegValue`, which is inconsistent with how other operations are presented.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.15 Missing parentheses in `div` specification *(Severity: Low)*
@@ -401,7 +401,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > On page 25 formula $$c \neq 0 \Rightarrow c \mathbin{∗} a \mathbin{\mathrm{div}} (c \mathbin{∗} b) = a \mathbin{\mathrm{div}} b$$ needs additional parentheses around the term $c \mathbin{∗} a$, otherwise it can be parsed as $$c \neq 0 \Rightarrow c \mathbin{∗} (a \mathbin{\mathrm{div}} (c \mathbin{∗} b)) = a \mathbin{\mathrm{div}} b$$ which does not hold (Counter-example: $c=2, a=3, b=2$). The lemma `divMultiply` in the file `Semantics.thy` does use extra parentheses around $c \mathbin{∗} a$.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.16 Unclear division explanation *(Severity: Low)*
@@ -414,7 +414,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The meaning of this statement needs to be further explained, since the arguments of `DivValue` could evaluate to negative numbers.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.17 Discrepancy with `evalValue` *(Severity: Low)*
@@ -425,7 +425,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > Moreover, the definition of `evalValue` is juxtaposed with some lemmas about its behavior (for example, `AddValue` being associative and commutative), making it harder to match the specification text with the Isabelle code.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.18 Missing `evalValue` lemmas in specification *(Severity: Low)*
@@ -434,7 +434,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > Not all lemmas about `evalValue` are listed in the specification. The absent lemmas include `evalDoubleNegValue`, `evalMulValue`, `evalSubValue`, and all division lemmas.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.19 Typo in **Use Value** case of `evalValue` *(Severity: Low)*
@@ -443,7 +443,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The **Use Value** case mentions `TimeIntervalEnd` instead of `UseValue`.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.20 Unexplained parameters of `playTrace` *(Severity: Low)*
@@ -452,7 +452,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The parameters of the function `playTrace` need to be explained.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.21 Type parameter discrepancy in `playTrace` *(Severity: Low)*
@@ -461,7 +461,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The first parameter of `playTrace` in the specification is `int`, while it is `POSIXTime` in the code. Even though the latter is an alias for the former, it is beneficial to use the `POSIXTime` name both for consistency and readability.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.22 Money preservation on failing transactions not specified *(Severity: Low)*
@@ -472,7 +472,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This is not a concern in practice because the lists of transactions that fail to evaluate are not accepted in the blockchain. However, this should be made explicit in the explanation of the property.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.23 Complicated definition of `allAccountsPositive` *(Severity: Low)*
@@ -481,7 +481,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The definition of\ `allAccountsPositive` is complicated and can be refactored as `all ((_, money) -> money > 0)`.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.24 Discrepancy with Isabelle code for `allAccountsPositive` *(Severity: Low)*
@@ -490,7 +490,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The `allAccountsPositive` function is defined differently in the specification and in the Isabelle code, although both definitions show the same behavior. These definitions need to be consolidated.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.25 Misleading or incorrect formula for contract not holding funds *(Severity: Low)*
@@ -499,7 +499,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The statement in natural language looks unconnected from the proposed formula. Otherwise, it is unclear how not holding funds forever is a consequence of producing no warnings.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.26 Different format for lemma statement *(Severity: Low)*
@@ -508,7 +508,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The lemma is stated using the proof derivation tree format as opposed to the rest of the specification and the Isabelle code.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.27 Function `isClosedAndEmpty` is unexplained *(Severity: Low)*
@@ -517,7 +517,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The function `isClosedAndEmpty` needs to be explained.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.28 Top-down definitions *(Severity: Low)*
@@ -526,7 +526,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > In Section 2, the order of definitions is reversed, and the reader is thus faced with functions which call other functions that have not been introduced yet, despite the claim in Section 1.3 that the definitions will be presented bottom-up.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.2.29 No mention of Isabelle lemmas in specification *(Severity: Low)*
@@ -535,7 +535,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > Generally, readability can be improved by mentioning the Isabelle lemma names alongside their statements. This way, it would be much easier to search for the actual Isabelle code and proofs matching the informal specification text, and compare the two.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ## 2.3 Lemmas and proofs
@@ -557,7 +557,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > -   in `MoneyPreservation.thy`, lemmas `reduceContractStep_preserves_money` and\ `reductionLoop_preserves_money`
 > -   in `SingleInputTransactions.thy`, lemmas `applyAllInputsPrefix_aux`,\ `computeTransactionIterative`, and `computeTransactionStepEquivalence_error`
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.2 Long lines in lemmas *(Severity: Low)*
@@ -575,7 +575,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > -   in `TimeRange.thy`, lemmas `reduceStep_ifCaseLtCt` and `reduceLoop_ifCaseLtCt`
 > -   in `ValidState.thy`, lemma `reductionLoop_preserves_valid_state_aux`
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.3 Confusing auxiliary lemmas *(Severity: Low)*
@@ -589,7 +589,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > -   in `PositiveAccounts.thy`, lemma `positiveMoneyInAccountOrNoAccountImpliesAllPositive_aux2`
 > -   in `SingleInputTransactions.thy`, lemma `applyAllInputsPrefix_aux`
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.4 Undescriptive variable names *(Severity: Low)*
@@ -604,7 +604,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > -   in `ValidState.thy`, lemma `reductionLoop_preserves_valid_state_aux`
 > -   in `TimeRange.thy`, lemmas `resultOfReduceIsCompatibleToo`, `resultOfReductionLoopIsCompatibleToo`, `resultOfReduceUntilQuiescentIsCompatibleToo`, `reduceLoop_ifCaseLtCt`, and\ `reduceContractUntilQuiescent_ifCaseLtCt`
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.5 Involved proof of `insert_valid` *(Severity: Low)*
@@ -639,7 +639,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The proofs of the lemmas can be found in […].
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.6 Repeated verbose expression *(Severity: Low)*
@@ -659,7 +659,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > is large and used in other lemmas as well. It would need to be moved to a separate function to save the effort of reading it repeteadly.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.7 Inconsistent variable name `valTrans` *(Severity: Low)*
@@ -668,7 +668,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The lemma uses a variable `valTrans` where other proofs use the name `paidMoney`. To convey the meaning of the variable faster, the same name should be used consistently in all places.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.8 Unused binding `interAccs` *(Severity: Low)*
@@ -677,7 +677,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The binding `interAccs` was probably intended to be used on this line. It should either be used or removed from the premise.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.9 Undescriptive variable name `acc` *(Severity: Low)*
@@ -686,7 +686,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This lemma has a variable `acc` that is used together with `tok2`. It would be more descriptive to call it `accId2`.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.10 Misleading indentation *(Severity: Low)*
@@ -695,7 +695,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The indentation is misleading: the premises on these lines are indented as if they are a part of the previous functional premise.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.11 Missing theorem regarding `playTrace` *(Severity: Low)*
@@ -704,7 +704,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > There is no theorem that `playTrace` keeps the state valid and positive when given a state which is valid and positive. This trivially follows from `playTraceAux_preserves_validAndPositive_state` but no such theorem is present.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.12 Unconcise goal in `reduceContractStepPayIsQuiescent` *(Severity: Low)*
@@ -714,7 +714,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > This lemma does not express its goal concisely, as it makes no mention of `reduceContractStep` in the formulation. Changing the first assumption to $\texttt{reduceContractStep}\ \mathit{env}\ \mathit{sta}\ (\texttt{Pay}\ \mathit{x21}\ \mathit{x22}\ \mathit{tok}\ \mathit{x23}\ \mathit{x24})$ makes more explicit in which contexts this lemma can be useful. Modifying this assumption requires an additional `apply simp` to be added to the proof (before line 30) for the lemma to go through. Further, an additional `apply simp` will need to be added in lemmas `reduceContractStepIsQuiescent` (before line 44) and `timedOutReduce_only_quiescent_in_close` (`Timeout.thy`, before line 128) as well.
 
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 ### 2.3.13 Misleading lemma names *(Severity: Low)*
 
@@ -730,7 +730,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This lemma should be renamed as `applyAllInputs_decreases_maxTransactions` or `applyAllInputs_reduced_decreases_maxTransactions`.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.14 Misleading variable name `reduced` *(Severity: Low)*
@@ -739,7 +739,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The boolean variable name `reduce` would be better named `reduced` as it is signifying that the contract has been reduced.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.15 Undescriptive name `beforeApplyAllLoopIsUseless` *(Severity: Low)*
@@ -750,7 +750,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > A more descriptive name for this lemma could be `reduceContractUntilQuiescent_hasNoEffect_before_applyAllLoop`
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.16 Unused and undocumented lemmas *(Severity: Low)*
@@ -768,7 +768,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 >     2.  Line 13, lemma `valid_state_valid_valueBounds`
 > 5.  In file `SingleInputTransactions.thy`, line 1214, lemma `traceListToSingleInput_isSingleInput`. It is mentioned in a commented out line in `StaticAnalysis.thy`. Furthermore, the lemma can be expressed more concisely as `$$\llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = \mathit{inp\_h}\ \#\ \mathit{inp\_t} \rrparenthesis\ \#\ t = \mathit{traceListToSingleInput}\ \mathit{t2} % \mathrel{% \mbox{\fontfamily{cmr}\fontencoding{OT1}\selectfont=}}% \joinrel\Rightarrow\mathit{inp\_t} = []$$`
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.17 Redundant `reduceContractStep` lemmas *(Severity: Low)*
@@ -777,7 +777,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This lemma is weaker than `transferMoneyBetweenAccounts_preserves`. If we replace its usage at line 351 with `transferMoneyBetweenAccounts_preserves`, the proof goes through.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.18 Redundant `transferMoneyBetweenAccounts_preserves` *(Severity: Low)*
@@ -799,7 +799,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 >   using transferMoneyBetweenAccounts_preserves validAndPositive_state.simps by auto
 > ```
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.19 Duplicated lemmas *(Severity: Low)*
@@ -812,7 +812,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This lemma is defined twice, once in each of these files. One of them should be removed.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.20 Redundant `computeTransaction` lemmas *(Severity: Low)*
@@ -821,7 +821,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > If `computeTransaction_preserves_valid_state_aux` is rewritten to have the same formulation as `computeTransaction_preserves_valid_state`, then the lemma (with the exact same proof) is still accepted, and these lemmas become duplicates of each other. Thus, no auxiliary lemma is needed.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.21 Complicated formulation of `updateMoneyInAccount_money2_aux` *(Severity: Low)*
@@ -848,7 +848,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 >   cases "moneyInAccount accId tok ((thisAccIdTok, money) # tail) |$\leq$| 0"
 > ```
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.22 Complicated proofs that can be simplified *(Severity: Low)*
@@ -901,7 +901,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This pattern appears many times in this file. For example, in the `Party` instantation alone, it is present on lines 51 -- 53, 56 -- 57, 77 -- 80, and 83 -- 84.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.23 Inconsistent style when applying constructor *(Severity: Low)*
@@ -910,7 +910,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The lines mentioned in these lemmas display the resulting constructor before the function application, which differs from the general style in the rest of the codebase.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.24 Unsimplified boolean formulas *(Severity: Low)*
@@ -919,7 +919,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > In multiple places, this lemma formulation includes top-level negation in front of nontrivial conjunctions and disjunctions. These negations should be distributed. Otherwise, the reader is taxed with the chore to mentally distribute the negation to understand the lemma.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.25 Typo with "independet" in multiple lemmas *(Severity: Low)*
@@ -928,7 +928,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > In both of these lemmas, there is a typo with the word "independet".
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.26 Poorly named `acc` lemmas *(Severity: Low)*
@@ -937,7 +937,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > It is unclear what `acc` refers to in these lemma names, as the lemmas are about the independence of warnings and payments, not accounts.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.27 Verbose lemma statement `playTraceAuxIterative_base_case` *(Severity: Low)*
@@ -946,7 +946,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The statement of this lemma is very verbose. A more natural (and slightly stronger) formulation could be `$$\begin{aligned} &\mathit{playTraceAux}\ \mathit{txOut}\ [\ \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = [h] \rrparenthesis, \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = t \rrparenthesis \ ] \\ =\ &\mathit{playTraceAux}\ \mathit{txOut}\ [\ \llparenthesis \mathit{interval} = \mathit{inte}, \mathit{inputs} = h\ \#\ t \rrparenthesis \ ]\end{aligned}$$`
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.28 `playTrace_only_accepts_maxTransactionsInitialState` not written as `theorem` *(Severity: Low)*
@@ -955,7 +955,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This lemma seems like the main result of this file. Assuming it is an important result, we recommend writing it as a `theorem` rather than a `lemma`.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.29 Inconsistent style with assumptions *(Severity: Low)*
@@ -964,7 +964,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > These lemmas use the hypothesis `$\mathit{minTime}\ \mathit{sta} \leq \mathit{iniTime}$` and build a state `$\mathit{sta}\ \llparenthesis \mathit{minTime} := \mathit{iniTime} \rrparenthesis)$` while other lemmas simply say `$\mathit{minTime}\ \mathit{sta} = \mathit{iniTime}$`. Readability would be improved by presenting these lemmas in the same style as the others, or documenting the need for these distinct presentations via code comments.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.30 Function `validTimeInterval` unnecessarily unfolded in lemma *(Severity: Low)*
@@ -973,7 +973,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > For consistency, $a \leq b$ should be replaced by $\texttt{validTimeInterval}$.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.31 Overly specific auxiliary lemma *(Severity: Low)*
@@ -982,7 +982,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This lemma on its own is very specific, and is only used in `reductionLoop_preserves_valid_state`. If possible, we recommend this lemma to be generalized or broken down into smaller lemmas, in order to present the arguments to the reader in smaller pieces.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.32 `playTrace_preserves_valid_state` not written as `theorem` *(Severity: Low)*
@@ -991,7 +991,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This lemma seems like the main result of this file. Assuming it is an important result, we recommend writing it as a `theorem` instead.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.3.33 Unnecessary assumptions *(Severity: Low)*
@@ -1042,7 +1042,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 
 ## 2.4 Isabelle implementation
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.1 Variable shadowing in `applyAllLoop` *(Severity: Medium)*
@@ -1051,7 +1051,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The $\texttt{cont}$ variable introduced by the pattern match shadows another $\texttt{cont}$ variable, coming from the pattern match of an outer case expression, making the function harder to follow while also making it more error-prone to future changes.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.2 Undescriptive name `moneyInPayment` *(Severity: Low)*
@@ -1060,7 +1060,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The name of the function can be more precise. Perhaps `moneyInPaymentToParty` or `moneyInExternalPayment` would work.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.3 Typo in section name *(Severity: Low)*
@@ -1069,7 +1069,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > Typo in section name: "Interval intesection".
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.4 Typo in comment *(Severity: Low)*
@@ -1078,7 +1078,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > Typo in comment: "endpoits".
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.5 Unclear need for multiple formulations for positive accounts *(Severity: Low)*
@@ -1087,7 +1087,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > It is unclear what the use is for multiple formulations (and lemmas about) positive accounts. The first formulation (with the theorems `playTraceAux_gtZero` and `playTrace_gtZero`) is not used in any other modules but the alternative formulation is used instead. If both formulations are relevant, then it should be explained why.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.6 Variable name discrepancy in `reductionLoop` *(Severity: Low)*
@@ -1096,7 +1096,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > When comparing this function against `specification-v3-rc1.pdf`, different names are used for a let-bound variable. It is `a` in the pdf and `newPayments` in the file `Semantics.thy`. There are similar issues in the function `reduceContractStep` in the equation for the `If` case, and in the function `giveMoney`.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.7 Typo in constructor *(Severity: Low)*
@@ -1105,7 +1105,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > Apparent typo in the error message constructor: the party mentioned should be $\texttt{party2}$.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.8 Unclear function name `calculateNonAmbiguousInterval` *(Severity: Low)*
@@ -1114,7 +1114,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > The meaning of the function is not obvious. It needs a comment to explain it.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.9 Non-modularized file `SingleInputTransactions.thy` *(Severity: Low)*
@@ -1125,7 +1125,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > Splitting the module, grouping the related lemmas, would help understanding the relationships between the groups.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.10 Misleading function names *(Severity: Low)*
@@ -1144,7 +1144,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This function should be renamed or repurposed. If renamed, `allAreSingleInput` more accurately reflects the meaning of the function. If repurposed, it should check that a single transaction has a single input, and `all isSingleInput` can be used to express the current behavior.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.11 Unused parameter in `maxTransactionCaseList` *(Severity: Low)*
@@ -1153,7 +1153,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This function has a parameter of type `State` that is completely unused and can be removed.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ### 2.4.12 Duplicated `isValidInterval` function *(Severity: Low)*
@@ -1162,7 +1162,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > This function duplicates $\texttt{validTimeInterval}$ from $\texttt{OptBoundTimeInterval.thy}$, and the latter has certain additional properties proven about it specifically, so it makes sense to use the latter in both cases.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ## 2.5 marlowe-cardano specification
@@ -1372,7 +1372,7 @@ The Plutus implementation differs slightly from the Isabelle for efficiency and 
 > 
 > The Isabelle implementation should use the helper function `moneyInAccount` instead of inlining its definition, so as to maintain consistency with the Haskell implementation.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here.
  
 > **Helper function `applyCases`, lines *596 (Semantics.hs), 498 (Semantics.thy)***
 > 
@@ -1442,7 +1442,7 @@ This misstatement is remedied in commit [8691f335](https://github.com/input-outp
 > 
 > where "bigger" implies strict inequality, while the code makes non-strict comparison. This difference needs to be acknowledged and further explained in the specification.
 
-![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: @hrajchert will add text here, since it relates to the Isabelle specification.
+![#f03c15](https://placehold.co/15x15/f03c15/f03c15.png) TODO: Isabelle-related text to be added here, since it relates to the Isabelle specification.
 
 
 ## 2.7 Haskell tests

@@ -1178,7 +1178,7 @@ Subsequent to the commencement of the audit, a "test oracle" (called test spec) 
 > 
 > Another alternative would be to demand other contracts' outputs to use datums that are different from the roles used by the Marlowe contract for payments.
 
-Commit [00010ea4](https://github.com/input-output-hk/marlowe-cardano/commit/00010ea48439892ff9eec54fb93929f56bcb6c7b) adds a paragraph of guidance to the Marlowe Cardano specification. The mitigation above for "2.1.2 Contracts vulnerable to double satisfaction attacks" implements validator changes to address this.
+Commit [00010ea4](https://github.com/input-output-hk/marlowe-cardano/commit/00010ea48439892ff9eec54fb93929f56bcb6c7b) adds a paragraph of guidance to the Marlowe Cardano specification. The mitigation above for [2.1.2](#222-contracts-vulnerable-to-double-satisfaction-attacks-severity-high) implements validator changes to address this.
 
 
 ### 2.5.2 No reference to creating a minting policy *(Severity: Low)*

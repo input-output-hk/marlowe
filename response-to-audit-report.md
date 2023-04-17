@@ -1225,7 +1225,7 @@ Commit [fda1d3e8](https://github.com/input-output-hk/marlowe-cardano/commit/fda1
 > 
 > The marlowe validator allows multiple outputs to be paid to a wallet, but it demands that a single output exists when paying to a role instead. The motivation to use different approaches needs to be documented. This is implemented in `Scripts.hs` at line 371, in function `payoutConstraints`.
 
-The asymmetric is a convenience and practicality related to the manner in which coin selection and transaction balancing typically occurs nowadays in wallets. Commit [4e81470d](https://github.com/input-output-hk/marlowe-cardano/commit/4e81470de90ddd6858c3ad8aace96e90df5a86ae) adds to the Marlowe Cardano specification a paragraph justifying this asymmetry in payout style and a comment to the Marlowe semantics validator along the same lines.
+The asymmetry is a convenience and practicality related to the manner in which coin selection and transaction balancing typically occurs nowadays in wallets. Commit [4e81470d](https://github.com/input-output-hk/marlowe-cardano/commit/4e81470de90ddd6858c3ad8aace96e90df5a86ae) adds to the Marlowe Cardano specification a paragraph justifying this asymmetry in payout style and a comment to the Marlowe semantics validator along the same lines.
 
 
 ### 2.5.7 Incorrect description of `rolePayoutValidator` *(Severity: Low)*

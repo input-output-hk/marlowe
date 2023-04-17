@@ -1252,7 +1252,7 @@ Commit [e150e308](https://github.com/input-output-hk/marlowe-cardano/commit/e150
 > 
 > If multiple cases in a case list can apply, the first one is taken. This behavior should be better communicated in the specification.
 
-Although this behavior is required by the Isabelle specification and implemented in the Plutus validator, the comment on `applyCases` has been editing in commit [08d6f34a](https://github.com/input-output-hk/marlowe-cardano/commit/08d6f34ac91da7aa34e7414c5bae0e33e9235d74) to reinforce that the first applicable `Case` is taken for a `When`.
+Although this behavior is required by the Isabelle specification and implemented in the Plutus validator, the comment on `applyCases` has been edited in commit [08d6f34a](https://github.com/input-output-hk/marlowe-cardano/commit/08d6f34ac91da7aa34e7414c5bae0e33e9235d74) to reinforce that the first applicable `Case` is taken for a `When`.
 
 
 ## 2.6 Haskell implementation

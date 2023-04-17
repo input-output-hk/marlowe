@@ -1187,7 +1187,7 @@ Commit [00010ea4](https://github.com/input-output-hk/marlowe-cardano/commit/0001
 > 
 > The minting policy is not specified, but a reference needs to be offered to explain how to create one.
 
-The monetary policy is not a concern of the Marlowe validator, but commit [fe00af7d](https://github.com/input-output-hk/marlowe-cardano/commit/fe00af7d622bbd17c3327363d4650ee544d1fff7) adds a sentance referencing the discussion of monetary policies for role tokens in the [Marlowe Best Practices Guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/best-practices.md).
+The monetary policy is not a concern of the Marlowe validator, but commit [fe00af7d](https://github.com/input-output-hk/marlowe-cardano/commit/fe00af7d622bbd17c3327363d4650ee544d1fff7) adds a sentence referencing the discussion of monetary policies for role tokens in the [Marlowe Best Practices Guide](https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe/best-practices.md).
 
 
 ### 2.5.3 Argument for Contract in `txInfoData` not specified *(Severity: Low)*

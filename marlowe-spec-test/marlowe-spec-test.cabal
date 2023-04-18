@@ -33,6 +33,8 @@ library
         Marlowe.Spec.ClientProcess
         Marlowe.Spec.Core
         Marlowe.Spec.Core.Arbitrary
+        Marlowe.Spec.Core.Generators
+        Marlowe.Spec.Core.Guarantees
         Marlowe.Spec.Core.Examples
         Marlowe.Spec.Core.Examples.Escrow
         Marlowe.Spec.Core.Examples.Swap
@@ -47,6 +49,7 @@ library
         aeson,
         base >=4.9 && <5,
         bytestring >= 0.10.12 && < 0.12,
+        containers,
         marlowe ==0.1.0.0,
         tasty >= 1.4.2 && < 1.5,
         tasty-hunit >= 0.10 && < 0.11,

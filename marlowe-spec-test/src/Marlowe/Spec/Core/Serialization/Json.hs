@@ -8,23 +8,39 @@
 module Marlowe.Spec.Core.Serialization.Json where
 
 import Control.Applicative ((<|>))
-import Data.Aeson.Types (Result(..), ToJSON(..), FromJSON(..))
-import Data.Aeson (object, (.=), (.:), withObject)
-import qualified Data.Aeson.Types as JSON
-import Data.Text as T
-import Data.Proxy (Proxy(..))
-import MarloweCoreJson
-import GHC.Stack (HasCallStack)
-import Test.Tasty (TestTree, testGroup)
-import Marlowe.Spec.Interpret (Response (..), InterpretJsonRequest, Request (..), testResponse)
-import Marlowe.Spec.TypeId (TypeId(..), HasTypeId (..))
-import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@=?))
-import qualified SemanticsTypes as C
-import Marlowe.Spec.Core.Arbitrary (genToken, genParty, genPayee, genChoiceId, genBound, genValue, genObservation, genAction, genContract, genInput, genTransaction, genPayment, genState, genTransactionWarning, genIntervalError, genTransactionError, genTransactionOutput)
 import Control.Monad.IO.Class (MonadIO)
-import Marlowe.Spec.Reproducible (generate, generateT, reproducibleProperty, assertResponse)
+import Data.Aeson (object, withObject, (.:), (.=))
+import Data.Aeson.Types (FromJSON (..), Result (..), ToJSON (..))
+import qualified Data.Aeson.Types as JSON
+import Data.Proxy (Proxy (..))
+import Data.Text as T
+import GHC.Stack (HasCallStack)
+import Marlowe.Spec.Core.Arbitrary
+import Marlowe.Spec.Core.Generators
+  ( genAction,
+    genChoiceId,
+    genContract,
+    genInput,
+    genObservation,
+    genParty,
+    genPayee,
+    genPayment,
+    genState,
+    genToken,
+    genTransaction,
+    genTransactionOutput,
+    genTransactionWarning,
+    genValue,
+  )
+import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), Response (..), testResponse)
+import Marlowe.Spec.Reproducible (assertResponse, generate, generateT, reproducibleProperty)
+import Marlowe.Spec.TypeId (HasTypeId (..), TypeId (..))
+import MarloweCoreJson
 import QuickCheck.GenT (MonadGen (resize))
-import Test.QuickCheck.Monadic (run, PropertyM)
+import qualified SemanticsTypes as C
+import Test.QuickCheck.Monadic (PropertyM, run)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@=?))
 
 data SerializationResponse transport
   = SerializationSuccess transport
@@ -248,4 +264,3 @@ arbitraryTransactionOutputTest :: InterpretJsonRequest -> TestTree
 arbitraryTransactionOutputTest i = reproducibleProperty "TransactionOutput" do
   out <- run $ generateT $ genTransactionOutput i
   propertyRoundtripTest i out
-

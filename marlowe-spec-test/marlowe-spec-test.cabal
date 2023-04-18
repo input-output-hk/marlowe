@@ -39,6 +39,7 @@ library
         Marlowe.Spec.Core.Examples.Escrow
         Marlowe.Spec.Core.Examples.Swap
         Marlowe.Spec.Core.Semantics
+        Marlowe.Spec.Core.SemiArbitrary
         Marlowe.Spec.Core.Serialization.Json
         Marlowe.Spec.Interpret
         Marlowe.Spec.LocalInterpret

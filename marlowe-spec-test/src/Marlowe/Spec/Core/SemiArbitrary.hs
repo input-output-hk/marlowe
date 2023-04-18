@@ -46,7 +46,6 @@ import QuickCheck.GenT
     GenT,
     MonadGen (..),
     frequency,
-    listOf,
     resize,
     sized,
     vectorOf,
@@ -87,6 +86,7 @@ class SemiArbitrary a where
   semiArbitrary :: Context -> Gen a
   semiArbitrary context =
     let xs = fromContext context in elements xs
+
   -- | Report values present in a context.
   fromContext :: Context -> [a]
   fromContext _ = []
@@ -94,8 +94,7 @@ class SemiArbitrary a where
 -- | Context for generating correlated Marlowe terms and state.
 data Context =
   Context
-  {
-    parties      :: [Party]                      -- ^ Universe of parties.
+  { parties      :: [Party]                      -- ^ Universe of parties.
   , tokens       :: [Token]                      -- ^ Universe of tokens.
   , amounts      :: [Arith.Int]                  -- ^ Universe of token amounts.
   , choiceNames  :: [String]                     -- ^ Universe of choice names.
@@ -107,8 +106,7 @@ data Context =
   , caccounts    :: Map (Party, Token) Arith.Int -- ^ Accounts for state.
   , cchoices     :: Map ChoiceId Arith.Int       -- ^ Choices for state.
   , cboundValues :: Map ValueId Arith.Int        -- ^ Bound values for state.
-  }
-  deriving Show
+  } deriving Show
 
 genContext :: InterpretJsonRequest -> GenT IO Context
 genContext interpret = sized \n ->
@@ -118,14 +116,18 @@ genContext interpret = sized \n ->
     amounts <- liftGen $ listOf' n arbitraryPositiveInteger
     choiceNames <- liftGen $ listOf' n arbitraryChoiceName
     chosenNums <- liftGen $ listOf' n arbitraryInteger
-    choiceIds <- listOf' n $ ChoiceId <$> (liftGen $ perturb arbitraryChoiceName choiceNames) <*> perturbM (genParty interpret) parties
+    choiceIds <- listOf' n $ ChoiceId
+      <$> (liftGen $ perturb arbitraryChoiceName choiceNames) <*> perturbM (genParty interpret) parties
     valueIds <- liftGen $ listOf' n genValueId
     values <- liftGen $ listOf' n arbitraryInteger
     times <- liftGen $ listOf' n arbitraryPositiveInteger
-    caccounts <- fromList . nubBy ((==) `on` fst) <$> listOf' n ((,) <$> ((,) <$> perturbM (genParty interpret) parties <*> perturbM (genToken interpret) tokens) <*> liftGen (perturb arbitraryPositiveInteger amounts))
-    cchoices <- fromList . nubBy ((==) `on` fst) <$> listOf' n ((,) <$> liftGen (elements choiceIds) <*> liftGen (perturb arbitraryInteger chosenNums))
-    cboundValues <- fromList . nubBy ((==) `on` fst) <$> listOf' n ((,) <$> liftGen (perturb genValueId valueIds) <*> liftGen (perturb arbitraryInteger values))
-    pure Context{..}
+    caccounts <- fromList . nubBy ((==) `on` fst)
+      <$> listOf' n ((,) <$> ((,) <$> perturbM (genParty interpret) parties <*> perturbM (genToken interpret) tokens) <*> liftGen (perturb arbitraryPositiveInteger amounts))
+    cchoices <- fromList . nubBy ((==) `on` fst)
+      <$> listOf' n ((,) <$> liftGen (elements choiceIds) <*> liftGen (perturb arbitraryInteger chosenNums))
+    cboundValues <- fromList . nubBy ((==) `on` fst)
+      <$> listOf' n ((,) <$> liftGen (perturb genValueId valueIds) <*> liftGen (perturb arbitraryInteger values))
+    pure Context {..}
   where
     listOf' n gen = choose (1, n) >>= flip replicateM gen
 
@@ -169,9 +171,6 @@ instance SemiArbitrary Bound where
     lower <- semiArbitrary context
     extent <- arbitraryNonnegativeInteger
     pure $ Bound lower (lower + extent)
-
-instance SemiArbitrary [Bound] where
-  semiArbitrary context = listOf $ semiArbitrary context
 
 instance SemiArbitrary Party where
   fromContext = parties
@@ -275,31 +274,55 @@ instance SemiArbitrary Observation where
       genFalse = pure FalseObs
 
 instance SemiArbitrary (State_ext ()) where
-  semiArbitrary context = do
-    minTime' <- arbitraryNonnegativeInteger
-    pure $ State_ext (toList $ caccounts context) (toList $ cchoices context) (toList $ cboundValues context) minTime' ()
+  semiArbitrary context =
+    State_ext
+      <$> pure (toList $ caccounts context)
+      <*> pure (toList $ cchoices context)
+      <*> pure (toList $ cboundValues context)
+      <*> arbitraryNonnegativeInteger
+      <*> pure ()
 
 instance SemiArbitrary TransactionWarning where
-  semiArbitrary context = frequency
-    [ ( 30, TransactionNonPositiveDeposit <$> semiArbitrary context <*> semiArbitrary context <*> semiArbitrary context <*> arbitraryInteger)
-    , ( 30, TransactionNonPositivePay <$> semiArbitrary context <*> semiArbitrary context <*> semiArbitrary context <*> arbitraryInteger)
-    , ( 30, TransactionShadowing <$> semiArbitrary context <*> arbitraryInteger <*> arbitraryInteger)
-    , ( 10, pure TransactionAssertionFailed)
-    ]
+  semiArbitrary context =
+    frequency
+      [ ( 30,
+          TransactionNonPositiveDeposit
+            <$> semiArbitrary context
+            <*> semiArbitrary context
+            <*> semiArbitrary context
+            <*> arbitraryInteger
+        ),
+        ( 30,
+          TransactionNonPositivePay
+            <$> semiArbitrary context
+            <*> semiArbitrary context
+            <*> semiArbitrary context
+            <*> arbitraryInteger
+        ),
+        ( 30,
+          TransactionShadowing
+            <$> semiArbitrary context
+            <*> arbitraryInteger
+            <*> arbitraryInteger
+        ),
+        (10, pure TransactionAssertionFailed)
+      ]
 
 instance SemiArbitrary TransactionOutput where
   semiArbitrary context =
     frequency
-       [ (30, TransactionError <$> genTransactionError)
-       , (70, TransactionOutput <$> do
-                                      wSize <- chooseInt (0, 2)
-                                      warnings <- vectorOf wSize $ semiArbitrary context
-                                      pSize <- chooseInt (0, 2)
-                                      payments <- vectorOf pSize $ semiArbitrary context
-                                      state <- resize 2 $ semiArbitrary context
-                                      contract <- resize 2 $ semiArbitrary context
-                                      pure $ TransactionOutputRecord_ext warnings payments state contract ())
-       ]
+      [ (30, TransactionError <$> genTransactionError),
+        ( 70,
+          TransactionOutput <$> do
+            wSize <- chooseInt (0, 2)
+            warnings <- vectorOf wSize $ semiArbitrary context
+            pSize <- chooseInt (0, 2)
+            payments <- vectorOf pSize $ semiArbitrary context
+            state <- resize 2 $ semiArbitrary context
+            contract <- resize 2 $ semiArbitrary context
+            pure $ TransactionOutputRecord_ext warnings payments state contract ()
+        )
+      ]
 
 instance SemiArbitrary (Bool, Contract) where
   semiArbitrary context =
@@ -310,21 +333,42 @@ instance SemiArbitrary Contract where
   semiArbitrary context = snd <$> (semiArbitrary context :: Gen (Bool, Contract))
 
 instance SemiArbitrary Action where
-  semiArbitrary context = frequency
-    [ (7, Deposit <$> semiArbitrary context <*> semiArbitrary context <*> semiArbitrary context <*> semiArbitrary context)
-    , (2, do
-        lSize <- chooseInt (1, 4)
-        Choice <$> semiArbitrary context <*> vectorOf lSize genBound
-      )
-    , (1, Notify <$> semiArbitrary context)
-    ]
+  semiArbitrary context =
+    frequency
+      [ ( 7,
+          Deposit
+            <$> semiArbitrary context
+            <*> semiArbitrary context
+            <*> semiArbitrary context
+            <*> semiArbitrary context
+        ),
+        ( 2,
+          do
+            lSize <- chooseInt (1, 4)
+            Choice
+              <$> semiArbitrary context
+              <*> vectorOf lSize genBound
+        ),
+        (1, Notify <$> semiArbitrary context)
+      ]
 
 instance SemiArbitrary Input where
-  semiArbitrary context = frequency
-    [ (50, IDeposit <$> semiArbitrary context <*> semiArbitrary context <*> semiArbitrary context <*> arbitraryInteger)
-    , (45, IChoice <$> semiArbitrary context <*> arbitraryInteger )
-    , (5, pure INotify)
-    ]
+  semiArbitrary context =
+    frequency
+      [ ( 50,
+          IDeposit
+            <$> semiArbitrary context
+            <*> semiArbitrary context
+            <*> semiArbitrary context
+            <*> arbitraryInteger
+        ),
+        ( 45,
+          IChoice
+            <$> semiArbitrary context
+            <*> arbitraryInteger
+        ),
+        (5, pure INotify)
+      ]
 
 instance SemiArbitrary (Transaction_ext ()) where
   semiArbitrary context = do
@@ -379,7 +423,6 @@ genGoldenContract context =
               <*> pure ()
       Swap.swap <$> p1 <*> p2
 
-
 -- | Generate a random step for a contract.
 arbitraryTransaction :: State_ext ()             -- ^ The state of the contract.
                      -> Contract                 -- ^ The contract.
@@ -412,19 +455,16 @@ arbitraryTransaction state (When cases timeout _) =
   where
     getAction :: Case -> Action
     getAction (Case a _) = a
-
 arbitraryTransaction state contract =
-  let
-    nextTimeout Close                                    = minTime state
-    nextTimeout (Pay _ _ _ _ continuation)               = nextTimeout continuation
-    nextTimeout (If _ thenContinuation elseContinuation) = maximum' $ nextTimeout <$> [thenContinuation, elseContinuation]
-    nextTimeout (When _ timeout _)                       = timeout
-    nextTimeout (Let _ _ continuation)                   = nextTimeout continuation
-    nextTimeout (Assert _ continuation)                  = nextTimeout continuation
-  in
-    Transaction_ext <$> arbitraryTimeIntervalAfter (maximum' [minTime state, nextTimeout contract]) <*> pure [] <*> pure ()
- where
-  maximum' = foldl1 Orderings.max
+  let nextTimeout Close = minTime state
+      nextTimeout (Pay _ _ _ _ continuation) = nextTimeout continuation
+      nextTimeout (If _ thenContinuation elseContinuation) = maximum' $ nextTimeout <$> [thenContinuation, elseContinuation]
+      nextTimeout (When _ timeout _) = timeout
+      nextTimeout (Let _ _ continuation) = nextTimeout continuation
+      nextTimeout (Assert _ continuation) = nextTimeout continuation
+   in Transaction_ext <$> arbitraryTimeIntervalAfter (maximum' [minTime state, nextTimeout contract]) <*> pure [] <*> pure ()
+  where
+    maximum' = foldl1 Orderings.max
 
 -- | Generate a random path through a contract.
 arbitraryValidTransactions :: State_ext ()             -- ^ The state of the contract.
@@ -434,7 +474,7 @@ arbitraryValidTransactions _ Close = pure []
 arbitraryValidTransactions state contract =
   do
     txIn <- arbitraryTransaction state contract
-    case computeTransaction txIn state contract of  -- FIXME: It is tautological to use `computeTransaction` to filter test cases.
+    case computeTransaction txIn state contract of -- FIXME: It is tautological to use `computeTransaction` to filter test cases.
       TransactionError _ -> pure []
       TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _) -> (txIn :) <$> arbitraryValidTransactions txOutState txOutContract
 
@@ -451,13 +491,38 @@ arbitraryContractWeighted :: [(Int, Int, Int, Int, Int, Int)] -- ^ The weights o
                           -> Gen Contract                     -- ^ Generator for a contract.
 arbitraryContractWeighted ((wClose, wPay, wIf, wWhen, wLet, wAssert) : w) context =
   frequency
-    [
-      (wClose , pure Close)
-    , (wPay   , Pay <$> semiArbitrary context <*> semiArbitrary context <*> semiArbitrary context <*> semiArbitrary context <*> arbitraryContractWeighted w context)
-    , (wIf    , If <$> semiArbitrary context <*> arbitraryContractWeighted w context <*> arbitraryContractWeighted w context)
-    , (wWhen  , When <$> (chooseInt (0, length w) >>= flip vectorOf (arbitraryCaseWeighted w context)) <*> semiArbitrary context <*> arbitraryContractWeighted w context)
-    , (wLet   , Let <$> semiArbitrary context <*> semiArbitrary context <*> arbitraryContractWeighted w context)
-    , (wAssert, Assert <$> semiArbitrary context <*> arbitraryContractWeighted w context)
+    [ (wClose, pure Close),
+      ( wPay,
+        Pay
+          <$> semiArbitrary context
+          <*> semiArbitrary context
+          <*> semiArbitrary context
+          <*> semiArbitrary context
+          <*> arbitraryContractWeighted w context
+      ),
+      ( wIf,
+        If
+          <$> semiArbitrary context
+          <*> arbitraryContractWeighted w context
+          <*> arbitraryContractWeighted w context
+      ),
+      ( wWhen,
+        When
+          <$> (chooseInt (0, length w) >>= flip vectorOf (arbitraryCaseWeighted w context))
+          <*> semiArbitrary context
+          <*> arbitraryContractWeighted w context
+      ),
+      ( wLet,
+        Let
+          <$> semiArbitrary context
+          <*> semiArbitrary context
+          <*> arbitraryContractWeighted w context
+      ),
+      ( wAssert,
+        Assert
+          <$> semiArbitrary context
+          <*> arbitraryContractWeighted w context
+      )
     ]
 arbitraryContractWeighted [] _ = pure Close
 

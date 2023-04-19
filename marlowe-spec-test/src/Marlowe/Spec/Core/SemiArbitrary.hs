@@ -8,9 +8,11 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Marlowe.Spec.Core.SemiArbitrary
-  ( arbitraryContractWeighted
+  ( arbitraryCaseWeighted
+  , arbitraryContractWeighted
+  , arbitraryContractSized
+  , Context
   , genContext
-  , Context (..)
   , SemiArbitrary (..)
   )
   where
@@ -96,32 +98,53 @@ data Context =
 
 genContext :: InterpretJsonRequest -> GenT IO Context
 genContext interpret = sized \n ->
-  do
-    parties <- listOf' n $ genParty interpret
-    tokens <- listOf' n $ genToken interpret
-    amounts <- liftGen $ listOf' n arbitraryPositiveInteger
-    choiceNames <- liftGen $ listOf' n arbitraryChoiceName
-    chosenNums <- liftGen $ listOf' n arbitraryInteger
-    choiceIds <- listOf' n $ ChoiceId
-      <$> (liftGen $ perturb arbitraryChoiceName choiceNames) <*> perturbM (genParty interpret) parties
-    valueIds <- liftGen $ listOf' n arbitrary
-    values <- liftGen $ listOf' n arbitraryInteger
-    times <- liftGen $ listOf' n arbitraryPositiveInteger
-    caccounts <- fromList . nubBy ((==) `on` fst)
-      <$> listOf' n ((,) <$> ((,) <$> perturbM (genParty interpret) parties <*> perturbM (genToken interpret) tokens) <*> liftGen (perturb arbitraryPositiveInteger amounts))
-    cchoices <- fromList . nubBy ((==) `on` fst)
-      <$> listOf' n ((,) <$> liftGen (elements choiceIds) <*> liftGen (perturb arbitraryInteger chosenNums))
-    cboundValues <- fromList . nubBy ((==) `on` fst)
-      <$> listOf' n ((,) <$> liftGen (perturb arbitrary valueIds) <*> liftGen (perturb arbitraryInteger values))
-    pure Context {..}
+  let listOf gen = choose (1, n) >>= flip replicateM gen
+      listOfGen = liftGen . listOf
+      genParty' = genParty interpret
+      genToken' = genToken interpret
+   in do
+        parties <- listOf genParty'
+        tokens <- listOf genToken'
+        amounts <- listOfGen arbitraryPositiveInteger
+        choiceNames <- listOfGen arbitraryChoiceName
+        chosenNums <- listOfGen arbitraryInteger
+        choiceIds <-
+          listOf $
+            ChoiceId
+              <$> liftGen (perturb arbitraryChoiceName choiceNames)
+              <*> perturb genParty' parties
+        valueIds <- listOfGen arbitrary
+        values <- listOfGen arbitraryInteger
+        times <- listOfGen arbitraryPositiveInteger
+        caccounts <-
+          fromList . nubBy ((==) `on` fst)
+            <$> listOf
+              ( (,)
+                  <$> ( (,)
+                          <$> perturb genParty' parties
+                          <*> perturb genToken' tokens
+                      )
+                  <*> liftGen (perturb arbitraryPositiveInteger amounts)
+              )
+        cchoices <-
+          fromList . nubBy ((==) `on` fst)
+            <$> listOf
+              ( (,)
+                  <$> liftGen (elements choiceIds)
+                  <*> liftGen (perturb arbitraryInteger chosenNums)
+              )
+        cboundValues <-
+          fromList . nubBy ((==) `on` fst)
+            <$> listOf
+              ( (,)
+                  <$> liftGen (perturb arbitrary valueIds)
+                  <*> liftGen (perturb arbitraryInteger values)
+              )
+        pure Context {..}
   where
-    listOf' n gen = choose (1, n) >>= flip replicateM gen
-
+    perturb :: MonadGen g => g a -> [a] -> g a
     perturb gen [] = gen
-    perturb gen xs = frequency [(20, gen), (80, elements xs)]
-
-    perturbM gen [] = gen
-    perturbM gen xs = frequency [(20, gen), (80, liftGen $ elements xs)]
+    perturb gen xs = frequency [(20, gen), (80, liftGen $ elements xs)]
 
 instance Prelude.Ord Party where
   compare (Address a) (Address b) = compare a b
@@ -176,7 +199,11 @@ instance SemiArbitrary Payee where
 
 instance SemiArbitrary Payment where
   semiArbitrary context =
-    Payment <$> semiArbitrary context <*> semiArbitrary context <*> semiArbitrary context <*> arbitraryInteger
+    Payment
+      <$> semiArbitrary context
+      <*> semiArbitrary context
+      <*> semiArbitrary context
+      <*> arbitraryInteger
 
 instance SemiArbitrary Value where
   semiArbitrary context = sized (

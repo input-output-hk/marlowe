@@ -13,12 +13,13 @@ import Arith
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Core.Arbitrary (genEnvironment)
+import Marlowe.Spec.Core.Arbitrary
+  ( arbitraryTransaction,
+    arbitraryValidTransactions,
+  )
 import Marlowe.Spec.Core.SemiArbitrary
   ( SemiArbitrary (..),
-    arbitraryTransaction,
-    arbitraryValidTransactions,
-    genContext,
+    genContext
   )
 import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
@@ -48,7 +49,7 @@ import SemanticsTypes
     State_ext (..),
     Value (..),
   )
-import Test.QuickCheck (withMaxSuccess)
+import Test.QuickCheck (Arbitrary (..), withMaxSuccess)
 import Test.QuickCheck.Monadic (PropertyM, assert, monitor, run)
 import Test.QuickCheck.Property (counterexample)
 import Test.Tasty (TestTree, testGroup)
@@ -70,7 +71,7 @@ tests i = testGroup "Semantics"
 evalValueTest :: InterpretJsonRequest -> TestTree
 evalValueTest interpret = reproducibleProperty' "Eval Value" (withMaxSuccess 500) do
     context <- run $ generateT $ genContext interpret
-    env <- run $ generate genEnvironment
+    env <- run $ generate arbitrary
     state <- run $ generate $ semiArbitrary context
     value <- run $ generate $ semiArbitrary context
     let
@@ -82,7 +83,7 @@ evalValueTest interpret = reproducibleProperty' "Eval Value" (withMaxSuccess 500
 evalObservationTest :: InterpretJsonRequest -> TestTree
 evalObservationTest interpret = reproducibleProperty "Eval Observation" do
     context <- run $ generateT $ genContext interpret
-    env <- run $ generate genEnvironment
+    env <- run $ generate arbitrary
     state <- run $ generate $ semiArbitrary context
     observation <- run $ generate $ semiArbitrary context
     let
@@ -94,7 +95,7 @@ evalObservationTest interpret = reproducibleProperty "Eval Observation" do
 divisionRoundsTowardsZeroTest :: InterpretJsonRequest -> TestTree
 divisionRoundsTowardsZeroTest interpret = reproducibleProperty "Division rounding"  do
     context <- run $ generateT $ genContext interpret
-    env <- run $ generate genEnvironment
+    env <- run $ generate arbitrary
     state <- run $ generate $ semiArbitrary context
     numerator <- run $ generate $ semiArbitrary context
     denominator <- run $ generate

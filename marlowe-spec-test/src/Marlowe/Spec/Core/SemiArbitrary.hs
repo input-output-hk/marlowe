@@ -9,8 +9,6 @@
 
 module Marlowe.Spec.Core.SemiArbitrary
   ( arbitraryContractWeighted
-  , arbitraryTransaction
-  , arbitraryValidTransactions
   , genContext
   , Context (..)
   , SemiArbitrary (..)
@@ -29,18 +27,11 @@ import Marlowe.Spec.Core.Arbitrary
     arbitraryInteger,
     arbitraryNonnegativeInteger,
     arbitraryPositiveInteger,
-    arbitraryTimeIntervalAfter,
-    arbitraryTimeIntervalBefore,
-    chooseArithInt,
-    genBound,
-    genTransactionError,
-    genValueId,
   )
 import Marlowe.Spec.Core.Generators (genParty, genToken)
 import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
   )
-import Orderings (Ord (..), max)
 import QuickCheck.GenT
   ( Gen,
     GenT,
@@ -56,8 +47,6 @@ import Semantics
     TransactionOutputRecord_ext (..),
     TransactionWarning (..),
     Transaction_ext (..),
-    computeTransaction,
-    evalValue,
   )
 import SemanticsTypes
   ( Action (..),
@@ -65,7 +54,6 @@ import SemanticsTypes
     Case (..),
     ChoiceId (..),
     Contract (..),
-    Environment_ext (..),
     Input (..),
     Observation (..),
     Party (..),
@@ -74,11 +62,9 @@ import SemanticsTypes
     Token (..),
     Value (..),
     ValueId (..),
-    minTime,
   )
 import Test.QuickCheck (chooseInt, elements)
 import Test.QuickCheck.Arbitrary (Arbitrary (..))
-import qualified Test.QuickCheck.Gen as QC (elements)
 
 -- | Class for arbitrary values with respect to a context.
 class SemiArbitrary a where
@@ -118,7 +104,7 @@ genContext interpret = sized \n ->
     chosenNums <- liftGen $ listOf' n arbitraryInteger
     choiceIds <- listOf' n $ ChoiceId
       <$> (liftGen $ perturb arbitraryChoiceName choiceNames) <*> perturbM (genParty interpret) parties
-    valueIds <- liftGen $ listOf' n genValueId
+    valueIds <- liftGen $ listOf' n arbitrary
     values <- liftGen $ listOf' n arbitraryInteger
     times <- liftGen $ listOf' n arbitraryPositiveInteger
     caccounts <- fromList . nubBy ((==) `on` fst)
@@ -126,7 +112,7 @@ genContext interpret = sized \n ->
     cchoices <- fromList . nubBy ((==) `on` fst)
       <$> listOf' n ((,) <$> liftGen (elements choiceIds) <*> liftGen (perturb arbitraryInteger chosenNums))
     cboundValues <- fromList . nubBy ((==) `on` fst)
-      <$> listOf' n ((,) <$> liftGen (perturb genValueId valueIds) <*> liftGen (perturb arbitraryInteger values))
+      <$> listOf' n ((,) <$> liftGen (perturb arbitrary valueIds) <*> liftGen (perturb arbitraryInteger values))
     pure Context {..}
   where
     listOf' n gen = choose (1, n) >>= flip replicateM gen
@@ -311,7 +297,7 @@ instance SemiArbitrary TransactionWarning where
 instance SemiArbitrary TransactionOutput where
   semiArbitrary context =
     frequency
-      [ (30, TransactionError <$> genTransactionError),
+      [ (30, TransactionError <$> arbitrary),
         ( 70,
           TransactionOutput <$> do
             wSize <- chooseInt (0, 2)
@@ -347,7 +333,7 @@ instance SemiArbitrary Action where
             lSize <- chooseInt (1, 4)
             Choice
               <$> semiArbitrary context
-              <*> vectorOf lSize genBound
+              <*> vectorOf lSize arbitrary
         ),
         (1, Notify <$> semiArbitrary context)
       ]
@@ -422,61 +408,6 @@ genGoldenContract context =
               <*> arbitraryPositiveInteger
               <*> pure ()
       Swap.swap <$> p1 <*> p2
-
--- | Generate a random step for a contract.
-arbitraryTransaction :: State_ext ()             -- ^ The state of the contract.
-                     -> Contract                 -- ^ The contract.
-                     -> Gen (Transaction_ext ()) -- ^ Generator for a transaction input for a single step.
-arbitraryTransaction _ (When [] timeout _) = Transaction_ext <$> arbitraryTimeIntervalAfter timeout <*> pure [] <*> pure ()
-arbitraryTransaction state (When cases timeout _) =
-  do
-    let
-      isEmptyChoice (Choice _ []) = True
-      isEmptyChoice _             = False
-      minTime' = minTime state
-
-    isTimeout <- frequency [(9, pure False), (1, pure True)]
-    if isTimeout || less_eq timeout minTime' || all (isEmptyChoice . getAction) cases
-      then Transaction_ext <$> arbitraryTimeIntervalAfter timeout <*> pure [] <*> pure ()
-      else
-        do
-          times <- arbitraryTimeIntervalBefore minTime' timeout
-          Case action cont <- QC.elements $ filter (not . isEmptyChoice . getAction) cases
-          i <- case action of
-                 Deposit a p t v -> pure . IDeposit a p t $ evalValue (Environment_ext times ()) state v
-                 Choice n bs     -> do
-                                      Bound lower upper <- QC.elements bs
-                                      IChoice n <$> chooseArithInt (lower, upper)
-                 Notify _        -> pure INotify
-          case cont of
-            Close -> pure $ Transaction_ext times [i] ()
-            _ -> do Transaction_ext _ inps _ <- arbitraryTransaction state cont
-                    pure $ Transaction_ext times (i:inps) ()
-  where
-    getAction :: Case -> Action
-    getAction (Case a _) = a
-arbitraryTransaction state contract =
-  let nextTimeout Close = minTime state
-      nextTimeout (Pay _ _ _ _ continuation) = nextTimeout continuation
-      nextTimeout (If _ thenContinuation elseContinuation) = maximum' $ nextTimeout <$> [thenContinuation, elseContinuation]
-      nextTimeout (When _ timeout _) = timeout
-      nextTimeout (Let _ _ continuation) = nextTimeout continuation
-      nextTimeout (Assert _ continuation) = nextTimeout continuation
-   in Transaction_ext <$> arbitraryTimeIntervalAfter (maximum' [minTime state, nextTimeout contract]) <*> pure [] <*> pure ()
-  where
-    maximum' = foldl1 Orderings.max
-
--- | Generate a random path through a contract.
-arbitraryValidTransactions :: State_ext ()             -- ^ The state of the contract.
-                           -> Contract                 -- ^ The contract.
-                           -> Gen [Transaction_ext ()] -- ^ Generator for a transaction inputs.
-arbitraryValidTransactions _ Close = pure []
-arbitraryValidTransactions state contract =
-  do
-    txIn <- arbitraryTransaction state contract
-    case computeTransaction txIn state contract of -- FIXME: It is tautological to use `computeTransaction` to filter test cases.
-      TransactionError _ -> pure []
-      TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _) -> (txIn :) <$> arbitraryValidTransactions txOutState txOutContract
 
 -- | Generate a random case, weighted towards different contract constructs.
 arbitraryCaseWeighted :: [(Int, Int, Int, Int, Int, Int)] -- ^ The weights for contract terms.

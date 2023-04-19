@@ -35,9 +35,6 @@ import Marlowe.Spec.Core.Arbitrary
   ( arbitraryChoiceName,
     arbitraryInteger,
     arbitraryNonnegativeInteger,
-    genBound,
-    genTransactionError,
-    genValueId,
   )
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), parseValidResponse)
 import Marlowe.Spec.TypeId (TypeId (..))
@@ -176,7 +173,7 @@ genValue i = sized (
   genChoiceValue = ChoiceValue <$> genChoiceId i
   genTimeIntervalStart = pure TimeIntervalStart
   genTimeIntervalEnd = pure TimeIntervalEnd
-  genUseValue = UseValue <$> liftGen genValueId
+  genUseValue = UseValue <$> liftGen arbitrary
   genCond = Cond <$> genObservation i <*> genValue i <*> genValue i
 
 genObservation :: InterpretJsonRequest -> GenT IO Observation
@@ -218,7 +215,7 @@ genAction i = frequency
       [ (7, Deposit <$> genParty i <*> genParty i <*> genToken i <*> genValue i)
       , (2, do
           lSize <- liftGen $ chooseInt (1, 4)
-          Choice <$> genChoiceId i <*> vectorOf lSize (liftGen genBound)
+          Choice <$> genChoiceId i <*> vectorOf lSize (liftGen arbitrary)
         )
       , (1, Notify <$> genObservation i)
       ]
@@ -254,7 +251,7 @@ genState i = rawGen `suchThat` valid_state
       boundSize <- liftGen $ chooseInt (0, min n 4)
       accounts <- vectorOf accountSize ((genParty i >*< genToken i) >*< liftGen arbitraryNonnegativeInteger)
       choices <- vectorOf choiceSize (genChoiceId i >*< liftGen arbitraryInteger)
-      bounds <- vectorOf boundSize (liftGen genValueId >*< liftGen arbitraryInteger)
+      bounds <- vectorOf boundSize (liftGen arbitrary >*< liftGen arbitraryInteger)
       minTime' <- liftGen arbitraryInteger
       pure $ State_ext accounts choices bounds minTime' ()
     )
@@ -263,14 +260,14 @@ genTransactionWarning :: InterpretJsonRequest -> GenT IO TransactionWarning
 genTransactionWarning i = frequency
   [ ( 30, TransactionNonPositiveDeposit <$> genParty i <*> genParty i <*> genToken i <*> liftGen arbitraryInteger)
   , ( 30, TransactionNonPositivePay <$> genParty i <*> genPayee i <*> genToken i <*> liftGen arbitraryInteger)
-  , ( 30, TransactionShadowing <$> liftGen genValueId <*> liftGen arbitraryInteger <*> liftGen arbitraryInteger)
+  , ( 30, TransactionShadowing <$> liftGen arbitrary <*> liftGen arbitraryInteger <*> liftGen arbitraryInteger)
   , ( 10, pure TransactionAssertionFailed)
   ]
 
 genTransactionOutput :: InterpretJsonRequest -> GenT IO TransactionOutput
 genTransactionOutput i =
   frequency
-    [ (30, TransactionError <$> liftGen genTransactionError),
+    [ (30, TransactionError <$> liftGen arbitrary),
       ( 70,
         TransactionOutput <$> do
           wSize <- liftGen $ chooseInt (0, 2)
@@ -312,6 +309,6 @@ genContract i =
       timeout <- liftGen arbitraryInteger
       cont <- resize (n - 1) (genContract i)
       pure $ When cases timeout cont
-    genLet n = Let <$> liftGen genValueId <*> limit (genValue i) <*> resize (n - 1) (genContract i)
+    genLet n = Let <$> liftGen arbitrary <*> limit (genValue i) <*> resize (n - 1) (genContract i)
     genAssert n = Assert <$> limit (genObservation i) <*> resize (n - 1) (genContract i)
     limit = scale (min 3)

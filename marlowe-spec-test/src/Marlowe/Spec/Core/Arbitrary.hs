@@ -15,40 +15,46 @@ module Marlowe.Spec.Core.Arbitrary
   , arbitraryTimeIntervalAfter
   , arbitraryTimeIntervalBefore
   , arbitraryTimeIntervalAround
+  , arbitraryTransaction
+  , arbitraryValidTransactions
   , chooseArithInt
-  , genBound
-  , genEnvironment
-  , genInterval
-  , genIntervalError
-  , genTransactionError
-  , genValueId
-  , shrinkChoiceName
-  , shrinkTimeInterval
   )
   where
 
 import qualified Arith
 import Data.List (nub)
-import Marlowe.Spec.TypeId (TypeId (..))
-import Orderings (Ord (..))
-import Semantics (TransactionError (..))
+import Marlowe.Spec.TypeId ()
+import Orderings (Ord (..), max)
+import QuickCheck.GenT (MonadGen (..), frequency, resize, sized, suchThat)
+import Semantics
+  ( TransactionError (..),
+    TransactionOutput (..),
+    TransactionOutputRecord_ext (..),
+    Transaction_ext (..),
+    computeTransaction,
+    evalValue,
+  )
 import SemanticsTypes
   ( Action (..),
     Bound (..),
+    Case (..),
     ChoiceId (..),
+    Contract (..),
     Environment_ext (..),
+    Input (..),
+    IntervalError (..),
     Observation (..),
     Party (..),
     Payee (..),
+    State_ext (..),
     Token (..),
     Value (..),
     ValueId (..),
-    IntervalError (..),
+    minTime,
   )
 import Test.QuickCheck (Gen)
 import Test.QuickCheck.Arbitrary (Arbitrary (..))
-import QuickCheck.GenT (MonadGen (..), frequency, resize, sized, suchThat)
-import qualified Test.QuickCheck.Gen as QC (chooseInteger)
+import qualified Test.QuickCheck.Gen as QC (chooseInteger, elements)
 
 -- | Part of the Fibonacci sequence.
 fibonaccis :: Num a => [a]
@@ -136,22 +142,6 @@ arbitraryTimeIntervalAfter lower =
 greater_eq :: Orderings.Ord a => a -> a -> Bool
 greater_eq = flip less_eq
 
--- | Shrink a generated time interval.
-shrinkTimeInterval :: (Arith.Int, Arith.Int) -> [(Arith.Int, Arith.Int)]
-shrinkTimeInterval (start, end) =
-  let
-    mid = (start + end) `Arith.divide_int` 2
-  in
-    filter (/= (start, end))
-      $ nub
-      [
-        (start, start)
-      , (start, mid  )
-      , (mid  , mid  )
-      , (mid  , end  )
-      , (end  , end  )
-      ]
-
 -- | Some choice names.
 randomChoiceNames :: [String]
 randomChoiceNames =
@@ -181,6 +171,22 @@ arbitraryChoiceName = arbitraryFibonacci randomChoiceNames
 -- | Shrink a generated choice name
 shrinkChoiceName :: String -> [String]
 shrinkChoiceName = shrinkString id randomChoiceNames
+
+-- | Shrink a generated time interval.
+shrinkTimeInterval :: (Arith.Int, Arith.Int) -> [(Arith.Int, Arith.Int)]
+shrinkTimeInterval (start, end) =
+  let
+    mid = (start + end) `Arith.divide_int` 2
+  in
+    filter (/= (start, end))
+      $ nub
+      [
+        (start, start)
+      , (start, mid  )
+      , (mid  , mid  )
+      , (mid  , end  )
+      , (end  , end  )
+      ]
 
 genValueId :: Gen ValueId
 genValueId = arbitraryFibonacci randomValueIds
@@ -243,15 +249,11 @@ instance Arbitrary Arith.Int where
   arbitrary = arbitraryInteger
 
 instance Arbitrary ValueId where
-  arbitrary = arbitraryFibonacci randomValueIds
+  arbitrary = genValueId
   shrink = shrinkString (\(ValueId x) -> x) randomValueIds
 
 instance Arbitrary Bound where
-  arbitrary =
-    do
-      lower <- arbitraryInteger
-      extent <- arbitraryNonnegativeInteger
-      pure $ Bound lower (lower + extent)
+  arbitrary = genBound
   shrink (Bound lower upper) =
     let
       mid = (lower + upper) `Arith.divide_int` 2
@@ -419,3 +421,72 @@ instance Arbitrary Action where
   shrink (Deposit a p t x) = [Deposit a' p t x | a' <- shrink a] ++ [Deposit a p' t x | p' <- shrink p] ++ [Deposit a p t' x | t' <- shrink t] ++ [Deposit a p t x' | x' <- shrink x]
   shrink (Choice c b) = [Choice c' b | c' <- shrink c] ++ [Choice c b' | b' <- shrink b]
   shrink (Notify o) = Notify <$> shrink o
+
+instance Arbitrary TransactionError where
+  arbitrary = genTransactionError
+  shrink (TEIntervalError i) = [TEIntervalError i' | i' <- shrink i]
+  shrink _ = []
+
+instance Arbitrary IntervalError where
+  arbitrary = genIntervalError
+  shrink (InvalidInterval i) = InvalidInterval <$> shrinkTimeInterval i
+  shrink (IntervalInPastError e i) = IntervalInPastError <$> shrink e <*> shrinkTimeInterval i
+
+instance Arbitrary (Environment_ext ()) where
+  arbitrary = genEnvironment
+  shrink (Environment_ext i ()) = Environment_ext <$> shrinkTimeInterval i <*> pure ()
+
+-- | Generate a random step for a contract.
+arbitraryTransaction :: State_ext ()             -- ^ The state of the contract.
+                     -> Contract                 -- ^ The contract.
+                     -> Gen (Transaction_ext ()) -- ^ Generator for a transaction input for a single step.
+arbitraryTransaction _ (When [] timeout _) = Transaction_ext <$> arbitraryTimeIntervalAfter timeout <*> pure [] <*> pure ()
+arbitraryTransaction state (When cases timeout _) =
+  do
+    let
+      isEmptyChoice (Choice _ []) = True
+      isEmptyChoice _             = False
+      minTime' = minTime state
+
+    isTimeout <- frequency [(9, pure False), (1, pure True)]
+    if isTimeout || less_eq timeout minTime' || all (isEmptyChoice . getAction) cases
+      then Transaction_ext <$> arbitraryTimeIntervalAfter timeout <*> pure [] <*> pure ()
+      else
+        do
+          times <- arbitraryTimeIntervalBefore minTime' timeout
+          Case action cont <- QC.elements $ filter (not . isEmptyChoice . getAction) cases
+          i <- case action of
+                 Deposit a p t v -> pure . IDeposit a p t $ evalValue (Environment_ext times ()) state v
+                 Choice n bs     -> do
+                                      Bound lower upper <- QC.elements bs
+                                      IChoice n <$> chooseArithInt (lower, upper)
+                 Notify _        -> pure INotify
+          case cont of
+            Close -> pure $ Transaction_ext times [i] ()
+            _ -> do Transaction_ext _ inps _ <- arbitraryTransaction state cont
+                    pure $ Transaction_ext times (i:inps) ()
+  where
+    getAction :: Case -> Action
+    getAction (Case a _) = a
+arbitraryTransaction state contract =
+  let nextTimeout Close = minTime state
+      nextTimeout (Pay _ _ _ _ continuation) = nextTimeout continuation
+      nextTimeout (If _ thenContinuation elseContinuation) = maximum' $ nextTimeout <$> [thenContinuation, elseContinuation]
+      nextTimeout (When _ timeout _) = timeout
+      nextTimeout (Let _ _ continuation) = nextTimeout continuation
+      nextTimeout (Assert _ continuation) = nextTimeout continuation
+   in Transaction_ext <$> arbitraryTimeIntervalAfter (maximum' [minTime state, nextTimeout contract]) <*> pure [] <*> pure ()
+  where
+    maximum' = foldl1 Orderings.max
+
+-- | Generate a random path through a contract.
+arbitraryValidTransactions :: State_ext ()             -- ^ The state of the contract.
+                           -> Contract                 -- ^ The contract.
+                           -> Gen [Transaction_ext ()] -- ^ Generator for a transaction inputs.
+arbitraryValidTransactions _ Close = pure []
+arbitraryValidTransactions state contract =
+  do
+    txIn <- arbitraryTransaction state contract
+    case computeTransaction txIn state contract of -- FIXME: It is tautological to use `computeTransaction` to filter test cases.
+      TransactionError _ -> pure []
+      TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _) -> (txIn :) <$> arbitraryValidTransactions txOutState txOutContract

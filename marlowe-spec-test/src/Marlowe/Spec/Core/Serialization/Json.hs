@@ -15,7 +15,6 @@ import qualified Data.Aeson.Types as JSON
 import Data.Proxy (Proxy (..))
 import Data.Text as T
 import GHC.Stack (HasCallStack)
-import Marlowe.Spec.Core.Arbitrary
 import Marlowe.Spec.Core.Generators
   ( genAction,
     genChoiceId,
@@ -37,10 +36,12 @@ import Marlowe.Spec.Reproducible (assertResponse, generate, generateT, reproduci
 import Marlowe.Spec.TypeId (HasTypeId (..), TypeId (..))
 import MarloweCoreJson
 import QuickCheck.GenT (MonadGen (resize))
+import qualified Semantics as C
 import qualified SemanticsTypes as C
 import Test.QuickCheck.Monadic (PropertyM, run)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@=?))
+import Test.QuickCheck (Gen, Arbitrary (..))
 
 data SerializationResponse transport
   = SerializationSuccess transport
@@ -202,7 +203,7 @@ arbitraryChoiceIdTest i = reproducibleProperty "ChoiceId" do
 
 arbitraryBoundTest :: InterpretJsonRequest -> TestTree
 arbitraryBoundTest i = reproducibleProperty "Bound" do
-  bound <- run $ generate genBound
+  bound <- run $ generate (arbitrary :: Gen C.Bound)
   propertyRoundtripTest i bound
 
 arbitraryValueTest :: InterpretJsonRequest -> TestTree
@@ -252,12 +253,12 @@ arbitraryTransactionWarningTest i = reproducibleProperty "TransactionWarning" do
 
 arbitraryIntervalErrorTest :: InterpretJsonRequest -> TestTree
 arbitraryIntervalErrorTest i = reproducibleProperty "IntervalError" do
-  warning <- run $ generate genIntervalError
+  warning <- run $ generate (arbitrary :: Gen C.IntervalError)
   propertyRoundtripTest i warning
 
 arbitraryTransactionErrorTest :: InterpretJsonRequest -> TestTree
 arbitraryTransactionErrorTest i = reproducibleProperty "TransactionError" do
-  txError <- run $ generate genTransactionError
+  txError <- run $ generate (arbitrary :: Gen C.TransactionError)
   propertyRoundtripTest i txError
 
 arbitraryTransactionOutputTest :: InterpretJsonRequest -> TestTree

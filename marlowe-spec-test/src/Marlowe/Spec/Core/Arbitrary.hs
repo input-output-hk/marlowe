@@ -355,6 +355,18 @@ instance Arbitrary Value where
       genUseValue = UseValue <$> arbitrary
       genCond = Cond <$> arbitrary <*> arbitrary <*> arbitrary
 
+  shrink (AvailableMoney x y) = [AvailableMoney x' y | x' <- shrink x] ++ [AvailableMoney x y' | y' <- shrink y]
+  shrink (Constant x)         = [Constant x' | x' <- shrink x]
+  shrink (NegValue x)         = [NegValue x' | x' <- shrink x]
+  shrink (AddValue x y)       = [AddValue x' y | x' <- shrink x] ++ [AddValue x y' | y' <- shrink y]
+  shrink (SubValue x y)       = [SubValue x' y | x' <- shrink x] ++ [SubValue x y' | y' <- shrink y]
+  shrink (MulValue x y)       = [MulValue x' y | x' <- shrink x] ++ [MulValue x y' | y' <- shrink y]
+  shrink (DivValue x y)       = [DivValue x' y | x' <- shrink x] ++ [DivValue x y' | y' <- shrink y]
+  shrink (ChoiceValue x)      = [ChoiceValue x' | x' <- shrink x]
+  shrink (UseValue x)         = [UseValue x' | x' <- shrink x]
+  shrink (Cond o x y)         = [Cond o' x y | o' <- shrink o] ++ [Cond o x' y | x' <- shrink x] ++ [Cond o x y' | y' <- shrink y]
+  shrink _                    = []
+
 instance Arbitrary Observation where
   arbitrary =
     frequency

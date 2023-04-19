@@ -6,6 +6,25 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Marlowe.Spec.Core.Arbitrary
+  ( arbitraryChoiceName
+  , arbitraryFibonacci
+  , arbitraryInteger
+  , arbitraryNonnegativeInteger
+  , arbitraryPositiveInteger
+  , arbitraryTimeInterval
+  , arbitraryTimeIntervalAfter
+  , arbitraryTimeIntervalBefore
+  , arbitraryTimeIntervalAround
+  , chooseArithInt
+  , genBound
+  , genEnvironment
+  , genInterval
+  , genIntervalError
+  , genTransactionError
+  , genValueId
+  , shrinkChoiceName
+  , shrinkTimeInterval
+  )
   where
 
 import qualified Arith
@@ -60,8 +79,8 @@ arbitraryInteger = Arith.Int_of_integer <$>
     ]
 
 -- | An arbitrary integer within an interval.
-chooseinteger :: (Arith.Int, Arith.Int) -> Gen Arith.Int
-chooseinteger (Arith.Int_of_integer i, Arith.Int_of_integer j) =
+chooseArithInt :: (Arith.Int, Arith.Int) -> Gen Arith.Int
+chooseArithInt (Arith.Int_of_integer i, Arith.Int_of_integer j) =
   Arith.Int_of_integer <$> QC.chooseInteger (i, j)
 
 -- | An arbitrary non-negative integer, mostly small.
@@ -103,7 +122,7 @@ arbitraryTimeIntervalBefore :: Arith.Int -> Arith.Int -> Gen (Arith.Int, Arith.I
 arbitraryTimeIntervalBefore lower upper =
   do
     start <- arbitraryNonnegativeInteger `suchThat` greater_eq lower
-    duration <- chooseinteger (0, upper - start - 1)
+    duration <- chooseArithInt (0, upper - start - 1)
     pure (start, start + duration)
 
 -- | Generate a semi-random time interval after a given time.
@@ -113,6 +132,9 @@ arbitraryTimeIntervalAfter lower =
     start <- arbitraryNonnegativeInteger `suchThat` less_eq lower
     duration <- arbitraryNonnegativeInteger
     pure (start, start + duration)
+
+greater_eq :: Orderings.Ord a => a -> a -> Bool
+greater_eq = flip less_eq
 
 -- | Shrink a generated time interval.
 shrinkTimeInterval :: (Arith.Int, Arith.Int) -> [(Arith.Int, Arith.Int)]
@@ -129,9 +151,6 @@ shrinkTimeInterval (start, end) =
       , (mid  , end  )
       , (end  , end  )
       ]
-
-greater_eq :: Orderings.Ord a => a -> a -> Bool
-greater_eq = flip less_eq
 
 -- | Some choice names.
 randomChoiceNames :: [String]

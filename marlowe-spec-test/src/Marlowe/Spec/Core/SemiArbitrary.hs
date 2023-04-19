@@ -31,7 +31,7 @@ import Marlowe.Spec.Core.Arbitrary
     arbitraryPositiveInteger,
     arbitraryTimeIntervalAfter,
     arbitraryTimeIntervalBefore,
-    chooseinteger,
+    chooseArithInt,
     genBound,
     genTransactionError,
     genValueId,
@@ -446,7 +446,7 @@ arbitraryTransaction state (When cases timeout _) =
                  Deposit a p t v -> pure . IDeposit a p t $ evalValue (Environment_ext times ()) state v
                  Choice n bs     -> do
                                       Bound lower upper <- QC.elements bs
-                                      IChoice n <$> chooseinteger (lower, upper)
+                                      IChoice n <$> chooseArithInt (lower, upper)
                  Notify _        -> pure INotify
           case cont of
             Close -> pure $ Transaction_ext times [i] ()

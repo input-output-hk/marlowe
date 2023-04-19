@@ -14,23 +14,23 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as JSON
 import Marlowe.Spec.Core.Arbitrary (genEnvironment)
-import Marlowe.Spec.Core.Guarantees
+import Marlowe.Spec.Core.SemiArbitrary
   ( SemiArbitrary (..),
     arbitraryTransaction,
     arbitraryValidTransactions,
-    genContext
+    genContext,
   )
 import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
     Request (..),
-    Response (..)
+    Response (..),
   )
 import Marlowe.Spec.Reproducible
   ( assertResponse,
     generate,
     generateT,
     reproducibleProperty,
-    reproducibleProperty'
+    reproducibleProperty',
   )
 import Marlowe.Utils (showAsJson)
 import Orderings (Ord (..))
@@ -41,12 +41,12 @@ import Semantics
     Transaction_ext (..),
     computeTransaction,
     evalObservation,
-    evalValue
+    evalValue,
   )
 import SemanticsTypes
   ( Contract (..),
     State_ext (..),
-    Value (..)
+    Value (..),
   )
 import Test.QuickCheck (withMaxSuccess)
 import Test.QuickCheck.Monadic (PropertyM, assert, monitor, run)

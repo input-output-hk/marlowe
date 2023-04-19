@@ -3,13 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Marlowe.Spec.Core.Guarantees
-  ( arbitraryContractWeighted
-  , arbitraryTransaction
-  , arbitraryValidTransactions
-  , genContext
-  , Context
-  , SemiArbitrary (..)
-  , tests
+  ( tests
   )
   where
 
@@ -17,10 +11,7 @@ import Arith (integer_of_nat)
 import qualified Arith
 import Control.Monad.IO.Class (MonadIO (..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Core.Arbitrary
-  ( arbitraryTimeIntervalAfter,
-    greater_eq,
-  )
+import Marlowe.Spec.Core.Arbitrary (arbitraryTimeIntervalAfter)
 import Marlowe.Spec.Core.SemiArbitrary
 import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
@@ -149,10 +140,6 @@ traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "theorem tra
       (JSON.Success _ , JSON.Success (TransactionError _)) -> pre False
       _ -> fail "JSON parsing failed"
 
-isWhen :: Contract -> Bool
-isWhen When {} = True
-isWhen _ = False
-
 -- QuiescentResults.thy
 --
 -- theorem computeTransactionIsQuiescent:
@@ -187,6 +174,10 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "theorem comp
              :: PropertyM ReproducibleTest Bool
       JSON.Success (TransactionError err ) -> fail $ "Unexpected Transaction Error: " ++ show err
       _ -> fail "JSON parsing failed!"
+  where
+    isWhen :: Contract -> Bool
+    isWhen When {} = True
+    isWhen _ = False
 
 -- QuiescentResults.thy
 --
@@ -259,6 +250,8 @@ timedOutTransaction_closes_contractTest interpret = reproducibleProperty "theore
              :: PropertyM ReproducibleTest Bool
       JSON.Success (TransactionError err ) -> fail $ "Unexpected Transaction Error: " ++ show err
       _ -> fail "JSON parsing failed!"
+  where
+    greater_eq = flip less_eq
 
 -- CloseIsSafe.thy
 --

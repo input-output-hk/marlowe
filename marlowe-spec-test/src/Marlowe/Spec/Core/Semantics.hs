@@ -17,10 +17,7 @@ import Marlowe.Spec.Core.Arbitrary
   ( arbitraryTransaction,
     arbitraryValidTransactions,
   )
-import Marlowe.Spec.Core.SemiArbitrary
-  ( SemiArbitrary (..),
-    genContext
-  )
+import Marlowe.Spec.Core.SemiArbitrary (SemiArbitrary (..))
 import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
     Request (..),
@@ -53,6 +50,7 @@ import Test.QuickCheck (Arbitrary (..), withMaxSuccess)
 import Test.QuickCheck.Monadic (PropertyM, assert, monitor, run)
 import Test.QuickCheck.Property (counterexample)
 import Test.Tasty (TestTree, testGroup)
+import Marlowe.Spec.Core.Generators (genContext)
 
 tests :: InterpretJsonRequest -> TestTree
 tests i = testGroup "Semantics"

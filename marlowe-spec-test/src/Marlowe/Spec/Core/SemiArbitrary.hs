@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -11,33 +10,22 @@ module Marlowe.Spec.Core.SemiArbitrary
   ( arbitraryCaseWeighted
   , arbitraryContractWeighted
   , arbitraryContractSized
-  , Context
-  , genContext
+  , Context (..)
   , SemiArbitrary (..)
   )
   where
 
 import qualified Arith
-import Control.Monad (replicateM)
-import Data.Function (on)
-import Data.List (nubBy)
-import Data.Map (Map, fromList, toList)
+import Data.Map (Map, toList)
 import qualified Examples.Escrow as Escrow
 import qualified Examples.Swap as Swap
 import Marlowe.Spec.Core.Arbitrary
-  ( arbitraryChoiceName,
-    arbitraryInteger,
+  ( arbitraryInteger,
     arbitraryNonnegativeInteger,
     arbitraryPositiveInteger,
   )
-import Marlowe.Spec.Core.Generators (genParty, genToken)
-import Marlowe.Spec.Interpret
-  ( InterpretJsonRequest,
-  )
 import QuickCheck.GenT
   ( Gen,
-    GenT,
-    MonadGen (..),
     frequency,
     resize,
     sized,
@@ -95,62 +83,6 @@ data Context =
   , cchoices     :: Map ChoiceId Arith.Int       -- ^ Choices for state.
   , cboundValues :: Map ValueId Arith.Int        -- ^ Bound values for state.
   } deriving Show
-
-genContext :: InterpretJsonRequest -> GenT IO Context
-genContext interpret = sized \n ->
-  let listOf gen = choose (1, n) >>= flip replicateM gen
-      listOfGen = liftGen . listOf
-      genParty' = genParty interpret
-      genToken' = genToken interpret
-   in do
-        parties <- listOf genParty'
-        tokens <- listOf genToken'
-        amounts <- listOfGen arbitraryPositiveInteger
-        choiceNames <- listOfGen arbitraryChoiceName
-        chosenNums <- listOfGen arbitraryInteger
-        choiceIds <-
-          listOf $
-            ChoiceId
-              <$> liftGen (perturb arbitraryChoiceName choiceNames)
-              <*> perturb genParty' parties
-        valueIds <- listOfGen arbitrary
-        values <- listOfGen arbitraryInteger
-        times <- listOfGen arbitraryPositiveInteger
-        caccounts <-
-          fromList . nubBy ((==) `on` fst)
-            <$> listOf
-              ( (,)
-                  <$> ( (,)
-                          <$> perturb genParty' parties
-                          <*> perturb genToken' tokens
-                      )
-                  <*> liftGen (perturb arbitraryPositiveInteger amounts)
-              )
-        cchoices <-
-          fromList . nubBy ((==) `on` fst)
-            <$> listOf
-              ( (,)
-                  <$> liftGen (elements choiceIds)
-                  <*> liftGen (perturb arbitraryInteger chosenNums)
-              )
-        cboundValues <-
-          fromList . nubBy ((==) `on` fst)
-            <$> listOf
-              ( (,)
-                  <$> liftGen (perturb arbitrary valueIds)
-                  <*> liftGen (perturb arbitraryInteger values)
-              )
-        pure Context {..}
-  where
-    perturb :: MonadGen g => g a -> [a] -> g a
-    perturb gen [] = gen
-    perturb gen xs = frequency [(20, gen), (80, liftGen $ elements xs)]
-
-instance Prelude.Ord Party where
-  compare (Address a) (Address b) = compare a b
-  compare (Address _) (Role _)    = LT
-  compare (Role _) (Address _)    = GT
-  compare (Role a) (Role b)       = compare a b
 
 instance Prelude.Ord Token where
   compare (Token a1 b1) (Token a2 b2) =
@@ -493,3 +425,9 @@ arbitraryContractSized :: Int           -- ^ The maximum depth.
                        -> Context       -- ^ The Marlowe context.
                        -> Gen Contract  -- ^ Generator for a contract.
 arbitraryContractSized = arbitraryContractWeighted . (`replicate` defaultContractWeights)
+
+instance Prelude.Ord Party where
+  compare (Address a) (Address b) = compare a b
+  compare (Address _) (Role _)    = LT
+  compare (Role _) (Address _)    = GT
+  compare (Role a) (Role b)       = compare a b

@@ -101,6 +101,12 @@ instance Prelude.Ord ChoiceId where
 instance Prelude.Ord ValueId where
   compare (ValueId v1) (ValueId v2) = compare v1 v2
 
+instance Prelude.Ord Party where
+  compare (Address a) (Address b) = compare a b
+  compare (Address _) (Role _)    = LT
+  compare (Role _) (Address _)    = GT
+  compare (Role a) (Role b)       = compare a b
+
 instance SemiArbitrary Arith.Int where
   fromContext = times
 
@@ -425,9 +431,3 @@ arbitraryContractSized :: Int           -- ^ The maximum depth.
                        -> Context       -- ^ The Marlowe context.
                        -> Gen Contract  -- ^ Generator for a contract.
 arbitraryContractSized = arbitraryContractWeighted . (`replicate` defaultContractWeights)
-
-instance Prelude.Ord Party where
-  compare (Address a) (Address b) = compare a b
-  compare (Address _) (Role _)    = LT
-  compare (Role _) (Address _)    = GT
-  compare (Role a) (Role b)       = compare a b

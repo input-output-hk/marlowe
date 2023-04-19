@@ -11,9 +11,16 @@ import Arith (integer_of_nat)
 import qualified Arith
 import Control.Monad.IO.Class (MonadIO (..))
 import qualified Data.Aeson as JSON
-import Marlowe.Spec.Core.Arbitrary (arbitraryTimeIntervalAfter, arbitraryTransaction, arbitraryValidTransactions)
+import Marlowe.Spec.Core.Arbitrary
+  ( arbitraryTimeIntervalAfter,
+    arbitraryTransaction,
+    arbitraryValidTransactions,
+  )
 import Marlowe.Spec.Core.Generators (genContext)
 import Marlowe.Spec.Core.SemiArbitrary
+  ( Context (..),
+    SemiArbitrary (..),
+  )
 import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
     Request (..),

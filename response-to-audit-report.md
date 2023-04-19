@@ -62,7 +62,7 @@ Mitigation of the difference between association lists (item 4 above) in Isabell
 
 The audit report for Marlowe on Cardano was based on the commit hash [523f3d56](https://github.com/input-output-hk/marlowe-cardano/commit/523f3d56f22bf992ddb0b0c8a52bb7a5a188f9e9). The revisions and mitigations discussed here apply to [ac65eba1](https://github.com/input-output-hk/marlowe-cardano/commit/) of that repository. The appendix to this report list the differences between pre- and post-audit validator code for Marlowe on Cardano.
 
-The medium-severity concerns in the audit report center around missing tests or name shadowing. With the exception of "2.7.1 More precise failure checks", these have all been remedied either by code changes (in the case of the shadowing) or by the addition of a significant augmentation of the property-based test suite. The audit's low-severity concerns generally relate to insufficiently detailed text in the Marlowe Cardano specification, the need for more elaborate comments in the code, naming of variable bindings, or typographical errors. Nearly all of these finds have been addressed, with only the exception of a few cosmetic recommendations that were not adopted.
+The medium-severity concerns in the audit report center around missing tests or name shadowing. These have all been remedied either by code changes (in the case of the shadowing) or by the addition of a significant augmentation of the property-based test suite. The audit's low-severity concerns generally relate to insufficiently detailed text in the Marlowe Cardano specification, the need for more elaborate comments in the code, naming of variable bindings, or typographical errors. Nearly all of these finds have been addressed, with only the exception of a few cosmetic recommendations that were not adopted.
 
 
 # 2 Responses to Specific Findings
@@ -1456,7 +1456,7 @@ This misstatement is remedied in commit [8691f335](https://github.com/input-outp
 > 
 > The absence of this information makes it easier to accidentally produce a test that is not testing what is intended.
 
-A future version of the Marlowe test suite for `checkSemanticsTransaction` and `checkPayoutTransaction` will instrument Plutus scripts for the Marlowe validators so that the precise cause of the test failure can be verified.
+Commit [8d18385b](https://github.com/input-output-hk/marlowe-cardano/commit/8d18385b107fbce2f7a4559e6017d9e228ab958b) to the Marlowe test suite for `checkSemanticsTransaction` instruments Plutus scripts for the Marlowe validator so that the precise cause of the test failure is verified.
 
 
 ### 2.7.2 Missing tests *(Severity: Medium)*

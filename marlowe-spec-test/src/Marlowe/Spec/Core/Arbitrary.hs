@@ -239,40 +239,12 @@ shrinkTimeInterval (start, end) =
       , (end  , end  )
       ]
 
-genValueId :: Gen ValueId
-genValueId = arbitraryFibonacci randomValueIds
-
-genBound :: Gen Bound
-genBound = do
-  lower <- arbitraryInteger
-  extent <- arbitraryNonnegativeInteger
-  pure $ Bound lower (lower + extent)
-
+-- | Generate a time interval.
 genInterval :: Gen (Arith.Int, Arith.Int)
 genInterval = do
   lower <- arbitraryNonnegativeInteger
   extent <- arbitraryNonnegativeInteger
   pure (lower, lower + extent)
-
-genIntervalError :: Gen IntervalError
-genIntervalError = do
-  lower <- arbitraryInteger
-  extent <- arbitraryNonnegativeInteger
-  frequency
-    [ (1, pure $ InvalidInterval (lower, lower + extent))
-    , (1, IntervalInPastError <$> liftGen arbitraryNonnegativeInteger <*> pure  (lower, lower + extent) )
-    ]
-
-genTransactionError :: Gen TransactionError
-genTransactionError = frequency
-    [ (1, pure TEAmbiguousTimeIntervalError)
-    , (1, pure TEApplyNoMatchError)
-    , (1, TEIntervalError <$> genIntervalError)
-    , (1, pure TEUselessTransaction)
-    ]
-
-genEnvironment :: Gen (Environment_ext ())
-genEnvironment = Environment_ext <$> genInterval <*> pure ()
 
 -- | Some value identifiers.
 randomValueIds :: [ValueId]
@@ -300,11 +272,15 @@ instance Arbitrary Arith.Int where
   arbitrary = arbitraryInteger
 
 instance Arbitrary ValueId where
-  arbitrary = genValueId
+  arbitrary = arbitraryFibonacci randomValueIds
   shrink = shrinkString (\(ValueId x) -> x) randomValueIds
 
 instance Arbitrary Bound where
-  arbitrary = genBound
+  arbitrary = do
+    lower <- arbitraryInteger
+    extent <- arbitraryNonnegativeInteger
+    pure $ Bound lower (lower + extent)
+
   shrink (Bound lower upper) =
     let
       mid = (lower + upper) `Arith.divide_int` 2
@@ -363,15 +339,28 @@ randomRoleNames =
   ]
 
 instance Arbitrary TransactionError where
-  arbitrary = genTransactionError
+  arbitrary = frequency
+    [ (1, pure TEAmbiguousTimeIntervalError)
+    , (1, pure TEApplyNoMatchError)
+    , (1, TEIntervalError <$> arbitrary)
+    , (1, pure TEUselessTransaction)
+    ]
+
   shrink (TEIntervalError i) = [TEIntervalError i' | i' <- shrink i]
   shrink _ = []
 
 instance Arbitrary IntervalError where
-  arbitrary = genIntervalError
+  arbitrary = do
+    lower <- arbitraryInteger
+    extent <- arbitraryNonnegativeInteger
+    frequency
+      [ (1, pure $ InvalidInterval (lower, lower + extent))
+      , (1, IntervalInPastError <$> liftGen arbitraryNonnegativeInteger <*> pure  (lower, lower + extent) )
+      ]
+
   shrink (InvalidInterval i) = InvalidInterval <$> shrinkTimeInterval i
   shrink (IntervalInPastError e i) = IntervalInPastError <$> shrink e <*> shrinkTimeInterval i
 
 instance Arbitrary (Environment_ext ()) where
-  arbitrary = genEnvironment
+  arbitrary = Environment_ext <$> genInterval <*> pure ()
   shrink (Environment_ext i ()) = Environment_ext <$> shrinkTimeInterval i <*> pure ()

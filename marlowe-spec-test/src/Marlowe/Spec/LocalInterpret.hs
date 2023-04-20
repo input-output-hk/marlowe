@@ -13,6 +13,7 @@ import qualified Arith (Int (..))
 import Data.Aeson (FromJSON, Result (..), ToJSON)
 import qualified Data.Aeson as JSON
 import Data.Data (Proxy)
+import Marlowe.Spec.Core.Arbitrary (arbitraryFibonacci)
 import qualified Marlowe.Spec.Core.Generators as Gen
 import Marlowe.Spec.Core.Serialization.Json (SerializationResponse (..))
 import Marlowe.Spec.Interpret (Request (..), Response (..))
@@ -21,11 +22,11 @@ import Semantics
   ( computeTransaction,
     evalObservation,
     evalValue,
-    playTrace
+    playTrace,
   )
 import SemanticsTypes (Party (..), Token (..))
 import Test.QuickCheck (Arbitrary (..))
-import Test.QuickCheck.Gen (Gen (..))
+import Test.QuickCheck.Gen (Gen (..), frequency)
 import Test.QuickCheck.Random (mkQCGen)
 
 interpretLocal :: Request JSON.Value -> IO (Response JSON.Value)
@@ -74,3 +75,46 @@ localJsonRoundtripSerialization t@(TypeId name proxy) v = case fromTypeName name
     roundtrip _  = case JSON.fromJSON v :: Result a of
             Error str -> SerializationError str
             Success c ->  SerializationSuccess $ JSON.toJSON c
+
+instance Arbitrary Token where
+  arbitrary =
+     do
+       isAda <- arbitrary
+       if isAda
+         then pure $ Token "" ""
+         else Token <$> arbitrary <*> arbitrary
+  shrink (Token c n)
+    | c == "" && n == "" = []
+    | otherwise          = Token "" "" : [Token c' n' | c' <- shrink c, n' <- shrink n]
+
+instance Arbitrary Party where
+  arbitrary =
+    do
+       isPubKeyHash <- frequency [(2, pure True), (8, pure False)]
+       if isPubKeyHash
+         then Address <$> arbitrary
+         else Role <$> arbitraryFibonacci randomRoleNames
+  shrink (Address _) = Role <$> randomRoleNames
+  shrink (Role _)    = Role <$> randomRoleNames
+
+-- | Some role names.
+randomRoleNames :: [String]
+randomRoleNames =
+  [
+    "Cy"
+  , "Noe"
+  , "Sten"
+  , "Cara"
+  , "Alene"
+  , "Hande"
+  , ""
+  , "I"
+  , "Zakkai"
+  , "Laurent"
+  , "Prosenjit"
+  , "Dafne Helge Mose"
+  , "Nonso Ernie Blanka"
+  , "Umukoro Alexander Columb"
+  , "Urbanus Roland Alison Ty Ryoichi"
+  , "Alcippe Alende Blanka Roland Dafne"  -- NB: Too long for Cardano ledger.
+  ]

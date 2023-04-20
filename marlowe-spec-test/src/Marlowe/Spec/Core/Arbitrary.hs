@@ -46,9 +46,7 @@ import SemanticsTypes
     Environment_ext (..),
     Input (..),
     IntervalError (..),
-    Party (..),
     State_ext (..),
-    Token (..),
     ValueId (..),
     minTime,
   )
@@ -294,49 +292,6 @@ instance Arbitrary Bound where
         , Bound mid   upper
         , Bound upper upper
         ]
-
-instance Arbitrary Token where
-  arbitrary =
-     do
-       isAda <- arbitrary
-       if isAda
-         then pure $ Token "" ""
-         else Token <$> arbitrary <*> arbitrary
-  shrink (Token c n)
-    | c == "" && n == "" = []
-    | otherwise          = Token "" "" : [Token c' n' | c' <- shrink c, n' <- shrink n]
-
-instance Arbitrary Party where
-  arbitrary =
-    do
-       isPubKeyHash <- frequency [(2, pure True), (8, pure False)]
-       if isPubKeyHash
-         then Address <$> arbitrary
-         else Role <$> arbitraryFibonacci randomRoleNames
-  shrink (Address _) = Role <$> randomRoleNames
-  shrink (Role _)    = Role <$> randomRoleNames
-
--- | Some role names.
-randomRoleNames :: [String]
-randomRoleNames =
-  [
-    "Cy"
-  , "Noe"
-  , "Sten"
-  , "Cara"
-  , "Alene"
-  , "Hande"
-  , ""
-  , "I"
-  , "Zakkai"
-  , "Laurent"
-  , "Prosenjit"
-  , "Dafne Helge Mose"
-  , "Nonso Ernie Blanka"
-  , "Umukoro Alexander Columb"
-  , "Urbanus Roland Alison Ty Ryoichi"
-  , "Alcippe Alende Blanka Roland Dafne"  -- NB: Too long for Cardano ledger.
-  ]
 
 instance Arbitrary TransactionError where
   arbitrary = frequency

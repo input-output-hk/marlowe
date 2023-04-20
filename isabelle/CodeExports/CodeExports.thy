@@ -64,6 +64,7 @@ export_code
   applyAllInputs
   computeTransaction
   playTrace
+  emptyState
 
    \<comment> \<open> Export utility functions\<close>
   getOutcomes

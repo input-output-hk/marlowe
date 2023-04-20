@@ -1,6 +1,7 @@
 {-# LANGUAGE BlockArguments    #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Marlowe.Spec.Core.Guarantees
   ( tests
@@ -15,11 +16,12 @@ import Marlowe.Spec.Core.Arbitrary
   ( arbitraryTimeIntervalAfter,
     arbitraryTransaction,
     arbitraryValidTransactions,
+    arbitraryPositiveInteger
   )
 import Marlowe.Spec.Core.Generators (genContext)
 import Marlowe.Spec.Core.SemiArbitrary
   ( Context (..),
-    SemiArbitrary (..),
+    SemiArbitrary (..), arbitraryContractWeighted,
   )
 import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
@@ -49,6 +51,8 @@ import Semantics
     maxTimeContract,
     txOutPayments,
     txOutWarnings,
+    txOutContract,
+    emptyState, txOutState
   )
 import SemanticsTypes
   ( Contract (..),
@@ -116,6 +120,14 @@ genContractStateAndValidTransactions context = do
     t <- arbitraryValidTransactions s c
     pure (c,s,t)
 
+isWhen :: Contract -> Bool
+isWhen When {} = True
+isWhen _ = False
+
+isClose :: Contract -> Bool
+isClose Close = True
+isClose _ = False
+
 -- SingleInputTransactions.thy
 --
 -- theorem traceToSingleInputIsEquivalent:
@@ -123,13 +135,15 @@ genContractStateAndValidTransactions context = do
 traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
 traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "theorem traceToSingleInputIsEquivalent" do
     context <- run $ generateT $ genContext interpret
-    (contract, State_ext _ _ _ (Arith.Int_of_integer startTime) _, transactions) <- run $ generate $ (do
-        (_,c) <- semiArbitrary context `suchThat` (\(b,c) -> b && integer_of_nat (maxTransactionsInitialState c) > 2)
-        s <- semiArbitrary context
+    (contract, (Arith.Int_of_integer startTime), transactions) <- run $ generate $ (do
+        c <- genArbitraryContracts context
+        startTime <- arbitraryPositiveInteger
+        let
+          s = emptyState startTime
         t <- arbitraryValidTransactions s c
-        pure (c,s,t)) `suchThat` \(_,_,t') -> t' /= traceListToSingleInput t'
-
+        pure (c,startTime,t)) `suchThat` \(_,_,t) -> t /= traceListToSingleInput t
     let
+        numberOfInputs = foldr (\tx n -> n + length (inputs tx)) 0 transactions
         multipleInputs = PlayTrace startTime contract transactions
         singletonInput = PlayTrace startTime contract (traceListToSingleInput transactions)
 
@@ -137,17 +151,32 @@ traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "theorem tra
     RequestResponse resSingletonInput <- run $ liftIO $ interpret singletonInput
 
     case (JSON.fromJSON resMultipleInputs, JSON.fromJSON resSingletonInput) of
-      (JSON.Success (TransactionOutput _), JSON.Success (TransactionOutput _)) -> do
+      (JSON.Success (TransactionOutput o), JSON.Success (TransactionOutput _)) -> do
         monitor
           ( counterexample $
               "Result singleton Input: " ++ showAsJson resSingletonInput ++ "\n"
                 ++ "Result multiple Inputs: " ++ showAsJson resMultipleInputs ++ "\n"
                 ++ "Expected to be equal")
-        assert $ resMultipleInputs == resSingletonInput
-      (JSON.Success (TransactionError _), JSON.Success _) -> pre False
-      (JSON.Success _ , JSON.Success (TransactionError _)) -> pre False
+        stop $ cover 100.0 (integer_of_nat (maxTransactionsInitialState contract) > 2) "Contract can accept more than 2 transactions"
+             $ cover 100.0 (numberOfInputs >= 2) "Transactions have 2 or more inputs"
+             $ cover 40.0 (numberOfInputs >= 3) "Transactions have 3 or more inputs"
+             $ cover 20.0 (not $ isClose $ txOutContract o) "Doesn't end up in close"
+             $ resMultipleInputs == resSingletonInput
+             :: PropertyM ReproducibleTest Bool
+      (JSON.Success _, JSON.Success _) -> fail "TransactionError"
       _ -> fail "JSON parsing failed"
-
+  where
+  genArbitraryContracts :: Context -> Gen Contract
+  genArbitraryContracts ctx = do
+    arbitraryContractWeighted
+      [ (0, 5, 10, 70, 10, 5)    -- A good contract for this test should never start with Close
+      , (5, 10, 10, 60, 10, 5)
+      , (15, 15, 10, 35, 20, 5)
+      , (25, 20, 10, 30, 20, 5)
+      , (25, 20, 10, 30, 20, 5)
+      ]
+      ctx
+      `suchThat` (\c -> integer_of_nat (maxTransactionsInitialState c) > 2)
 -- QuiescentResults.thy
 --
 -- theorem computeTransactionIsQuiescent:
@@ -170,22 +199,20 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "theorem comp
 
     RequestResponse res <- run $ liftIO $ interpret req
     case JSON.fromJSON res of
-      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _)) -> do
+      JSON.Success (TransactionOutput o) -> do
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
                 ++ "Response: " ++ showAsJson res ++ "\n"
                 ++ "Expected reponse to be quiescent")
         stop $ cover 30.0 (not (null (inputs transaction))) "Non empty transaction"
-             $ cover 10.0 (isWhen txOutContract) "Output contract is a When statement"
-             $ isQuiescent txOutContract txOutState
+             $ cover 10.0 (isWhen $ txOutContract o) "Output contract is a When statement"
+             $ isQuiescent (txOutContract o) (txOutState o)
              :: PropertyM ReproducibleTest Bool
       JSON.Success (TransactionError err ) -> fail $ "Unexpected Transaction Error: " ++ show err
       _ -> fail "JSON parsing failed!"
-  where
-    isWhen :: Contract -> Bool
-    isWhen When {} = True
-    isWhen _ = False
+
+
 
 -- QuiescentResults.thy
 --
@@ -206,13 +233,13 @@ playTraceIsQuiescentTest interpret = reproducibleProperty "theorem playTraceIsQu
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
-      JSON.Success (TransactionOutput (TransactionOutputRecord_ext _ _ txOutState txOutContract _)) -> do
+      JSON.Success (TransactionOutput o) -> do
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
                 ++ "Response: " ++ showAsJson res ++ "\n"
                 ++ "Expected reponse to be quiescent" )
-        assert $ isQuiescent txOutContract txOutState
+        assert $ isQuiescent (txOutContract o) (txOutState o)
       JSON.Success (TransactionError _ ) -> pre False
       _ -> fail "JSON parsing failed!"
 
@@ -244,14 +271,14 @@ timedOutTransaction_closes_contractTest interpret = reproducibleProperty "theore
     RequestResponse res <- run $ liftIO $ interpret req
 
     case JSON.fromJSON res of
-      JSON.Success txOut@(TransactionOutput (TransactionOutputRecord_ext _ txOutPayment txOutState txOutContract _)) -> do
+      JSON.Success txOut@(TransactionOutput o) -> do
         monitor
           ( counterexample $
               "Request: " ++ showAsJson req ++ "\n"
-                ++ "txOutContract: " ++ show txOutContract
-                ++ "txOutState: " ++ show txOutState)
+                ++ "txOutContract: " ++ show (txOutContract o)
+                ++ "txOutState: " ++ show (txOutState o))
         stop $ cover 100.0 (null (inputs transaction)) "Transaction without inputs"
-             $ cover 10.0 (length txOutPayment > 1) "Timeout contract produces payments"
+             $ cover 10.0 (length (txOutPayments o) > 1) "Timeout contract produces payments"
              $ cover 70.0 (integer_of_nat (maxTransactionsInitialState contract) >= 1) "At least 1 transaction"
              $ cover 10.0 (integer_of_nat (maxTransactionsInitialState contract) >= 3) "At least 3 transactions"
              $ isClosedAndEmpty txOut

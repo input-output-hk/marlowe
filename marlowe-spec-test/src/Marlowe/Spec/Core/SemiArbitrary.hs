@@ -10,6 +10,7 @@ module Marlowe.Spec.Core.SemiArbitrary
   ( arbitraryCaseWeighted
   , arbitraryContractWeighted
   , arbitraryContractSized
+  , genGoldenContract
   , Context (..)
   , SemiArbitrary (..)
   )

@@ -6,19 +6,27 @@ begin
 
 declare [[ smt_timeout = 300 ]]
 
+text 
+\<open>The function inputsToTransactions creates a single-input transaction for every
+ provided input.
+\<close>
 fun inputsToTransactions :: "TimeInterval \<Rightarrow> Input list \<Rightarrow> Transaction list" where
-"inputsToTransactions si Nil = Cons \<lparr> interval = si
-                                    , inputs = Nil \<rparr> Nil" |
-"inputsToTransactions si (Cons inp1 Nil) = Cons \<lparr> interval = si
-                                                 , inputs = Cons inp1 Nil \<rparr> Nil" |
-"inputsToTransactions si (Cons inp1 rest) = Cons \<lparr> interval = si
-                                                 , inputs = Cons inp1 Nil \<rparr>
-                                                 (inputsToTransactions si rest)"
+ "inputsToTransactions ti [] = [\<lparr> interval = ti, inputs = [] \<rparr>]" 
+|"inputsToTransactions ti [inp1] = [\<lparr> interval = ti, inputs = [inp1] \<rparr>]" 
+|"inputsToTransactions ti (headInput # tailInput) =  
+  Cons 
+    \<lparr> interval = ti, inputs = [headInput] \<rparr>
+    (inputsToTransactions ti tailInput)"
 
+text 
+\<open>
+The function traceListToSingleInput explodes a list of transactions that might have 
+multiple inputs into a list of transactions of 0 or 1 input 
+\<close>
 fun traceListToSingleInput :: "Transaction list \<Rightarrow> Transaction list" where
-"traceListToSingleInput Nil = Nil" |
-"traceListToSingleInput (Cons \<lparr> interval = si
-                              , inputs = inps \<rparr> rest) = inputsToTransactions si inps @ (traceListToSingleInput rest)"
+"traceListToSingleInput [] = []" |
+"traceListToSingleInput (\<lparr> interval = si, inputs = inps \<rparr> # tailTx) = 
+  inputsToTransactions si inps @ traceListToSingleInput tailTx"
 
 lemma reductionLoopIdempotent :
   "reductionLoop reducedBefore env state contract wa pa = ContractQuiescent reducedAfter nwa npa nsta ncont \<Longrightarrow>

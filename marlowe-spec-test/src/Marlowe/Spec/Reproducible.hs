@@ -17,7 +17,6 @@ import Marlowe.Spec.Interpret (InterpretJsonRequest, Request, Response)
 import qualified Data.Aeson as JSON
 import Marlowe.Utils (showAsJson)
 
-
 newtype ReproducibleTest a = ReproducibleTest (StateT QCGen IO a)
   deriving (Functor, Applicative, Monad, MonadState QCGen, MonadIO)
 
@@ -33,7 +32,6 @@ generate (MkGen g) = do
   put newGen
   return (g oldGen 30)
 
-
 generateT :: (MonadState QCGen m, MonadIO m) => GenT IO a -> m a
 generateT gt = do
   (oldGen, newGen) <- gets Gen.split
@@ -42,17 +40,16 @@ generateT gt = do
     MkGen iog = runGenT gt
   liftIO $ iog oldGen 30
 
-
 assertResponse :: MonadIO m => InterpretJsonRequest -> Request JSON.Value -> Response JSON.Value -> PropertyM m ()
 assertResponse interpret req successResponse = do
-    res <- run $ liftIO $ interpret req
-    monitor (
-        counterexample $
-            "Request: " ++ showAsJson req ++ "\n" ++
-            "Expected: " ++ show successResponse ++ "\n" ++
-            "Actual: " ++ show res
-        )
-    assert $ successResponse == res
+  res <- run $ liftIO $ interpret req
+  monitor (
+      counterexample $
+          "Request: " ++ showAsJson req ++ "\n" ++
+          "Expected: " ++ show successResponse ++ "\n" ++
+          "Actual: " ++ show res
+      )
+  assert $ successResponse == res
 
 reproducibleProperty' :: TestName -> (a -> Property) -> PropertyM ReproducibleTest a -> TestTree
 reproducibleProperty' testName tx prop =
@@ -66,7 +63,6 @@ reproducibleProperty' testName tx prop =
 
   runProperty ::  Int -> Gen Property
   runProperty seed = ioProperty . runReproducibleTest seed <$> monadic' prop'
-
 
 reproducibleProperty :: Testable a => TestName -> PropertyM ReproducibleTest a -> TestTree
 reproducibleProperty testName = reproducibleProperty' testName property

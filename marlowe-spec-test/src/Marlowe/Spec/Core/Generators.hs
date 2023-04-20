@@ -4,8 +4,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 module Marlowe.Spec.Core.Generators
   ( gen
   , genContext

@@ -226,8 +226,7 @@ instance SemiArbitrary Observation where
 
 instance SemiArbitrary (State_ext ()) where
   semiArbitrary context =
-    State_ext
-      <$> pure (toList $ caccounts context)
+    pure (State_ext (toList $ caccounts context))
       <*> pure (toList $ cchoices context)
       <*> pure (toList $ cboundValues context)
       <*> arbitraryNonnegativeInteger

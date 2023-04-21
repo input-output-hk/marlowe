@@ -24,7 +24,7 @@ inputsToTransactions ti (headInput : v : va) =
 traceListToSingleInput ::
   [Semantics.Transaction_ext ()] -> [Semantics.Transaction_ext ()];
 traceListToSingleInput [] = [];
-traceListToSingleInput (Semantics.Transaction_ext si inps () : rest) =
-  inputsToTransactions si inps ++ traceListToSingleInput rest;
+traceListToSingleInput (Semantics.Transaction_ext si inps () : tailTx) =
+  inputsToTransactions si inps ++ traceListToSingleInput tailTx;
 
 }

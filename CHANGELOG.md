@@ -14,6 +14,7 @@
 - [SCP-4901](https://github.com/input-output-hk/marlowe/pull/160) - Add tests to EvalValue
 - [PLT-4250](https://github.com/input-output-hk/marlowe/pull/170) - Add tests to EvalObservation
 - [PLT-3313](https://github.com/input-output-hk/marlowe/pull/167) - Add Semiarbitrary instances and property based tests for some of Isabelle theorems
+- [PLT-4143](https://github.com/input-output-hk/marlowe/pull/166) - Improved SWAP example
 
 ## General
 - [SCP-4748](https://github.com/input-output-hk/marlowe/pull/155) - Fixed cabal packages.

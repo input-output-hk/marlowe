@@ -1,7 +1,6 @@
 {-# LANGUAGE BlockArguments    #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 
 module Marlowe.Spec.Core.Guarantees
   ( tests
@@ -13,15 +12,16 @@ import qualified Arith
 import Control.Monad.IO.Class (MonadIO (..))
 import qualified Data.Aeson as JSON
 import Marlowe.Spec.Core.Arbitrary
-  ( arbitraryTimeIntervalAfter,
+  ( arbitraryPositiveInteger,
+    arbitraryTimeIntervalAfter,
     arbitraryTransaction,
     arbitraryValidTransactions,
-    arbitraryPositiveInteger
   )
 import Marlowe.Spec.Core.Generators (genContext)
 import Marlowe.Spec.Core.SemiArbitrary
   ( Context (..),
-    SemiArbitrary (..), arbitraryContractWeighted,
+    SemiArbitrary (..),
+    arbitraryContractWeighted,
   )
 import Marlowe.Spec.Interpret
   ( InterpretJsonRequest,
@@ -39,6 +39,7 @@ import Orderings (Ord (..))
 import PositiveAccounts (validAndPositive_state)
 import QuickCheck.GenT
   ( Gen,
+    MonadGen (..),
     frequency,
     suchThat,
   )
@@ -46,13 +47,14 @@ import Semantics
   ( TransactionOutput (..),
     TransactionOutputRecord_ext (..),
     Transaction_ext (..),
+    emptyState,
     inputs,
     isQuiescent,
     maxTimeContract,
-    txOutPayments,
-    txOutWarnings,
     txOutContract,
-    emptyState, txOutState
+    txOutPayments,
+    txOutState,
+    txOutWarnings,
   )
 import SemanticsTypes
   ( Contract (..),
@@ -60,7 +62,7 @@ import SemanticsTypes
   )
 import SingleInputTransactions (traceListToSingleInput)
 import Test.QuickCheck (cover)
-import Test.QuickCheck.Monadic (PropertyM, assert, monitor, pre, run, stop)
+import Test.QuickCheck.Monadic (PropertyM, assert, monitor, run, stop)
 import Test.QuickCheck.Property (counterexample)
 import Test.Tasty (TestTree, testGroup)
 import Timeout (isClosedAndEmpty)
@@ -91,11 +93,11 @@ tests i = testGroup "Guarantees"
 playTrace_only_accepts_maxTransactionsInitialStateTest :: InterpretJsonRequest -> TestTree
 playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleProperty "lemma playTrace_only_accepts_maxTransactionsInitialState" do
     context <- run $ generateT $ genContext interpret
-    (contract, State_ext _ _ _ (Arith.Int_of_integer startTime) _, transactions) <- run $ generate $
+    (contract, Arith.Int_of_integer startTime, transactions) <- run $ generate $
         frequency
-          [ (5, genContractStateAndValidTransactions context)
-          , (20, genContractStateAndValidTransactions context `suchThat` \(_,_,l) -> not (null l))
-          , (75, genContractStateAndValidTransactions context `suchThat` \(_,_,l) -> length l > 1)
+          [ (5, genContractStartTimeAndValidTransactions context)
+          , (20, genContractStartTimeAndValidTransactions context `suchThat` \(_,_,l) -> not (null l))
+          , (75, genContractStartTimeAndValidTransactions context `suchThat` \(_,_,l) -> length l > 1)
           ]
     let
         req :: Request JSON.Value
@@ -110,15 +112,16 @@ playTrace_only_accepts_maxTransactionsInitialStateTest interpret = reproducibleP
                 ++ "Expected maxTransactionsInitialState (" ++ show (maxTransactionsInitialState contract) ++ ")\n"
                 ++ "to be an upper bound for the number of transactions (" ++ show (length transactions) ++ ")")
         stop $ cover 50.0 (length transactions > 1) "more than one transaction" $ toInteger (length transactions) <= integer_of_nat (maxTransactionsInitialState contract)
-      JSON.Success (TransactionError _ ) -> pre False
+        :: PropertyM ReproducibleTest Bool
+      JSON.Success (TransactionError err ) -> fail $ "Unexpected Transaction Error: " ++ show err
       _ -> fail "JSON parsing failed!"
 
-genContractStateAndValidTransactions :: Context -> Gen (Contract, State_ext (), [Transaction_ext ()])
-genContractStateAndValidTransactions context = do
+genContractStartTimeAndValidTransactions :: Context -> Gen (Contract, Arith.Int, [Transaction_ext ()])
+genContractStartTimeAndValidTransactions context = do
     c <- semiArbitrary context `suchThat` (/=Close)
-    s <- semiArbitrary context
-    t <- arbitraryValidTransactions s c
-    pure (c,s,t)
+    s <- arbitraryPositiveInteger
+    t <- arbitraryValidTransactions (emptyState s) c
+    pure (c, s, t)
 
 isWhen :: Contract -> Bool
 isWhen When {} = True
@@ -134,14 +137,13 @@ isClose _ = False
 --    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
 traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
 traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "theorem traceToSingleInputIsEquivalent" do
-    context <- run $ generateT $ genContext interpret
-    (contract, (Arith.Int_of_integer startTime), transactions) <- run $ generate $ (do
-        c <- genArbitraryContracts context
-        startTime <- arbitraryPositiveInteger
-        let
-          s = emptyState startTime
-        t <- arbitraryValidTransactions s c
-        pure (c,startTime,t)) `suchThat` \(_,_,t) -> t /= traceListToSingleInput t
+    (contract, Arith.Int_of_integer startTime, transactions) <- run $ do
+      generateT $ (do
+        context <- genContext interpret
+        c <- liftGen $ genArbitraryContracts context
+        s <- liftGen arbitraryPositiveInteger
+        t <- liftGen $ arbitraryValidTransactions (emptyState s) c
+        pure (c,s,t)) `suchThat` \(_,_,t) -> t /= traceListToSingleInput t
     let
         numberOfInputs = foldr (\tx n -> n + length (inputs tx)) 0 transactions
         multipleInputs = PlayTrace startTime contract transactions
@@ -177,6 +179,7 @@ traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "theorem tra
       ]
       ctx
       `suchThat` (\c -> integer_of_nat (maxTransactionsInitialState c) > 2)
+
 -- QuiescentResults.thy
 --
 -- theorem computeTransactionIsQuiescent:
@@ -209,10 +212,15 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "theorem comp
              $ cover 10.0 (isWhen $ txOutContract o) "Output contract is a When statement"
              $ isQuiescent (txOutContract o) (txOutState o)
              :: PropertyM ReproducibleTest Bool
-      JSON.Success (TransactionError err ) -> fail $ "Unexpected Transaction Error: " ++ show err
+      JSON.Success (TransactionError err) -> fail $ "Unexpected Transaction Error: " ++ show err
       _ -> fail "JSON parsing failed!"
 
-
+genContractStateAndValidTransactions :: Context -> Gen (Contract, State_ext (), [Transaction_ext ()])
+genContractStateAndValidTransactions context = do
+    c <- semiArbitrary context `suchThat` (/=Close)
+    s <- semiArbitrary context
+    t <- arbitraryValidTransactions s c
+    pure (c, s, t)
 
 -- QuiescentResults.thy
 --
@@ -222,10 +230,10 @@ computeTransactionIsQuiescentTest interpret = reproducibleProperty "theorem comp
 playTraceIsQuiescentTest :: InterpretJsonRequest -> TestTree
 playTraceIsQuiescentTest interpret = reproducibleProperty "theorem playTraceIsQuiescent" do
     context <- run $ generateT $ genContext interpret
-    (contract, State_ext _ _ _ (Arith.Int_of_integer startTime) _, transactions) <- run $ generate $
+    (contract, Arith.Int_of_integer startTime, transactions) <- run $ generate $
         frequency
-          [ (45, genContractStateAndValidTransactions context `suchThat` \(_,_,l) -> not (null l))
-          , (55, genContractStateAndValidTransactions context `suchThat` \(_,_,l) -> length l > 1)
+          [ (45, genContractStartTimeAndValidTransactions context `suchThat` \(_,_,l) -> not (null l))
+          , (55, genContractStartTimeAndValidTransactions context `suchThat` \(_,_,l) -> length l > 1)
           ]
     let
         req :: Request JSON.Value
@@ -240,7 +248,7 @@ playTraceIsQuiescentTest interpret = reproducibleProperty "theorem playTraceIsQu
                 ++ "Response: " ++ showAsJson res ++ "\n"
                 ++ "Expected reponse to be quiescent" )
         assert $ isQuiescent (txOutContract o) (txOutState o)
-      JSON.Success (TransactionError _ ) -> pre False
+      JSON.Success (TransactionError err) -> fail $ "Unexpected Transaction Error: " ++ show err
       _ -> fail "JSON parsing failed!"
 
 -- Timeout.thy
@@ -283,7 +291,7 @@ timedOutTransaction_closes_contractTest interpret = reproducibleProperty "theore
              $ cover 10.0 (integer_of_nat (maxTransactionsInitialState contract) >= 3) "At least 3 transactions"
              $ isClosedAndEmpty txOut
              :: PropertyM ReproducibleTest Bool
-      JSON.Success (TransactionError err ) -> fail $ "Unexpected Transaction Error: " ++ show err
+      JSON.Success (TransactionError err) -> fail $ "Unexpected Transaction Error: " ++ show err
       _ -> fail "JSON parsing failed!"
   where
     greater_eq = flip less_eq

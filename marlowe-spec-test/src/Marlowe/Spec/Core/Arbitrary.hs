@@ -24,11 +24,6 @@ import qualified Arith
 import Data.List (nub)
 import Marlowe.Spec.TypeId ()
 import Orderings (Ord (..), max)
-import QuickCheck.GenT
-  ( MonadGen (..),
-    frequency,
-    suchThat,
-  )
 import Semantics
   ( TransactionError (..),
     TransactionOutput (..),
@@ -49,7 +44,7 @@ import SemanticsTypes
     ValueId (..),
     minTime,
   )
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen, frequency, suchThat, oneof)
 import Test.QuickCheck.Arbitrary (Arbitrary (..))
 import qualified Test.QuickCheck.Gen as QC (chooseInteger, elements)
 
@@ -293,11 +288,11 @@ instance Arbitrary Bound where
         ]
 
 instance Arbitrary TransactionError where
-  arbitrary = frequency
-    [ (1, pure TEAmbiguousTimeIntervalError)
-    , (1, pure TEApplyNoMatchError)
-    , (1, TEIntervalError <$> arbitrary)
-    , (1, pure TEUselessTransaction)
+  arbitrary = oneof
+    [ pure TEAmbiguousTimeIntervalError
+    , pure TEApplyNoMatchError
+    , TEIntervalError <$> arbitrary
+    , pure TEUselessTransaction
     ]
 
   shrink (TEIntervalError i) = [TEIntervalError i' | i' <- shrink i]
@@ -307,9 +302,9 @@ instance Arbitrary IntervalError where
   arbitrary = do
     lower <- arbitraryInteger
     extent <- arbitraryNonnegativeInteger
-    frequency
-      [ (1, pure $ InvalidInterval (lower, lower + extent))
-      , (1, IntervalInPastError <$> liftGen arbitraryNonnegativeInteger <*> pure  (lower, lower + extent) )
+    oneof
+      [ pure $ InvalidInterval (lower, lower + extent)
+      , IntervalInPastError <$> arbitraryNonnegativeInteger <*> pure  (lower, lower + extent)
       ]
 
   shrink (InvalidInterval i) = InvalidInterval <$> shrinkTimeInterval i

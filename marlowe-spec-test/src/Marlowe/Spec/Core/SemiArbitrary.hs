@@ -275,13 +275,8 @@ instance SemiArbitrary TransactionOutput where
         )
       ]
 
-instance SemiArbitrary (Bool, Contract) where
-  semiArbitrary context =
-    frequency [(98, (True,) <$> gen), (2, (False,) <$> genGoldenContract context)]
-      where gen = sized \size -> arbitraryContractSized (min (size `div` 6) 5) context -- Keep tests from growing too large to execute by capping the maximum contract depth at 5 (default size is 30)
-
 instance SemiArbitrary Contract where
-  semiArbitrary context = snd <$> (semiArbitrary context :: Gen (Bool, Contract))
+  semiArbitrary context = snd <$> genContract context
 
 instance SemiArbitrary Action where
   semiArbitrary context =
@@ -328,6 +323,11 @@ instance SemiArbitrary (Transaction_ext ()) where
     iSize <- chooseInt (0, 4)
     inps <- vectorOf iSize $ semiArbitrary context
     pure $ Transaction_ext (lower, lower + extent) inps ()
+
+genContract :: Context -> Gen (Bool, Contract)
+genContract context =
+    frequency [(98, (True,) <$> gen), (2, (False,) <$> genGoldenContract context)]
+      where gen = sized \size -> arbitraryContractSized (min (size `div` 6) 5) context -- Keep tests from growing too large to execute by capping the maximum contract depth at 5 (default size is 30)
 
 genGoldenContract :: Context -> Gen Contract
 genGoldenContract context =

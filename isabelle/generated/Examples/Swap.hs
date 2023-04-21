@@ -1,8 +1,10 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Examples.Swap(SwapParty_ext(..), swap, swapExample, happyPathPayments,
-                 happyPathTransactions)
+  Examples.Swap(SwapParty_ext(..), swap, swapExample,
+                 partialExecutionPathPayments, successfulExecutionPathPayments,
+                 partialExecutionPathTransactions,
+                 successfulExecutionPathTransactions)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -123,15 +125,33 @@ swapExample =
       (SemanticsTypes.Constant (Arith.Int_of_integer (20 :: Integer)))
       dollarToken (Arith.Int_of_integer (1664816400000 :: Integer)) ());
 
-happyPathPayments :: [Semantics.Payment];
-happyPathPayments =
+partialExecutionPathPayments :: [Semantics.Payment];
+partialExecutionPathPayments =
+  [Semantics.Payment adaProvider (SemanticsTypes.Party adaProvider) adaToken
+     (Arith.Int_of_integer (10 :: Integer))];
+
+successfulExecutionPathPayments :: [Semantics.Payment];
+successfulExecutionPathPayments =
   [Semantics.Payment adaProvider (SemanticsTypes.Party dollarProvider) adaToken
      (Arith.Int_of_integer (10 :: Integer)),
     Semantics.Payment dollarProvider (SemanticsTypes.Party adaProvider)
       dollarToken (Arith.Int_of_integer (20 :: Integer))];
 
-happyPathTransactions :: [Semantics.Transaction_ext ()];
-happyPathTransactions =
+partialExecutionPathTransactions :: [Semantics.Transaction_ext ()];
+partialExecutionPathTransactions =
+  [Semantics.Transaction_ext
+     (Arith.Int_of_integer (1664812600000 :: Integer),
+       Arith.Int_of_integer (1664812700000 :: Integer))
+     [SemanticsTypes.IDeposit adaProvider adaProvider adaToken
+        (Arith.Int_of_integer (10 :: Integer))]
+     (),
+    Semantics.Transaction_ext
+      (Arith.Int_of_integer (1664816400000 :: Integer),
+        Arith.Int_of_integer (1664816600000 :: Integer))
+      [] ()];
+
+successfulExecutionPathTransactions :: [Semantics.Transaction_ext ()];
+successfulExecutionPathTransactions =
   [Semantics.Transaction_ext
      (Arith.Int_of_integer (1664812600000 :: Integer),
        Arith.Int_of_integer (1664812700000 :: Integer))

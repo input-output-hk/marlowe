@@ -36,6 +36,7 @@ library
         Marlowe.Spec.Core.Generators
         Marlowe.Spec.Core.Guarantees
         Marlowe.Spec.Core.Examples
+        Marlowe.Spec.Core.Examples.Common
         Marlowe.Spec.Core.Examples.Escrow
         Marlowe.Spec.Core.Examples.Swap
         Marlowe.Spec.Core.Semantics

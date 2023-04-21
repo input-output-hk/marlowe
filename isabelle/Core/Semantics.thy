@@ -32,15 +32,18 @@ subsection \<open>Account operations\<close>
 text \<open>In this section we present some helper functions to query and modify the assets
 present in the internal accounts of a contract\<close>
 
-text \<open>The function \<^emph>\<open>moneyInAccount\<close> returns the number of \<^emph>\<open>token\<close> a particular \<^emph>\<open>AccountId\<close> has in
-their account.\<close>
+text \<open>The function \<^emph>\<open>moneyInAccount\<close> returns the number of \<^emph>\<open>token\<close>s a particular \<^emph>\<open>AccountId\<close> has in
+their account. The function \<^emph>\<open>findWithDefault\<close> looks for a key in a Map (represented in this case
+by an assosiative list), and uses the provided default if the key is not present. \<close>
 
 fun moneyInAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Accounts \<Rightarrow> int"
   where
   "moneyInAccount accId token accountsV =
     findWithDefault 0 (accId, token) accountsV"
 
-text \<open>The function \<^emph>\<open>updateMoneyInAccount\<close> sets the amount of \<^emph>\<open>token\<close> a particular \<^emph>\<open>AccountId\<close>
+
+
+text \<open>The function \<^emph>\<open>updateMoneyInAccount\<close> sets the amount of \<^emph>\<open>token\<close>s a particular \<^emph>\<open>AccountId\<close>
 has in their account, overriding any previous value. Marlowe requires all accounts to have positive
 balances, so if the function is called with a negative value or zero the entry is removed
 from the accounts.\<close>
@@ -53,7 +56,7 @@ where
      else MList.insert (accId, token) money accountsV)"
 
 text \<open>The function \<^emph>\<open>addMoneyToAccount\<close> increases the amount of token a particular \<^emph>\<open>AccountId\<close> has
-in their account. To ensure that the value always increases we check that \<^term>\<open>money > 0\<close>. \<close>
+in their account. To ensure that the value always increases we check that \<^emph>\<open>money\<close> > \<^emph>\<open>0\<close>.\<close>
 fun addMoneyToAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> int \<Rightarrow> Accounts \<Rightarrow> Accounts"
 where
   "addMoneyToAccount accId token money accts =
@@ -68,7 +71,7 @@ subsection \<open>Eval value and observation\label{sec:evalValueObservation}\<cl
 
 text \<open>The functions \<^emph>\<open>evalValue\<close> and \<^emph>\<open>evalObservation\<close> are defined in a mutually
 recursive manner. They operate by taking a term, as described in section \secref{sec:values-and-observations},
- and evaluating it with a specific \<^emph>\<open>State\<close> and \<^emph>\<open>Environment\<close>.\<close>
+ and evaluating it with a specific \<^emph>\<open>State\<close> \secref{sec:state} and \<^emph>\<open>Environment\<close> \secref{sec:transaction}.\<close>
 fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarrow> int"
 and evalObservation :: "Environment \<Rightarrow> State \<Rightarrow> Observation \<Rightarrow> bool"
 where
@@ -544,7 +547,8 @@ where
     | NotReduced \<Rightarrow>
         \<comment> \<open>During the loop, we prepend the warnings and payments to their respective\<close>
         \<comment> \<open>lists, resulting in the last warning/payment appearing first.\<close>
-        \<comment> \<open>After the recursion ends, we reverse the lists to restore the intended order.\<close>
+        \<comment> \<open>After the recursion ends, we reverse the lists to restore the intended\<close>
+        \<comment> \<open>order.\<close>
         \<comment> \<open>This approach reduces the number of O(1) operations and requires only\<close>
         \<comment> \<open>one O(N) operation\<close>
         ContractQuiescent reduced (rev warnings) (rev payments) state contract)"
@@ -782,17 +786,17 @@ the blockchain as part of the transaction validation.
 
 text \<open>
 The \<^emph>\<open>IntervalResult\<close> datatype represents the result of calling \<^emph>\<open>fixInterval\<close>, an
- auxiliary function used in \<^emph>\<open>computeTransaction\<close>. The function makes sure that the 
-provided interval is valid (it ends after it starts and is not in the past) and it 
-may adjust the \<^emph>\<open>minState\<close> property of the contract state. If the transaction is 
-computed successfully, the new \<^emph>\<open>minState\<close> becomes a lower bound on the observed time. 
-It is important to note that the interpreter is composed of pure functions, so it can't 
-query the current time. For the semantics to work as intended, it is expected that the 
+ auxiliary function used in \<^emph>\<open>computeTransaction\<close>. The function makes sure that the
+provided interval is valid (it ends after it starts and is not in the past) and it
+may adjust the \<^emph>\<open>minState\<close> property of the contract state. If the transaction is
+computed successfully, the new \<^emph>\<open>minState\<close> becomes a lower bound on the observed time.
+It is important to note that the interpreter is composed of pure functions, so it can't
+query the current time. For the semantics to work as intended, it is expected that the
 blockchain that executes \<^emph>\<open>computeTransaction\<close> checks that \<^emph>\<open>startTime\<close> \le \<^emph>\<open>now\<close> \le \<^emph>\<open>endTime\<close>.
 
 \<close>
 
-datatype IntervalResult  
+datatype IntervalResult
   = IntervalTrimmed Environment State
   | IntervalError IntervalError
 
@@ -840,69 +844,69 @@ where
 
 subsection \<open>Play trace\label{sec:playTrace}\<close>
 
-text 
+text
 \<open>
-The \<^emph>\<open>computeTransaction\<close> function is capable of processing currently running 
-contracts, allowing them to move forward. However, there are instances where it is 
-beneficial to replay the entire sequence of transactions from the beginning. This is 
-where the \<^emph>\<open>playTrace\<close> function comes into play, which makes use of \<^emph>\<open>emptyState\<close> and 
-\<^emph>\<open>playTraceAux\<close>. This function accepts an initial time, a contract, and a list of 
-transactions as input, and it accumulates the outcome by invoking \<^emph>\<open>computeTransaction\<close> 
+The \<^emph>\<open>computeTransaction\<close> function is capable of processing currently running
+contracts, allowing them to move forward. However, there are instances where it is
+beneficial to replay the entire sequence of transactions from the beginning. This is
+where the \<^emph>\<open>playTrace\<close> function comes into play, which makes use of \<^emph>\<open>emptyState\<close> and
+\<^emph>\<open>playTraceAux\<close>. This function accepts an initial time, a contract, and a list of
+transactions as input, and it accumulates the outcome by invoking \<^emph>\<open>computeTransaction\<close>
 recursively.
 \<close>
 
 fun emptyState :: "POSIXTime \<Rightarrow> State" where
-"emptyState initialTime = 
+"emptyState initialTime =
   \<lparr> accounts = MList.empty
   , choices = MList.empty
   , boundValues = MList.empty
-  , minTime = initialTime 
+  , minTime = initialTime
   \<rparr>"
 
 (* TODO: rename to playTraceLoop to keep consistency with reductionLoop and applyAllLoop  *)
 
 fun playTraceAux ::
-  "TransactionOutputRecord 
-  \<Rightarrow> Transaction list 
-  \<Rightarrow> TransactionOutput" 
+  "TransactionOutputRecord
+  \<Rightarrow> Transaction list
+  \<Rightarrow> TransactionOutput"
 where
- "playTraceAux res Nil = TransactionOutput res" 
+ "playTraceAux res Nil = TransactionOutput res"
 |"playTraceAux \<lparr> txOutWarnings = warnings
               , txOutPayments = payments
               , txOutState = state
               , txOutContract = cont \<rparr> (h # t) =
-   (let 
-      transRes = computeTransaction h state cont 
-    in 
+   (let
+      transRes = computeTransaction h state cont
+    in
       case transRes of
-        TransactionOutput transResRec \<Rightarrow> 
-          playTraceAux 
-            (transResRec 
+        TransactionOutput transResRec \<Rightarrow>
+          playTraceAux
+            (transResRec
               \<lparr> txOutPayments := payments @ (txOutPayments transResRec)
-              , txOutWarnings := warnings @ (txOutWarnings transResRec) 
+              , txOutWarnings := warnings @ (txOutWarnings transResRec)
               \<rparr>
             )
             t
       | TransactionError _ \<Rightarrow> transRes)"
 
 
-fun playTrace :: 
-  "POSIXTime 
-  \<Rightarrow> Contract 
-  \<Rightarrow> Transaction list 
-  \<Rightarrow> TransactionOutput" 
+fun playTrace ::
+  "POSIXTime
+  \<Rightarrow> Contract
+  \<Rightarrow> Transaction list
+  \<Rightarrow> TransactionOutput"
 where
-"playTrace initialTime contract transactions = 
-  playTraceAux 
+"playTrace initialTime contract transactions =
+  playTraceAux
     \<lparr> txOutWarnings = Nil
     , txOutPayments = Nil
     , txOutState = emptyState initialTime
-    , txOutContract = contract 
-    \<rparr> 
+    , txOutContract = contract
+    \<rparr>
     transactions"
 
 
-(*TODO: Move into its own module refactor and document, for now it is removed 
+(*TODO: Move into its own module refactor and document, for now it is removed
 from the PDF*)
 (*<*)
 section \<open>Contract insights\<close>
@@ -974,6 +978,47 @@ and maxTimeCase :: "Case \<Rightarrow> int" where
 "maxTimeContract (Assert _ contract) = maxTimeContract contract" |
 "maxTimeCase (Case _ contract) = maxTimeContract contract"
 
+
+section "Arithmetic guarantees"
+(* TODO: Find a proper place for these *)
+lemma evalDoubleNegValue :
+  "evalValue env sta (NegValue (NegValue x)) = evalValue env sta x"
+  by auto
+
+lemma evalNegValue :
+  "evalValue env sta (AddValue x (NegValue x)) = 0"
+  by auto
+
+lemma evalAddCommutative :
+  "evalValue env sta (AddValue x y) = evalValue env sta (AddValue y x)"
+  by auto
+
+lemma evalAddAssoc :
+  "evalValue env sta (AddValue x (AddValue y z)) = evalValue env sta (AddValue (AddValue x y) z)"
+  by auto
+
+lemma evalMulValue :
+  "evalValue env sta (MulValue x (Constant 0)) = 0"
+  by auto
+
+lemma evalSubValue :
+  "evalValue env sta (SubValue (AddValue x y) y) = evalValue env sta x"
+  by auto
+
+lemma evalDivCancelsMul :
+  "evalValue env sta c \<noteq> 0 \<Longrightarrow> evalValue env sta (DivValue (MulValue a c) c) = evalValue env sta a"
+  apply simp
+  by (smt (verit, best) minus_mult_minus mult_minus_left nonzero_mult_div_cancel_right)
+
+lemma evalDivCommutesWithNeg1 :
+  "evalValue env sta (NegValue (DivValue a b)) = evalValue env sta (DivValue (NegValue a) b)"
+  apply (simp add:Let_def)
+  using div_minus_right by fastforce
+
+lemma evalDivCommutesWithNeg2 :
+  "evalValue env sta (NegValue (DivValue a b)) = evalValue env sta (DivValue a (NegValue b))"
+  apply (simp add:Let_def)
+  by (smt (verit) div_minus_right)
 
 end
 (*>*)

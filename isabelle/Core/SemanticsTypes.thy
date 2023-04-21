@@ -33,8 +33,6 @@ datatype Party =
     Address Address
   | Role RoleName
 
-
-
 text \<open>
 An address party is defined by a Blockhain specific \<^term>\<open>Address\<close> \secref{sec:blockchain-agnostic} and it cannot be traded
 (it is fixed for the lifetime of a contract).
@@ -48,7 +46,6 @@ as tokens\<^footnote>\<open>In the Cardano implementation roles are represented 
 deployed to the blockchain\<close> that can be traded. By minting multiple tokens for a particular role,
 several people can be given permission to act on behalf of that role simultaneously, this allows for more complex use cases.
 \<close>
-
 
 subsection \<open>Multi-Asset token\<close>
 
@@ -79,7 +76,6 @@ when the contract is closed, all remaining assets can be redeemed by their respe
 accounts are local: they only exist (and are accessible) within the contract.
 \<close>
 
-
 \<comment> \<open>TODO: Should we change int for nat, we shouldn't be able to have negative accounts.\<close>
 type_synonym Accounts = "((AccountId \<times> Token) \<times> int) list"
 
@@ -90,16 +86,14 @@ During its execution, the contract can invite parties to deposit assets into an 
  the term "\<^term>\<open>Pay accountId payee token value continuation\<close>'', where \<^term>\<open>Payee\<close> is:
 \<close>
 
-datatype Payee 
+datatype Payee
   = Account AccountId
   | Party Party
-
 
 text \<open>
 A \<^term>\<open>Pay\<close> always takes money from an internal \<^term>\<open>AccountId\<close>, and the \<^term>\<open>Payee\<close>
  defines if we transfer internally (\<^term>\<open>Account p\<close>) or externally (\<^term>\<open>Party p\<close>)
 \<close>
-
 
 subsection \<open>Choices\label{sec:choices}\<close>
 
@@ -250,7 +244,6 @@ text \<open>The differences between the @{term Actions} and @{term Inputs} are:
  \<^term>\<open>Observation\<close> must evaluate to true inside the \<^term>\<open>Transaction\<close> \secref{sec:transaction}
 \<close>
 
-
 subsection \<open>Contracts \label{sec:contracts}\<close>
 
 text \<open>
@@ -317,7 +310,7 @@ text \<open>
 While executing a Marlowe contract, we keep track of the following information:
 \<close>
 
-record State 
+record State
     \<comment> \<open>How many tokens each participant has inside the contract\<close>
   = accounts :: Accounts
     \<comment> \<open>A record of choices made by participants through the Choice Action\<close>
@@ -328,14 +321,14 @@ record State
     minTime :: POSIXTime
 
 text \<open>
-The accounts, choices and boundValues are actually Map's but they are represented 
-here as association lists. Each blockchain have different capabilities to represent 
+The accounts, choices and boundValues are actually Map's but they are represented
+here as association lists. Each blockchain have different capabilities to represent
 data structutres, the most suitable one should be used in each case.
 \<close>
 
 text \<open>
-The accounts should only have positive values. If a transaction ask to pay more assets 
-than available to the account, a partial payment warning is raised and the entry is 
+The accounts should only have positive values. If a transaction ask to pay more assets
+than available to the account, a partial payment warning is raised and the entry is
 removed from the Map.
 \<close>
 
@@ -343,7 +336,7 @@ text \<open>
 Transactions are computed within a time interval @{term "(startTime, endTime)"} which
  give us a proxy for real time. It is up to the blockchain implementation to make sure
  that @{term startTime} \le @{term now} \le  @{term endTime}. The variable @{term minTime}
- is the biggest known @{term startTime}. That allow us to trim a time interval and 
+ is the biggest known @{term startTime}. That allow us to trim a time interval and
 ensure that @{term startTime} does not decrease between transactions.
 \<close>
 
@@ -352,18 +345,18 @@ subsection \<open>Payment \label{sec:payment}\<close>
 text \<open>
 
 The \<^emph>\<open>Payment\<close> type represents the intention to transfer funds from the internal
- \<^emph>\<open>AccountId\<close> to a \<^emph>\<open>Payee\<close> \secref{sec:internal-accounts}. This type is created as a 
-result of executing a \<^emph>\<open>Pay\<close> statement and is included as part of the output of computing a 
+ \<^emph>\<open>AccountId\<close> to a \<^emph>\<open>Payee\<close> \secref{sec:internal-accounts}. This type is created as a
+result of executing a \<^emph>\<open>Pay\<close> statement and is included as part of the output of computing a
 transaction.
 \<close>
 
 text \<open>
-The \<^emph>\<open>Payee\<close> indicates whether the recipient of the payment is an internal account or 
-external participant. When we call \<^emph>\<open>computeTransaction\<close>, if the payment is internal, 
-the funds are transferred between internal state accounts and no further action is 
-required. In this case, the \<^emph>\<open>Payment\<close> type serves as an information of what has 
-happened. However, if the payment is external, the funds are removed from the state 
-account, but the actual transfer is expected to occur outside of the semantics 
+The \<^emph>\<open>Payee\<close> indicates whether the recipient of the payment is an internal account or
+external participant. When we call \<^emph>\<open>computeTransaction\<close>, if the payment is internal,
+the funds are transferred between internal state accounts and no further action is
+required. In this case, the \<^emph>\<open>Payment\<close> type serves as an information of what has
+happened. However, if the payment is external, the funds are removed from the state
+account, but the actual transfer is expected to occur outside of the semantics
 defined in this document.
 \<close>
 
@@ -371,30 +364,30 @@ datatype Payment = Payment AccountId Payee Token int
 
 subsection \<open>Transaction \label{sec:transaction}\<close>
 
-text \<open>We use transactions to move contracts forward. Transactions are comprised of a 
+text \<open>We use transactions to move contracts forward. Transactions are comprised of a
 list of inputs (possibly empty) to be applied within a TimeInterval\<close>
-record Transaction 
+record Transaction
   = interval :: TimeInterval
     inputs :: "Input list"
 
 text \<open>
 
-From the transaction we can extract the validity interval as its own type, which is 
+From the transaction we can extract the validity interval as its own type, which is
 useful for functions like evalValue and evalObservation, which only depends on the interval.
 \<close>
 (* TODO: See if it makes sense to just use TimeInterval and to upgrade to Environment
          once we know more data should be present here *)
 record Environment = timeInterval :: TimeInterval
 
-text \<open>The rest of this section introduces the types used to represent the output of 
+text \<open>The rest of this section introduces the types used to represent the output of
 \<^emph>\<open>computeTransaction\<close>.\<close>
 
 text \<open>The following warnings are issues that can happen while executing a transaction.
 They doesn't prevent the transaction from being completed, but they may indicate a poorly
- designed contract. To ensure that no execution path results in a warning, Marlowe 
-contracts can be analyzed statically.\<close>
+ designed contract. Marlowe contracts can be statically analyzed to ensure that no
+execution path results in a warning.\<close>
 
-datatype TransactionWarning 
+datatype TransactionWarning
   \<comment> \<open>A Deposit of a value lower or equal to 0 was asked\<close>
   \<comment> \<open>The contract will need an empty Deposit to advance\<close>
   = TransactionNonPositiveDeposit Party AccountId Token int
@@ -402,7 +395,7 @@ datatype TransactionWarning
   \<comment> \<open>The contract won't produce any payment and continue\<close>
   | TransactionNonPositivePay AccountId Payee Token int
   \<comment> \<open>A payment is partially fullfilled as more assets \<close>
-  \<comment> \<open>than available were asked\<close> 
+  \<comment> \<open>than available were asked\<close>
   | TransactionPartialPay AccountId Payee Token int int
   \<comment> \<open>A variable already bound in the state is being overwritten\<close>
   \<comment> \<open>This doesn't necessarily indicate a problem as it is the only\<close>
@@ -412,11 +405,11 @@ datatype TransactionWarning
   | TransactionAssertionFailed
 
 text \<open>
-The \<^emph>\<open>IntervalError\<close> type describes possible problems in the Transaction
- \<^emph>\<open>TimeInterval\<close> 
+The \<^emph>\<open>IntervalError\<close> type describes possible errors associated with the
+ \<^emph>\<open>TimeInterval\<close>.
 \<close>
 
-datatype IntervalError 
+datatype IntervalError
   \<comment> \<open>A TimeInterval is invalid if it ends before it starts\<close>
   = InvalidInterval TimeInterval
   \<comment> \<open>The interval is in the past if the endTime is bigger than\<close>
@@ -437,29 +430,27 @@ datatype TransactionError
   \<comment> \<open>The transaction does not modify neither the State nor the continuation\<close>
   | TEUselessTransaction
 
-text \<open>In a time interval @{term "(startTime, endTime)"}, a When's @{term timeout} is 
+text \<open>In a time interval @{term "(startTime, endTime)"}, a When's @{term timeout} is
 ambiguous iff @{term startTime} < @{term timeout} \le @{term endTime}. \<close>
 
 text \<open>If a transaction is computed correctly it will yield a new state and contract
 continuation with optional warnings and payments.\<close>
 
-record TransactionOutputRecord 
+record TransactionOutputRecord
   = txOutWarnings :: "TransactionWarning list"
     txOutPayments :: "Payment list"
     txOutState :: State
     txOutContract :: Contract
 
-text 
+text
 \<open>
 Finally, the \<^emph>\<open>TransactionOutput\<close> type captures the results of calling computeTransaction
 \<close>
-datatype TransactionOutput 
+datatype TransactionOutput
+  \<comment> \<open>The transaction was computed successfully\<close>
   = TransactionOutput TransactionOutputRecord
+  \<comment> \<open>There was a problem computing the transaction\<close>
   | TransactionError TransactionError
-
-
-
-
 
 (*<*)
 end

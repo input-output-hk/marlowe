@@ -29,7 +29,7 @@ proved two properties: ``MultiAssets Preservation'' and ``Contracts Always Close
 
 text \<open>
 Regarding asset preservation, tokens are not created nor destroyed by the semantics. Formally speaking,
-if a transaction is computed successfully, the sum of the assets stored in the previous state and 
+if a transaction is computed successfully, the sum of the assets stored in the previous state and
 the assets deposited by a transaction are equal to the assets in the new state and possible external payments
 (from internal account to external party).
 \<close>
@@ -44,7 +44,7 @@ section \<open>Contracts Always Close\<close>
 text \<open>
 
 For every Marlowe Contract there is a maximum time that allows any participant
-to create an empty transaction that will close the contract successfully. 
+to create an empty transaction that will close the contract successfully.
 \<close>
 
 text \<open>@{thm [display,names_short, margin=40] timeOutTransaction_does_not_fail}\<close>

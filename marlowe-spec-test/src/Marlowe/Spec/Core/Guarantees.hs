@@ -39,7 +39,6 @@ import Orderings (Ord (..))
 import PositiveAccounts (validAndPositive_state)
 import QuickCheck.GenT
   ( Gen,
-    MonadGen (..),
     frequency,
     suchThat,
   )

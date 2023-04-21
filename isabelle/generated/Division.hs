@@ -1,6 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module Timeout(isClosedAndEmpty) where {
+module Division(quot) where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -8,14 +8,13 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
-import qualified SemanticsTypes;
 import qualified Arith;
 
-isClosedAndEmpty :: SemanticsTypes.TransactionOutput -> Bool;
-isClosedAndEmpty (SemanticsTypes.TransactionOutput txOut) =
-  SemanticsTypes.equal_Contract (SemanticsTypes.txOutContract txOut)
-    SemanticsTypes.Close &&
-    null (SemanticsTypes.accounts (SemanticsTypes.txOutState txOut));
-isClosedAndEmpty (SemanticsTypes.TransactionError v) = False;
+quot :: Arith.Int -> Arith.Int -> Arith.Int;
+quot x y =
+  (if Arith.less_int x Arith.zero_int == Arith.less_int y Arith.zero_int
+    then Arith.divide_int x y
+    else Arith.uminus_int
+           (Arith.divide_int (Arith.abs_int x) (Arith.abs_int y)));
 
 }

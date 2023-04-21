@@ -14,7 +14,6 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
-import qualified Semantics;
 import qualified Stringa;
 import qualified SemanticsTypes;
 import qualified Arith;
@@ -266,38 +265,38 @@ exampleArgs =
 escrowExample :: SemanticsTypes.Contract;
 escrowExample = escrow exampleArgs;
 
-confirmClaimPayments :: [Semantics.Payment];
+confirmClaimPayments :: [SemanticsTypes.Payment];
 confirmClaimPayments =
-  [Semantics.Payment seller (SemanticsTypes.Account buyer) (token exampleArgs)
-     (Arith.Int_of_integer (10 :: Integer)),
-    Semantics.Payment buyer (SemanticsTypes.Party buyer) (token exampleArgs)
-      (Arith.Int_of_integer (10 :: Integer))];
+  [SemanticsTypes.Payment seller (SemanticsTypes.Account buyer)
+     (token exampleArgs) (Arith.Int_of_integer (10 :: Integer)),
+    SemanticsTypes.Payment buyer (SemanticsTypes.Party buyer)
+      (token exampleArgs) (Arith.Int_of_integer (10 :: Integer))];
 
-dismissClaimPayments :: [Semantics.Payment];
+dismissClaimPayments :: [SemanticsTypes.Payment];
 dismissClaimPayments =
-  [Semantics.Payment seller (SemanticsTypes.Account buyer) (token exampleArgs)
-     (Arith.Int_of_integer (10 :: Integer)),
-    Semantics.Payment buyer (SemanticsTypes.Account seller) (token exampleArgs)
-      (Arith.Int_of_integer (10 :: Integer)),
-    Semantics.Payment seller (SemanticsTypes.Party seller) (token exampleArgs)
-      (Arith.Int_of_integer (10 :: Integer))];
+  [SemanticsTypes.Payment seller (SemanticsTypes.Account buyer)
+     (token exampleArgs) (Arith.Int_of_integer (10 :: Integer)),
+    SemanticsTypes.Payment buyer (SemanticsTypes.Account seller)
+      (token exampleArgs) (Arith.Int_of_integer (10 :: Integer)),
+    SemanticsTypes.Payment seller (SemanticsTypes.Party seller)
+      (token exampleArgs) (Arith.Int_of_integer (10 :: Integer))];
 
-confirmProblemPayments :: [Semantics.Payment];
+confirmProblemPayments :: [SemanticsTypes.Payment];
 confirmProblemPayments =
-  [Semantics.Payment seller (SemanticsTypes.Account buyer) (token exampleArgs)
-     (Arith.Int_of_integer (10 :: Integer)),
-    Semantics.Payment buyer (SemanticsTypes.Party buyer) (token exampleArgs)
-      (Arith.Int_of_integer (10 :: Integer))];
+  [SemanticsTypes.Payment seller (SemanticsTypes.Account buyer)
+     (token exampleArgs) (Arith.Int_of_integer (10 :: Integer)),
+    SemanticsTypes.Payment buyer (SemanticsTypes.Party buyer)
+      (token exampleArgs) (Arith.Int_of_integer (10 :: Integer))];
 
-confirmClaimTransactions :: [Semantics.Transaction_ext ()];
+confirmClaimTransactions :: [SemanticsTypes.Transaction_ext ()];
 confirmClaimTransactions =
-  [Semantics.Transaction_ext
+  [SemanticsTypes.Transaction_ext
      (Arith.Int_of_integer (1664812600000 :: Integer),
        Arith.Int_of_integer (1664812700000 :: Integer))
      [SemanticsTypes.IDeposit seller buyer (token exampleArgs)
         (Arith.Int_of_integer (10 :: Integer))]
      (),
-    Semantics.Transaction_ext
+    SemanticsTypes.Transaction_ext
       (Arith.Int_of_integer (1664812900000 :: Integer),
         Arith.Int_of_integer (1664813100000 :: Integer))
       [SemanticsTypes.IChoice
@@ -320,7 +319,7 @@ confirmClaimTransactions =
            buyer)
          Arith.one_int]
       (),
-    Semantics.Transaction_ext
+    SemanticsTypes.Transaction_ext
       (Arith.Int_of_integer (1664817400000 :: Integer),
         Arith.Int_of_integer (1664817400000 :: Integer))
       [SemanticsTypes.IChoice
@@ -344,7 +343,7 @@ confirmClaimTransactions =
            seller)
          Arith.zero_int]
       (),
-    Semantics.Transaction_ext
+    SemanticsTypes.Transaction_ext
       (Arith.Int_of_integer (1664821400000 :: Integer),
         Arith.Int_of_integer (1664822400000 :: Integer))
       [SemanticsTypes.IChoice
@@ -367,15 +366,15 @@ confirmClaimTransactions =
          Arith.one_int]
       ()];
 
-dismissClaimTransactions :: [Semantics.Transaction_ext ()];
+dismissClaimTransactions :: [SemanticsTypes.Transaction_ext ()];
 dismissClaimTransactions =
-  [Semantics.Transaction_ext
+  [SemanticsTypes.Transaction_ext
      (Arith.Int_of_integer (1664812600000 :: Integer),
        Arith.Int_of_integer (1664812700000 :: Integer))
      [SemanticsTypes.IDeposit seller buyer (token exampleArgs)
         (Arith.Int_of_integer (10 :: Integer))]
      (),
-    Semantics.Transaction_ext
+    SemanticsTypes.Transaction_ext
       (Arith.Int_of_integer (1664812900000 :: Integer),
         Arith.Int_of_integer (1664813100000 :: Integer))
       [SemanticsTypes.IChoice
@@ -398,7 +397,7 @@ dismissClaimTransactions =
            buyer)
          Arith.one_int]
       (),
-    Semantics.Transaction_ext
+    SemanticsTypes.Transaction_ext
       (Arith.Int_of_integer (1664817400000 :: Integer),
         Arith.Int_of_integer (1664817400000 :: Integer))
       [SemanticsTypes.IChoice
@@ -422,7 +421,7 @@ dismissClaimTransactions =
            seller)
          Arith.zero_int]
       (),
-    Semantics.Transaction_ext
+    SemanticsTypes.Transaction_ext
       (Arith.Int_of_integer (1664821400000 :: Integer),
         Arith.Int_of_integer (1664822400000 :: Integer))
       [SemanticsTypes.IChoice
@@ -445,15 +444,15 @@ dismissClaimTransactions =
          Arith.zero_int]
       ()];
 
-confirmProblemTransactions :: [Semantics.Transaction_ext ()];
+confirmProblemTransactions :: [SemanticsTypes.Transaction_ext ()];
 confirmProblemTransactions =
-  [Semantics.Transaction_ext
+  [SemanticsTypes.Transaction_ext
      (Arith.Int_of_integer (1664812600000 :: Integer),
        Arith.Int_of_integer (1664812700000 :: Integer))
      [SemanticsTypes.IDeposit seller buyer (token exampleArgs)
         (Arith.Int_of_integer (10 :: Integer))]
      (),
-    Semantics.Transaction_ext
+    SemanticsTypes.Transaction_ext
       (Arith.Int_of_integer (1664812900000 :: Integer),
         Arith.Int_of_integer (1664813100000 :: Integer))
       [SemanticsTypes.IChoice
@@ -476,7 +475,7 @@ confirmProblemTransactions =
            buyer)
          Arith.one_int]
       (),
-    Semantics.Transaction_ext
+    SemanticsTypes.Transaction_ext
       (Arith.Int_of_integer (1664817400000 :: Integer),
         Arith.Int_of_integer (1664817400000 :: Integer))
       [SemanticsTypes.IChoice
@@ -501,20 +500,20 @@ confirmProblemTransactions =
          Arith.one_int]
       ()];
 
-everythingIsAlrightPayments :: [Semantics.Payment];
+everythingIsAlrightPayments :: [SemanticsTypes.Payment];
 everythingIsAlrightPayments =
-  [Semantics.Payment seller (SemanticsTypes.Party seller) (token exampleArgs)
-     (Arith.Int_of_integer (10 :: Integer))];
+  [SemanticsTypes.Payment seller (SemanticsTypes.Party seller)
+     (token exampleArgs) (Arith.Int_of_integer (10 :: Integer))];
 
-everythingIsAlrightTransactions :: [Semantics.Transaction_ext ()];
+everythingIsAlrightTransactions :: [SemanticsTypes.Transaction_ext ()];
 everythingIsAlrightTransactions =
-  [Semantics.Transaction_ext
+  [SemanticsTypes.Transaction_ext
      (Arith.Int_of_integer (1664812600000 :: Integer),
        Arith.Int_of_integer (1664812700000 :: Integer))
      [SemanticsTypes.IDeposit seller buyer (token exampleArgs)
         (Arith.Int_of_integer (10 :: Integer))]
      (),
-    Semantics.Transaction_ext
+    SemanticsTypes.Transaction_ext
       (Arith.Int_of_integer (1664812900000 :: Integer),
         Arith.Int_of_integer (1664813100000 :: Integer))
       [SemanticsTypes.IChoice

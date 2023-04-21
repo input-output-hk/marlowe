@@ -11,7 +11,6 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
-import qualified Semantics;
 import qualified Stringa;
 import qualified SemanticsTypes;
 import qualified Arith;
@@ -123,22 +122,22 @@ swapExample =
       (SemanticsTypes.Constant (Arith.Int_of_integer (20 :: Integer)))
       dollarToken (Arith.Int_of_integer (1664816400000 :: Integer)) ());
 
-happyPathPayments :: [Semantics.Payment];
+happyPathPayments :: [SemanticsTypes.Payment];
 happyPathPayments =
-  [Semantics.Payment adaProvider (SemanticsTypes.Party dollarProvider) adaToken
-     (Arith.Int_of_integer (10 :: Integer)),
-    Semantics.Payment dollarProvider (SemanticsTypes.Party adaProvider)
+  [SemanticsTypes.Payment adaProvider (SemanticsTypes.Party dollarProvider)
+     adaToken (Arith.Int_of_integer (10 :: Integer)),
+    SemanticsTypes.Payment dollarProvider (SemanticsTypes.Party adaProvider)
       dollarToken (Arith.Int_of_integer (20 :: Integer))];
 
-happyPathTransactions :: [Semantics.Transaction_ext ()];
+happyPathTransactions :: [SemanticsTypes.Transaction_ext ()];
 happyPathTransactions =
-  [Semantics.Transaction_ext
+  [SemanticsTypes.Transaction_ext
      (Arith.Int_of_integer (1664812600000 :: Integer),
        Arith.Int_of_integer (1664812700000 :: Integer))
      [SemanticsTypes.IDeposit adaProvider adaProvider adaToken
         (Arith.Int_of_integer (10 :: Integer))]
      (),
-    Semantics.Transaction_ext
+    SemanticsTypes.Transaction_ext
       (Arith.Int_of_integer (1664812900000 :: Integer),
         Arith.Int_of_integer (1664813100000 :: Integer))
       [SemanticsTypes.IDeposit dollarProvider dollarProvider dollarToken

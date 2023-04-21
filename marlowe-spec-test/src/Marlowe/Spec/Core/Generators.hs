@@ -106,7 +106,7 @@ genContext interpret = sized \n ->
               <*> perturb genParty' parties
         valueIds <- listOfGen arbitrary
         values <- listOfGen arbitraryInteger
-        times <- listOfGen arbitraryPositiveInteger
+        times <- liftGen $ replicateM n arbitraryPositiveInteger
         caccounts <-
           fromList . nubBy ((==) `on` fst)
             <$> listOf

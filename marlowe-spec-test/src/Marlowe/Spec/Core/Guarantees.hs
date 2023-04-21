@@ -137,12 +137,12 @@ isClose _ = False
 --    "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
 traceToSingleInputIsEquivalentTest :: InterpretJsonRequest -> TestTree
 traceToSingleInputIsEquivalentTest interpret = reproducibleProperty "theorem traceToSingleInputIsEquivalent" do
+    context <- run $ generateT $ genContext interpret
     (contract, Arith.Int_of_integer startTime, transactions) <- run $ do
-      generateT $ (do
-        context <- genContext interpret
-        c <- liftGen $ genArbitraryContracts context
-        s <- liftGen arbitraryPositiveInteger
-        t <- liftGen $ arbitraryValidTransactions (emptyState s) c
+      generate $ (do
+        c <- genArbitraryContracts context
+        s <- arbitraryPositiveInteger
+        t <- arbitraryValidTransactions (emptyState s) c
         pure (c,s,t)) `suchThat` \(_,_,t) -> t /= traceListToSingleInput t
     let
         numberOfInputs = foldr (\tx n -> n + length (inputs tx)) 0 transactions

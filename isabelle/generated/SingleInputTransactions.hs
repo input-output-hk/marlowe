@@ -15,15 +15,16 @@ import qualified Arith;
 inputsToTransactions ::
   (Arith.Int, Arith.Int) ->
     [SemanticsTypes.Input] -> [Semantics.Transaction_ext ()];
-inputsToTransactions si [] = [Semantics.Transaction_ext si [] ()];
-inputsToTransactions si [inp1] = [Semantics.Transaction_ext si [inp1] ()];
-inputsToTransactions si (inp1 : v : va) =
-  Semantics.Transaction_ext si [inp1] () : inputsToTransactions si (v : va);
+inputsToTransactions ti [] = [Semantics.Transaction_ext ti [] ()];
+inputsToTransactions ti [inp1] = [Semantics.Transaction_ext ti [inp1] ()];
+inputsToTransactions ti (headInput : v : va) =
+  Semantics.Transaction_ext ti [headInput] () :
+    inputsToTransactions ti (v : va);
 
 traceListToSingleInput ::
   [Semantics.Transaction_ext ()] -> [Semantics.Transaction_ext ()];
 traceListToSingleInput [] = [];
-traceListToSingleInput (Semantics.Transaction_ext si inps () : rest) =
-  inputsToTransactions si inps ++ traceListToSingleInput rest;
+traceListToSingleInput (Semantics.Transaction_ext si inps () : tailTx) =
+  inputsToTransactions si inps ++ traceListToSingleInput tailTx;
 
 }

@@ -1,5 +1,5 @@
 theory SmallStepF
-imports Main Util.MList Util.SList ListTools Semantics "HOL-Library.Product_Lexorder" "HOL.Product_Type" "HOL-IMP.Star"
+imports Main Util.MList Util.SList ListTools Semantics "HOL-Library.Product_Lexorder" "HOL.Product_Type" "HOL-IMP.Star" PositiveAccounts
 begin
 
 type_synonym Configuration = "Contract * State * Environment * (ReduceWarning list) * (Payment list)"
@@ -7,77 +7,144 @@ type_synonym Configuration = "Contract * State * Environment * (ReduceWarning li
 inductive
   small_step_reduce :: "Configuration \<Rightarrow> Configuration \<Rightarrow> bool" (infix "\<rightarrow>" 55)
 where
-CloseRefund:  "refundOne (accounts s) = Some ((party, token, money), newAccount) \<Longrightarrow>
-  (Close, s, env, warns, payments) \<rightarrow>
-  (Close, (s\<lparr>accounts := newAccount\<rparr>), env, warns @ [ReduceNoWarning], payments @ [Payment party (Party party) token money])" |
-PayNonPositive: "evalValue env s val \<le> 0 \<Longrightarrow>
-  (Pay accId payee token val cont, s, env, warns, payments) \<rightarrow>
-  (cont, s, env, warns @ [ReduceNonPositivePay accId payee token (evalValue env s val)], payments)" |
-\<comment>\<open>TODO: Partial external payment\<close>
-PayPositivePartialWithPayment: "\<lbrakk>
-  \<comment>\<open>TODO: We may be able to remove this using validAndPositive_state\<close>
-  evalValue env s val > 0;
-  moneyInAccount accId token (accounts s) = availableMoney; 
-  evalValue env s val > availableMoney;
-  updateMoneyInAccount accId token 0 (accounts s) = newAccs;
-  giveMoney accId payee token (availableMoney) newAccs = (ReduceWithPayment payment, finalAccs)
+
+CloseRefund:  
+  "refundOne (accounts s) = Some ((party, token, money), newAccount) \<Longrightarrow>
+  ( Close
+  , s
+  , env
+  , warns
+  , payments
+  ) \<rightarrow>
+  ( Close
+  , s\<lparr>accounts := newAccount\<rparr>
+  , env
+  , warns @ [ReduceNoWarning]
+  , payments @ [Payment party (Party party) token money]
+  )" 
+
+|PayNonPositive: 
+  "evalValue env s val \<le> 0 \<Longrightarrow>
+  (Pay accId payee token val cont
+  , s
+  , env
+  , warns
+  , payments
+  ) \<rightarrow>
+  ( cont
+  , s
+  , env
+  , warns @ [ReduceNonPositivePay accId payee token (evalValue env s val)]
+  , payments
+  )" 
+
+|PayInternalTransfer: 
+ "\<lbrakk> validAndPositive_state s;
+    evalValue env state val = moneyToPay;
+    moneyToPay > 0;
+    moneyInAccount srcAccId token (accounts s) = availableSrcMoney;   
+    min availableSrcMoney moneyToPay = paidMoney;  
+    Account dstAccId = payee;
+    \<comment> \<open>Internal transfer\<close>
+    updateMoneyInAccount srcAccId token (availableSrcMoney - paidMoney) (accounts s) 
+      = accsWithoutSrc;    
+    addMoneyToAccount dstAccId token paidMoney accsWithoutSrc = finalAccs
   \<rbrakk> \<Longrightarrow>
-  (Pay accId payee token val cont, s, env, warns, payments) \<rightarrow>
-  ((cont, s\<lparr>accounts := finalAccs\<rparr>, env, warns @ [ReducePartialPay accId payee token availableMoney (evalValue env s val)], payments @ [payment]))" |
-\<comment>\<open>TODO: Partial internal payment\<close>
-PayPositivePartialWithoutPayment: "\<lbrakk>
-  \<comment>\<open>TODO: We may be able to remove this using validAndPositive_state\<close>
-  evalValue env s val > 0;
-  moneyInAccount accId token (accounts s) = availableMoney;
-  evalValue env s val > availableMoney;
-  updateMoneyInAccount accId token 0 (accounts s) = newAccs;  
-  giveMoney accId payee token (availableMoney) newAccs = (ReduceNoPayment, finalAccs)
+  ( Pay srcAccId payee token val cont
+  , s
+  , env
+  , warns
+  , payments
+  ) \<rightarrow>
+  ( cont
+  , s\<lparr>accounts := finalAccs\<rparr>
+  , env
+  , warns @ [ if paidMoney < moneyToPay
+              then ReducePartialPay accId payee token paidMoney moneyToPay
+              else ReduceNoWarning
+            ]
+  , payments @ [Payment srcAccId payee token paidMoney]
+  )" 
+
+|PayExternal: 
+ "\<lbrakk> validAndPositive_state s;
+    evalValue env state val = moneyToPay;
+    moneyToPay > 0;
+    moneyInAccount srcAccId token (accounts s) = availableSrcMoney;   
+    min availableSrcMoney moneyToPay = paidMoney;  
+    Party external = payee;
+    \<comment> \<open>If the payment is external, the funds are removed from the source account, but \<close>
+    \<comment> \<open>the actual payment is expected to occur outside of these semantics\<close>
+    updateMoneyInAccount srcAccId token (availableSrcMoney - paidMoney) (accounts s) 
+      = accsWithoutSrc
   \<rbrakk> \<Longrightarrow>
-  (Pay accId payee token val cont, s, env, warns, payments) \<rightarrow>
-  ((cont, s\<lparr>accounts := finalAccs\<rparr>, env, warns @ [ReducePartialPay accId payee token availableMoney (evalValue env s val)], payments))" |
-\<comment>\<open>TODO: Full external payment\<close>
-PayPositiveFullWithPayment: "\<lbrakk>evalValue env s val > 0;
-  moneyInAccount accId token (accounts s) = availableMoney;
-  evalValue env s val \<le> availableMoney;
-  availableMoney - (evalValue env s val) = newBalance;
-  updateMoneyInAccount accId token newBalance (accounts s) = newAccs;
-  giveMoney accId payee token (evalValue env s val) newAccs = (ReduceWithPayment payment, finalAccs)
-  \<rbrakk> \<Longrightarrow>
-  (Pay accId payee token val cont, s, env, warns, payments) \<rightarrow>
-  (cont, s\<lparr>accounts := finalAccs\<rparr>, env, warns @ [ReduceNoWarning], payments @ [payment])" |
-\<comment>\<open>TODO: Full internal payment\<close>
-PayPositiveFullWithoutPayment: "\<lbrakk>evalValue env s val > 0;
-  moneyInAccount accId token (accounts s) = availableMoney;
-  evalValue env s val \<le> availableMoney;
-  availableMoney - (evalValue env s val) = newBalance;
-  updateMoneyInAccount accId token newBalance (accounts s) = newAccs;
-  giveMoney accId payee token (evalValue env s val) newAccs = (ReduceNoPayment, finalAccs)
-  \<rbrakk> \<Longrightarrow>
-  (Pay accId payee token val cont, s, env, warns, payments) \<rightarrow>
-  (cont, s\<lparr>accounts := finalAccs\<rparr>, env, warns @ [ReduceNoWarning], payments)"  |
-IfTrue: "evalObservation env s obs \<Longrightarrow>
+  ( Pay srcAccId payee token val cont
+  , s
+  , env
+  , warns
+  , payments
+  ) \<rightarrow>
+  ( cont
+  , s\<lparr>accounts := accsWithoutSrc\<rparr>
+  , env
+  , warns @ [ if paidMoney < moneyToPay
+              then ReducePartialPay accId payee token paidMoney moneyToPay
+              else ReduceNoWarning
+            ]
+  , payments @ [Payment srcAccId payee token paidMoney]
+  )" 
+|IfTrue: 
+ "evalObservation env s obs \<Longrightarrow>
   (If obs cont1 cont2, s, env, warns, payments) \<rightarrow>
-  (cont1, s, env, warns @ [ReduceNoWarning], payments)" |
-IfFalse: "\<not>evalObservation env s obs \<Longrightarrow>
+  (cont1, s, env, warns @ [ReduceNoWarning], payments)" 
+|IfFalse: 
+ "\<not>evalObservation env s obs \<Longrightarrow>
   (If obs cont1 cont2, s, env, warns, payments) \<rightarrow>
-  (cont2, s, env, warns @ [ReduceNoWarning], payments)" |
-WhenTimeout: "\<lbrakk>timeInterval env = (startTime, endTime);
-  endTime \<ge> timeout;
-  startTime \<ge> timeout\<rbrakk> \<Longrightarrow>
+  (cont2, s, env, warns @ [ReduceNoWarning], payments)" 
+|WhenTimeout: 
+ "\<lbrakk> timeInterval env = (startTime, endTime);
+\<comment> \<open>TODO: Shouldn't this be startTime \<le> endTime \<le> timeout? \<close>
+    endTime \<ge> timeout;
+    startTime \<ge> timeout
+  \<rbrakk> \<Longrightarrow>
   (When cases timeout cont, s, env, warns, payments) \<rightarrow>
-  (cont, s, env, warns @ [ReduceNoWarning], payments)"|
-LetShadow: "\<lbrakk> lookup valId (boundValues s) = Some oldVal; 
-  evalValue env s val = newVal
+  (cont, s, env, warns @ [ReduceNoWarning], payments)"
+
+|LetShadow: 
+ "\<lbrakk> lookup valId (boundValues s) = Some oldVal;
+    evalValue env s val = newVal
   \<rbrakk> \<Longrightarrow>
-  (Let valId val cont, s, env, warns, payments) \<rightarrow>
-  (cont, s\<lparr> boundValues := MList.insert valId newVal (boundValues s)\<rparr>, env, warns @ [ReduceShadowing valId oldVal newVal], payments)" |
-LetNoShadow: "lookup valId (boundValues s) = None \<Longrightarrow>
-  (Let valId val cont, s, env, warns, payments) \<rightarrow>
-  (cont, s\<lparr> boundValues := MList.insert valId (evalValue env s val) (boundValues s)\<rparr>, env, warns @ [ReduceNoWarning], payments)"  |
-AssertTrue: "evalObservation env s obs \<Longrightarrow>
+  ( Let valId val cont
+  , s
+  , env
+  , warns
+  , payments
+  ) \<rightarrow>
+  ( cont
+  , s\<lparr> boundValues := MList.insert valId newVal (boundValues s)\<rparr>
+  , env
+  , warns @ [ReduceShadowing valId oldVal newVal]
+  , payments
+  )" 
+
+|LetNoShadow: "lookup valId (boundValues s) = None \<Longrightarrow>
+  ( Let valId val cont
+  , s
+  , env
+  , warns
+  , payments) \<rightarrow>
+  ( cont
+  , s \<lparr> boundValues := MList.insert valId (evalValue env s val) (boundValues s)\<rparr>
+  , env
+  , warns @ [ReduceNoWarning]
+  , payments
+  )"  
+
+|AssertTrue: "evalObservation env s obs \<Longrightarrow>
   (Assert obs cont, s, env, warns, payments) \<rightarrow>
-  (cont, s, env, warns @ [ReduceNoWarning], payments)" |
-AssertFalse: "\<not>evalObservation env s obs \<Longrightarrow>
+  (cont, s, env, warns @ [ReduceNoWarning], payments)" 
+
+|AssertFalse: "\<not>evalObservation env s obs \<Longrightarrow>
   (Assert obs cont, s, env, warns, payments) \<rightarrow>
   (cont, s, env, warns @ [ReduceAssertionFailed], payments)"
 
@@ -126,15 +193,62 @@ apply (induction rule: star.induct[of "small_step_reduce", split_format(complete
 text "A configuration cs is final if there is no transition that can be made."
 definition "finalConfiguration cs \<longleftrightarrow> \<not>(\<exists>cs'. cs \<rightarrow> cs')"
 
+declare finalConfiguration_def [simp add]
+
+fun isClose :: "Contract \<Rightarrow> bool" where 
+"isClose Close = True" 
+|"isClose _ = False"
+
+fun isWhen :: "Contract \<Rightarrow> bool" where 
+"isWhen (When _ _ _) = True" 
+|"isWhen _ = False"
+
+
 lemma finalD:
-"finalConfiguration (contract, s, e, w, p) \<Longrightarrow>
-  contract = Close \<or> (\<exists> cases timeout continue . contract = When cases timeout continue)"
-  apply (auto simp add: finalConfiguration_def)
-  apply (cases contract, auto)
-     apply (meson PayNonPositive PayPositiveFullWithPayment PayPositiveFullWithoutPayment PayPositivePartialWithPayment PayPositivePartialWithoutPayment giveMoney.elims not_less)
-    apply (meson IfFalse IfTrue)
-   apply (meson LetShadow option.exhaust_sel small_step_reduce.intros(11))
-  by (meson small_step_reduce.intros(12) small_step_reduce.intros(13))
+  assumes "validAndPositive_state s"
+  assumes "finalConfiguration (contract, s, e, w, p)"
+  shows   "isClose contract \<or> isWhen contract"  
+proof (cases contract)
+  case (Pay accId payee token val cont)
+  then obtain moneyToPay where moneyToPay: "evalValue e s val = moneyToPay" 
+    by simp
+  
+  then have "finalConfiguration (contract, s, e, w, p) = False"
+  proof (cases "moneyToPay \<le> 0")
+    case True
+    with Pay moneyToPay show "?thesis"
+      by (meson PayNonPositive finalConfiguration_def)
+  next
+    case False
+    have 0: "moneyToPay > 0" 
+      using False by linarith
+   
+    then show ?thesis
+      apply (cases payee, auto)      
+      using assms(1) Pay moneyToPay by blast+   
+  qed
+    
+  with assms show ?thesis by auto
+next
+  case (If obs trueCont falseCont)
+  then have "finalConfiguration (contract, s, e, w, p) = False"
+    apply (cases "evalObservation e s obs", auto)
+    by blast+
+  with assms show ?thesis by auto
+next
+  case (Let valId val cont)
+  then have "finalConfiguration (contract, s, e, w, p) = False"
+    apply (cases "lookup valId (boundValues s)", auto)
+    by blast+
+  with assms show ?thesis by auto
+next
+  case (Assert obs cont)
+  then have "finalConfiguration (contract, s, e, w, p) = False"
+    apply (cases "evalObservation e s obs", auto)
+    by blast+
+  with assms show ?thesis by auto
+qed auto
+ 
 
 (*BEGIN proof of Reduce Step is a Small Step Reduction in Marlowe*)
 text \<open>

@@ -5,8 +5,7 @@ import Test.Tasty (TestTree, testGroup)
 import qualified Examples.Swap
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), parseValidResponse)
-import Semantics (TransactionOutput(..), txOutContract, txOutWarnings, txOutPayments)
-import SemanticsTypes (Contract(..))
+import SemanticsTypes (Contract(..), TransactionOutput(..), txOutContract, txOutWarnings, txOutPayments)
 
 
 tests :: InterpretJsonRequest -> TestTree

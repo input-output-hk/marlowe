@@ -45,22 +45,23 @@ import Orderings (Ord (..))
 import PositiveAccounts (validAndPositive_state)
 import QuickCheck.GenT (frequency, suchThat, liftGen, GenT)
 import Semantics
-  ( TransactionOutput (..),
-    TransactionOutputRecord_ext (TransactionOutputRecord_ext),
-    Transaction_ext (..),
+  (
     computeTransaction,
     evalValue,
     evalObservation,
     isQuiescent,
-    txOutWarnings,
-    txOutPayments,
     maxTimeContract,
-    inputs,
   )
 import SemanticsTypes
   ( Contract (..),
     State_ext (..),
-    Value (..)
+    Value (..),
+    TransactionOutput (..),
+    TransactionOutputRecord_ext (TransactionOutputRecord_ext),
+    Transaction_ext (..),
+    txOutWarnings,
+    txOutPayments,
+    inputs,
   )
 import SingleInputTransactions (traceListToSingleInput)
 import Test.QuickCheck (cover, withMaxSuccess)

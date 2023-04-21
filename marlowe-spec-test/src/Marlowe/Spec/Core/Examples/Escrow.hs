@@ -5,8 +5,7 @@ module Marlowe.Spec.Core.Examples.Escrow (tests) where
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 import Marlowe.Spec.Interpret (InterpretJsonRequest, Request (..), parseValidResponse)
-import Semantics (TransactionOutput(..), txOutContract, txOutWarnings, txOutPayments, Transaction_ext (..), Payment (..))
-import SemanticsTypes (Contract(..))
+import SemanticsTypes (Contract(..), TransactionOutput(..), txOutContract, txOutWarnings, txOutPayments, Transaction_ext (..), Payment (..))
 import Examples.Escrow (confirmProblemPayments, dismissClaimPayments, confirmClaimPayments, escrowExample, confirmClaimTransactions, dismissClaimTransactions, confirmProblemTransactions, everythingIsAlrightPayments, everythingIsAlrightTransactions)
 
 tests :: InterpretJsonRequest -> TestTree

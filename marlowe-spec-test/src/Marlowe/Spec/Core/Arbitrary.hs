@@ -62,12 +62,7 @@ import Marlowe.Spec.TypeId (TypeId (..))
 import Orderings (Ord (..), max)
 import QuickCheck.GenT (GenT, MonadGen (..), frequency, resize, sized, suchThat, vectorOf)
 import Semantics
-  ( Payment (..),
-    TransactionError (..),
-    TransactionOutput (..),
-    TransactionOutputRecord_ext (..),
-    TransactionWarning (..),
-    Transaction_ext (..),
+  (
     computeTransaction,
     evalValue,
   )
@@ -87,6 +82,12 @@ import SemanticsTypes
     Token (..),
     Value (..),
     ValueId (..),
+    Payment (..),
+    TransactionError (..),
+    TransactionOutput (..),
+    TransactionOutputRecord_ext (..),
+    TransactionWarning (..),
+    Transaction_ext (..),
     minTime,
   )
 import Test.QuickCheck (Gen, chooseInt, elements, getSize)

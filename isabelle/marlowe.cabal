@@ -27,7 +27,6 @@ library
     other-modules:
         HOL
         List
-        ListTools
         Option
         OptBoundTimeInterval
         Product_Lexorder

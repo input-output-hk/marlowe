@@ -313,7 +313,7 @@ where
                 else cont2
      in Reduced ReduceNoWarning ReduceNoPayment state cont
     )"
-  \<comment> \<open>A When contract is reduced to the contingeny continuation if the timeout is\<close>
+  \<comment> \<open>A When contract is reduced to the contingency continuation if the timeout is\<close>
   \<comment> \<open>in the past. If the timeout has not happened yet the contract is Quiescent\<close>
 | "reduceContractStep env state (When _ timeout cont) =
     (let (startTime, endTime) = timeInterval env in

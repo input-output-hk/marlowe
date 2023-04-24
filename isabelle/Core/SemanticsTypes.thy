@@ -284,7 +284,7 @@ text \<open>@{term When} is the most complex constructor for contracts, with the
  \<^term>\<open>Contract\<close> continuations. When we do a \<^term>\<open>computeTransaction\<close> \secref{sec:computeTransaction},
  we follow the continuation associated to the first \<^term>\<open>Action\<close> that matches the \<^term>\<open>Input\<close>. If no
  action is matched it returns a \<^term>\<open>ApplyAllNoMatchError\<close>. If a valid \<^term>\<open>Transaction\<close> is computed
- with a \<^term>\<open>TimeInterval\<close> with a start time bigger than the \<^term>\<open>Timeout t\<close>, the contingency
+ with a \<^term>\<open>TimeInterval\<close> with a start time bigger or equal to the \<^term>\<open>Timeout t\<close>, the contingency
  continuation \<^term>\<open>c\<close> is evaluated. The explicit timeout mechanism is what allows Marlowe to avoid
 waiting forever for external inputs.\<close>
 

@@ -27,12 +27,9 @@ A TimeInterval (startTime, endTime) is ambiguous wrt a When's timeout iff startT
 text \<open>The \<^emph>\<open>calculateNonAmbiguousInterval\<close> function can help a user to calculate a TimeInterval that
 won't be ambiguous for the next \<^emph>\<open>n\<close> inputs of a contract.\<close>
 
-text \<open>The only Contract constructor that can yield a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> is the \<^term>\<open>When\<close>. 
-Computing a transaction of a contract that starts in a non quiescent state (\<^term>\<open>Let\<close>, \<^term>\<open>Pay\<close>, \<^term>\<open>If\<close>, \<^term>\<open>Assert\<close>) 
-can end in a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> iff there is a \<^term>\<open>When\<close> that makes it ambiguous.
-\<close>
-
-text \<open>A TimeInterval expressed as the tuple \<^term>\<open>(startTime, endTime)\<close> is ambiguous wrt a \<^term>\<open>When\<close>'s timeout
+text \<open>The only constructor that can yield a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> is \<^term>\<open>When\<close> contract. 
+Computing a transaction can yield a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> if there is a \<^term>\<open>When\<close> timeout that makes it ambiguous.
+A TimeInterval expressed as the tuple \<^term>\<open>(startTime, endTime)\<close> is ambiguous wrt a \<^term>\<open>When\<close>'s timeout
 iff \<^emph>\<open>startTime < timeout \<le> endTime\<close>
 \<close>
 

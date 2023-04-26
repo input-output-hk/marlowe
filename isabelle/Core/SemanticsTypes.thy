@@ -15,7 +15,7 @@ and the types needed to call \<^term>\<open>computeTransaction\<close>\secref{se
 
 text \<open>
 Marlowe uses a literate programming approach in which the types are defined from the bottom up,
-as explained in  \secref{sec:generation-nomenclature}.
+as explained in \secref{sec:generation-nomenclature}.
 However, readers who prefer a top-down approach can also start with the Contract definition in \secref{sec:contracts}.
 \<close>
 
@@ -191,9 +191,9 @@ subsection \<open>Actions and inputs\label{sec:actions-and-inputs}\<close>
 text \<open>
 We use @{term "Action"}s while designing a contract, which have a counterpart called
  @{term "Input"}s during execution. An @{term "Action"} can only appear in a
- @{term "Case"} statement together with a continuation. In turn, a  @{term "Case"}
+ @{term "Case"} statement together with a continuation. In turn, a @{term "Case"}
  can only appear inside a  @{term "When"} statement, and is the only way to declare
-that an external  @{term "Input"} is expected. When an  @{term "Input"} is applied to
+that an external @{term "Input"} is expected. When an @{term "Input"} is applied to
 the contract, it is matched against the list of expected @{term "Action"} and the
 first match is applied \secref{sec:applyInputs}.\<close>
 
@@ -210,7 +210,7 @@ text \<open>A @{term "Deposit a p t v"} makes a deposit of \#@{term v} @{term To
  into account @{term a}.\<close>
 
 text \<open>A @{term "Choice i bs"} can be made for a particular option identified by the @{term ChoiceId}
- @{term i} \secref{sec:choices}  with a list of inclusive bounds @{term bs} that indicates acceptable values.
+ @{term i} \secref{sec:choices} with a list of inclusive bounds @{term bs} that indicates acceptable values.
 For example, @{term "Choice (ChoiceId name party) [Bound 0 0, Bound 3 5]"} allows @{term party} to
 choose either 0, 3, 4 or 5 in the @{term name} option.
 \<close>
@@ -322,20 +322,20 @@ record State
 
 text \<open>
 The accounts, choices and boundValues are actually Map's but they are represented
-here as association lists. Each blockchain have different capabilities to represent
+here as association lists. Each blockchain has different capabilities to represent
 data structutres, the most suitable one should be used in each case.
 \<close>
 
 text \<open>
-The accounts should only have positive values. If a transaction ask to pay more assets
+The accounts should only have positive values. If a transaction asks to pay more assets
 than available to the account, a partial payment warning is raised and the entry is
 removed from the Map.
 \<close>
 
 text \<open>
-Transactions are computed within a time interval @{term "(startTime, endTime)"} which
- give us a proxy for real time. It is up to the blockchain implementation to make sure
- that @{term startTime} \le @{term now} \le  @{term endTime}. The variable @{term minTime}
+Transactions have a validity time interval @{term "(startTime, endTime)"} which
+ gives us a proxy for real time. It is up to the blockchain implementation to make sure
+ that @{term startTime} \le @{term now} \le @{term endTime}. The variable @{term minTime}
  is the biggest known @{term startTime}. That allow us to trim a time interval and
 ensure that @{term startTime} does not decrease between transactions.
 \<close>
@@ -383,7 +383,7 @@ text \<open>The rest of this section introduces the types used to represent the 
 \<^emph>\<open>computeTransaction\<close>.\<close>
 
 text \<open>The following warnings are issues that can happen while executing a transaction.
-They doesn't prevent the transaction from being completed, but they may indicate a poorly
+They don't prevent the transaction from being completed, but they may indicate a poorly
  designed contract. Marlowe contracts can be statically analyzed to ensure that no
 execution path results in a warning.\<close>
 
@@ -421,13 +421,13 @@ text \<open>The following errors are issues that can happen while executing a tr
 Unlike the warnings, they do prevent a transaction from being executed.\<close>
 
 datatype TransactionError
-  \<comment> \<open>A When's timeout is ambiguous w.r.t. the transaction time interval\<close>
+  \<comment> \<open>A When's timeout is ambiguous w.r.t. the transaction's time interval\<close>
   = TEAmbiguousTimeIntervalError
   \<comment> \<open>No Case matched the provided Input\<close>
   | TEApplyNoMatchError
   \<comment> \<open>The transaction's TimeInterval has one of the problems described before\<close>
   | TEIntervalError IntervalError
-  \<comment> \<open>The transaction does not modify neither the State nor the continuation\<close>
+  \<comment> \<open>The transaction does not have any effect\<close>
   | TEUselessTransaction
 
 text \<open>In a time interval @{term "(startTime, endTime)"}, a When's @{term timeout} is

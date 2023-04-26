@@ -23,18 +23,18 @@ An implementation of Marlowe can use this section as reference. However, it is n
 the exact same inner types and functions. The essential requirements are to model the types defined in
 section \secref{sec:core-types} and ensure that calling \<^emph>\<open>computeTransaction\<close> \secref{sec:computeTransaction}
 produces the same results as specified in this document. The Marlowe repository includes a tool called
- \<^emph>\<open>spec-test\<close> which is used to verify compliance of an implementation with the
+ \<^emph>\<open>spec-test\<close> which is used to test an implementation's compliance with the
 specification.
 \<close>
 
 subsection \<open>Account operations\<close>
 
-text \<open>In this section we present some helper functions to query and modify the assets
+text \<open>In this section, we present some helper functions to query and modify the assets
 present in the internal accounts of a contract\<close>
 
 text \<open>The function \<^emph>\<open>moneyInAccount\<close> returns the number of \<^emph>\<open>token\<close>s a particular \<^emph>\<open>AccountId\<close> has in
 their account. The function \<^emph>\<open>findWithDefault\<close> looks for a key in a Map (represented in this case
-by an assosiative list), and uses the provided default if the key is not present. \<close>
+by an associative list), and uses the provided default if the key is not present. \<close>
 
 fun moneyInAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Accounts \<Rightarrow> int"
   where
@@ -55,8 +55,8 @@ where
      then MList.delete (accId, token) accountsV
      else MList.insert (accId, token) money accountsV)"
 
-text \<open>The function \<^emph>\<open>addMoneyToAccount\<close> increases the amount of token a particular \<^emph>\<open>AccountId\<close> has
-in their account. To ensure that the value always increases we check that \<^emph>\<open>money\<close> > \<^emph>\<open>0\<close>.\<close>
+text \<open>The function \<^emph>\<open>addMoneyToAccount\<close> increases the amount of tokens in an account identified by
+a particular \<^emph>\<open>AccountId\<close>. To ensure that the value always increases we check that \<^emph>\<open>money\<close> > \<^emph>\<open>0\<close>.\<close>
 fun addMoneyToAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> int \<Rightarrow> Accounts \<Rightarrow> Accounts"
 where
   "addMoneyToAccount accId token money accts =
@@ -105,12 +105,11 @@ where
   \<comment> \<open>Eval value from Environment\<close>
 | "evalValue env state TimeIntervalStart = fst (timeInterval env)"
 | "evalValue env state TimeIntervalEnd = snd (timeInterval env)"
-  \<comment> \<open>Conditional/Ternary operator\<close>
+  \<comment> \<open>Conditional ternary operator\<close>
 | "evalValue env state (Cond cond thn els) =
     (if evalObservation env state cond
      then evalValue env state thn
      else evalValue env state els)"
-
   \<comment> \<open>===Eval Observation===\<close>
   \<comment> \<open>Constants\<close>
 | "evalObservation env state TrueObs = True"
@@ -137,11 +136,9 @@ where
 | "evalObservation env state (ValueEQ lhs rhs) =
     (evalValue env state lhs = evalValue env state rhs)"
 
-text \<open>Different languages can behave differently regarding rounding with partial
-division. To follow the specification, it is important for implementers to respect
-the following properties.\<close>
+text \<open>Different programming languages may exhibit different behaviors when it comes to rounding during partial division. To ensure compliance with the specification, implementations must maintain the following properties.\<close>
 
-text \<open>Dividing by zero results in zero\<close>
+text \<open>Dividing by a value that evaluates to zero results in zero\<close>
 lemma eval_DivValue_by_zero_is_zero :
   assumes "evalValue env sta d = 0"
     shows "evalValue env sta (DivValue n d) = 0"
@@ -149,7 +146,7 @@ lemma eval_DivValue_by_zero_is_zero :
   using assms by simp
 (*>*)
 
-text \<open>Dividing by itself results in one\<close>
+text \<open>Dividing two equivalent values by each other results in one (unless they evaluate to zero)\<close>
 lemma eval_DivValue_by_itself :
   assumes "evalValue env sta n = a"
       and "evalValue env sta d = a"
@@ -159,7 +156,7 @@ lemma eval_DivValue_by_itself :
   using assms  by simp
 (*>*)
 
-text \<open>Dividing by one results in the numerator\<close>
+text \<open>Dividing by a value that evaluates to one results in the numerator\<close>
 lemma eval_DivValue_by_one :
   assumes "evalValue env sta d = 1"
     shows "evalValue env sta (DivValue n d) = evalValue env sta n"
@@ -167,8 +164,8 @@ lemma eval_DivValue_by_one :
   using assms by (simp add:Let_def)
 (*>*)
 
-text \<open>If we multiply the numerator and denominator by the same constant, we can
-simplify it.\<close>
+text \<open>If we multiply the numerator and denominator by the same constant, we obtain
+an equivalent value.\<close>
 lemma eval_DivValue_simp_MulByConstant :
   assumes "evalValue env sta c \<noteq> 0"
     shows "evalValue env sta (DivValue (MulValue c a) (MulValue c b))
@@ -191,8 +188,8 @@ lemma eval_DivValue_rounds_to_zero :
 subsection \<open>Reduce contract step\label{sec:reduceContractStep}\<close>
 
 text \<open>In section \secref{sec:Quiescent}, we defined a quiescent contract as one that has either completed its execution or is
- waiting for external input. The function \<^emph>\<open>reduceContractStep\<close> makes a single reduction toward that state.
-It is later recursively called by the \<^emph>\<open>reduceContractUntilQuiescent\<close> function until the contract can no longer
+ waiting for external input. The function \<^emph>\<open>reduceContractStep\<close> performs a single reduction towards that state.
+It is iteratively called by the \<^emph>\<open>reduceContractUntilQuiescent\<close> function until the contract can no longer
  be reduced any further.\<close>
 
 text \<open>The following datatypes are auxiliary to define the result of the \<^emph>\<open>reduceContractStep\<close> function.\<close>
@@ -210,13 +207,13 @@ datatype ReduceWarning
   \<comment> \<open>If a Pay contract tries to pay a value lower or equal than zero, no payment is\<close>
   \<comment> \<open> made and this warning is raised\<close>
   | ReduceNonPositivePay AccountId Payee Token int
-  \<comment> \<open>If a Pay contract tries to pay more tokens than the available in the account,\<close>
+  \<comment> \<open>If a Pay contract tries to pay more tokens than are available in the account,\<close>
   \<comment> \<open>the available tokens are paid and this warning is raised\<close>
   | ReducePartialPay AccountId Payee Token int int
   \<comment> \<open>If a Let contract uses a value that was already bound, the value is overwritten\<close>
   \<comment> \<open>and this warning is raised\<close>
   | ReduceShadowing ValueId int int
-  \<comment> \<open>If the observation of an Assert evaluates to false this warning is raised\<close>
+  \<comment> \<open>If the observation of an Assert evaluates to false, this warning is raised\<close>
   | ReduceAssertionFailed
 
 text \<open>When calling reduceContractStep, there are three potential outcomes. If the
@@ -226,7 +223,7 @@ the updated state, and the new continuation. However, if the contract is a \<^em
 statement with an ambiguous timeout for the given Environment, the function will
 return an \<^emph>\<open>AmbiguousTimeIntervalReductionError\<close>\<close>
 
-text \<open>A TimeInterval expressed as the tuple \<^term>\<open>(startTime \<times> endTime)\<close> can be
+text \<open>A TimeInterval expressed as the tuple \<^term>\<open>(startTime, endTime)\<close> can be
 ambiguous w.r.t. a \<^term>\<open>When\<close>'s timeout iff \<^emph>\<open>startTime\<close> < \<^emph>\<open>timeout\<close> \le \<^emph>\<open>endTime\<close>
 \<close>
 datatype ReduceStepResult
@@ -313,8 +310,8 @@ where
                 else cont2
      in Reduced ReduceNoWarning ReduceNoPayment state cont
     )"
-  \<comment> \<open>A When contract is reduced to the contingency continuation if the timeout is\<close>
-  \<comment> \<open>in the past. If the timeout has not happened yet the contract is Quiescent\<close>
+  \<comment> \<open>A When contract is reduced to the contingency continuation if the timeout has\<close>
+  \<comment> \<open>been reached. If the timeout has not happened yet the contract is Quiescent\<close>
 | "reduceContractStep env state (When _ timeout cont) =
     (let (startTime, endTime) = timeInterval env in
      if endTime < timeout
@@ -584,12 +581,12 @@ contract using \<^emph>\<open>applyInput\<close>. This, in turn, requires us to 
  how to apply an input to a Case statement with \<^emph>\<open>applyCases\<close>.\<close>
 
 subsubsection \<open>Apply cases\<close>
-text \<open>The following datatypes describes the result of calling \<^emph>\<open>applyCases\<close>\<close>
+text \<open>The following datatypes describe the result of calling \<^emph>\<open>applyCases\<close>\<close>
 
 datatype ApplyWarning
   \<comment> \<open>No warning was produced by applying a case\<close>
   = ApplyNoWarning
-  \<comment> \<open>A Deposit of zero or less token was asked\<close>
+  \<comment> \<open>A Deposit of zero or fewer tokens was attempted\<close>
   | ApplyNonPositiveDeposit Party AccountId Token int
 
 datatype ApplyResult
@@ -706,7 +703,7 @@ datatype ApplyAllResult
 
 
 text \<open>
-The function \<^emph>\<open>applyAllLoop\<close> recursively apply inputs to a contract. In other
+The function \<^emph>\<open>applyAllLoop\<close> recursively applies inputs to a contract. In other
 programming languages, it could be defined as an inner function
 of \<^emph>\<open>applyAllInputs\<close>, however, Isabelle does not support inner functions.
 \<close>
@@ -727,10 +724,10 @@ fun applyAllLoop ::
 where
 "applyAllLoop contractChanged env state contract inps warnings payments =
    \<comment> \<open>Before calling applyInput we make sure that the contract is in a\<close>
-   \<comment> \<open>quiescent state, meaning it has finished executing or is waiting\<close>
+   \<comment> \<open>quiescent state. That means it has finished executing or is waiting\<close>
    \<comment> \<open>for an external input. During the first iteration of the loop, a\<close>
    \<comment> \<open>contract may not be in a quiescent state if it was constructed with\<close>
-   \<comment> \<open>a statement other than a When or Close or if the When statement has\<close>
+   \<comment> \<open>a statement other than a When or Close, or if the When statement has\<close>
    \<comment> \<open>timed out with respect to the environment. For subsequent iterations\<close>
    \<comment> \<open>of the loop, this code reduces the continuation of the previous\<close>
    \<comment> \<open>applyInput, ensuring that the final continuation is quiescent.\<close>

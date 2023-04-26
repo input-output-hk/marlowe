@@ -59,17 +59,17 @@ explicit this way, and each \<^term>\<open>Contract\<close> term is executed at 
 
 subsection \<open>Data types\<close>
 text \<open>The \<^term>\<open>Value\<close>s and \<^term>\<open>Observation\<close>s \secref{sec:values-and-observations} only works with
-integers and booleans respectively. There are no custom data types, records, tuples, nor string
-manipulation. There are also no floating point numbers, so in order to represent currencies it is
-recommended to work with cents. Dates are only used in the context of \<^term>\<open>Timeout\<close>s and they are absolute,
- but it is likely we'll add relative times in a future version.
+integers and booleans respectively. There is no native representation of decimal numbers, so in order to
+represent currencies it is recommended to work with fractional units (like cents). For example, amounts of
+Ada are represented in Lovelaces, because a Lovelace represents a one-millionth of an Ada. Dates are only
+used in the context of \<^term>\<open>Timeout\<close>s and they are absolute.
 \<close>
 
 
 subsection \<open>Quiescent \label{sec:Quiescent}\<close>
 
-text \<open>When a transaction is computed, the contract and state are reduced to their most basic form.
-When it can't be reduced anymore the contract is consider quiescent, which means that it is either
+text \<open>When a transaction is computed, the contract is reduced as much as possible.
+When it cannot be reduced anymore the contract is considered quiescent, which means that it is either
  awaiting external input or has been fully executed\<close>
 
 subsection \<open>Timeouts and Contingencies\<close>
@@ -95,8 +95,9 @@ the assets available in their internal accounts.
 \<close>
 
 text \<open>
-The accounts, choices, and  variables stored in the \<^term>\<open>State\<close> \secref{sec:state} are global
- to that contract.
+The accounts, choices, and variables stored in the \<^term>\<open>State\<close> \secref{sec:state} remain
+in the \<^term>\<open>State\<close> until the contract is closed. But in the case of accounts and variables,
+they are omitted for space efficiency if their value becomes 0, because that is their default value.
 \<close>
 
 

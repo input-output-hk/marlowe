@@ -20,33 +20,33 @@ fun subIfSome :: "int option \<Rightarrow> int \<Rightarrow> int option" where
 
 
 text \<open>
-A TimeInterval (startTime, endTime) can be ambiguous wrt a When's timeout if startTime < timeout \<le> endTime
+A TimeInterval (startTime, endTime) is ambiguous wrt a When's timeout iff startTime < timeout \<le> endTime
 
 \<close>
 
 text \<open>The \<^emph>\<open>calculateNonAmbiguousInterval\<close> function can help a user to calculate a TimeInterval that
 won't be ambiguous for the next \<^emph>\<open>n\<close> inputs of a contract.\<close>
 
-text \<open>The only Contract constructor that can yield a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> is the \<^term>\<open>When\<close> case. 
+text \<open>The only Contract constructor that can yield a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> is the \<^term>\<open>When\<close>. 
 Computing a transaction of a contract that starts in a non quiescent state (\<^term>\<open>Let\<close>, \<^term>\<open>Pay\<close>, \<^term>\<open>If\<close>, \<^term>\<open>Assert\<close>) 
-can end in a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> iff there is a \<^term>\<open>When\<close> case that makes it ambiguous.
+can end in a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> iff there is a \<^term>\<open>When\<close> that makes it ambiguous.
 \<close>
 
-text \<open>A TimeInterval expressed as the tuple \<^term>\<open>(startTime \<times> endTime)\<close> can be ambiguous wrt a \<^term>\<open>When\<close>'s timeout
+text \<open>A TimeInterval expressed as the tuple \<^term>\<open>(startTime, endTime)\<close> is ambiguous wrt a \<^term>\<open>When\<close>'s timeout
 iff \<^emph>\<open>startTime < timeout \<le> endTime\<close>
 \<close>
 
 text
 \<open> The parameters of \<^emph>\<open>calculateNonAmbiguousInterval\<close> are:
-\<^item> An optional number of Inputs to check. The number of inputs corresponds to the number of "When". 
+\<^item> An optional number of inputs to check. The number of inputs corresponds to the number of \<^term>\<open>When\<close>. 
 If None is passed, it means that we should check for transactions of any number of inputs.
 \<^item> A lower bound (normally the current time).
 \<^item> The Contract to check.
 
 The function returns an Optionally Bound Time Interval, as defined in the \<^emph>\<open>OptBoundTimeInterval.thy\<close> theory.
-In the \<^emph>\<open>TimeRange.thy\<close> theory we prove that computing a transaction with these bounds doesn't end with an ambiguous error. 
+In the \<^emph>\<open>TimeRange.thy\<close> theory we prove that computing a transaction with these bounds doesn't end with an ambiguous interval error. 
 \<close>
-\<comment> \<open>NOTE: The intersectInterval can produce an invalid time interval, which would mean that not suitable TimeInterval was found\<close>
+\<comment> \<open>NOTE: The intersectInterval function can produce an invalid time interval, which would mean that no suitable TimeInterval was found\<close>
 fun calculateNonAmbiguousInterval :: "int option \<Rightarrow> POSIXTime \<Rightarrow> Contract \<Rightarrow> OptBoundTimeInterval"
   where
 \<comment> \<open>A Close contract can't be ambiguous, so an Unbounded interval is returned \<close>
@@ -54,12 +54,10 @@ fun calculateNonAmbiguousInterval :: "int option \<Rightarrow> POSIXTime \<Right
 \<comment> \<open>A Pay contract isn't ambiguous by itself, so we calculate for the continuation\<close>
 "calculateNonAmbiguousInterval n t (Pay _ _ _ _ c) = calculateNonAmbiguousInterval n t c" |
 \<comment> \<open>If we branch, we intersect the result of both possibilites. \<close>
-\<comment> \<open>FIXME: Note that not knowing which branch can be selected beforehand means that we return a smaller TimeInterval than
-possible. Maybe we could improve this by using the actual Input instead of the number of inputs\<close>
 "calculateNonAmbiguousInterval n t (If _ ct cf) = intersectInterval 
                                                            (calculateNonAmbiguousInterval n t ct)
                                                            (calculateNonAmbiguousInterval n t cf)" |
-\<comment> \<open>We treat the When contract in two parts. The base case (when no actions are available) and a recursive
+\<comment> \<open>We handle the When contract in two parts. The base case (when no actions are available) and a recursive
 case, when we have a particular action \<close>
 "calculateNonAmbiguousInterval n t (When [] timeout tcont) =
   (if t < timeout
@@ -76,9 +74,9 @@ case, when we have a particular action \<close>
    then intersectInterval (calculateNonAmbiguousInterval (subIfSome n 1) t cont)
                          (calculateNonAmbiguousInterval n t (When restCases timeout tcont))
 \<comment> \<open>If n \<le> 0 we don't calculate for the current case and we iterate until we reach the base case\<close>  
-\<comment> \<open>TODO: we should be able to change restCases for [] to check the base case directly\<close>
+\<comment> \<open>TODO: we should be able to replace restCases with [] to check the base case directly\<close>
    else calculateNonAmbiguousInterval n t (When restCases timeout tcont))" |
-\<comment> \<open>A Let or Assert contracts aren't ambiguous by themselves, so we calculate for the continuation\<close>
+\<comment> \<open>Let and Assert constructs aren't ambiguous by themselves, so we just calculate for the continuation\<close>
 "calculateNonAmbiguousInterval n t (Let _ _ c) = calculateNonAmbiguousInterval n t c" |
 "calculateNonAmbiguousInterval n t (Assert _ c) = calculateNonAmbiguousInterval n t c"
 

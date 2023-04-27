@@ -7,7 +7,7 @@
 - [PLT-3505](https://github.com/input-output-hk/marlowe/pull/168) - Several small fixes to the specification from the audit report
 - [SCP-4869](https://github.com/input-output-hk/marlowe/pull/164) - Add lemma for DivValue rounding to zero
 - [SCP-4908](https://github.com/input-output-hk/marlowe/pull/163) - Add Escrow to the contract examples
-
+- [PLT-3761](https://github.com/input-output-hk/marlowe/pull/182) - Refactor semantic theory into literate programming
 ## Test Spec
 - [SCP-4860](https://github.com/input-output-hk/marlowe/pull/158) - Make tests reproducible
 - [SCP-4698](https://github.com/input-output-hk/marlowe/pull/154) - Implement roundtrip test for all serialized types

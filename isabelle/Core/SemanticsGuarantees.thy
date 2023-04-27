@@ -185,7 +185,9 @@ proof
 qed
 end
 
-
+section "State"
+(* TODO: This should eventually be moved to one of the 
+state specific theories *)
 fun valid_state :: "State \<Rightarrow> bool" where
 "valid_state state = (valid_map (accounts state)
                      \<and> valid_map (choices state)

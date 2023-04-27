@@ -43,21 +43,22 @@ import QuickCheck.GenT
     suchThat,
   )
 import Semantics
-  ( TransactionOutput (..),
-    TransactionOutputRecord_ext (..),
-    Transaction_ext (..),
-    emptyState,
-    inputs,
+  ( emptyState,
     isQuiescent,
     maxTimeContract,
-    txOutContract,
-    txOutPayments,
-    txOutState,
-    txOutWarnings,
+
   )
 import SemanticsTypes
   ( Contract (..),
     State_ext (..),
+    TransactionOutput (..),
+    TransactionOutputRecord_ext (..),
+    Transaction_ext (..),
+    inputs,
+    txOutContract,
+    txOutPayments,
+    txOutState,
+    txOutWarnings,
   )
 import SingleInputTransactions (traceListToSingleInput)
 import Test.QuickCheck (cover)

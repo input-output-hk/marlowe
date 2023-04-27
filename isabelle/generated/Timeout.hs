@@ -8,15 +8,14 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
-import qualified Semantics;
 import qualified SemanticsTypes;
 import qualified Arith;
 
-isClosedAndEmpty :: Semantics.TransactionOutput -> Bool;
-isClosedAndEmpty (Semantics.TransactionOutput txOut) =
-  SemanticsTypes.equal_Contract (Semantics.txOutContract txOut)
+isClosedAndEmpty :: SemanticsTypes.TransactionOutput -> Bool;
+isClosedAndEmpty (SemanticsTypes.TransactionOutput txOut) =
+  SemanticsTypes.equal_Contract (SemanticsTypes.txOutContract txOut)
     SemanticsTypes.Close &&
-    null (SemanticsTypes.accounts (Semantics.txOutState txOut));
-isClosedAndEmpty (Semantics.TransactionError v) = False;
+    null (SemanticsTypes.accounts (SemanticsTypes.txOutState txOut));
+isClosedAndEmpty (SemanticsTypes.TransactionError v) = False;
 
 }

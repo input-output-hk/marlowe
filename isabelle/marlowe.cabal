@@ -27,13 +27,13 @@ library
     other-modules:
         HOL
         List
-        ListTools
         Option
         OptBoundTimeInterval
         Product_Lexorder
         Product_Type
         SList
         Stringa
+        Division
     exposed-modules:
         Arith
         ArithNumInstance

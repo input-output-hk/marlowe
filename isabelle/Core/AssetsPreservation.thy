@@ -67,9 +67,9 @@ how it distributes when there wasn't a previous entry for that pair."
 lemma assetsInAccounts_distrib_insert_not_member :
   assumes "valid_map accs"
   assumes "(accId, tok) \<notin> keys accs"
-  shows "assetsInAccounts (insert (accId, tok) val accs) = assetsInAccounts accs + asset tok (nat val)"
+  shows "assetsInAccounts (MList.insert (accId, tok) val accs) = assetsInAccounts accs + asset tok (nat val)"
 proof -
-  have "foldr addAccountAssets (insert (accId, tok) val accs) = addAccountAssets ((accId, tok), val) \<circ> foldr addAccountAssets accs" (is "?l = ?r")
+  have "foldr addAccountAssets (MList.insert (accId, tok) val accs) = addAccountAssets ((accId, tok), val) \<circ> foldr addAccountAssets accs" (is "?l = ?r")
     by (meson foldr_insert keys_member_r assms addAccountAssetsCommutesComposition)
   then have "?l 0 = ?r 0"
     by fastforce
@@ -82,19 +82,20 @@ entry"
 
 lemma assetsInAccounts_distrib_insert_deleted :
   assumes "valid_map accs"
-  shows "assetsInAccounts (insert (accId, tok) val accs) = assetsInAccounts (delete (accId, tok) accs) + asset tok (nat val)"
-  by auto (metis AssetsPreservation.assetsInAccounts.simps MList.member.elims(2) assetsInAccounts_distrib_insert_not_member assms delete_lookup_None delete_valid insertOverDeleted keys_member_r)
+  shows "assetsInAccounts (MList.insert (accId, tok) val accs) = assetsInAccounts (MList.delete (accId, tok) accs) + asset tok (nat val)"
+  by auto (metis AssetsPreservation.assetsInAccounts.elims MList.delete_lookup_None MList.delete_valid MList.member.elims(2) assetsInAccounts_distrib_insert_not_member assms insertOverDeleted keys_member_r)
+ 
 
 lemma assetsInAccounts_of_deleted :
   assumes "valid_map accs"
-  shows "assetsInAccounts (delete (accId, tok) accs)
+  shows "assetsInAccounts (MList.delete (accId, tok) accs)
        = assetsInAccounts accs - asset tok (nat (moneyInAccount accId tok accs))"
 proof (cases "(accId, tok) \<in> keys accs")
   case True
-  then obtain v where "lookup (accId, tok) accs = Some v"
+  then obtain v where "MList.lookup (accId, tok) accs = Some v"
     by (meson MList.member.simps assms keys_member_r not_None_eq)
   then show ?thesis
-    by auto (metis AssetsPreservation.assetsInAccounts.elims MList.member.elims(2) add_implies_diff assetsInAccounts_distrib_insert_not_member assms delete_lookup_None delete_valid insertDeleted keys_member_r)
+    by auto (metis AssetsPreservation.assetsInAccounts.simps add_diff_cancel_right' assetsInAccounts_distrib_insert_deleted assms insertDeleted insertOverDeleted)
 next
   case False
   then have "moneyInAccount accId tok accs = 0"
@@ -106,7 +107,7 @@ qed
 text "And finally the general case"
 theorem assetsInAccounts_distrib_insert :
   assumes "valid_map accs"
-  shows "assetsInAccounts (insert (accId, tok) val accs)
+  shows "assetsInAccounts (MList.insert (accId, tok) val accs)
        = assetsInAccounts accs - asset tok (nat (moneyInAccount accId tok accs)) + asset tok (nat val)"
   using assetsInAccounts_distrib_insert_deleted assetsInAccounts_of_deleted assms by auto
 
@@ -800,7 +801,7 @@ next
                , txOutState = prevState
                , txOutContract = prevCont
                \<rparr>"
-    using Semantics.TransactionOutputRecord.cases by blast
+    using TransactionOutputRecord.cases by blast
 
   show ?case
   proof (cases "computeTransaction h prevState prevCont")
@@ -854,7 +855,7 @@ proof -
       = assetsInState (txOutState out) + assetsInExternalPayments (txOutPayments out)"
     using calculation playTraceAux_preserves_assets by blast
   ultimately show ?thesis
-     by (auto simp add: empty_def)
+     by (auto simp add: MList.empty_def)
 qed
 
 end

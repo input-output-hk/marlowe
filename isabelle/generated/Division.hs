@@ -1,6 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module ListTools(anya) where {
+module Division(quot) where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -8,9 +8,13 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
+import qualified Arith;
 
-anya :: forall a. (a -> Bool) -> [a] -> Bool;
-anya f [] = False;
-anya f (h : t) = f h || anya f t;
+quot :: Arith.Int -> Arith.Int -> Arith.Int;
+quot x y =
+  (if Arith.less_int x Arith.zero_int == Arith.less_int y Arith.zero_int
+    then Arith.divide_int x y
+    else Arith.uminus_int
+           (Arith.divide_int (Arith.abs_int x) (Arith.abs_int y)));
 
 }

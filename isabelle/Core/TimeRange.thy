@@ -2,6 +2,82 @@ theory TimeRange
 imports Semantics PositiveAccounts QuiescentResult Timeout TransactionBound
 begin
 
+
+subsection "calculateNonAmbiguousInterval"
+
+text "Helper functions for \<^emph>\<open>calculateNonAmbiguousInterval\<close>"
+fun gtIfNone :: "int option \<Rightarrow> int \<Rightarrow> bool" where
+"gtIfNone None _ = True" |
+"gtIfNone (Some x) y = (x > y)"
+
+fun geIfNone :: "int option \<Rightarrow> int \<Rightarrow> bool" where
+"geIfNone None _ = True" |
+"geIfNone (Some x) y = (x \<ge> y)"
+
+fun subIfSome :: "int option \<Rightarrow> int \<Rightarrow> int option" where
+"subIfSome None _ = None" |
+"subIfSome (Some x) y = Some (x - y)"
+
+
+text \<open>
+A TimeInterval (startTime, endTime) is ambiguous wrt a When's timeout iff startTime < timeout \<le> endTime
+
+\<close>
+
+text \<open>The \<^emph>\<open>calculateNonAmbiguousInterval\<close> function can help a user to calculate a TimeInterval that
+won't be ambiguous for the next \<^emph>\<open>n\<close> inputs of a contract.\<close>
+
+text \<open>The only constructor that can yield a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> is \<^term>\<open>When\<close> contract. 
+Computing a transaction can yield a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> if there is a \<^term>\<open>When\<close> timeout that makes it ambiguous.
+A TimeInterval expressed as the tuple \<^term>\<open>(startTime, endTime)\<close> is ambiguous wrt a \<^term>\<open>When\<close>'s timeout
+iff \<^emph>\<open>startTime < timeout \<le> endTime\<close>
+\<close>
+
+text
+\<open> The parameters of \<^emph>\<open>calculateNonAmbiguousInterval\<close> are:
+\<^item> An optional number of inputs to check. The number of inputs corresponds to the number of \<^term>\<open>When\<close>. 
+If None is passed, it means that we should check for transactions of any number of inputs.
+\<^item> A lower bound (normally the current time).
+\<^item> The Contract to check.
+
+The function returns an Optionally Bound Time Interval, as defined in the \<^emph>\<open>OptBoundTimeInterval.thy\<close> theory.
+In the \<^emph>\<open>TimeRange.thy\<close> theory we prove that computing a transaction with these bounds doesn't end with an ambiguous interval error. 
+\<close>
+\<comment> \<open>NOTE: The intersectInterval function can produce an invalid time interval, which would mean that no suitable TimeInterval was found\<close>
+fun calculateNonAmbiguousInterval :: "int option \<Rightarrow> POSIXTime \<Rightarrow> Contract \<Rightarrow> OptBoundTimeInterval"
+  where
+\<comment> \<open>A Close contract can't be ambiguous, so an Unbounded interval is returned \<close>
+"calculateNonAmbiguousInterval _ _ Close = (Unbounded, Unbounded)" |
+\<comment> \<open>A Pay contract isn't ambiguous by itself, so we calculate for the continuation\<close>
+"calculateNonAmbiguousInterval n t (Pay _ _ _ _ c) = calculateNonAmbiguousInterval n t c" |
+\<comment> \<open>If we branch, we intersect the result of both possibilites. \<close>
+"calculateNonAmbiguousInterval n t (If _ ct cf) = intersectInterval 
+                                                           (calculateNonAmbiguousInterval n t ct)
+                                                           (calculateNonAmbiguousInterval n t cf)" |
+\<comment> \<open>We handle the When contract in two parts. The base case (when no actions are available) and a recursive
+case, when we have a particular action \<close>
+"calculateNonAmbiguousInterval n t (When [] timeout tcont) =
+  (if t < timeout
+  \<comment> \<open>If the When's timeout is in the future, we can generate a non-ambiguous time interval
+      by restricting the endTime to be strictly lower than the timeout\<close>
+   then (Unbounded, Bounded (timeout - 1))
+  \<comment> \<open>If the timeout is in the past, we need to restrict the startTime to be larger or equal than
+     the timeout\<close>
+   else intersectInterval (Bounded timeout, Unbounded) (calculateNonAmbiguousInterval n t tcont))" |
+
+"calculateNonAmbiguousInterval n t (When (Case _ cont  # restCases) timeout tcont) =  
+  (if gtIfNone n 0
+\<comment> \<open>If n is none (check all) or n > 0 we recursively calculate the intersection for all the continuations\<close>
+   then intersectInterval (calculateNonAmbiguousInterval (subIfSome n 1) t cont)
+                         (calculateNonAmbiguousInterval n t (When restCases timeout tcont))
+\<comment> \<open>If n \<le> 0 we don't calculate for the current case and we iterate until we reach the base case\<close>  
+\<comment> \<open>TODO: we should be able to replace restCases with [] to check the base case directly\<close>
+   else calculateNonAmbiguousInterval n t (When restCases timeout tcont))" |
+\<comment> \<open>Let and Assert constructs aren't ambiguous by themselves, so we just calculate for the continuation\<close>
+"calculateNonAmbiguousInterval n t (Let _ _ c) = calculateNonAmbiguousInterval n t c" |
+"calculateNonAmbiguousInterval n t (Assert _ c) = calculateNonAmbiguousInterval n t c"
+
+
 theorem inIntervalIdempotentToIntersectInterval :
   "inInterval (min1, max1) (min2, max2) =
      (intersectInterval (Bounded min1, Bounded max1) (min2, max2) = (Bounded min1, Bounded max1))"
@@ -36,7 +112,7 @@ lemma compatibleIdempotencyWhen :
    inInterval (a1, a2) (calculateNonAmbiguousInterval n ct (When a b c)) \<Longrightarrow>
    inInterval (a1, a2) (calculateNonAmbiguousInterval n ct c)"
   apply (induction a)
-  apply (smt (verit, best) OptBoundTimeInterval.inInterval.simps(2) Semantics.calculateNonAmbiguousInterval.simps(4) inIntervalIdempotency2)
+  apply (smt (verit, best) OptBoundTimeInterval.inInterval.simps(2) calculateNonAmbiguousInterval.simps(4) inIntervalIdempotency2)
   subgoal for c1 c2
     apply (cases c1)
     apply simp
@@ -93,7 +169,7 @@ lemma resultOfReduceIsCompatibleToo :
   subgoal for a b c d e
     apply (cases "evalValue env state d \<le> 0")
     by (simp_all add:Let_def)
-    apply (smt (verit, del_insts) OptBoundTimeInterval.inInterval.elims(3) Semantics.ReduceStepResult.inject Semantics.calculateNonAmbiguousInterval.simps(3) Semantics.reduceContractStep.simps(3) inIntervalIdempotency1 inIntervalIdempotency2)
+    apply (smt (verit, del_insts) OptBoundTimeInterval.inInterval.elims(3) Semantics.ReduceStepResult.inject calculateNonAmbiguousInterval.simps(3) Semantics.reduceContractStep.simps(3) inIntervalIdempotency1 inIntervalIdempotency2)
   subgoal for a b c
     apply (cases "timeInterval env")
     apply (simp only:reduceContractStep.simps Let_def prod.case)
@@ -106,7 +182,7 @@ lemma resultOfReduceIsCompatibleToo :
        apply (meson compatibleIdempotencyWhen linorder_not_le)
       by simp
     done
-  apply (metis Semantics.ReduceStepResult.inject Semantics.calculateNonAmbiguousInterval.simps(6) Semantics.reduceContractStep.simps(5))
+  apply (metis Semantics.ReduceStepResult.inject calculateNonAmbiguousInterval.simps(6) Semantics.reduceContractStep.simps(5))
   by simp
 
 lemma resultOfReductionLoopQuiescentIsCompatibleToo :
@@ -209,7 +285,7 @@ lemma resultOfApplyInputIsCompatibleToo :
 
 lemma geIfNone_redListSize :
   "geIfNone n (int (length (h # t))) \<Longrightarrow> geIfNone (subIfSome n 1) (int (length t))"
-  by (smt (verit, ccfv_threshold) Semantics.geIfNone.elims(1) Semantics.geIfNone.simps(2) Semantics.subIfSome.elims impossible_Cons of_nat_le_iff)
+  by (smt (verit, ccfv_threshold) geIfNone.elims(1) geIfNone.simps(2) subIfSome.elims impossible_Cons of_nat_le_iff)
 
 
 lemma reduceStep_ifCaseLtCt_aux : "inInterval (a, b) (calculateNonAmbiguousInterval n ct (When x41 x42 x43)) \<Longrightarrow>
@@ -293,7 +369,7 @@ lemma calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_applyAllLoop :
             using fact(3) fact(5) resultOfReduceUntilQuiescentIsCompatibleToo apply blast
             apply (simp add: fact(7))
             using fact(3) fact(4) fact(5) reduceContractUntilQuiescent_ifCaseLtCt apply blast
-            using Semantics.gtIfNone.elims(3) fact(2) of_nat_le_iff by fastforce
+            using gtIfNone.elims(3) fact(2) of_nat_le_iff by fastforce
           done
         by (metis Semantics.ApplyAllResult.distinct(5) Semantics.ApplyResult.simps(5))
       using calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_reduceContractUntilQuiescent by auto
@@ -338,11 +414,11 @@ corollary calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_bounded :
   "n \<ge> (int (length (inputs tx))) \<Longrightarrow>
    inInterval (interval tx) (calculateNonAmbiguousInterval (Some n) ct c) \<Longrightarrow>
    computeTransaction tx s c \<noteq> TransactionError TEAmbiguousTimeIntervalError"
-  using Semantics.geIfNone.simps(2) calculateNonAmbiguousIntervalAvoidsAmbiguousInterval by blast
+  using geIfNone.simps(2) calculateNonAmbiguousIntervalAvoidsAmbiguousInterval by blast
 
 corollary calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_unbounded :
   "inInterval (interval tx) (calculateNonAmbiguousInterval None ct c) \<Longrightarrow>
    computeTransaction tx s c \<noteq> TransactionError TEAmbiguousTimeIntervalError"
-  by (meson Semantics.geIfNone.simps(1) calculateNonAmbiguousIntervalAvoidsAmbiguousInterval)
+  by (meson geIfNone.simps(1) calculateNonAmbiguousIntervalAvoidsAmbiguousInterval)
 
 end

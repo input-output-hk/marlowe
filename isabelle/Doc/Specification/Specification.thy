@@ -59,17 +59,23 @@ explicit this way, and each \<^term>\<open>Contract\<close> term is executed at 
 
 subsection \<open>Data types\<close>
 text \<open>The \<^term>\<open>Value\<close>s and \<^term>\<open>Observation\<close>s \secref{sec:values-and-observations} only works with
-integers and booleans respectively. There are no custom data types, records, tuples, nor string 
-manipulation. There are also no floating point numbers, so in order to represent currencies it is 
-recommended to work with cents. Dates are only used in the context of \<^term>\<open>Timeout\<close>s and they are absolute,
- but it is likely we'll add relative times in a future version.
+integers and booleans respectively. There is no native representation of decimal numbers, so in order to
+represent currencies it is recommended to work with fractional units (like cents). For example, amounts of
+Ada are represented in Lovelaces, because a Lovelace represents a one-millionth of an Ada. Dates are only
+used in the context of \<^term>\<open>Timeout\<close>s and they are absolute.
 \<close>
 
 
-subsection \<open>Quiescent\<close>
+subsection \<open>Quiescent \label{sec:Quiescent}\<close>
+
+text \<open>When a transaction is computed, the contract is reduced as much as possible.
+When it cannot be reduced anymore the contract is considered quiescent, which means that it is either
+ awaiting external input or has been fully executed\<close>
+
+subsection \<open>Timeouts and Contingencies\<close>
 text \<open>
 The blockchain can't force a participant to make a transaction. To avoid having a participant blocking
-the execution of a contract, whenever an \<^term>\<open>Input\<close> is expected, there is a \<^term>\<open>Timeout\<close> with a contingency 
+the execution of a contract, whenever an \<^term>\<open>Input\<close> is expected, there is a \<^term>\<open>Timeout\<close> with a contingency
 continuation. For each step, we can know in advance how long it can last, and we can extend this to
 know the maximum duration and the amount of transactions of a contract.
 \<close>
@@ -89,20 +95,21 @@ the assets available in their internal accounts.
 \<close>
 
 text \<open>
-The accounts, choices, and  variables stored in the \<^term>\<open>State\<close> \secref{sec:state-and-env} are global
- to that contract.  
+The accounts, choices, and variables stored in the \<^term>\<open>State\<close> \secref{sec:state} remain
+in the \<^term>\<open>State\<close> until the contract is closed. But in the case of accounts and variables,
+they are omitted for space efficiency if their value becomes 0, because that is their default value.
 \<close>
 
 
 subsection \<open>Core and Extended\<close>
 
 text \<open>
-The set of types and functions that conform the semantics executed in the blockchain is called 
+The set of types and functions that conform the semantics executed in the blockchain is called
  \<^emph>\<open>Marlowe Core\<close>, and it's formalized in chapter \secref{sec:marlowe-core}. To improve usability, there
 is another set of types and functions that compile to core, and it is called \<^emph>\<open>Marlowe Extended\<close>.
 \<close>
 text \<open>In the first version of the extended language, the only modification to the DSL is the addition
- of template parameters. These allows an initial form of contract reutilization, allowing to instantiate 
+ of template parameters. These allows an initial form of contract reutilization, allowing to instantiate
 the same contract with different \<^term>\<open>Value\<close>s and \<^term>\<open>Timeout\<close>s. For the moment, the extended
  language is not formalized in this specification but it will be added in the future
 \<close>

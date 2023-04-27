@@ -9,8 +9,8 @@ import ArithNumInstance
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertFailure, testCase, (@?=))
 import CoreOrphanEq
-import SemanticsTypes (Contract (..), Party (..), Payee(..), Token(..), Value(..), Case(..), Action(..), Input(..))
-import Semantics (TransactionOutput(..), Transaction_ext(..), TransactionWarning(..), Payment(..), playTrace, txOutContract, txOutWarnings, txOutPayments)
+import SemanticsTypes (Contract (..), Party (..), Payee(..), Token(..), Value(..), Case(..), Action(..), Input(..), TransactionOutput(..), Transaction_ext(..), TransactionWarning(..), Payment(..), txOutContract, txOutWarnings, txOutPayments)
+import Semantics (playTrace)
 import qualified Examples.Swap
 
 -- FIXME: Isabelle doesn't export type synonims by default, see if we can fix that or

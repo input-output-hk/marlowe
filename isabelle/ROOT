@@ -7,6 +7,7 @@ session Util in "Util" = HOL +
     "HOL-Library"
   theories
     MList
+    Division
     ByteString
     Serialisation
     SList
@@ -21,7 +22,6 @@ session Core in "Core" = HOL +
     "Util"
   theories
     CloseSafe
-    ListTools
     AssetsPreservation
     PositiveAccounts
     QuiescentResult
@@ -91,12 +91,12 @@ session Specification in "Doc/Specification" = HOL +
 
   theories
     Specification
-    Core
     Guarantees
     Extended
     Examples
   document_theories
     "Core.SemanticsTypes"
+    "Core.Semantics"
     "Core.BlockchainTypes"
     "Core.OptBoundTimeInterval"
     "CodeExports.CodeExports"

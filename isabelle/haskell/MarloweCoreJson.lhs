@@ -45,8 +45,8 @@ import qualified Data.Foldable as F
 import qualified Data.Text as T
 import Data.Scientific (Scientific, floatingOrInteger)
 import qualified Examples.Swap
-import SemanticsTypes (Action(..), Case(..), Contract(..), Input(..), Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..), State_ext(..), IntervalError(..), Environment_ext(..))
-import Semantics (Transaction_ext(..), Payment(..), TransactionWarning(..), TransactionError(..), TransactionOutput(..), TransactionOutputRecord_ext(..), txOutWarnings, txOutPayments, txOutState, txOutContract, playTrace)
+import SemanticsTypes (Action(..), Case(..), Contract(..), Input(..), Party(..), Token(..), Payee(..), ChoiceId(..), ValueId(..), Value(..), Observation(..), Bound(..), State_ext(..), IntervalError(..), Environment_ext(..), Transaction_ext(..), Payment(..), TransactionWarning(..), TransactionError(..), TransactionOutput(..), TransactionOutputRecord_ext(..), txOutWarnings, txOutPayments, txOutState, txOutContract, )
+import Semantics (playTrace)
 
 
 

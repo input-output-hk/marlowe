@@ -39,7 +39,7 @@ code_printing
   \<comment> \<open>into Haskell string. Because this is a textual rewrite, we need to force the\<close>
   \<comment> \<open>generation of String.implode\<close>
   | constant "BS :: string \<Rightarrow> ByteString"
-      \<rightharpoonup> (Haskell) "Stringa.implode"
+      \<rightharpoonup> (Haskell) "Str.implode"
 
 
 text \<open>With a \<^bold>\<open>code\_identifier\<close> we hint what the name of the module should be.\<close>

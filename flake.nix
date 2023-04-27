@@ -8,7 +8,7 @@
 
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
 
-    isabelle-nixpkgs.url = "nixpkgs/nixos-22.05";
+    isabelle-nixpkgs.url = "nixpkgs/nixpkgs-unstable";
 
     nixLsp.url = "github:oxalica/nil";
 

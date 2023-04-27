@@ -14,7 +14,7 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
 import qualified Semantics;
-import qualified Stringa;
+import qualified Str;
 import qualified SemanticsTypes;
 import qualified Arith;
 
@@ -59,62 +59,62 @@ swap p1 p2 =
       (makePayment p1 p2 (makePayment p2 p1 SemanticsTypes.Close)));
 
 adaToken :: SemanticsTypes.Token;
-adaToken = SemanticsTypes.Token (Stringa.implode []) (Stringa.implode []);
+adaToken = SemanticsTypes.Token (Str.implode []) (Str.implode []);
 
 adaProvider :: SemanticsTypes.Party;
 adaProvider =
   SemanticsTypes.Role
-    (Stringa.implode
-      [Stringa.Char True False False False False False True False,
-        Stringa.Char False False True False False True True False,
-        Stringa.Char True False False False False True True False,
-        Stringa.Char False False False False False True False False,
-        Stringa.Char False False False False True False True False,
-        Stringa.Char False True False False True True True False,
-        Stringa.Char True True True True False True True False,
-        Stringa.Char False True True False True True True False,
-        Stringa.Char True False False True False True True False,
-        Stringa.Char False False True False False True True False,
-        Stringa.Char True False True False False True True False,
-        Stringa.Char False True False False True True True False]);
+    (Str.implode
+      [Str.Char True False False False False False True False,
+        Str.Char False False True False False True True False,
+        Str.Char True False False False False True True False,
+        Str.Char False False False False False True False False,
+        Str.Char False False False False True False True False,
+        Str.Char False True False False True True True False,
+        Str.Char True True True True False True True False,
+        Str.Char False True True False True True True False,
+        Str.Char True False False True False True True False,
+        Str.Char False False True False False True True False,
+        Str.Char True False True False False True True False,
+        Str.Char False True False False True True True False]);
 
 dollarToken :: SemanticsTypes.Token;
 dollarToken =
   SemanticsTypes.Token
-    (Stringa.implode
-      [Stringa.Char False False False True True True False False,
-        Stringa.Char True False True False True True False False,
-        Stringa.Char False True False False False True True False,
-        Stringa.Char False True False False False True True False,
-        Stringa.Char False True True False True True False False,
-        Stringa.Char True False True False True True False False])
-    (Stringa.implode
-      [Stringa.Char False False True False False True True False,
-        Stringa.Char True True True True False True True False,
-        Stringa.Char False False True True False True True False,
-        Stringa.Char False False True True False True True False,
-        Stringa.Char True False False False False True True False,
-        Stringa.Char False True False False True True True False]);
+    (Str.implode
+      [Str.Char False False False True True True False False,
+        Str.Char True False True False True True False False,
+        Str.Char False True False False False True True False,
+        Str.Char False True False False False True True False,
+        Str.Char False True True False True True False False,
+        Str.Char True False True False True True False False])
+    (Str.implode
+      [Str.Char False False True False False True True False,
+        Str.Char True True True True False True True False,
+        Str.Char False False True True False True True False,
+        Str.Char False False True True False True True False,
+        Str.Char True False False False False True True False,
+        Str.Char False True False False True True True False]);
 
 dollarProvider :: SemanticsTypes.Party;
 dollarProvider =
   SemanticsTypes.Role
-    (Stringa.implode
-      [Stringa.Char False False True False False False True False,
-        Stringa.Char True True True True False True True False,
-        Stringa.Char False False True True False True True False,
-        Stringa.Char False False True True False True True False,
-        Stringa.Char True False False False False True True False,
-        Stringa.Char False True False False True True True False,
-        Stringa.Char False False False False False True False False,
-        Stringa.Char False False False False True False True False,
-        Stringa.Char False True False False True True True False,
-        Stringa.Char True True True True False True True False,
-        Stringa.Char False True True False True True True False,
-        Stringa.Char True False False True False True True False,
-        Stringa.Char False False True False False True True False,
-        Stringa.Char True False True False False True True False,
-        Stringa.Char False True False False True True True False]);
+    (Str.implode
+      [Str.Char False False True False False False True False,
+        Str.Char True True True True False True True False,
+        Str.Char False False True True False True True False,
+        Str.Char False False True True False True True False,
+        Str.Char True False False False False True True False,
+        Str.Char False True False False True True True False,
+        Str.Char False False False False False True False False,
+        Str.Char False False False False True False True False,
+        Str.Char False True False False True True True False,
+        Str.Char True True True True False True True False,
+        Str.Char False True True False True True True False,
+        Str.Char True False False True False True True False,
+        Str.Char False False True False False True True False,
+        Str.Char True False True False False True True False,
+        Str.Char False True False False True True True False]);
 
 swapExample :: SemanticsTypes.Contract;
 swapExample =

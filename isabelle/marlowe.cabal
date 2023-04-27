@@ -33,7 +33,7 @@ library
         Product_Lexorder
         Product_Type
         SList
-        Stringa
+        Str
     exposed-modules:
         Arith
         ArithNumInstance

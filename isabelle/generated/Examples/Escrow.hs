@@ -15,7 +15,7 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
 import qualified Semantics;
-import qualified Stringa;
+import qualified Str;
 import qualified SemanticsTypes;
 import qualified Arith;
 
@@ -28,12 +28,12 @@ data EscrowArgs_ext a =
 buyer :: SemanticsTypes.Party;
 buyer =
   SemanticsTypes.Role
-    (Stringa.implode
-      [Stringa.Char False True False False False False True False,
-        Stringa.Char True False True False True True True False,
-        Stringa.Char True False False True True True True False,
-        Stringa.Char True False True False False True True False,
-        Stringa.Char False True False False True True True False]);
+    (Str.implode
+      [Str.Char False True False False False False True False,
+        Str.Char True False True False True True True False,
+        Str.Char True False False True True True True False,
+        Str.Char True False True False False True True False,
+        Str.Char False True False False True True True False]);
 
 paymentDeadline :: forall a. EscrowArgs_ext a -> Arith.Int;
 paymentDeadline
@@ -56,13 +56,13 @@ price (EscrowArgs_ext price token buyerParty sellerParty mediatorParty
 seller :: SemanticsTypes.Party;
 seller =
   SemanticsTypes.Role
-    (Stringa.implode
-      [Stringa.Char True True False False True False True False,
-        Stringa.Char True False True False False True True False,
-        Stringa.Char False False True True False True True False,
-        Stringa.Char False False True True False True True False,
-        Stringa.Char True False True False False True True False,
-        Stringa.Char False True False False True True True False]);
+    (Str.implode
+      [Str.Char True True False False True False True False,
+        Str.Char True False True False False True True False,
+        Str.Char False False True True False True True False,
+        Str.Char False False True True False True True False,
+        Str.Char True False True False False True True False,
+        Str.Char False True False False True True True False]);
 
 complaintDeadline :: forall a. EscrowArgs_ext a -> Arith.Int;
 complaintDeadline
@@ -85,15 +85,15 @@ mediationDeadline
 mediator :: SemanticsTypes.Party;
 mediator =
   SemanticsTypes.Role
-    (Stringa.implode
-      [Stringa.Char True False True True False False True False,
-        Stringa.Char True False True False False True True False,
-        Stringa.Char False False True False False True True False,
-        Stringa.Char True False False True False True True False,
-        Stringa.Char True False False False False True True False,
-        Stringa.Char False False True False True True True False,
-        Stringa.Char True True True True False True True False,
-        Stringa.Char False True False False True True True False]);
+    (Str.implode
+      [Str.Char True False True True False False True False,
+        Str.Char True False True False False True True False,
+        Str.Char False False True False False True True False,
+        Str.Char True False False True False True True False,
+        Str.Char True False False False False True True False,
+        Str.Char False False True False True True True False,
+        Str.Char True True True True False True True False,
+        Str.Char False True False False True True True False]);
 
 mediation :: EscrowArgs_ext () -> SemanticsTypes.Contract;
 mediation args =
@@ -101,20 +101,20 @@ mediation args =
     [SemanticsTypes.Case
        (SemanticsTypes.Choice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char False False True False False False True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True True False False True True True False,
-               Stringa.Char True False True True False True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True True False False True True True False,
-               Stringa.Char True True False False True True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char True True False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char True False False False False True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True False True True False True True False])
+           (Str.implode
+             [Str.Char False False True False False False True False,
+               Str.Char True False False True False True True False,
+               Str.Char True True False False True True True False,
+               Str.Char True False True True False True True False,
+               Str.Char True False False True False True True False,
+               Str.Char True True False False True True True False,
+               Str.Char True True False False True True True False,
+               Str.Char False False False False False True False False,
+               Str.Char True True False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char True False False False False True True False,
+               Str.Char True False False True False True True False,
+               Str.Char True False True True False True True False])
            mediator)
          [SemanticsTypes.Bound Arith.zero_int Arith.zero_int])
        (SemanticsTypes.Pay buyer (SemanticsTypes.Account seller) (token args)
@@ -122,20 +122,20 @@ mediation args =
       SemanticsTypes.Case
         (SemanticsTypes.Choice
           (SemanticsTypes.ChoiceId
-            (Stringa.implode
-              [Stringa.Char True True False False False False True False,
-                Stringa.Char True True True True False True True False,
-                Stringa.Char False True True True False True True False,
-                Stringa.Char False True True False False True True False,
-                Stringa.Char True False False True False True True False,
-                Stringa.Char False True False False True True True False,
-                Stringa.Char True False True True False True True False,
-                Stringa.Char False False False False False True False False,
-                Stringa.Char True True False False False True True False,
-                Stringa.Char False False True True False True True False,
-                Stringa.Char True False False False False True True False,
-                Stringa.Char True False False True False True True False,
-                Stringa.Char True False True True False True True False])
+            (Str.implode
+              [Str.Char True True False False False False True False,
+                Str.Char True True True True False True True False,
+                Str.Char False True True True False True True False,
+                Str.Char False True True False False True True False,
+                Str.Char True False False True False True True False,
+                Str.Char False True False False True True True False,
+                Str.Char True False True True False True True False,
+                Str.Char False False False False False True False False,
+                Str.Char True True False False False True True False,
+                Str.Char False False True True False True True False,
+                Str.Char True False False False False True True False,
+                Str.Char True False False True False True True False,
+                Str.Char True False True True False True True False])
             mediator)
           [SemanticsTypes.Bound Arith.one_int Arith.one_int])
         SemanticsTypes.Close]
@@ -147,44 +147,44 @@ dispute args =
     [SemanticsTypes.Case
        (SemanticsTypes.Choice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char True True False False False False True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True True True False True True False,
-               Stringa.Char False True True False False True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True False True True False True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char True False True True False True True False])
+           (Str.implode
+             [Str.Char True True False False False False True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True True True False True True False,
+               Str.Char False True True False False True True False,
+               Str.Char True False False True False True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True False True True False True True False,
+               Str.Char False False False False False True False False,
+               Str.Char False False False False True True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char True False True False False True True False,
+               Str.Char True False True True False True True False])
            seller)
          [SemanticsTypes.Bound Arith.one_int Arith.one_int])
        SemanticsTypes.Close,
       SemanticsTypes.Case
         (SemanticsTypes.Choice
           (SemanticsTypes.ChoiceId
-            (Stringa.implode
-              [Stringa.Char False False True False False False True False,
-                Stringa.Char True False False True False True True False,
-                Stringa.Char True True False False True True True False,
-                Stringa.Char False False False False True True True False,
-                Stringa.Char True False True False True True True False,
-                Stringa.Char False False True False True True True False,
-                Stringa.Char True False True False False True True False,
-                Stringa.Char False False False False False True False False,
-                Stringa.Char False False False False True True True False,
-                Stringa.Char False True False False True True True False,
-                Stringa.Char True True True True False True True False,
-                Stringa.Char False True False False False True True False,
-                Stringa.Char False False True True False True True False,
-                Stringa.Char True False True False False True True False,
-                Stringa.Char True False True True False True True False])
+            (Str.implode
+              [Str.Char False False True False False False True False,
+                Str.Char True False False True False True True False,
+                Str.Char True True False False True True True False,
+                Str.Char False False False False True True True False,
+                Str.Char True False True False True True True False,
+                Str.Char False False True False True True True False,
+                Str.Char True False True False False True True False,
+                Str.Char False False False False False True False False,
+                Str.Char False False False False True True True False,
+                Str.Char False True False False True True True False,
+                Str.Char True True True True False True True False,
+                Str.Char False True False False False True True False,
+                Str.Char False False True True False True True False,
+                Str.Char True False True False False True True False,
+                Str.Char True False True True False True True False])
             seller)
           [SemanticsTypes.Bound Arith.zero_int Arith.zero_int])
         (mediation args)]
@@ -196,49 +196,49 @@ report args =
     [SemanticsTypes.Case
        (SemanticsTypes.Choice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char True False True False False False True False,
-               Stringa.Char False True True False True True True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True False False True True True True False,
-               Stringa.Char False False True False True True True False,
-               Stringa.Char False False False True False True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char False True True True False True True False,
-               Stringa.Char True True True False False True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True True False False True True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char True False False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True True True False False True True False,
-               Stringa.Char False False False True False True True False,
-               Stringa.Char False False True False True True True False])
+           (Str.implode
+             [Str.Char True False True False False False True False,
+               Str.Char False True True False True True True False,
+               Str.Char True False True False False True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True False False True True True True False,
+               Str.Char False False True False True True True False,
+               Str.Char False False False True False True True False,
+               Str.Char True False False True False True True False,
+               Str.Char False True True True False True True False,
+               Str.Char True True True False False True True False,
+               Str.Char False False False False False True False False,
+               Str.Char True False False True False True True False,
+               Str.Char True True False False True True True False,
+               Str.Char False False False False False True False False,
+               Str.Char True False False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True False False True False True True False,
+               Str.Char True True True False False True True False,
+               Str.Char False False False True False True True False,
+               Str.Char False False True False True True True False])
            buyer)
          [SemanticsTypes.Bound Arith.zero_int Arith.zero_int])
        SemanticsTypes.Close,
       SemanticsTypes.Case
         (SemanticsTypes.Choice
           (SemanticsTypes.ChoiceId
-            (Stringa.implode
-              [Stringa.Char False True False False True False True False,
-                Stringa.Char True False True False False True True False,
-                Stringa.Char False False False False True True True False,
-                Stringa.Char True True True True False True True False,
-                Stringa.Char False True False False True True True False,
-                Stringa.Char False False True False True True True False,
-                Stringa.Char False False False False False True False False,
-                Stringa.Char False False False False True True True False,
-                Stringa.Char False True False False True True True False,
-                Stringa.Char True True True True False True True False,
-                Stringa.Char False True False False False True True False,
-                Stringa.Char False False True True False True True False,
-                Stringa.Char True False True False False True True False,
-                Stringa.Char True False True True False True True False])
+            (Str.implode
+              [Str.Char False True False False True False True False,
+                Str.Char True False True False False True True False,
+                Str.Char False False False False True True True False,
+                Str.Char True True True True False True True False,
+                Str.Char False True False False True True True False,
+                Str.Char False False True False True True True False,
+                Str.Char False False False False False True False False,
+                Str.Char False False False False True True True False,
+                Str.Char False True False False True True True False,
+                Str.Char True True True True False True True False,
+                Str.Char False True False False False True True False,
+                Str.Char False False True True False True True False,
+                Str.Char True False True False False True True False,
+                Str.Char True False True True False True True False])
             buyer)
           [SemanticsTypes.Bound Arith.one_int Arith.one_int])
         (SemanticsTypes.Pay seller (SemanticsTypes.Account buyer) (token args)
@@ -257,8 +257,8 @@ exampleArgs :: EscrowArgs_ext ();
 exampleArgs =
   EscrowArgs_ext
     (SemanticsTypes.Constant (Arith.Int_of_integer (10 :: Integer)))
-    (SemanticsTypes.Token (Stringa.implode []) (Stringa.implode [])) buyer
-    seller mediator (Arith.Int_of_integer (1664812800000 :: Integer))
+    (SemanticsTypes.Token (Str.implode []) (Str.implode [])) buyer seller
+    mediator (Arith.Int_of_integer (1664812800000 :: Integer))
     (Arith.Int_of_integer (1664816400000 :: Integer))
     (Arith.Int_of_integer (1664820420000 :: Integer))
     (Arith.Int_of_integer (1664824440000 :: Integer)) ();
@@ -302,21 +302,21 @@ confirmClaimTransactions =
         Arith.Int_of_integer (1664813100000 :: Integer))
       [SemanticsTypes.IChoice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char False True False False True False True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char False False True False True True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char True False True True False True True False])
+           (Str.implode
+             [Str.Char False True False False True False True False,
+               Str.Char True False True False False True True False,
+               Str.Char False False False False True True True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True False False True True True False,
+               Str.Char False False True False True True True False,
+               Str.Char False False False False False True False False,
+               Str.Char False False False False True True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char True False True False False True True False,
+               Str.Char True False True True False True True False])
            buyer)
          Arith.one_int]
       (),
@@ -325,22 +325,22 @@ confirmClaimTransactions =
         Arith.Int_of_integer (1664817400000 :: Integer))
       [SemanticsTypes.IChoice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char False False True False False False True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True True False False True True True False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char True False True False True True True False,
-               Stringa.Char False False True False True True True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char True False True True False True True False])
+           (Str.implode
+             [Str.Char False False True False False False True False,
+               Str.Char True False False True False True True False,
+               Str.Char True True False False True True True False,
+               Str.Char False False False False True True True False,
+               Str.Char True False True False True True True False,
+               Str.Char False False True False True True True False,
+               Str.Char True False True False False True True False,
+               Str.Char False False False False False True False False,
+               Str.Char False False False False True True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char True False True False False True True False,
+               Str.Char True False True True False True True False])
            seller)
          Arith.zero_int]
       (),
@@ -349,20 +349,20 @@ confirmClaimTransactions =
         Arith.Int_of_integer (1664822400000 :: Integer))
       [SemanticsTypes.IChoice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char True True False False False False True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True True True False True True False,
-               Stringa.Char False True True False False True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True False True True False True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char True True False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char True False False False False True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True False True True False True True False])
+           (Str.implode
+             [Str.Char True True False False False False True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True True True False True True False,
+               Str.Char False True True False False True True False,
+               Str.Char True False False True False True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True False True True False True True False,
+               Str.Char False False False False False True False False,
+               Str.Char True True False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char True False False False False True True False,
+               Str.Char True False False True False True True False,
+               Str.Char True False True True False True True False])
            mediator)
          Arith.one_int]
       ()];
@@ -380,21 +380,21 @@ dismissClaimTransactions =
         Arith.Int_of_integer (1664813100000 :: Integer))
       [SemanticsTypes.IChoice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char False True False False True False True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char False False True False True True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char True False True True False True True False])
+           (Str.implode
+             [Str.Char False True False False True False True False,
+               Str.Char True False True False False True True False,
+               Str.Char False False False False True True True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True False False True True True False,
+               Str.Char False False True False True True True False,
+               Str.Char False False False False False True False False,
+               Str.Char False False False False True True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char True False True False False True True False,
+               Str.Char True False True True False True True False])
            buyer)
          Arith.one_int]
       (),
@@ -403,22 +403,22 @@ dismissClaimTransactions =
         Arith.Int_of_integer (1664817400000 :: Integer))
       [SemanticsTypes.IChoice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char False False True False False False True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True True False False True True True False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char True False True False True True True False,
-               Stringa.Char False False True False True True True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char True False True True False True True False])
+           (Str.implode
+             [Str.Char False False True False False False True False,
+               Str.Char True False False True False True True False,
+               Str.Char True True False False True True True False,
+               Str.Char False False False False True True True False,
+               Str.Char True False True False True True True False,
+               Str.Char False False True False True True True False,
+               Str.Char True False True False False True True False,
+               Str.Char False False False False False True False False,
+               Str.Char False False False False True True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char True False True False False True True False,
+               Str.Char True False True True False True True False])
            seller)
          Arith.zero_int]
       (),
@@ -427,20 +427,20 @@ dismissClaimTransactions =
         Arith.Int_of_integer (1664822400000 :: Integer))
       [SemanticsTypes.IChoice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char False False True False False False True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True True False False True True True False,
-               Stringa.Char True False True True False True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True True False False True True True False,
-               Stringa.Char True True False False True True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char True True False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char True False False False False True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True False True True False True True False])
+           (Str.implode
+             [Str.Char False False True False False False True False,
+               Str.Char True False False True False True True False,
+               Str.Char True True False False True True True False,
+               Str.Char True False True True False True True False,
+               Str.Char True False False True False True True False,
+               Str.Char True True False False True True True False,
+               Str.Char True True False False True True True False,
+               Str.Char False False False False False True False False,
+               Str.Char True True False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char True False False False False True True False,
+               Str.Char True False False True False True True False,
+               Str.Char True False True True False True True False])
            mediator)
          Arith.zero_int]
       ()];
@@ -458,21 +458,21 @@ confirmProblemTransactions =
         Arith.Int_of_integer (1664813100000 :: Integer))
       [SemanticsTypes.IChoice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char False True False False True False True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char False False True False True True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char True False True True False True True False])
+           (Str.implode
+             [Str.Char False True False False True False True False,
+               Str.Char True False True False False True True False,
+               Str.Char False False False False True True True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True False False True True True False,
+               Str.Char False False True False True True True False,
+               Str.Char False False False False False True False False,
+               Str.Char False False False False True True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char True False True False False True True False,
+               Str.Char True False True True False True True False])
            buyer)
          Arith.one_int]
       (),
@@ -481,22 +481,22 @@ confirmProblemTransactions =
         Arith.Int_of_integer (1664817400000 :: Integer))
       [SemanticsTypes.IChoice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char True True False False False False True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True True True False True True False,
-               Stringa.Char False True True False False True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True False True True False True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char False False False False True True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True True True True False True True False,
-               Stringa.Char False True False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char True False True True False True True False])
+           (Str.implode
+             [Str.Char True True False False False False True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True True True False True True False,
+               Str.Char False True True False False True True False,
+               Str.Char True False False True False True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True False True True False True True False,
+               Str.Char False False False False False True False False,
+               Str.Char False False False False True True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True True True True False True True False,
+               Str.Char False True False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char True False True False False True True False,
+               Str.Char True False True True False True True False])
            seller)
          Arith.one_int]
       ()];
@@ -519,28 +519,28 @@ everythingIsAlrightTransactions =
         Arith.Int_of_integer (1664813100000 :: Integer))
       [SemanticsTypes.IChoice
          (SemanticsTypes.ChoiceId
-           (Stringa.implode
-             [Stringa.Char True False True False False False True False,
-               Stringa.Char False True True False True True True False,
-               Stringa.Char True False True False False True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True False False True True True True False,
-               Stringa.Char False False True False True True True False,
-               Stringa.Char False False False True False True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char False True True True False True True False,
-               Stringa.Char True True True False False True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True True False False True True True False,
-               Stringa.Char False False False False False True False False,
-               Stringa.Char True False False False False True True False,
-               Stringa.Char False False True True False True True False,
-               Stringa.Char False True False False True True True False,
-               Stringa.Char True False False True False True True False,
-               Stringa.Char True True True False False True True False,
-               Stringa.Char False False False True False True True False,
-               Stringa.Char False False True False True True True False])
+           (Str.implode
+             [Str.Char True False True False False False True False,
+               Str.Char False True True False True True True False,
+               Str.Char True False True False False True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True False False True True True True False,
+               Str.Char False False True False True True True False,
+               Str.Char False False False True False True True False,
+               Str.Char True False False True False True True False,
+               Str.Char False True True True False True True False,
+               Str.Char True True True False False True True False,
+               Str.Char False False False False False True False False,
+               Str.Char True False False True False True True False,
+               Str.Char True True False False True True True False,
+               Str.Char False False False False False True False False,
+               Str.Char True False False False False True True False,
+               Str.Char False False True True False True True False,
+               Str.Char False True False False True True True False,
+               Str.Char True False False True False True True False,
+               Str.Char True True True False False True True False,
+               Str.Char False False False True False True True False,
+               Str.Char False False True False True True True False])
            buyer)
          Arith.zero_int]
       ()];

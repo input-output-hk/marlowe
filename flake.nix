@@ -66,6 +66,7 @@
               (with scripts; [
                 build-marlowe-proofs
                 edit-marlowe-proofs
+                vscode-marlowe-proofs
                 build-marlowe-docs
               ]
               ) ++

@@ -37,4 +37,8 @@
     cd isabelle
     isabelle jedit -d . -u Doc/Specification/Specification.thy
   '';
+  vscode-marlowe-proofs = writeShellScriptBinInRepoRoot "vscode-marlowe-proofs" ''
+    cd isabelle
+    isabelle vscode  -o "editor_output_state=true" -d . -u Doc/Specification/Specification.thy .
+  '';
 }

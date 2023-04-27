@@ -1377,7 +1377,7 @@ transactionOutputSuccessExample :: TransactionOutput
 transactionOutputSuccessExample = playTrace
                                     0
                                     Examples.Swap.swapExample
-                                    Examples.Swap.happyPathTransactions
+                                    Examples.Swap.successfulExecutionPathTransactions
 \end{code}
 
 is serialized as

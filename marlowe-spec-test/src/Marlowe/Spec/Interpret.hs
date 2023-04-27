@@ -20,7 +20,7 @@ import Marlowe.Spec.TypeId (TypeId (..))
 import Test.Tasty (TestName)
 import Test.Tasty.Providers (TestTree)
 import Test.Tasty.HUnit (testCase, (@?=), Assertion)
-import MarloweCoreJson()
+import MarloweCoreJson ()
 import qualified Data.Text as T
 import Marlowe.Utils (showJson)
 
@@ -89,31 +89,27 @@ instance Show (Response JSON.Value) where
   show (ResponseFailure err) = "(ResponseFailure " ++ err ++ ")"
 
 instance FromJSON (Response JSON.Value) where
-    parseJSON (JSON.String "UnknownRequest") = return UnknownRequest
-    parseJSON (JSON.String "RequestNotImplemented") = return RequestNotImplemented
-    parseJSON (JSON.Object v) = asError <|> asSuccess
-        where
-        asError = InvalidRequest <$> v .: "invalid-request"
-        asSuccess = RequestResponse <$> v .: "request-response"
-    parseJSON _ = fail "Response must be either a string or an object"
-
+  parseJSON (JSON.String "UnknownRequest") = return UnknownRequest
+  parseJSON (JSON.String "RequestNotImplemented") = return RequestNotImplemented
+  parseJSON (JSON.Object v) = asError <|> asSuccess
+    where
+    asError = InvalidRequest <$> v .: "invalid-request"
+    asSuccess = RequestResponse <$> v .: "request-response"
+  parseJSON _ = fail "Response must be either a string or an object"
 
 instance ToJSON (Response JSON.Value) where
   toJSON UnknownRequest = JSON.String "UnknownRequest"
   toJSON RequestNotImplemented = JSON.String "RequestNotImplemented"
   toJSON RequestTimeOut = JSON.String "RequestTimeOut"
-
   toJSON (InvalidRequest err) = object
     [ "invalid-request" .= JSON.String (T.pack err)
     ]
   toJSON (RequestResponse res) = object
     [ "request-response" .= res
-
     ]
   toJSON (ResponseFailure err) = object
     [ "invalid-request" .= JSON.String (T.pack err)
     ]
-
 
 parseValidResponse :: FromJSON a => Response JSON.Value -> Either String a
 parseValidResponse (InvalidRequest err) = Left $ "Invalid request: " ++ err
@@ -121,7 +117,6 @@ parseValidResponse UnknownRequest = Left "Unknown request"
 parseValidResponse RequestNotImplemented = Left "Request not implemented"
 parseValidResponse RequestTimeOut = Left "Request timed out"
 parseValidResponse (ResponseFailure err) = Left $ "Problem processing the response: " ++ err
-
 parseValidResponse (RequestResponse v) = case fromJSON v of
   (Error err) -> Left $ "Invalid response: " ++ err
   (Success a) -> Right a
@@ -129,8 +124,7 @@ parseValidResponse (RequestResponse v) = case fromJSON v of
 type InterpretJsonRequest = Request JSON.Value -> IO (Response JSON.Value)
 
 testResponse :: InterpretJsonRequest -> TestName -> Request JSON.Value -> (Response JSON.Value -> Assertion) -> TestTree
-testResponse interpret testName req assertion =
-  testCase testName $ assertion =<< interpret req
+testResponse interpret testName req assertion = testCase testName $ assertion =<< interpret req
 
 exactMatch :: InterpretJsonRequest -> TestName -> Request JSON.Value -> Response JSON.Value -> TestTree
 exactMatch interpret testName req expected = testResponse interpret testName req (\actual -> actual @?= expected)

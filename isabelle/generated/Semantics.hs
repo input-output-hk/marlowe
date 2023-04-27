@@ -1,11 +1,17 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Semantics(ReduceWarning, ReduceEffect, ReduceResult, ApplyAllResult,
-             IntervalResult, ReduceStepResult, evalValue, evalObservation,
-             reductionLoop, reduceContractUntilQuiescent, applyAllInputs,
-             computeTransaction, playTrace, getOutcomes, isQuiescent,
-             maxTimeContract, getSignatures, equal_ReduceResult)
+  Semantics(Payment(..), equal_Payment, ReduceWarning, TransactionWarning(..),
+             equal_TransactionWarning, ReduceEffect, ReduceResult,
+             ApplyAllResult, ReduceStepResult, TransactionError(..),
+             TransactionOutputRecord_ext(..), TransactionOutput(..),
+             Transaction_ext(..), evalValue, evalObservation, txOutWarnings,
+             txOutPayments, interval, inputs, reductionLoop,
+             reduceContractUntilQuiescent, applyAllInputs, computeTransaction,
+             emptyState, playTrace, getOutcomes, isQuiescent, maxTimeContract,
+             getSignatures, calculateNonAmbiguousInterval, txOutState,
+             txOutContract, equal_ReduceResult, equal_TransactionError,
+             equal_TransactionOutput, equal_Transaction_ext)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -14,18 +20,34 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
+import qualified OptBoundTimeInterval;
 import qualified Product_Type;
 import qualified List;
 import qualified Orderings;
-import qualified Product_Lexorder;
 import qualified Option;
 import qualified MList;
-import qualified Division;
 import qualified HOL;
+import qualified Product_Lexorder;
+import qualified ListTools;
 import qualified SList;
 import qualified SemanticsGuarantees;
-import qualified Arith;
 import qualified SemanticsTypes;
+import qualified Arith;
+
+data Payment =
+  Payment SemanticsTypes.Party SemanticsTypes.Payee SemanticsTypes.Token
+    Arith.Int
+  deriving (Prelude.Read, Prelude.Show);
+
+equal_Payment :: Payment -> Payment -> Bool;
+equal_Payment (Payment x1 x2 x3 x4) (Payment y1 y2 y3 y4) =
+  SemanticsTypes.equal_Party x1 y1 &&
+    SemanticsTypes.equal_Payee x2 y2 &&
+      SemanticsTypes.equal_Token x3 y3 && Arith.equal_int x4 y4;
+
+instance Eq Payment where {
+  a == b = equal_Payment a b;
+};
 
 data ReduceWarning = ReduceNoWarning
   | ReduceNonPositivePay SemanticsTypes.Party SemanticsTypes.Payee
@@ -91,6 +113,84 @@ instance Eq ReduceWarning where {
   a == b = equal_ReduceWarning a b;
 };
 
+data TransactionWarning =
+  TransactionNonPositiveDeposit SemanticsTypes.Party SemanticsTypes.Party
+    SemanticsTypes.Token Arith.Int
+  | TransactionNonPositivePay SemanticsTypes.Party SemanticsTypes.Payee
+      SemanticsTypes.Token Arith.Int
+  | TransactionPartialPay SemanticsTypes.Party SemanticsTypes.Payee
+      SemanticsTypes.Token Arith.Int Arith.Int
+  | TransactionShadowing SemanticsTypes.ValueId Arith.Int Arith.Int
+  | TransactionAssertionFailed deriving (Prelude.Read, Prelude.Show);
+
+equal_TransactionWarning :: TransactionWarning -> TransactionWarning -> Bool;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionShadowing y41 y42 y43) =
+  SemanticsTypes.equal_ValueId x41 y41 &&
+    Arith.equal_int x42 y42 && Arith.equal_int x43 y43;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionPartialPay y31 y32 y33 y34 y35) =
+  SemanticsTypes.equal_Party x31 y31 &&
+    SemanticsTypes.equal_Payee x32 y32 &&
+      SemanticsTypes.equal_Token x33 y33 &&
+        Arith.equal_int x34 y34 && Arith.equal_int x35 y35;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionNonPositivePay y21 y22 y23 y24) =
+  SemanticsTypes.equal_Party x21 y21 &&
+    SemanticsTypes.equal_Payee x22 y22 &&
+      SemanticsTypes.equal_Token x23 y23 && Arith.equal_int x24 y24;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionNonPositiveDeposit y11 y12 y13 y14) =
+  SemanticsTypes.equal_Party x11 y11 &&
+    SemanticsTypes.equal_Party x12 y12 &&
+      SemanticsTypes.equal_Token x13 y13 && Arith.equal_int x14 y14;
+equal_TransactionWarning TransactionAssertionFailed TransactionAssertionFailed =
+  True;
+
+instance Eq TransactionWarning where {
+  a == b = equal_TransactionWarning a b;
+};
+
 data ApplyWarning = ApplyNoWarning
   | ApplyNonPositiveDeposit SemanticsTypes.Party SemanticsTypes.Party
       SemanticsTypes.Token Arith.Int
@@ -100,25 +200,18 @@ data ApplyResult =
   Applied ApplyWarning (SemanticsTypes.State_ext ()) SemanticsTypes.Contract
   | ApplyNoMatchError deriving (Prelude.Read, Prelude.Show);
 
-data ReduceEffect = ReduceNoPayment | ReduceWithPayment SemanticsTypes.Payment
+data ReduceEffect = ReduceNoPayment | ReduceWithPayment Payment
   deriving (Prelude.Read, Prelude.Show);
 
 data ReduceResult =
-  ContractQuiescent Bool [ReduceWarning] [SemanticsTypes.Payment]
-    (SemanticsTypes.State_ext ()) SemanticsTypes.Contract
+  ContractQuiescent Bool [ReduceWarning] [Payment] (SemanticsTypes.State_ext ())
+    SemanticsTypes.Contract
   | RRAmbiguousTimeIntervalError deriving (Prelude.Read, Prelude.Show);
 
 data ApplyAllResult =
-  ApplyAllSuccess Bool [SemanticsTypes.TransactionWarning]
-    [SemanticsTypes.Payment] (SemanticsTypes.State_ext ())
-    SemanticsTypes.Contract
+  ApplyAllSuccess Bool [TransactionWarning] [Payment]
+    (SemanticsTypes.State_ext ()) SemanticsTypes.Contract
   | ApplyAllNoMatchError | ApplyAllAmbiguousTimeIntervalError
-  deriving (Prelude.Read, Prelude.Show);
-
-data IntervalResult =
-  IntervalTrimmed (SemanticsTypes.Environment_ext ())
-    (SemanticsTypes.State_ext ())
-  | IntervalError SemanticsTypes.IntervalError
   deriving (Prelude.Read, Prelude.Show);
 
 data ReduceStepResult =
@@ -127,6 +220,29 @@ data ReduceStepResult =
   | NotReduced | AmbiguousTimeIntervalReductionError
   deriving (Prelude.Read, Prelude.Show);
 
+data TransactionError = TEAmbiguousTimeIntervalError | TEApplyNoMatchError
+  | TEIntervalError SemanticsTypes.IntervalError | TEUselessTransaction
+  deriving (Prelude.Read, Prelude.Show);
+
+data TransactionOutputRecord_ext a =
+  TransactionOutputRecord_ext [TransactionWarning] [Payment]
+    (SemanticsTypes.State_ext ()) SemanticsTypes.Contract a
+  deriving (Prelude.Read, Prelude.Show);
+
+data TransactionOutput = TransactionOutput (TransactionOutputRecord_ext ())
+  | TransactionError TransactionError deriving (Prelude.Read, Prelude.Show);
+
+data Transaction_ext a =
+  Transaction_ext (Arith.Int, Arith.Int) [SemanticsTypes.Input] a
+  deriving (Prelude.Read, Prelude.Show);
+
+quot :: Arith.Int -> Arith.Int -> Arith.Int;
+quot x y =
+  (if Arith.less_int x Arith.zero_int == Arith.less_int y Arith.zero_int
+    then Arith.divide_int x y
+    else Arith.uminus_int
+           (Arith.divide_int (Arith.abs_int x) (Arith.abs_int y)));
+
 addSig ::
   [SemanticsTypes.Party] -> SemanticsTypes.Input -> [SemanticsTypes.Party];
 addSig acc (SemanticsTypes.IDeposit uu p uv uw) = SList.insert p acc;
@@ -134,23 +250,23 @@ addSig acc (SemanticsTypes.IChoice (SemanticsTypes.ChoiceId ux p) uy) =
   SList.insert p acc;
 addSig acc SemanticsTypes.INotify = acc;
 
-moneyInAccount ::
-  SemanticsTypes.Party ->
-    SemanticsTypes.Token ->
-      [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)] -> Arith.Int;
-moneyInAccount accId token accountsV =
-  MList.findWithDefault Arith.zero_int (accId, token) accountsV;
+gtIfNone :: Maybe Arith.Int -> Arith.Int -> Bool;
+gtIfNone Nothing uu = True;
+gtIfNone (Just x) y = Arith.less_int y x;
+
+inBounds :: Arith.Int -> [SemanticsTypes.Bound] -> Bool;
+inBounds num =
+  ListTools.anya
+    (\ (SemanticsTypes.Bound l u) ->
+      Arith.less_eq_int l num && Arith.less_eq_int num u);
 
 evalValue ::
   SemanticsTypes.Environment_ext () ->
     SemanticsTypes.State_ext () -> SemanticsTypes.Value -> Arith.Int;
 evalValue env state (SemanticsTypes.AvailableMoney accId token) =
-  moneyInAccount accId token (SemanticsTypes.accounts state);
-evalValue env state (SemanticsTypes.ChoiceValue choId) =
-  MList.findWithDefault Arith.zero_int choId (SemanticsTypes.choices state);
-evalValue env state (SemanticsTypes.UseValue valId) =
-  MList.findWithDefault Arith.zero_int valId (SemanticsTypes.boundValues state);
-evalValue env state (SemanticsTypes.Constant c) = c;
+  MList.findWithDefault Arith.zero_int (accId, token)
+    (SemanticsTypes.accounts state);
+evalValue env state (SemanticsTypes.Constant integer) = integer;
 evalValue env state (SemanticsTypes.NegValue val) =
   Arith.uminus_int (evalValue env state val);
 evalValue env state (SemanticsTypes.AddValue lhs rhs) =
@@ -163,12 +279,15 @@ evalValue env state (SemanticsTypes.DivValue lhs rhs) =
   let {
     n = evalValue env state lhs;
     d = evalValue env state rhs;
-  } in (if Arith.equal_int d Arith.zero_int then Arith.zero_int
-         else Division.quot n d);
+  } in (if Arith.equal_int d Arith.zero_int then Arith.zero_int else quot n d);
+evalValue env state (SemanticsTypes.ChoiceValue choId) =
+  MList.findWithDefault Arith.zero_int choId (SemanticsTypes.choices state);
 evalValue env state SemanticsTypes.TimeIntervalStart =
   fst (SemanticsTypes.timeInterval env);
 evalValue env state SemanticsTypes.TimeIntervalEnd =
   snd (SemanticsTypes.timeInterval env);
+evalValue env state (SemanticsTypes.UseValue valId) =
+  MList.findWithDefault Arith.zero_int valId (SemanticsTypes.boundValues state);
 evalValue env state (SemanticsTypes.Cond cond thn els) =
   (if evalObservation env state cond then evalValue env state thn
     else evalValue env state els);
@@ -176,14 +295,12 @@ evalValue env state (SemanticsTypes.Cond cond thn els) =
 evalObservation ::
   SemanticsTypes.Environment_ext () ->
     SemanticsTypes.State_ext () -> SemanticsTypes.Observation -> Bool;
-evalObservation env state SemanticsTypes.TrueObs = True;
-evalObservation env state SemanticsTypes.FalseObs = False;
-evalObservation env state (SemanticsTypes.NotObs subObs) =
-  not (evalObservation env state subObs);
 evalObservation env state (SemanticsTypes.AndObs lhs rhs) =
   evalObservation env state lhs && evalObservation env state rhs;
 evalObservation env state (SemanticsTypes.OrObs lhs rhs) =
   evalObservation env state lhs || evalObservation env state rhs;
+evalObservation env state (SemanticsTypes.NotObs subObs) =
+  not (evalObservation env state subObs);
 evalObservation env state (SemanticsTypes.ChoseSomething choId) =
   MList.member choId (SemanticsTypes.choices state);
 evalObservation env state (SemanticsTypes.ValueGE lhs rhs) =
@@ -196,6 +313,8 @@ evalObservation env state (SemanticsTypes.ValueLE lhs rhs) =
   Arith.less_eq_int (evalValue env state lhs) (evalValue env state rhs);
 evalObservation env state (SemanticsTypes.ValueEQ lhs rhs) =
   Arith.equal_int (evalValue env state lhs) (evalValue env state rhs);
+evalObservation env state SemanticsTypes.TrueObs = True;
+evalObservation env state SemanticsTypes.FalseObs = False;
 
 updateMoneyInAccount ::
   SemanticsTypes.Party ->
@@ -208,18 +327,25 @@ updateMoneyInAccount accId token money accountsV =
     then MList.delete (accId, token) accountsV
     else MList.insert (accId, token) money accountsV);
 
+moneyInAccount ::
+  SemanticsTypes.Party ->
+    SemanticsTypes.Token ->
+      [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)] -> Arith.Int;
+moneyInAccount accId token accountsV =
+  MList.findWithDefault Arith.zero_int (accId, token) accountsV;
+
 addMoneyToAccount ::
   SemanticsTypes.Party ->
     SemanticsTypes.Token ->
       Arith.Int ->
         [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)] ->
           [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)];
-addMoneyToAccount accId token money accts =
+addMoneyToAccount accId token money accountsV =
   let {
-    balance = moneyInAccount accId token accts;
+    balance = moneyInAccount accId token accountsV;
     newBalance = Arith.plus_int balance money;
-  } in (if Arith.less_eq_int money Arith.zero_int then accts
-         else updateMoneyInAccount accId token newBalance accts);
+  } in (if Arith.less_eq_int money Arith.zero_int then accountsV
+         else updateMoneyInAccount accId token newBalance accountsV);
 
 giveMoney ::
   SemanticsTypes.Party ->
@@ -229,15 +355,53 @@ giveMoney ::
           [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)] ->
             (ReduceEffect,
               [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)]);
-giveMoney accountId payee token money accts =
+giveMoney accountId payee token money accountsV =
   let {
     a = (case payee of {
           SemanticsTypes.Account accId ->
-            addMoneyToAccount accId token money accts;
-          SemanticsTypes.Party _ -> accts;
+            addMoneyToAccount accId token money accountsV;
+          SemanticsTypes.Party _ -> accountsV;
         });
-  } in (ReduceWithPayment (SemanticsTypes.Payment accountId payee token money),
-         a);
+  } in (ReduceWithPayment (Payment accountId payee token money), a);
+
+txOutWarnings_update ::
+  forall a.
+    ([TransactionWarning] -> [TransactionWarning]) ->
+      TransactionOutputRecord_ext a -> TransactionOutputRecord_ext a;
+txOutWarnings_update txOutWarningsa
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = TransactionOutputRecord_ext (txOutWarningsa txOutWarnings) txOutPayments
+      txOutState txOutContract more;
+
+txOutPayments_update ::
+  forall a.
+    ([Payment] -> [Payment]) ->
+      TransactionOutputRecord_ext a -> TransactionOutputRecord_ext a;
+txOutPayments_update txOutPaymentsa
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = TransactionOutputRecord_ext txOutWarnings (txOutPaymentsa txOutPayments)
+      txOutState txOutContract more;
+
+txOutWarnings ::
+  forall a. TransactionOutputRecord_ext a -> [TransactionWarning];
+txOutWarnings
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutWarnings;
+
+txOutPayments :: forall a. TransactionOutputRecord_ext a -> [Payment];
+txOutPayments
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutPayments;
+
+interval :: forall a. Transaction_ext a -> (Arith.Int, Arith.Int);
+interval (Transaction_ext interval inputs more) = interval;
+
+inputs :: forall a. Transaction_ext a -> [SemanticsTypes.Input];
+inputs (Transaction_ext interval inputs more) = inputs;
 
 refundOne ::
   [((SemanticsTypes.Party, SemanticsTypes.Token), Arith.Int)] ->
@@ -254,42 +418,39 @@ reduceContractStep ::
 reduceContractStep uu state SemanticsTypes.Close =
   (case refundOne (SemanticsTypes.accounts state) of {
     Nothing -> NotReduced;
-    Just ((party, (token, money)), newAccounts) ->
+    Just ((party, (token, money)), newAccount) ->
       let {
-        newState = SemanticsTypes.accounts_update (\ _ -> newAccounts) state;
+        newState = SemanticsTypes.accounts_update (\ _ -> newAccount) state;
       } in Reduced ReduceNoWarning
              (ReduceWithPayment
-               (SemanticsTypes.Payment party (SemanticsTypes.Party party) token
-                 money))
+               (Payment party (SemanticsTypes.Party party) token money))
              newState SemanticsTypes.Close;
   });
 reduceContractStep env state (SemanticsTypes.Pay accId payee token val cont) =
   let {
-    amountToPay = evalValue env state val;
-  } in (if Arith.less_eq_int amountToPay Arith.zero_int
+    moneyToPay = evalValue env state val;
+  } in (if Arith.less_eq_int moneyToPay Arith.zero_int
          then let {
-                warning = ReduceNonPositivePay accId payee token amountToPay;
+                warning = ReduceNonPositivePay accId payee token moneyToPay;
               } in Reduced warning ReduceNoPayment state cont
          else let {
                 balance =
                   moneyInAccount accId token (SemanticsTypes.accounts state);
-                paidAmount = Orderings.min balance amountToPay;
-                newBalance = Arith.minus_int balance paidAmount;
+                paidMoney = Orderings.min balance moneyToPay;
+                newBalance = Arith.minus_int balance paidMoney;
                 newAccs =
                   updateMoneyInAccount accId token newBalance
                     (SemanticsTypes.accounts state);
                 warning =
-                  (if Arith.less_int paidAmount amountToPay
-                    then ReducePartialPay accId payee token paidAmount
-                           amountToPay
+                  (if Arith.less_int paidMoney moneyToPay
+                    then ReducePartialPay accId payee token paidMoney moneyToPay
                     else ReduceNoWarning);
-              } in (case giveMoney accId payee token paidAmount newAccs of {
+              } in (case giveMoney accId payee token paidMoney newAccs of {
                      (payment, finalAccs) ->
-                       let {
-                         newState =
-                           SemanticsTypes.accounts_update (\ _ -> finalAccs)
-                             state;
-                       } in Reduced warning payment newState cont;
+                       Reduced warning payment
+                         (SemanticsTypes.accounts_update (\ _ -> finalAccs)
+                           state)
+                         cont;
                    }));
 reduceContractStep env state (SemanticsTypes.If obs cont1 cont2) =
   let {
@@ -326,11 +487,10 @@ reductionLoop ::
   Bool ->
     SemanticsTypes.Environment_ext () ->
       SemanticsTypes.State_ext () ->
-        SemanticsTypes.Contract ->
-          [ReduceWarning] -> [SemanticsTypes.Payment] -> ReduceResult;
+        SemanticsTypes.Contract -> [ReduceWarning] -> [Payment] -> ReduceResult;
 reductionLoop reduced env state contract warnings payments =
   (case reduceContractStep env state contract of {
-    Reduced warning effect newState cont ->
+    Reduced warning effect newState ncontract ->
       let {
         newWarnings =
           (if equal_ReduceWarning warning ReduceNoWarning then warnings
@@ -339,7 +499,7 @@ reductionLoop reduced env state contract warnings payments =
               ReduceNoPayment -> payments;
               ReduceWithPayment payment -> payment : payments;
             });
-      } in reductionLoop True env newState cont newWarnings a;
+      } in reductionLoop True env newState ncontract newWarnings a;
     NotReduced ->
       ContractQuiescent reduced (reverse warnings) (reverse payments) state
         contract;
@@ -352,25 +512,23 @@ reduceContractUntilQuiescent ::
 reduceContractUntilQuiescent env state contract =
   reductionLoop False env state contract [] [];
 
-convertReduceWarnings :: [ReduceWarning] -> [SemanticsTypes.TransactionWarning];
+convertReduceWarnings :: [ReduceWarning] -> [TransactionWarning];
 convertReduceWarnings [] = [];
 convertReduceWarnings (ReduceNoWarning : rest) = convertReduceWarnings rest;
 convertReduceWarnings (ReduceNonPositivePay accId payee tok amount : rest) =
-  SemanticsTypes.TransactionNonPositivePay accId payee tok amount :
-    convertReduceWarnings rest;
+  TransactionNonPositivePay accId payee tok amount : convertReduceWarnings rest;
 convertReduceWarnings (ReducePartialPay accId payee tok paid expected : rest) =
-  SemanticsTypes.TransactionPartialPay accId payee tok paid expected :
+  TransactionPartialPay accId payee tok paid expected :
     convertReduceWarnings rest;
 convertReduceWarnings (ReduceShadowing valId oldVal newVal : rest) =
-  SemanticsTypes.TransactionShadowing valId oldVal newVal :
-    convertReduceWarnings rest;
+  TransactionShadowing valId oldVal newVal : convertReduceWarnings rest;
 convertReduceWarnings (ReduceAssertionFailed : rest) =
-  SemanticsTypes.TransactionAssertionFailed : convertReduceWarnings rest;
+  TransactionAssertionFailed : convertReduceWarnings rest;
 
-convertApplyWarning :: ApplyWarning -> [SemanticsTypes.TransactionWarning];
+convertApplyWarning :: ApplyWarning -> [TransactionWarning];
 convertApplyWarning ApplyNoWarning = [];
 convertApplyWarning (ApplyNonPositiveDeposit party accId tok amount) =
-  [SemanticsTypes.TransactionNonPositiveDeposit party accId tok amount];
+  [TransactionNonPositiveDeposit party accId tok amount];
 
 applyCases ::
   SemanticsTypes.Environment_ext () ->
@@ -398,8 +556,7 @@ applyCases env state (SemanticsTypes.IDeposit accId1 party1 tok1 amount)
              (SemanticsTypes.IDeposit accId1 party1 tok1 amount) rest);
 applyCases env state (SemanticsTypes.IChoice choId1 choice)
   (SemanticsTypes.Case (SemanticsTypes.Choice choId2 bounds) cont : rest) =
-  (if SemanticsTypes.equal_ChoiceId choId1 choId2 &&
-        SemanticsTypes.inBounds choice bounds
+  (if SemanticsTypes.equal_ChoiceId choId1 choId2 && inBounds choice bounds
     then let {
            newState =
              SemanticsTypes.choices_update
@@ -430,7 +587,7 @@ applyCases env state SemanticsTypes.INotify
 applyCases env state SemanticsTypes.INotify
   (SemanticsTypes.Case (SemanticsTypes.Choice vb vc) va : rest) =
   applyCases env state SemanticsTypes.INotify rest;
-applyCases env state input [] = ApplyNoMatchError;
+applyCases env state acc [] = ApplyNoMatchError;
 
 applyInput ::
   SemanticsTypes.Environment_ext () ->
@@ -451,12 +608,11 @@ applyAllLoop ::
       SemanticsTypes.State_ext () ->
         SemanticsTypes.Contract ->
           [SemanticsTypes.Input] ->
-            [SemanticsTypes.TransactionWarning] ->
-              [SemanticsTypes.Payment] -> ApplyAllResult;
-applyAllLoop contractChanged env state contract inps warnings payments =
+            [TransactionWarning] -> [Payment] -> ApplyAllResult;
+applyAllLoop contractChanged env state contract inputs warnings payments =
   (case reduceContractUntilQuiescent env state contract of {
     ContractQuiescent reduced reduceWarns pays curState cont ->
-      (case inps of {
+      (case inputs of {
         [] -> ApplyAllSuccess (contractChanged || reduced)
                 (warnings ++ convertReduceWarnings reduceWarns)
                 (payments ++ pays) curState cont;
@@ -478,92 +634,85 @@ applyAllInputs ::
   SemanticsTypes.Environment_ext () ->
     SemanticsTypes.State_ext () ->
       SemanticsTypes.Contract -> [SemanticsTypes.Input] -> ApplyAllResult;
-applyAllInputs env state contract inps =
-  applyAllLoop False env state contract inps [] [];
+applyAllInputs env state contract inputs =
+  applyAllLoop False env state contract inputs [] [];
 
 fixInterval ::
-  (Arith.Int, Arith.Int) -> SemanticsTypes.State_ext () -> IntervalResult;
-fixInterval (startTime, endTime) state =
+  (Arith.Int, Arith.Int) ->
+    SemanticsTypes.State_ext () -> SemanticsTypes.IntervalResult;
+fixInterval (low, high) state =
   let {
     curMinTime = SemanticsTypes.minTime state;
-    newMinTime = Orderings.max startTime curMinTime;
-    env = SemanticsTypes.Environment_ext (newMinTime, endTime) ();
-    newState = SemanticsTypes.minTime_update (\ _ -> newMinTime) state;
-  } in (if Arith.less_int endTime startTime
-         then IntervalError
-                (SemanticsTypes.InvalidInterval (startTime, endTime))
-         else (if Arith.less_int endTime curMinTime
-                then IntervalError
+    newLow = Orderings.max low curMinTime;
+    curInterval = (newLow, high);
+    env = SemanticsTypes.Environment_ext curInterval ();
+    newState = SemanticsTypes.minTime_update (\ _ -> newLow) state;
+  } in (if Arith.less_int high low
+         then SemanticsTypes.IntervalError
+                (SemanticsTypes.InvalidInterval (low, high))
+         else (if Arith.less_int high curMinTime
+                then SemanticsTypes.IntervalError
                        (SemanticsTypes.IntervalInPastError curMinTime
-                         (startTime, endTime))
-                else IntervalTrimmed env newState));
+                         (low, high))
+                else SemanticsTypes.IntervalTrimmed env newState));
 
 computeTransaction ::
-  SemanticsTypes.Transaction_ext () ->
-    SemanticsTypes.State_ext () ->
-      SemanticsTypes.Contract -> SemanticsTypes.TransactionOutput;
+  Transaction_ext () ->
+    SemanticsTypes.State_ext () -> SemanticsTypes.Contract -> TransactionOutput;
 computeTransaction tx state contract =
   let {
-    inps = SemanticsTypes.inputs tx;
-  } in (case fixInterval (SemanticsTypes.interval tx) state of {
-         IntervalTrimmed env fixSta ->
+    inps = inputs tx;
+  } in (case fixInterval (interval tx) state of {
+         SemanticsTypes.IntervalTrimmed env fixSta ->
            (case applyAllInputs env fixSta contract inps of {
              ApplyAllSuccess reduced warnings payments newState cont ->
                (if not reduced &&
                      (not (SemanticsTypes.equal_Contract contract
                             SemanticsTypes.Close) ||
                        null (SemanticsTypes.accounts state))
-                 then SemanticsTypes.TransactionError
-                        SemanticsTypes.TEUselessTransaction
-                 else SemanticsTypes.TransactionOutput
-                        (SemanticsTypes.TransactionOutputRecord_ext warnings
-                          payments newState cont ()));
-             ApplyAllNoMatchError ->
-               SemanticsTypes.TransactionError
-                 SemanticsTypes.TEApplyNoMatchError;
+                 then TransactionError TEUselessTransaction
+                 else TransactionOutput
+                        (TransactionOutputRecord_ext warnings payments newState
+                          cont ()));
+             ApplyAllNoMatchError -> TransactionError TEApplyNoMatchError;
              ApplyAllAmbiguousTimeIntervalError ->
-               SemanticsTypes.TransactionError
-                 SemanticsTypes.TEAmbiguousTimeIntervalError;
+               TransactionError TEAmbiguousTimeIntervalError;
            });
-         IntervalError errora ->
-           SemanticsTypes.TransactionError
-             (SemanticsTypes.TEIntervalError errora);
+         SemanticsTypes.IntervalError errora ->
+           TransactionError (TEIntervalError errora);
        });
 
 playTraceAux ::
-  SemanticsTypes.TransactionOutputRecord_ext () ->
-    [SemanticsTypes.Transaction_ext ()] -> SemanticsTypes.TransactionOutput;
-playTraceAux res [] = SemanticsTypes.TransactionOutput res;
-playTraceAux
-  (SemanticsTypes.TransactionOutputRecord_ext warnings payments state cont ())
+  TransactionOutputRecord_ext () -> [Transaction_ext ()] -> TransactionOutput;
+playTraceAux res [] = TransactionOutput res;
+playTraceAux (TransactionOutputRecord_ext warnings payments state cont ())
   (h : t) =
   let {
     transRes = computeTransaction h state cont;
   } in (case transRes of {
-         SemanticsTypes.TransactionOutput transResRec ->
+         TransactionOutput transResRec ->
            playTraceAux
-             (SemanticsTypes.txOutWarnings_update
-               (\ _ -> warnings ++ SemanticsTypes.txOutWarnings transResRec)
-               (SemanticsTypes.txOutPayments_update
-                 (\ _ -> payments ++ SemanticsTypes.txOutPayments transResRec)
-                 transResRec))
+             (txOutWarnings_update
+               (\ _ -> warnings ++ txOutWarnings transResRec)
+               (txOutPayments_update
+                 (\ _ -> payments ++ txOutPayments transResRec) transResRec))
              t;
-         SemanticsTypes.TransactionError _ -> transRes;
+         TransactionError _ -> transRes;
        });
 
 emptyState :: Arith.Int -> SemanticsTypes.State_ext ();
-emptyState initialTime =
-  SemanticsTypes.State_ext MList.empty MList.empty MList.empty initialTime ();
+emptyState sl =
+  SemanticsTypes.State_ext MList.empty MList.empty MList.empty sl ();
 
 playTrace ::
   Arith.Int ->
-    SemanticsTypes.Contract ->
-      [SemanticsTypes.Transaction_ext ()] -> SemanticsTypes.TransactionOutput;
-playTrace initialTime contract transactions =
-  playTraceAux
-    (SemanticsTypes.TransactionOutputRecord_ext [] [] (emptyState initialTime)
-      contract ())
-    transactions;
+    SemanticsTypes.Contract -> [Transaction_ext ()] -> TransactionOutput;
+playTrace sl c t =
+  playTraceAux (TransactionOutputRecord_ext [] [] (emptyState sl) c ()) t;
+
+subIfSome :: Maybe Arith.Int -> Arith.Int -> Maybe Arith.Int;
+subIfSome Nothing uu = Nothing;
+subIfSome (Just x) y = Just (Arith.minus_int x y);
 
 addOutcome ::
   SemanticsTypes.Party ->
@@ -581,16 +730,12 @@ addOutcome party diffValue trOut =
 getPartiesFromReduceEffect ::
   [ReduceEffect] -> [(SemanticsTypes.Party, (SemanticsTypes.Token, Arith.Int))];
 getPartiesFromReduceEffect
-  (ReduceWithPayment
-     (SemanticsTypes.Payment src (SemanticsTypes.Party p) tok m) :
-    t)
-  = (p, (tok, Arith.uminus_int m)) : getPartiesFromReduceEffect t;
+  (ReduceWithPayment (Payment src (SemanticsTypes.Party p) tok m) : t) =
+  (p, (tok, Arith.uminus_int m)) : getPartiesFromReduceEffect t;
 getPartiesFromReduceEffect (ReduceNoPayment : t) = getPartiesFromReduceEffect t;
 getPartiesFromReduceEffect
-  (ReduceWithPayment
-     (SemanticsTypes.Payment va (SemanticsTypes.Account ve) vc vd) :
-    t)
-  = getPartiesFromReduceEffect t;
+  (ReduceWithPayment (Payment va (SemanticsTypes.Account ve) vc vd) : t) =
+  getPartiesFromReduceEffect t;
 getPartiesFromReduceEffect [] = [];
 
 getPartiesFromInput ::
@@ -640,6 +785,54 @@ maxTimeContract (SemanticsTypes.Assert vb contract) = maxTimeContract contract;
 getSignatures :: [SemanticsTypes.Input] -> [SemanticsTypes.Party];
 getSignatures l = List.foldl addSig SList.empty l;
 
+calculateNonAmbiguousInterval ::
+  Maybe Arith.Int ->
+    Arith.Int ->
+      SemanticsTypes.Contract ->
+        (OptBoundTimeInterval.BEndpoint, OptBoundTimeInterval.BEndpoint);
+calculateNonAmbiguousInterval uu uv SemanticsTypes.Close =
+  (OptBoundTimeInterval.Unbounded, OptBoundTimeInterval.Unbounded);
+calculateNonAmbiguousInterval n t (SemanticsTypes.Pay uw ux uy uz c) =
+  calculateNonAmbiguousInterval n t c;
+calculateNonAmbiguousInterval n t (SemanticsTypes.If va ct cf) =
+  OptBoundTimeInterval.intersectInterval (calculateNonAmbiguousInterval n t ct)
+    (calculateNonAmbiguousInterval n t cf);
+calculateNonAmbiguousInterval n t (SemanticsTypes.When [] timeout tcont) =
+  (if Arith.less_int t timeout
+    then (OptBoundTimeInterval.Unbounded,
+           OptBoundTimeInterval.Bounded (Arith.minus_int timeout Arith.one_int))
+    else OptBoundTimeInterval.intersectInterval
+           (OptBoundTimeInterval.Bounded timeout,
+             OptBoundTimeInterval.Unbounded)
+           (calculateNonAmbiguousInterval n t tcont));
+calculateNonAmbiguousInterval n t
+  (SemanticsTypes.When (SemanticsTypes.Case vb cont : restCases) timeout tcont)
+  = (if gtIfNone n Arith.zero_int
+      then OptBoundTimeInterval.intersectInterval
+             (calculateNonAmbiguousInterval (subIfSome n Arith.one_int) t cont)
+             (calculateNonAmbiguousInterval n t
+               (SemanticsTypes.When restCases timeout tcont))
+      else calculateNonAmbiguousInterval n t
+             (SemanticsTypes.When restCases timeout tcont));
+calculateNonAmbiguousInterval n t (SemanticsTypes.Let vc vd c) =
+  calculateNonAmbiguousInterval n t c;
+calculateNonAmbiguousInterval n t (SemanticsTypes.Assert ve c) =
+  calculateNonAmbiguousInterval n t c;
+
+txOutState ::
+  forall a. TransactionOutputRecord_ext a -> SemanticsTypes.State_ext ();
+txOutState
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutState;
+
+txOutContract ::
+  forall a. TransactionOutputRecord_ext a -> SemanticsTypes.Contract;
+txOutContract
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutContract;
+
 equal_ReduceResult :: ReduceResult -> ReduceResult -> Bool;
 equal_ReduceResult (ContractQuiescent x11 x12 x13 x14 x15)
   RRAmbiguousTimeIntervalError = False;
@@ -654,5 +847,58 @@ equal_ReduceResult (ContractQuiescent x11 x12 x13 x14 x15)
           SemanticsTypes.equal_Contract x15 y15;
 equal_ReduceResult RRAmbiguousTimeIntervalError RRAmbiguousTimeIntervalError =
   True;
+
+equal_TransactionError :: TransactionError -> TransactionError -> Bool;
+equal_TransactionError (TEIntervalError x3) TEUselessTransaction = False;
+equal_TransactionError TEUselessTransaction (TEIntervalError x3) = False;
+equal_TransactionError TEApplyNoMatchError TEUselessTransaction = False;
+equal_TransactionError TEUselessTransaction TEApplyNoMatchError = False;
+equal_TransactionError TEApplyNoMatchError (TEIntervalError x3) = False;
+equal_TransactionError (TEIntervalError x3) TEApplyNoMatchError = False;
+equal_TransactionError TEAmbiguousTimeIntervalError TEUselessTransaction =
+  False;
+equal_TransactionError TEUselessTransaction TEAmbiguousTimeIntervalError =
+  False;
+equal_TransactionError TEAmbiguousTimeIntervalError (TEIntervalError x3) =
+  False;
+equal_TransactionError (TEIntervalError x3) TEAmbiguousTimeIntervalError =
+  False;
+equal_TransactionError TEAmbiguousTimeIntervalError TEApplyNoMatchError = False;
+equal_TransactionError TEApplyNoMatchError TEAmbiguousTimeIntervalError = False;
+equal_TransactionError (TEIntervalError x3) (TEIntervalError y3) =
+  SemanticsTypes.equal_IntervalError x3 y3;
+equal_TransactionError TEUselessTransaction TEUselessTransaction = True;
+equal_TransactionError TEApplyNoMatchError TEApplyNoMatchError = True;
+equal_TransactionError TEAmbiguousTimeIntervalError TEAmbiguousTimeIntervalError
+  = True;
+
+equal_TransactionOutputRecord_ext ::
+  forall a.
+    (Eq a) => TransactionOutputRecord_ext a ->
+                TransactionOutputRecord_ext a -> Bool;
+equal_TransactionOutputRecord_ext
+  (TransactionOutputRecord_ext txOutWarningsa txOutPaymentsa txOutStatea
+    txOutContracta morea)
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutWarningsa == txOutWarnings &&
+      txOutPaymentsa == txOutPayments &&
+        SemanticsTypes.equal_State_ext txOutStatea txOutState &&
+          SemanticsTypes.equal_Contract txOutContracta txOutContract &&
+            morea == more;
+
+equal_TransactionOutput :: TransactionOutput -> TransactionOutput -> Bool;
+equal_TransactionOutput (TransactionOutput x1) (TransactionError x2) = False;
+equal_TransactionOutput (TransactionError x2) (TransactionOutput x1) = False;
+equal_TransactionOutput (TransactionError x2) (TransactionError y2) =
+  equal_TransactionError x2 y2;
+equal_TransactionOutput (TransactionOutput x1) (TransactionOutput y1) =
+  equal_TransactionOutputRecord_ext x1 y1;
+
+equal_Transaction_ext ::
+  forall a. (Eq a) => Transaction_ext a -> Transaction_ext a -> Bool;
+equal_Transaction_ext (Transaction_ext intervala inputsa morea)
+  (Transaction_ext interval inputs more) =
+  intervala == interval && inputsa == inputs && morea == more;
 
 }

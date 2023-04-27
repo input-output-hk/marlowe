@@ -8,22 +8,23 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
+import qualified Semantics;
 import qualified SemanticsTypes;
 import qualified Arith;
 
 inputsToTransactions ::
   (Arith.Int, Arith.Int) ->
-    [SemanticsTypes.Input] -> [SemanticsTypes.Transaction_ext ()];
-inputsToTransactions si [] = [SemanticsTypes.Transaction_ext si [] ()];
-inputsToTransactions si [inp1] = [SemanticsTypes.Transaction_ext si [inp1] ()];
-inputsToTransactions si (inp1 : v : va) =
-  SemanticsTypes.Transaction_ext si [inp1] () :
-    inputsToTransactions si (v : va);
+    [SemanticsTypes.Input] -> [Semantics.Transaction_ext ()];
+inputsToTransactions ti [] = [Semantics.Transaction_ext ti [] ()];
+inputsToTransactions ti [inp1] = [Semantics.Transaction_ext ti [inp1] ()];
+inputsToTransactions ti (headInput : v : va) =
+  Semantics.Transaction_ext ti [headInput] () :
+    inputsToTransactions ti (v : va);
 
 traceListToSingleInput ::
-  [SemanticsTypes.Transaction_ext ()] -> [SemanticsTypes.Transaction_ext ()];
+  [Semantics.Transaction_ext ()] -> [Semantics.Transaction_ext ()];
 traceListToSingleInput [] = [];
-traceListToSingleInput (SemanticsTypes.Transaction_ext si inps () : rest) =
-  inputsToTransactions si inps ++ traceListToSingleInput rest;
+traceListToSingleInput (Semantics.Transaction_ext si inps () : tailTx) =
+  inputsToTransactions si inps ++ traceListToSingleInput tailTx;
 
 }

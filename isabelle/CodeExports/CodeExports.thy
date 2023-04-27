@@ -64,6 +64,7 @@ export_code
   applyAllInputs
   computeTransaction
   playTrace
+  emptyState
 
    \<comment> \<open> Export utility functions\<close>
   getOutcomes
@@ -92,8 +93,10 @@ export_code
   swap
   SwapParty_ext
   swapExample
-  happyPathTransactions
-  happyPathPayments
+  successfulExecutionPathTransactions
+  successfulExecutionPathPayments
+  partialExecutionPathTransactions
+  partialExecutionPathPayments
 
   \<comment> \<open>Force the export of string implode (works together with the BS code\_printing hint) \<close>
   String.implode

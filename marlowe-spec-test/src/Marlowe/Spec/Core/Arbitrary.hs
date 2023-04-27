@@ -25,11 +25,7 @@ import Data.List (nub)
 import Marlowe.Spec.TypeId ()
 import Orderings (Ord (..), max)
 import Semantics
-  ( TransactionError (..),
-    TransactionOutput (..),
-    TransactionOutputRecord_ext (..),
-    Transaction_ext (..),
-    computeTransaction,
+  ( computeTransaction,
     evalValue,
   )
 import SemanticsTypes
@@ -42,6 +38,10 @@ import SemanticsTypes
     IntervalError (..),
     State_ext (..),
     ValueId (..),
+    TransactionError (..),
+    TransactionOutput (..),
+    TransactionOutputRecord_ext (..),
+    Transaction_ext (..),
     minTime,
   )
 import Test.QuickCheck (Gen, frequency, suchThat, oneof)

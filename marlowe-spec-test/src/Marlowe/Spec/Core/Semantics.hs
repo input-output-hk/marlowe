@@ -34,10 +34,7 @@ import Marlowe.Utils (showAsJson)
 import Orderings (Ord (..))
 import QuickCheck.GenT (suchThat)
 import Semantics
-  ( TransactionOutput (..),
-    TransactionOutputRecord_ext (..),
-    Transaction_ext (..),
-    computeTransaction,
+  ( computeTransaction,
     evalObservation,
     evalValue,
   )
@@ -45,6 +42,9 @@ import SemanticsTypes
   ( Contract (..),
     State_ext (..),
     Value (..),
+    TransactionOutput (..),
+    TransactionOutputRecord_ext (..),
+    Transaction_ext (..),
   )
 import Test.QuickCheck (Arbitrary (..), withMaxSuccess)
 import Test.QuickCheck.Monadic (PropertyM, assert, monitor, run)

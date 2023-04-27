@@ -32,13 +32,6 @@ import QuickCheck.GenT
     sized,
     vectorOf,
   )
-import Semantics
-  ( Payment (..),
-    TransactionOutput (..),
-    TransactionOutputRecord_ext (..),
-    TransactionWarning (..),
-    Transaction_ext (..),
-  )
 import SemanticsTypes
   ( Action (..),
     Bound (..),
@@ -53,6 +46,11 @@ import SemanticsTypes
     Token (..),
     Value (..),
     ValueId (..),
+    Payment (..),
+    TransactionOutput (..),
+    TransactionOutputRecord_ext (..),
+    TransactionWarning (..),
+    Transaction_ext (..),
   )
 import Test.QuickCheck (chooseInt, elements)
 import Test.QuickCheck.Arbitrary (Arbitrary (..))

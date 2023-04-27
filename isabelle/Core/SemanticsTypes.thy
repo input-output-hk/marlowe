@@ -395,10 +395,10 @@ datatype TransactionWarning
   \<comment> \<open>The contract won't produce any payment and continue\<close>
   | TransactionNonPositivePay AccountId Payee Token int
   \<comment> \<open>A payment is partially fullfilled as more assets \<close>
-  \<comment> \<open>than available were asked\<close>
+  \<comment> \<open>than available were required\<close>
   | TransactionPartialPay AccountId Payee Token int int
   \<comment> \<open>A variable already bound in the state is being overwritten\<close>
-  \<comment> \<open>This doesn't necessarily indicate a problem as it is the only\<close>
+  \<comment> \<open>This doesn't necessarily indicate a problem and is the only\<close>
   \<comment> \<open>way to model mutable variables\<close>
   | TransactionShadowing ValueId int int
   \<comment> \<open>A custom Assert observation evaluates to False\<close>

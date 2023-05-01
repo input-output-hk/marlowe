@@ -37,58 +37,58 @@ CloseRefund:
   , warns @ [ReduceNonPositivePay accId payee token (evalValue env s val)]
   , payments
   )" 
-
+(*validAndPositive_state s; *)
 |PayInternalTransfer: 
- "\<lbrakk> validAndPositive_state s;
+ "\<lbrakk> 
     evalValue env state val = moneyToPay;
     moneyToPay > 0;
-    moneyInAccount srcAccId token (accounts s) = availableSrcMoney;   
+    moneyInAccount srcAccId token (accounts state) = availableSrcMoney;   
     min availableSrcMoney moneyToPay = paidMoney;  
     Account dstAccId = payee;
     \<comment> \<open>Internal transfer\<close>
-    updateMoneyInAccount srcAccId token (availableSrcMoney - paidMoney) (accounts s) 
+    updateMoneyInAccount srcAccId token (availableSrcMoney - paidMoney) (accounts state) 
       = accsWithoutSrc;    
     addMoneyToAccount dstAccId token paidMoney accsWithoutSrc = finalAccs
   \<rbrakk> \<Longrightarrow>
   ( Pay srcAccId payee token val cont
-  , s
+  , state
   , env
   , warns
   , payments
   ) \<rightarrow>
   ( cont
-  , s\<lparr>accounts := finalAccs\<rparr>
+  , state\<lparr>accounts := finalAccs\<rparr>
   , env
   , warns @ [ if paidMoney < moneyToPay
-              then ReducePartialPay accId payee token paidMoney moneyToPay
+              then ReducePartialPay srcAccId payee token paidMoney moneyToPay
               else ReduceNoWarning
             ]
   , payments @ [Payment srcAccId payee token paidMoney]
   )" 
-
+(* validAndPositive_state s;*)
 |PayExternal: 
- "\<lbrakk> validAndPositive_state s;
+ "\<lbrakk>
     evalValue env state val = moneyToPay;
     moneyToPay > 0;
-    moneyInAccount srcAccId token (accounts s) = availableSrcMoney;   
+    moneyInAccount srcAccId token (accounts state) = availableSrcMoney;   
     min availableSrcMoney moneyToPay = paidMoney;  
     Party external = payee;
     \<comment> \<open>If the payment is external, the funds are removed from the source account, but \<close>
     \<comment> \<open>the actual payment is expected to occur outside of these semantics\<close>
-    updateMoneyInAccount srcAccId token (availableSrcMoney - paidMoney) (accounts s) 
+    updateMoneyInAccount srcAccId token (availableSrcMoney - paidMoney) (accounts state) 
       = accsWithoutSrc
   \<rbrakk> \<Longrightarrow>
   ( Pay srcAccId payee token val cont
-  , s
+  , state
   , env
   , warns
   , payments
   ) \<rightarrow>
   ( cont
-  , s\<lparr>accounts := accsWithoutSrc\<rparr>
+  , state\<lparr>accounts := accsWithoutSrc\<rparr>
   , env
   , warns @ [ if paidMoney < moneyToPay
-              then ReducePartialPay accId payee token paidMoney moneyToPay
+              then ReducePartialPay srcAccId payee token paidMoney moneyToPay
               else ReduceNoWarning
             ]
   , payments @ [Payment srcAccId payee token paidMoney]
@@ -147,7 +147,7 @@ CloseRefund:
 |AssertFalse: "\<not>evalObservation env s obs \<Longrightarrow>
   (Assert obs cont, s, env, warns, payments) \<rightarrow>
   (cont, s, env, warns @ [ReduceAssertionFailed], payments)"
-
+thm PayInternalTransfer[of env s2 v m sc t asr pm dstAccId payee accsWithoutSrc finalAccs cont2 prevWarnings prevPayments ]
 abbreviation
   small_step_reduces :: "Configuration \<Rightarrow> Configuration \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
   where "x \<rightarrow>* y == star small_step_reduce x y"
@@ -205,7 +205,7 @@ fun isWhen :: "Contract \<Rightarrow> bool" where
 
 
 lemma finalD:
-  assumes "validAndPositive_state s"
+(*  assumes "validAndPositive_state s"*)
   assumes "finalConfiguration (contract, s, e, w, p)"
   shows   "isClose contract \<or> isWhen contract"  
 proof (cases contract)
@@ -261,6 +261,8 @@ fun effectAsPaymentList :: "ReduceEffect \<Rightarrow> Payment list" where
 |"effectAsPaymentList (ReduceWithPayment p) = [p]"
 
 thm Contract.exhaust
+
+thm PayInternalTransfer[of env2 state2]
 lemma reduceStepIsSmallStepReduction:
   assumes "reduceContractStep env prevState prevCont = 
              Reduced newWarning paymentReduceResult newState newCont"
@@ -294,22 +296,25 @@ next
     apply (cases "evalValue env prevState val \<le> 0", auto)
     by (metis Semantics.ReduceEffect.distinct(1) Semantics.ReduceStepResult.inject)   
 next
-  case (Pay_ReduceWithPayment accId payee token val cont payment)
+  case (Pay_ReduceWithPayment srcAccId payee token val cont payment)
   then show ?thesis 
   proof (cases "evalValue env prevState val \<le> 0")
     case True
     with assms Pay_ReduceWithPayment  show ?thesis by auto
   next
     case False
-    then obtain moneyToPay availableMoney newAccs newBalance paidMoney where 0:
+    then obtain moneyToPay availableSrcMoney accsWithoutSrc paidMoney where 0:
       "moneyToPay = evalValue env prevState val"
-      "availableMoney = moneyInAccount accId token (accounts prevState)"
-      "paidMoney = min availableMoney moneyToPay"
-      "newBalance = availableMoney - paidMoney"
-      "newAccs = updateMoneyInAccount accId token newBalance (accounts prevState)"
+      "availableSrcMoney = moneyInAccount srcAccId token (accounts prevState)"
+      "paidMoney = min availableSrcMoney moneyToPay"
+      "accsWithoutSrc = updateMoneyInAccount srcAccId token (availableSrcMoney - paidMoney) (accounts prevState)"
       by simp_all
-   
-    have 4: "payment = Payment accId payee token paidMoney" 
+    have 9: "cont = newCont" 
+      using assms Pay_ReduceWithPayment(1) False 
+      apply (cases "payee")
+      by (auto simp add: Let_def )
+      
+    have 4: "payment = Payment srcAccId payee token paidMoney" 
       using assms False 0 Pay_ReduceWithPayment
         (* TODO: simplify *)
       apply (simp only: reduceContractStep.simps )
@@ -318,102 +323,76 @@ next
       apply (simp only: giveMoney.simps)
       apply (cases payee)
       by auto
-    (*
-    then obtain finalAccs p2 where 1:
-      "(p2, finalAccs) = giveMoney accId payee token (availableMoney) newAccs"
-      using False  assms Pay_ReduceWithPayment
-      by (metis Semantics.giveMoney.simps)*)
-    then obtain finalAccs where 1:
-      "(ReduceWithPayment payment, finalAccs) = giveMoney accId payee token (availableMoney) newAccs"
-      using False  assms Pay_ReduceWithPayment 0 4
-      apply auto
-      (* TODO: we ended mob programming here *)
 
-    have 2: "p2 = ReduceWithPayment payment"
-      using 0 1 4 False assms Pay_ReduceWithPayment  
-      
-      apply (cases payee)
-      apply (cases "lookup (accId, token) (accounts prevState)")
-      
-        apply (simp)
+    with False have 5: "moneyToPay > 0" 
+      by (simp add: "0"(1))
 
-       apply auto
-      sorry
-      
-(*    have 3: "availableMoney \<ge> 0" 
-      sledgehammer*)
-    with False assms Pay_ReduceWithPayment 0 1 2  show ?thesis
-      apply auto
-      apply (cases "evalValue env prevState val > availableMoney")
-       apply auto
-      
+    have 7: "paymentReduceResult = ReduceWithPayment (Payment srcAccId payee token paidMoney)"
+      using assms  Pay_ReduceWithPayment 4
+      by force
+    have 8: "newWarning = (if paidMoney < moneyToPay
+              then ReducePartialPay srcAccId payee token paidMoney moneyToPay
+              else ReduceNoWarning)"
+         using assms  Pay_ReduceWithPayment 
+         by (smt (verit, best) "0"(1) "0"(2) "0"(3) False Semantics.ReduceStepResult.inject Semantics.giveMoney.simps Semantics.reduceContractStep.simps(2) case_prod_conv)
 
-      sorry
-  qed
-(*
-    subgoal premises ps proof (cases "lookup (accId, token) (accounts state)")
-      case None
-      moreover from ps have "min 0 (evalValue env state val) = 0" by simp
-      ultimately show ?thesis using ps apply auto
-        subgoal premises ps proof (cases "giveMoney payee token 0 (MList.delete (accId, token) (accounts state))")
-          case (Pair reduceEffect finalAccs)
-          moreover from ps calculation have "(Contract.Pay accId payee token val continueContract, state, env,
-                              initialWarnings, initialPayments) \<rightarrow>
-                             (continueContract, state\<lparr>accounts := finalAccs\<rparr>, env,
-                              initialWarnings @ [ReducePartialPay accId payee token 0 (evalValue env state val)],
-                              initialPayments @ [payment])" by auto
-          (*by auto before elimination rules*)
-          ultimately show ?thesis using ps by (auto, meson)
-        qed
-        done
+    show ?thesis proof (cases "payee")
+      case (Account dstAccId)
+      obtain finalAccs where 6:
+          "finalAccs = addMoneyToAccount dstAccId token paidMoney accsWithoutSrc"
+        by simp
+
+      (* TODO: simplify *)
+      have 10: "newState= prevState\<lparr>accounts := finalAccs\<rparr>"
+        using assms Pay_ReduceWithPayment(1)
+        apply (simp only: reduceContractStep.simps)
+        apply (simp only: Let_def)
+        apply (simp only: False)
+        apply (simp only: if_False)
+        apply (simp only: giveMoney.simps)
+        apply (simp only: Let_def)
+        apply (simp only: Account)
+        apply (simp only: Payee.case)
+
+        using "0"(1) "0"(2) "0"(3) "0"(4) "6" by force
+
+      thm  PayInternalTransfer[of env prevState val moneyToPay srcAccId token availableSrcMoney paidMoney dstAccId payee accsWithoutSrc finalAccs newCont prevWarnings prevPayments ]
+      show ?thesis
+        apply (subst 7)
+        apply (subst 8)
+        apply (subst effectAsPaymentList.simps)
+        apply (subst 10)
+        apply (subst Pay_ReduceWithPayment)
+        apply (subst 9)
+        apply (subst  PayInternalTransfer[of env prevState val moneyToPay srcAccId token availableSrcMoney paidMoney dstAccId payee accsWithoutSrc finalAccs newCont prevWarnings prevPayments ] )
+        using 0 5 6 Account by auto
     next
-      case (Some bal)
-      then show ?thesis using ps apply auto
-        apply (cases "bal \<le> evalValue env state val", auto)
-        subgoal premises ps proof -
-          from ps have "min bal (evalValue env state val) = bal" by simp
-          then show ?thesis using ps apply auto
-            subgoal premises ps proof (cases "giveMoney payee token bal (MList.delete (accId, token) (accounts state))")
-              case (Pair reduceEffect finalAccs)
-              then show ?thesis using ps apply auto
-                apply (cases "bal < evalValue env state val", auto)
-                subgoal premises ps proof -
-                  from ps have "(Contract.Pay accId payee token val continueContract, state, env,
-                                initialWarnings, initialPayments) \<rightarrow>
-                               (continueContract, state\<lparr>accounts := finalAccs\<rparr>, env,
-                                initialWarnings @ [ReducePartialPay accId payee token bal (evalValue env state val)],
-                                initialPayments @ [payment])" by simp
-                  then show ?thesis by meson
-                qed
-                subgoal premises ps proof -
-                  from ps have "(Contract.Pay accId payee token val continueContract, state, env,
-                                initialWarnings, initialPayments) \<rightarrow>
-                               (continueContract, state\<lparr>accounts := finalAccs\<rparr>, env,
-                                initialWarnings @ [ReduceNoWarning], initialPayments @ [payment])" by simp
-                  then show ?thesis by meson
-                qed
-                done
-            qed
-            done
-        qed
-        subgoal premises ps proof -
-          from ps have "min bal (evalValue env state val) = evalValue env state val" by simp
-          then show ?thesis using ps apply auto
-            subgoal premises ps proof (cases "giveMoney payee token (evalValue env state val) (MList.insert (accId, token) (bal - (evalValue env state val)) (accounts state))")
-              case (Pair reduceEffect finalAccs)
-              moreover from ps calculation have "(Contract.Pay accId payee token val continueContract, state, env,
-                                  initialWarnings, initialPayments) \<rightarrow>
-                                 (continueContract, state\<lparr>accounts := finalAccs\<rparr>, env,
-                                  initialWarnings @ [ReduceNoWarning], initialPayments @ [payment])" by auto
-              (*used calculation by auto before elimination rules*)
-              then show ?thesis using ps by (auto, meson)
-            qed
-            done
-        qed
-        done
+      case (Party external)
+      have 11: "newState= prevState\<lparr>accounts := accsWithoutSrc\<rparr>"
+        using assms Pay_ReduceWithPayment(1) 
+        apply (simp only: reduceContractStep.simps)
+        apply (simp only: Let_def)
+        apply (simp only: False)
+        apply (simp only: if_False)
+        apply (simp only: giveMoney.simps)
+        apply (simp only: Let_def)
+        apply (simp only: Party)
+        apply (simp only: Payee.case)
+        using "0"(1) "0"(2) "0"(3) "0"(4) by force
+ 
+      thm  PayExternal[of env prevState val moneyToPay srcAccId token availableSrcMoney paidMoney external payee accsWithoutSrc newCont prevWarnings prevPayments]      
+      show ?thesis 
+        apply (subst 11)
+        apply (subst Pay_ReduceWithPayment)
+        apply (subst 9)
+        apply (subst 8)
+        apply (subst 7)
+        apply (subst effectAsPaymentList.simps)
+        apply (subst PayExternal[of env prevState val moneyToPay srcAccId token availableSrcMoney paidMoney external payee accsWithoutSrc newCont prevWarnings prevPayments])
+        using 0 5 Party by auto
     qed
-    done
-*)
+  qed
+
 
 next
   case (When_ReduceNoPayment x41 timeout x43)

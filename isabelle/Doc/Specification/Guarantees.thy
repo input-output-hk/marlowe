@@ -25,9 +25,9 @@ theories and files to access the full definitions.\<close>
 section \<open>Positive Accounts\<close>
 
 text \<open>The Marlowe State represents the \<^emph>\<open>accounts\<close>, \<^emph>\<open>choices\<close> and \<^emph>\<open>boundValues\<close> Maps as
-associative lists \secref{sec:state}. While we make proofs in Isabelle, we often need to
- assert that two Maps are equal, and with the list representation, this means that the 
-maps should be in the same order and without duplicate keys. To ensure this, we have the following helper located 
+associative lists \secref{sec:state}. As part of Isabelle proofs, we often need to
+ assert that two Maps are equal and, with the list representation, this requires that the 
+maps should be in the same order and have no duplicate keys. To ensure this, we have the following helper function located 
 in the MList.thy theory\<close>
 
 text \<open>
@@ -53,7 +53,7 @@ text \<open>The function and lemma are located in \<^emph>\<open>PositiveAccount
 section \<open>Finite contracts\label{sec:finite-contracts}\<close>
 
 text \<open>
-All contracts are finite and will end at a particular time. We can use the following function
+All contracts are finite and have an expiration time. We can use the following function
 (located in Semantics.thy) to see what that time is\<close>
 
 (* We use a hardcoded type as aliases get expanded *)
@@ -62,9 +62,12 @@ text \<open>
 
 text 
 \<open>
-The Blockchain doesn't have the notion of a cronjob, so it can't refund participants
-after the contract timeouts on its own. Instead we can guarantee that computing a transaction
-without inputs with a validity interval that starts after the max time will always succeed 
+Contracts in most blockchains (including Cardano) need to be triggered by a transaction in order
+to progress. Because of this, they can't automatically refund participants
+after the contract timeouts on its own. Instead, after it has expired, the contract will not accept any
+more inputs, it will only accept a transaction with no inputs, and that transaction will trigger the refunds
+if any and close the contract. To ensure this, we prove that a transaction with no inputs with a
+validity interval that starts after the max time will always succeed
 \<close>
 
 text \<open>\<^bold>\<open>corollary\<close> \<^emph>\<open>timeOutTransaction\_does\_not\_fail\<close>: @{thm [display,names_short, margin=60] timeOutTransaction_does_not_fail}\<close>
@@ -77,7 +80,7 @@ text \<open>
 
 text \<open>\<^bold>\<open>theorem\<close> \<^emph>\<open>timedOutTransaction\_closes\_contract\<close>:@{thm [display,names_short, margin=60] timedOutTransaction_closes_contract}\<close>
 
-text \<open>The helper and lemmas are located in \<^emph>\<open>Timeout.thy\<close>.\<close>
+text \<open>The helper function and lemmas are located in \<^emph>\<open>Timeout.thy\<close>.\<close>
 
 
 subsection \<open>Transaction Bound\label{sec:transaction-bound}\<close>
@@ -95,7 +98,7 @@ exceed this value\<close>
 
 text \<open>\<^bold>\<open>lemma\<close> \<^emph>\<open>playTrace\_only\_accepts\_maxTransactionsInitialState\<close>: @{thm  [display,names_short, margin=60] playTrace_only_accepts_maxTransactionsInitialState}\<close>
 
-text \<open>The helper and lemma are located in \<^emph>\<open>TransactionBound.thy\<close>.\<close>
+text \<open>The helper function and lemma are located in \<^emph>\<open>TransactionBound.thy\<close>.\<close>
 
 subsection "Close is safe"
 text \<open>Computing a transaction on a Closed contract doesn't produce any warnings \<close>
@@ -123,9 +126,9 @@ text \<open>
 \<^item> assetsInState :: @{typeof assetsInState}
 \<close>
 
-text \<open>These functions extracts the \<^emph>\<open>amount\<close> of \<^emph>\<open>token\<close> available in different 
-structures. We store this information in a new type called \<^emph>\<open>Assets\<close>, that allow us 
-to do addition and subtraction keeping the token information \<^footnote>\<open>The Assets type is located
+text \<open>These functions extract the \<^emph>\<open>amount\<close>s of each \<^emph>\<open>token\<close> available in different 
+structures. We store this information in a new type called \<^emph>\<open>Assets\<close>, that allows us 
+to conveniently perform arithmetic operations on sets of tokens of different types, while maintaining the separation of information regarding the quantity of each individual type of token in the set \<^footnote>\<open>The Assets type is located
 in MultiAssets.thy, the functions and theorem are in AssetPreservation.thy\<close>.\<close>
 
 text \<open>
@@ -144,8 +147,8 @@ part of the blockchain, preserving assets in its current state.\<close>
 subsection \<open>Refund after timeout\<close>
 
 text \<open>
-In section \secref{sec:finite-contracts} we proved that there is a maximum time that 
-allows any participant to create an empty transaction that will close the contract 
+In section \secref{sec:finite-contracts}, we proved that there is a maximum time after 
+which any participant can create an empty transaction that will close the contract 
 successfully.
 \<close>
 
@@ -159,7 +162,8 @@ section \<open>Quiescent\<close>
 
 text \<open>
 
-A contract is quiescent iff it is terminated or is awaiting an external Input \secref{sec:Quiescent}.
+A contract is quiescent iff it is closed and has empty accounts or is awaiting an external
+Input \secref{sec:Quiescent}.
 If calling \<^emph>\<open>computeTransaction\<close> produces a valid \<^emph>\<open>TransactionOutput\<close>, then the continuation
 is quiescent.
 \<close>

@@ -76,7 +76,7 @@ text "We define the unmerkleize function for contract and case together as they 
 Each function takes as input a map of continuations and the merkleized contract or case, and may return
  the unmerkleized version if all the continuations are present in the map
 "
-term those
+
 function (sequential) unmerkleize :: "MerkleMap \<Rightarrow> MContract \<Rightarrow> Contract option"
 and unmerkleizeCase :: "MerkleMap \<Rightarrow> MCase \<Rightarrow> Case option"
 where

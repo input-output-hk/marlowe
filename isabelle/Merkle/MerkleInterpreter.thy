@@ -1,6 +1,6 @@
 theory MerkleInterpreter
 
-imports MerkleTypes Core.Semantics Unmerkleize
+imports MerkleTypes Core.Semantics Unmerkleize 
 begin
 
 section "Interpreter"
@@ -120,6 +120,10 @@ termination reductionMLoop
   apply (relation "measure (\<lambda>(_, (_, (state, (contract, _)))) . evalSize state contract)")  
   using reduceMContractStepReducesSize by auto
 
+
+(* This lemma allows to work with the reductionLoop.induct theorem with a new name for the induction
+   case.*)
+lemmas reductionMLoop_induct = reductionMLoop.induct[case_names "reductionMLoopInduction"]
 
 fun reduceMContractUntilQuiescent :: "Environment \<Rightarrow> State \<Rightarrow> MContract \<Rightarrow> ReduceMResult" where
 "reduceMContractUntilQuiescent env state contract = reductionMLoop False env state contract [] []"
@@ -275,6 +279,7 @@ proof (cases "contM")
     using assms by auto
 
   show ?thesis
+    
   proof (cases "refundOne (accounts st)")
     case None
     with assms show ?thesis 
@@ -326,4 +331,114 @@ next
     using assms by auto
   then show ?thesis by auto
 qed
+
+(* TODO: rename and simplify *)
+lemma yy:
+  assumes "reduceMContractStep env st contM \<equiv>\<^sub>s\<^sub>r reduceContractStep env st cont" 
+    and "reduceMContractStep env st contM = NotReduced"
+  shows "reduceContractStep env st cont = ReduceStepResult.NotReduced"
+  using assms 
+  by (metis (no_types, lifting) MerkleInterpreter.ReduceStepMResult.simps(9) Product_Type.old.prod.case Semantics.ReduceStepResult.exhaust Semantics.ReduceStepResult.simps(10) Semantics.ReduceStepResult.simps(8) reduceStepResult_equiv_def)
+
+lemma yy2:
+  assumes "reduceMContractStep env st contM \<equiv>\<^sub>s\<^sub>r reduceContractStep env st cont" 
+    and "reduceMContractStep env st contM = AmbiguousTimeIntervalReductionError"
+  shows "reduceContractStep env st cont = ReduceStepResult.AmbiguousTimeIntervalReductionError"   
+proof (cases "reduceMContractStep env st contM")
+  case (Reduced _ _ _ _)
+  then show ?thesis using assms by simp
+next
+  case NotReduced
+  then show ?thesis 
+   using assms MerkleInterpreter.ReduceStepMResult.simps(7) by presburger
+next
+  case AmbiguousTimeIntervalReductionError
+  then show ?thesis by (metis (no_types, lifting) assms MerkleInterpreter.ReduceStepMResult.simps(10) Product_Type.old.prod.case Semantics.ReduceStepResult.exhaust Semantics.ReduceStepResult.simps(8) Semantics.ReduceStepResult.simps(9) reduceStepResult_equiv_def)
+qed
+
+
+lemma yy3:
+  assumes "reduceMContractStep env st contM \<equiv>\<^sub>s\<^sub>r reduceContractStep env st cont" 
+    and "reduceMContractStep env st contM = Reduced warn eff redState redContM"
+  shows "\<exists> redCont. reduceContractStep env st cont = ReduceStepResult.Reduced warn eff redState redCont"   
+  using assms
+  by (smt (verit, best) MerkleInterpreter.ReduceStepMResult.simps(8) Product_Type.old.prod.case Semantics.ReduceStepResult.exhaust Semantics.ReduceStepResult.simps(10) Semantics.ReduceStepResult.simps(8) Semantics.ReduceStepResult.simps(9) reduceStepResult_equiv_def)
+
+subsection "Reduce contract until quiescent" 
+definition reduceResult_equiv :: "ReduceMResult \<Rightarrow> ReduceResult \<Rightarrow> bool" (infixl "\<equiv>\<^sub>r\<^sub>r" 50)
+  where "resM \<equiv>\<^sub>r\<^sub>r res \<longleftrightarrow> (case (resM, res) of 
+   (ContractQuiescent reducedM warnM payM stateM contM, Semantics.ContractQuiescent reduced warn pay state cont)
+     \<Rightarrow> reducedM = reduced \<and> warnM = warn \<and> payM = pay \<and> stateM = state
+   |(RRAmbiguousTimeIntervalError, Semantics.RRAmbiguousTimeIntervalError) \<Rightarrow> True
+   |(_, _) \<Rightarrow> False)"
+
+declare reduceResult_equiv_def [simp]
+
+lemma merkle_reductionLoop_equiv :
+  assumes "unmerkleize continuations contM = Some cont" 
+  shows "reductionMLoop reduced env state contM warns payments \<equiv>\<^sub>r\<^sub>r reductionLoop reduced env state cont warns payments"
+using assms proof (induction reduced env state contM warns payments arbitrary: cont rule:reductionMLoop_induct)
+   case (reductionMLoopInduction reduced env state indContM indWarns indPays)
+   then show ?case 
+   proof (cases "reduceMContractStep env state indContM")
+     case (Reduced rWarn rEff rState rContM)
+     then show ?thesis
+       
+         (*   apply (simp only: reductionMLoop.simps)
+       apply (simp only: NotReduced )
+       apply (simp only: ReduceStepMResult.case )
+       apply (simp only: reductionLoop.simps)     
+       apply (simp only: 0)
+      
+       apply auto
+       sorry*)
+       
+       sorry
+   next
+     case [simp]: NotReduced
+
+     have "reduceContractStep env state cont = ReduceStepResult.NotReduced"
+       using NotReduced local.reductionMLoopInduction.prems merkle_reduceContractStep_equiv yy by blast
+
+     then show ?thesis       
+        by auto
+   next
+     case [simp]: AmbiguousTimeIntervalReductionError
+     have 0 [simp]:"reduceContractStep env state cont = ReduceStepResult.AmbiguousTimeIntervalReductionError"       
+       by (meson AmbiguousTimeIntervalReductionError local.reductionMLoopInduction.prems merkle_reduceContractStep_equiv yy2)
+     then show ?thesis by auto              
+   qed       
+qed
+(*
+proof (cases "contM")
+  case [simp]: Close
+  have 0 [simp]: "cont = Contract.Close"    
+    using assms by auto
+  
+  then show ?thesis 
+    apply (simp only: 0 Close)
+    apply (simp only: reductionMLoop.simps reductionLoop.simps)
+    sledgehammer
+    apply (cases "refundOne (accounts state)")
+     apply auto[1]
+    apply (cases "reduceMContractStep env state Close")
+    apply auto
+    sorry
+next
+  case (Pay x21 x22 x23 x24 x25)
+  then show ?thesis sorry
+next
+  case (If x31 x32 x33)
+  then show ?thesis sorry
+next
+  case (When x41 x42 x43)
+  then show ?thesis sorry
+next
+  case (Let x51 x52 x53)
+  then show ?thesis sorry
+next
+  case (Assert x61 x62)
+  then show ?thesis sorry
+qed
+*)
 end

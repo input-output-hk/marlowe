@@ -64,9 +64,9 @@ text
 \<open>
 Contracts in most blockchains (including Cardano) need to be triggered by a transaction in order
 to progress. Because of this, they can't automatically refund participants
-after the contract timeouts on its own. Instead, after it has expired, the contract will not accept any
-more inputs, it will only accept a transaction with no inputs, and that transaction will trigger the refunds
-if any and close the contract. To ensure this, we prove that a transaction with no inputs with a
+after the contract times out on its own. Instead, after it has expired, the contract will not accept any
+more inputs, it will only accept a transaction with no inputs, and that transaction will trigger the refunds,
+if any, and close the contract. To ensure this, we prove that a transaction with no inputs and a
 validity interval that starts after the max time will always succeed
 \<close>
 

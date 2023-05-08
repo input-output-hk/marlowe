@@ -964,8 +964,8 @@ fun isQuiescent :: "Contract \<Rightarrow> State \<Rightarrow> bool" where
 "isQuiescent _ _ = False"
 
 subsection \<open>Maximum time\<close>
-fun maxTimeContract :: "Contract \<Rightarrow> int"
-and maxTimeCase :: "Case \<Rightarrow> int" where
+fun maxTimeContract :: "Contract \<Rightarrow> POSIXTime"
+and maxTimeCase :: "Case \<Rightarrow> POSIXTime" where
 "maxTimeContract Close = 0" |
 "maxTimeContract (Pay _ _ _ _ contract) = maxTimeContract contract" |
 "maxTimeContract (If _ contractTrue contractFalse) = max (maxTimeContract contractTrue) (maxTimeContract contractFalse)" |

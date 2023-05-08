@@ -38,7 +38,7 @@ The audit report's main and high-severity concerns for the Isabelle Proofs were:
 - 2.1.6 Missing description of Merkleization
 - 2.1.4 Inaccurate formulation of Money preservation
 
-We didn't mention the merkleization in the specification document as we thought of it as an implementation detail. This does lessen the applicability of the Isabelle proofs to the different implementations (marlowe-cardano, purescript-marlowe, etc). To check that an implementation is compliant to the specification we use the `spec-test` tool, which uses property based tests to check that a custom implementation behaves equally to the Isabelle implementation. Without the proper formalization, the tool can only test for the non-merkleized cases. In practice this gives us confidence that the merkleized interpreter works the same for non-merkleized cases. To test the correctness of merkleized cases, the marlowe-cardano repository has specific tests. The Merkleization formalization will be introduced in a future version of the specification, the initial formulation started in [PR-171](https://github.com/input-output-hk/marlowe/pull/171).
+We didn't mention the merkleization in the specification document as we thought of it as an implementation detail. This does lessen the applicability of the Isabelle proofs to the different implementations (marlowe-cardano, purescript-marlowe, etc). To check that an implementation is compliant with the specification we use the `spec-test` tool, which uses property based tests to check that a custom implementation behaves equally to the Isabelle implementation. Without the proper formalization, the tool can only test for the non-merkleized cases. In practice this gives us confidence that the merkleized interpreter works the same for non-merkleized cases. To test the correctness of merkleized cases, the marlowe-cardano repository has specific tests. The Merkleization formalization will be introduced in a future version of the specification, the initial formulation started in [PR-171](https://github.com/input-output-hk/marlowe/pull/171).
 
 The Money preservation theory was only taking into account the amount of assets and not the type. This meant that the proof wasn't considering a case were a contract could receive `20 ada`, `15 djed` and pay back `20 djed` and `15 ada`. We added a new MultiAssets type and refactored the Isabelle code (without modifying the interpreter) to prove that the Assets are preserved.
 
@@ -125,9 +125,9 @@ Although this `Eq` instance is not used by the Marlowe validators (so it does no
 >
 > Money preservation is a property stated with an equality. The left hand side is the sum of the deposits done by a list of transactions. The right hand side of the equality is the sum of all the payments done in the same list of transactions. Each sum, in turn, is represented as a single integer which aggregates the amounts of the various payments and deposits, irrespective of what currencies correspond to these amounts.
 
-To address this, a new `MultiAssets.thy` theory was created. This theory defines a new type that ties together the number of tokens and the type of token, and it implements some type classes to be able to work with normal addition and substraction. Also the MoneyPreservation was refactored into AssetsPreservation, addressing issue 2.1.4 among others.
+To address this, a new `MultiAssets.thy` theory was created. This theory defines a new type that ties together the number of tokens and the type of token, and it implements some type classes to be able to work with normal addition and substraction. Also, the MoneyPreservation was refactored into AssetsPreservation, addressing issue 2.1.4 among others.
 
-These changes can be found on [PR-161](https://github.com/input-output-hk/marlowe/pull/161)
+These changes can be found in [PR-161](https://github.com/input-output-hk/marlowe/pull/161)
 
 
 ### 2.1.5 Insufficient documentation of Money preservation *(Severity: Medium)*
@@ -329,7 +329,7 @@ This type was properly documented in [PR-182](https://github.com/input-output-hk
 >
 > The specification changes from using Isabelle to using Haskell henceforth. Making the reader aware of the criteria for the language change would help maintaining the document.
 
-The cause of this problem was that initially we had the Isabelle code separated from the documentation generation and we coulnd't find a way to display the Isabelle code, so we showed the exported Haskell instead. We agree that it is confusing so we refactored to a literate programming style in [PR-182](https://github.com/input-output-hk/marlowe/pull/182)
+The cause of this problem was that initially we had the Isabelle code separated from the documentation generation and we couldn't find a way to display the Isabelle code, so we showed the exported Haskell instead. We agree that it is confusing so we refactored to a literate programming style in [PR-182](https://github.com/input-output-hk/marlowe/pull/182)
 
 
 ### 2.2.8 Repeated definition of `IntervalResult` *(Severity: Low)*
@@ -411,7 +411,7 @@ The way we document evalValue was modified in [PR-182](https://github.com/input-
 >
 > On page 25 formula $$c \neq 0 \Rightarrow c \mathbin{∗} a \mathbin{\mathrm{div}} (c \mathbin{∗} b) = a \mathbin{\mathrm{div}} b$$ needs additional parentheses around the term $c \mathbin{∗} a$, otherwise it can be parsed as $$c \neq 0 \Rightarrow c \mathbin{∗} (a \mathbin{\mathrm{div}} (c \mathbin{∗} b)) = a \mathbin{\mathrm{div}} b$$ which does not hold (Counter-example: $c=2, a=3, b=2$). The lemma `divMultiply` in the file `Semantics.thy` does use extra parentheses around $c \mathbin{∗} a$.
 
-This lemma was removed from the PDF specification and replaced with lemmas that uses `evalValue` instead.
+This lemma was removed from the PDF specification and replaced with lemmas that use `evalValue` instead.
 
 ### 2.2.16 Unclear division explanation *(Severity: Low)*
 
@@ -442,7 +442,7 @@ The way we document evalValue was modified in [PR-182](https://github.com/input-
 >
 > Not all lemmas about `evalValue` are listed in the specification. The absent lemmas include `evalDoubleNegValue`, `evalMulValue`, `evalSubValue`, and all division lemmas.
 
-This section was rewritten an only the Division lemmas are now present as they are the most relevant ones.
+This section was rewritten and only the Division lemmas are now present as they are the most relevant ones.
 
 
 ### 2.2.19 Typo in **Use Value** case of `evalValue` *(Severity: Low)*
@@ -451,7 +451,7 @@ This section was rewritten an only the Division lemmas are now present as they a
 >
 > The **Use Value** case mentions `TimeIntervalEnd` instead of `UseValue`.
 
-This section was rewritten and the issue was fixed
+This section was [rewritten](https://github.com/input-output-hk/marlowe/pull/182) and the issue was fixed
 
 
 ### 2.2.20 Unexplained parameters of `playTrace` *(Severity: Low)*
@@ -469,7 +469,7 @@ The function `playTrace` was documented in [PR-182](https://github.com/input-out
 >
 > The first parameter of `playTrace` in the specification is `int`, while it is `POSIXTime` in the code. Even though the latter is an alias for the former, it is beneficial to use the `POSIXTime` name both for consistency and readability.
 
-This happened because we were using a type alias, which gets fully expanded when being referenced by the documentation.  [PR-182](https://github.com/input-output-hk/marlowe/pull/182) address this by making the whole theory in literal programming mode.
+This happened because we were using a type alias, which gets fully expanded when being referenced by the documentation. [PR-182](https://github.com/input-output-hk/marlowe/pull/182) addresses this by making the whole theory in literal programming mode.
 
 
 ### 2.2.22 Money preservation on failing transactions not specified *(Severity: Low)*
@@ -498,7 +498,7 @@ The proposed definition is simpler and it is likely to be implemented in the fut
 >
 > The `allAccountsPositive` function is defined differently in the specification and in the Isabelle code, although both definitions show the same behavior. These definitions need to be consolidated.
 
-The definition in the specification is the exported haskell code of the Isabelle code. This is a limitation that Isabelle has when importing code from other theories. A possible solution is to change the Accounts positive theory to be literal programming.
+The definition in the specification is the exported Haskell code of the Isabelle code. This is a limitation that Isabelle has when importing code from other theories. A possible solution is to change the Accounts positive theory to be literal programming.
 
 
 ### 2.2.25 Misleading or incorrect formula for contract not holding funds *(Severity: Low)*
@@ -525,7 +525,7 @@ This was addressed in [PR-168](https://github.com/input-output-hk/marlowe/pull/1
 >
 > The function `isClosedAndEmpty` needs to be explained.
 
-In [PR-186](https://github.com/input-output-hk/marlowe/pull/186) we add a small explanation, in the future we'll probably expand on this by refactoring the guarantees as literate programming.
+In [PR-186](https://github.com/input-output-hk/marlowe/pull/186) we added a small explanation; in the future, we'll probably expand on this by refactoring the guarantees as literate programming.
 
 
 ### 2.2.28 Top-down definitions *(Severity: Low)*
@@ -564,7 +564,7 @@ In [PR-186](https://github.com/input-output-hk/marlowe/pull/186) we added the na
 > -   in `MoneyPreservation.thy`, lemmas `reduceContractStep_preserves_money` and\ `reductionLoop_preserves_money`
 > -   in `SingleInputTransactions.thy`, lemmas `applyAllInputsPrefix_aux`,\ `computeTransactionIterative`, and `computeTransactionStepEquivalence_error`
 
-We agree with this observation. New lemmas and theories are proven with this recommendation in mind and some theories were refactored (like the Asset preservation). It will take some time until all theories are in this format.
+We agree with this observation. New lemmas and theories are proven with this recommendation in mind, and some theories were refactored (like the Asset preservation). It will take some time until all theories are in this format.
 
 
 ### 2.3.2 Long lines in lemmas *(Severity: Low)*
@@ -644,7 +644,7 @@ Same response as 2.3.1
 >
 > The proofs of the lemmas can be found in […].
 
-We agree that the proposed prove is easier, but the lemma will become obsolete once we replace the custom MList with
+We agree that the proposed proof is easier, but the lemma will become obsolete once we replace the custom MList with
 `HOL-Library/finiteMap`, which addresses other problems found in the report.
 
 
@@ -717,7 +717,7 @@ The valid and positive preservation is needed in lower-level functions so that h
 >
 > This lemma does not express its goal concisely, as it makes no mention of `reduceContractStep` in the formulation. Changing the first assumption to $\texttt{reduceContractStep}\ \mathit{env}\ \mathit{sta}\ (\texttt{Pay}\ \mathit{x21}\ \mathit{x22}\ \mathit{tok}\ \mathit{x23}\ \mathit{x24})$ makes more explicit in which contexts this lemma can be useful. Modifying this assumption requires an additional `apply simp` to be added to the proof (before line 30) for the lemma to go through. Further, an additional `apply simp` will need to be added in lemmas `reduceContractStepIsQuiescent` (before line 44) and `timedOutReduce_only_quiescent_in_close` (`Timeout.thy`, before line 128) as well.
 
-We agree on this observation and it will addressed in a future refactor of the theory file.
+We agree on this observation and it will be addressed in a future refactor of the theory file.
 
 ### 2.3.13 Misleading lemma names *(Severity: Low)*
 
@@ -741,7 +741,7 @@ We agree on these observations and they will likely be addressed when we refacto
 >
 > The boolean variable name `reduce` would be better named `reduced` as it is signifying that the contract has been reduced.
 
-We agree on this observation and it will addressed in a future refactor of the theory file.
+We agree on this observation and it will be addressed in a future refactor of the theory file.
 
 ### 2.3.15 Undescriptive name `beforeApplyAllLoopIsUseless` *(Severity: Low)*
 
@@ -770,7 +770,7 @@ We agree on this observation and it will addressed in a future refactor of the t
 
 * Lemma `transferMoneyBetweenAccounts_preserves_aux` was removed in [PR-161](https://github.com/input-output-hk/marlowe/pull/161)
 * Lemma `reduceOne_onlyIfNonEmptyState`, `valid_state_valid_choices` were removed in [PR-168](https://github.com/input-output-hk/marlowe/pull/168)
-* Lemma `reduceContractUntilQuiescent_ifDifferentReduced` was promoted to a theorem with an explanation in  [PR-168](https://github.com/input-output-hk/marlowe/pull/168)
+* Lemma `reduceContractUntilQuiescent_ifDifferentReduced` was promoted to a theorem with an explanation in [PR-168](https://github.com/input-output-hk/marlowe/pull/168)
 * Lemma `positiveMoneyInAccountOrNoAccount_gtZero_preservation` was removed in favour of `positiveMoneyInAccountOrNoAccount_gtZero_preservation` in [PR-168](https://github.com/input-output-hk/marlowe/pull/168)
 
 
@@ -912,7 +912,7 @@ These issues were resolved in [PR-168](https://github.com/input-output-hk/marlow
 >
 > The lines mentioned in these lemmas display the resulting constructor before the function application, which differs from the general style in the rest of the codebase.
 
-These observation regarding readability will be addressed when we refactor the theory.
+These observations regarding readability will be addressed when we refactor the theory.
 
 
 ### 2.3.24 Unsimplified boolean formulas *(Severity: Low)*
@@ -953,7 +953,7 @@ This observation regarding readability will be addressed when we refactor the th
 >
 > This lemma seems like the main result of this file. Assuming it is an important result, we recommend writing it as a `theorem` rather than a `lemma`.
 
-We agree on the observation, will likely promote to theorem in the future
+We agree on the observation, and will likely promote it to theorem in the future.
 
 ### 2.3.29 Inconsistent style with assumptions *(Severity: Low)*
 
@@ -978,7 +978,7 @@ This observation regarding readability will be addressed when we refactor the th
 >
 > This lemma on its own is very specific, and is only used in `reductionLoop_preserves_valid_state`. If possible, we recommend this lemma to be generalized or broken down into smaller lemmas, in order to present the arguments to the reader in smaller pieces.
 
-We agree on this observation and it will addressed in a future refactor of the theory file.
+We agree on this observation and it will be addressed in a future refactor of the theory file.
 
 ### 2.3.32 `playTrace_preserves_valid_state` not written as `theorem` *(Severity: Low)*
 
@@ -1033,7 +1033,7 @@ The lemma was promoted to a theorem in [PR-168](https://github.com/input-output-
 >
 > The assumption `$$\begin{aligned} \mathit{newState} = \llparenthesis &\mathit{accounts} = \mathit{newAccounts}, \mathit{choices} = \mathit{newChoices}, \\ &\mathit{boundValues} = \mathit{newBoundValues}, \mathit{minTime} = \mathit{newMinTime} \rrparenthesis\end{aligned}$$` is unnecessary.
 
-We removed the unnecessary assumptions in [PR-168](https://github.com/input-output-hk/marlowe/pull/168)
+We removed the unnecessary assumptions in [PR-168](https://github.com/input-output-hk/marlowe/pull/168).
 
 ## 2.4 Isabelle implementation
 
@@ -1043,7 +1043,7 @@ We removed the unnecessary assumptions in [PR-168](https://github.com/input-outp
 >
 > The $\texttt{cont}$ variable introduced by the pattern match shadows another $\texttt{cont}$ variable, coming from the pattern match of an outer case expression, making the function harder to follow while also making it more error-prone to future changes.
 
-The variable was renamed in [PR-168](https://github.com/input-output-hk/marlowe/pull/168)
+The variable was renamed in [PR-168](https://github.com/input-output-hk/marlowe/pull/168).
 
 ### 2.4.2 Undescriptive name `moneyInPayment` *(Severity: Low)*
 
@@ -1051,7 +1051,7 @@ The variable was renamed in [PR-168](https://github.com/input-output-hk/marlowe/
 >
 > The name of the function can be more precise. Perhaps `moneyInPaymentToParty` or `moneyInExternalPayment` would work.
 
-The theory was refactored into AssetsPreservation and the function is now called `assetsInExternalPayment`
+The theory was refactored into AssetsPreservation and the function is now called `assetsInExternalPayment`.
 
 
 ### 2.4.3 Typo in section name *(Severity: Low)*
@@ -1076,7 +1076,7 @@ The typo was fixed in [PR-168](https://github.com/input-output-hk/marlowe/pull/1
 >
 > It is unclear what the use is for multiple formulations (and lemmas about) positive accounts. The first formulation (with the theorems `playTraceAux_gtZero` and `playTrace_gtZero`) is not used in any other modules but the alternative formulation is used instead. If both formulations are relevant, then it should be explained why.
 
-We agree that it is confusing and will be refactored in the future.
+We agree that it is confusing, and it will be refactored in the future.
 
 ### 2.4.6 Variable name discrepancy in `reductionLoop` *(Severity: Low)*
 
@@ -1130,7 +1130,7 @@ We agree with the observation and it will be addressed in a future refactor.
 >
 > This function should be renamed or repurposed. If renamed, `allAreSingleInput` more accurately reflects the meaning of the function. If repurposed, it should check that a single transaction has a single input, and `all isSingleInput` can be used to express the current behavior.
 
-We agree on the observations, for the moment some simple refactor and comments were added as part of
+We agree on the observations, for the moment some simple refactoring and comments were added as part of
 [PR-180](https://github.com/input-output-hk/marlowe/pull/180/files#diff-638dc578b752590b5f2bace45f1e1ae9e522351f62056e6f92aa272424657b03). Further refactor and optional renaming might happen in the future.
 
 
@@ -1140,7 +1140,7 @@ We agree on the observations, for the moment some simple refactor and comments w
 >
 > This function has a parameter of type `State` that is completely unused and can be removed.
 
-We agree on this observation and it will addressed in a future refactor of the theory file.
+We agree on this observation and it will addressed in a future refactoring of the theory file.
 
 ### 2.4.12 Duplicated `isValidInterval` function *(Severity: Low)*
 

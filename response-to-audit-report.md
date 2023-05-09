@@ -364,7 +364,7 @@ We renamed as suggested in [PR-182](https://github.com/input-output-hk/marlowe/p
 >
 > This function is confusing in that it takes the account identifier of the paying account which is not used for anything other than filling a field in the returned value.
 
-This function is confusing, we will likely to remove it in a future release.
+This function is confusing, we will likely remove it in a future release.
 
 
 ### 2.2.12 Redundant evaluation in `addMoneyToAccount` *(Severity: Low)*

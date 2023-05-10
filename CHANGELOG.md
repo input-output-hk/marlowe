@@ -1,6 +1,6 @@
 # Changelog
 
-# XXX 2023 - Marlowe specification version 3, (RC2 or final?)
+# May 2023 - Marlowe specification version 3, RC2
 
 ## Specification
 - [PLT-4195](https://github.com/input-output-hk/marlowe/pull/161) - Change MoneyPreservation for AssetPreservation

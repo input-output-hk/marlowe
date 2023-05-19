@@ -48,13 +48,13 @@ section \<open>The Marlowe Model\<close>
 
 text \<open>
 Marlowe \<^term>\<open>Contract\<close>s describe a series of sequential steps. For example, the contract
-@{term "Pay a p t v c"} says ``make a payment of @{term v} number of tokens @{term t} to the party
+@{term "Pay a p t v c"} means ``make a payment of @{term v} number of tokens @{term t} to the party
 @{term p} from the account @{term a}, and then follow the contract @{term c}''. We call @{term c} the
-continuation of the contract. The \<^term>\<open>Contract\<close> has a tree structure with \<^term>\<open>Close\<close>
+continuation of the contract. Strictly speaking the \<^term>\<open>Contract\<close> builds a tree structure with \<^term>\<open>Close\<close>
 \<^term>\<open>Contract\<close>s in the leafs and the branches represent all possible paths of a \<^term>\<open>Contract\<close>.\<close>
 
 subsection \<open>Data types\<close>
-text \<open>The \<^term>\<open>Value\<close>s and \<^term>\<open>Observation\<close>s \secref{sec:values-and-observations} are restricted to work with
+text \<open>The \<^term>\<open>Value\<close>s and \<^term>\<open>Observation\<close>s \secref{sec:values-and-observations} are restricted to 
 integers and booleans respectively. There is no native representation of decimal numbers, so in order to
 represent currencies it is recommended to work with fractional units (like cents). For example, amounts of
 Ada are represented in Lovelaces, because a Lovelace represents a one-millionth of an Ada. Dates are only
@@ -71,7 +71,7 @@ subsection \<open>Timeouts and Contingencies\<close>
 text \<open>
 The blockchain can't force a participant to make a transaction. Therefore in order to avoid having a participant blocking
 the progression of a contract, there is a \<^term>\<open>Timeout\<close> for applying \<^term>\<open>Input\<close>s together with a continuation
-contract in case of a timeout. For each step, we can know in advance how long it can last, and therefore know as well the
+contract in case of a timeout. For each step, we know in advance how long it can last, and therefore know as well the
 maximum duration and the number of transactions of a contract.
 \<close>
 
@@ -81,7 +81,7 @@ text \<open>
 A contract explicitly defines the participants. The number of participants is therefore fixed for the duration
 of the contract, but there are mechanisms to trade participation \secref{sec:participants-roles-and-addresses}.\<close>
 
-text \<open>Each participant has an internal account that allows the contract to keep track of the owner of the
+text \<open>Each participant has an internal account that allows the contract to keep track of ownership of
  assets \secref{sec:internal-accounts}. Whenever a \<^term>\<open>Party\<close> deposits an asset into a contract,
 they need to assign the owner of that asset. Payments can be made to transfer ownership
 or to take the asset out of the contract. When the contract is closed, an owner of an asset can redeem
@@ -100,7 +100,7 @@ subsection \<open>Core and Extended\<close>
 text \<open>
 The set of types and functions that conforms to the semantics executed on the blockchain is called
  \<^emph>\<open>Marlowe Core\<close>, and it's formalized in chapter \secref{sec:marlowe-core}. To improve usability, there
-is another set of types and functions called \<^emph>\<open>Marlowe Extended\<close> that compile to core.
+is another set of types and functions called \<^emph>\<open>Marlowe Extended\<close> that compiles to core.
 \<close>
 text \<open>In the first version of the extended language, the only modification to the DSL is the addition
  of template parameters. These allows an initial form of contract re-utilization, allowing to instantiate

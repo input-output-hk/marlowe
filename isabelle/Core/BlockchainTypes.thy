@@ -1,5 +1,5 @@
 (*<*)
-\<comment> \<open>This module defines the types we abstract from Blockchain specific implementation\<close>
+\<comment> \<open>This module defines the types we abstract from blockchain specific implementation\<close>
 theory BlockchainTypes
 imports Main Util.ByteString
 begin
@@ -8,7 +8,7 @@ begin
 section \<open>Blockchain agnostic \label{sec:blockchain-agnostic}\<close>
 
 text \<open>
-Marlowe is currently implemented on the Cardano Blockchain, but it is designed to be Blockchain agnostic.
+Marlowe is currently implemented on the Cardano blockchain, but it is designed to be blockchain agnostic.
 \<close>
 
 text \<open>
@@ -18,7 +18,7 @@ Programs written in languages like Java and Python can be run on different archi
 \<close>
 
 text \<open>
-We make the following assumptions on the underlying Blockchain that allow Marlowe Semantics to serve
+We make the following assumptions on the underlying blockchain that allow Marlowe Semantics to serve
 as a common abstraction:
 \<close>
 

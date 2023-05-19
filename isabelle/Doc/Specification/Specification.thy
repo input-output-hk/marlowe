@@ -18,18 +18,21 @@ it's operational semantics are formalized in the Isabelle proof-assistant.
 text
 \<open>
 Marlowe has been inspired by financial contract languages popularised in the last decade by academics
-and enterprises such as LexiFi \<^footnote>\<open>\<^url>\<open>https://www.lexifi.com/\<close>\<close>, providing contract modelling
-software for the financial sector. When developing Marlowe, we have adapted these ideas to work on a blockchain \secref{sec:blockchain-agnostic}.
+and enterprises such as LexiFi \<^footnote>\<open>\<^url>\<open>https://www.lexifi.com/\<close>\<close>, that is providing contract modelling
+software for the financial sector.
+
 \<close>
 
 text
 \<open>
-With Marlowe we have a strong focus on operational semantics. Smart contracts are immutable, that means
-that the assets deposited into a contract will inevitably follow the contract logic.\<close>
+With Marlowe we have a strong focus on operational semantics, as the goal was to develop a language that
+can also run on a blockchain \secref{sec:blockchain-agnostic}.\<close>
 
-text \<open>To reduce the probability of not intended behaviour, the Marlowe DSL is designed with simplicity
-in mind. Without loops, recursion, or other features that general purposes smart-contract languages
-(E.g: Plutus, Solidity) have, it is easier to make certain claims. Each Marlowe contract can be
+text \<open>
+Smart contracts are immutable, that means that the assets deposited into a contract will inevitably follow
+the contract logic. In order to reduce the probability of not intended behaviour, the Marlowe DSL is designed
+with simplicity in mind. Without loops, recursion, or other features that general purposes smart-contract
+languages (E.g: Plutus, Solidity) have, it is easier to make certain claims. Each Marlowe contract can be
 reasoned with a static analyzer to avoid common pitfalls such as trying to Pay more money than
 available.\<close>
 
@@ -75,34 +78,34 @@ maximum duration and the number of transactions of a contract.
 subsection \<open>Participants, accounts and state\<close>
 
 text \<open>
-A contract defines explicitly the participants. The number of participants is therefore fixed for the duration
+A contract explicitly defines the participants. The number of participants is therefore fixed for the duration
 of the contract, but there are mechanisms to trade participation \secref{sec:participants-roles-and-addresses}.\<close>
 
-text \<open>Each participant has an internal account that allows the contract to define default owner for
- assets \secref{sec:internal-accounts}. Whenever a \<^term>\<open>Party\<close> deposits an asset in the contract,
-they need to decide the default owner of that asset. Payments can be made to transfer the default owner
-or to take the asset out of the contract. If the contract is closed, the default owner can redeem
-the assets available in their internal accounts.
+text \<open>Each participant has an internal account that allows the contract to keep track of the owner of the
+ assets \secref{sec:internal-accounts}. Whenever a \<^term>\<open>Party\<close> deposits an asset into a contract,
+they need to assign the owner of that asset. Payments can be made to transfer ownership
+or to take the asset out of the contract. When the contract is closed, an owner of an asset can redeem
+the available funds.
 \<close>
 
 text \<open>
 The accounts, choices, and variables are stored in the \<^term>\<open>State\<close> \secref{sec:state} and remain
 there until the contract is closed, and in the case of accounts and variables
-they are omitted for space efficiency if their value becomes 0.
+those are omitted for space efficiency if their value becomes 0.
 \<close>
 
 
 subsection \<open>Core and Extended\<close>
 
 text \<open>
-The set of types and functions that conform the semantics executed in the blockchain is called
+The set of types and functions that conforms to the semantics executed on the blockchain is called
  \<^emph>\<open>Marlowe Core\<close>, and it's formalized in chapter \secref{sec:marlowe-core}. To improve usability, there
-is another set of types and functions that compile to core, and it is called \<^emph>\<open>Marlowe Extended\<close>.
+is another set of types and functions called \<^emph>\<open>Marlowe Extended\<close> that compile to core.
 \<close>
 text \<open>In the first version of the extended language, the only modification to the DSL is the addition
- of template parameters. These allows an initial form of contract reutilization, allowing to instantiate
+ of template parameters. These allows an initial form of contract re-utilization, allowing to instantiate
 the same contract with different \<^term>\<open>Value\<close>s and \<^term>\<open>Timeout\<close>s. For the moment, the extended
- language is not formalized in this specification but it will be added in the future
+ language is not formalized in this specification but it will be added in the future.
 \<close>
 
 section \<open>Specification generation and nomenclature \label{sec:generation-nomenclature}\<close>
@@ -113,12 +116,12 @@ The code is written in a literate programming style and this document is generat
 This improves code documentation and lowers the probability of stale information.\<close>
 
 text \<open>
-As a drawback, the code/doc organization is more rigid. Isabelle require us to define code in a
-bottom-up approach, having to define first the dependencies and later the most complex structures.
+As a drawback, the code/doc organization is more rigid. Isabelle requires us to define code in a
+bottom-up approach, having to define first the dependencies and later the more complex structures.
 \<close>
 
-text \<open>The notation is closer to a Mathematical formula than a functional programming language. There are
-some configurations in the \<^emph>\<open>SpecificationLatexSugar\<close> theory file that makes the output be closer to code.
+text \<open>The notation is closer to a mathematical formula than a functional programming language. There are
+some configurations in the \<^emph>\<open>SpecificationLatexSugar\<close> theory file that help making the output be closer to code.
 \<close>
 
 

@@ -8,13 +8,8 @@ begin
 section \<open>Blockchain agnostic \label{sec:blockchain-agnostic}\<close>
 
 text \<open>
-Marlowe is currently implemented on the Cardano blockchain, but it is designed to be blockchain agnostic.
-\<close>
-
-text \<open>
-Programs written in languages like Java and Python can be run on different architectures, like amd64 or arm64, because they have
- interpreters and runtimes for them. In the same way, the Marlowe interpreter could be implemented to run on other blockchains,
- like Ethereum, Solana for example.
+The Marlowe language and interpreter are designed to be blockchain agnostic. There is also an
+implementation of the language and interpreter for the Cardano blockchain.
 \<close>
 
 text \<open>
@@ -24,7 +19,7 @@ as a common abstraction:
 
 text \<open>
 In order to define the different \<^term>\<open>Token\<close>s that are used as currency in the participants accounts
-\secref{sec:internal-accounts}, deposits, and payments,
+\secref{sec:internal-accounts}, deposits and payments,
  we need to be able to express a \<^term>\<open>TokenName\<close> and \<^term>\<open>CurrencySymbol\<close>.
 \<close>
 type_synonym TokenName = ByteString

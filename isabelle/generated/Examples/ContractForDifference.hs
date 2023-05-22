@@ -1,6 +1,9 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module Examples.ContractForDifference(CfdArgs_ext, cfd) where {
+module
+  Examples.ContractForDifference(CfdArgs_ext, contractForDifference, cfdExample,
+                                  cfdExamplePayments, cfdExampleTransactions)
+  where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -21,6 +24,68 @@ data CfdArgs_ext a =
 
 ada :: SemanticsTypes.Token;
 ada = SemanticsTypes.Token (Stringa.implode []) (Stringa.implode []);
+
+wait :: Arith.Int -> SemanticsTypes.Contract -> SemanticsTypes.Contract;
+wait timeout cont = SemanticsTypes.When [] timeout cont;
+
+party :: SemanticsTypes.Party;
+party =
+  SemanticsTypes.Role
+    (Stringa.implode
+      [Stringa.Char False False False False True False True False,
+        Stringa.Char True False False False False True True False,
+        Stringa.Char False True False False True True True False,
+        Stringa.Char False False True False True True True False,
+        Stringa.Char True False False True True True True False]);
+
+gtLtEq ::
+  SemanticsTypes.Value ->
+    SemanticsTypes.Value ->
+      SemanticsTypes.Contract ->
+        SemanticsTypes.Contract ->
+          SemanticsTypes.Contract -> SemanticsTypes.Contract;
+gtLtEq value1 value2 gtContinuation ltContinuation eqContinuation =
+  SemanticsTypes.If (SemanticsTypes.ValueGT value1 value2) gtContinuation
+    (SemanticsTypes.If (SemanticsTypes.ValueLT value1 value2) ltContinuation
+      eqContinuation);
+
+oracle :: SemanticsTypes.Party;
+oracle =
+  SemanticsTypes.Role
+    (Stringa.implode
+      [Stringa.Char True True True True False False True False,
+        Stringa.Char False True False False True True True False,
+        Stringa.Char True False False False False True True False,
+        Stringa.Char True True False False False True True False,
+        Stringa.Char False False True True False True True False,
+        Stringa.Char True False True False False True True False]);
+
+priceEnd :: SemanticsTypes.Party -> SemanticsTypes.ChoiceId;
+priceEnd =
+  SemanticsTypes.ChoiceId
+    (Stringa.implode
+      [Stringa.Char False False False False True False True False,
+        Stringa.Char False True False False True True True False,
+        Stringa.Char True False False True False True True False,
+        Stringa.Char True True False False False True True False,
+        Stringa.Char True False True False False True True False,
+        Stringa.Char False False False False False True False False,
+        Stringa.Char True False False True False True True False,
+        Stringa.Char False True True True False True True False,
+        Stringa.Char False False False False False True False False,
+        Stringa.Char True True False False True True True False,
+        Stringa.Char True False True False False True True False,
+        Stringa.Char True True False False False True True False,
+        Stringa.Char True True True True False True True False,
+        Stringa.Char False True True True False True True False,
+        Stringa.Char False False True False False True True False,
+        Stringa.Char False False False False False True False False,
+        Stringa.Char True True True False True True True False,
+        Stringa.Char True False False True False True True False,
+        Stringa.Char False True True True False True True False,
+        Stringa.Char False False True False False True True False,
+        Stringa.Char True True True True False True True False,
+        Stringa.Char True True True False True True True False]);
 
 counterpartyDepositDeadline :: forall a. CfdArgs_ext a -> Arith.Int;
 counterpartyDepositDeadline
@@ -183,49 +248,8 @@ oracleInput choiceId timeout timeoutContinuation continuation =
        continuation]
     timeout timeoutContinuation;
 
-priceEnd :: SemanticsTypes.Party -> SemanticsTypes.ChoiceId;
-priceEnd =
-  SemanticsTypes.ChoiceId
-    (Stringa.implode
-      [Stringa.Char False False False False True False True False,
-        Stringa.Char False True False False True True True False,
-        Stringa.Char True False False True False True True False,
-        Stringa.Char True True False False False True True False,
-        Stringa.Char True False True False False True True False,
-        Stringa.Char False False False False False True False False,
-        Stringa.Char True False False True False True True False,
-        Stringa.Char False True True True False True True False,
-        Stringa.Char False False False False False True False False,
-        Stringa.Char True True False False True True True False,
-        Stringa.Char True False True False False True True False,
-        Stringa.Char True True False False False True True False,
-        Stringa.Char True True True True False True True False,
-        Stringa.Char False True True True False True True False,
-        Stringa.Char False False True False False True True False,
-        Stringa.Char False False False False False True False False,
-        Stringa.Char True True True False True True True False,
-        Stringa.Char True False False True False True True False,
-        Stringa.Char False True True True False True True False,
-        Stringa.Char False False True False False True True False,
-        Stringa.Char True True True True False True True False,
-        Stringa.Char True True True False True True True False]);
-
-gtLtEq ::
-  SemanticsTypes.Value ->
-    SemanticsTypes.Value ->
-      SemanticsTypes.Contract ->
-        SemanticsTypes.Contract ->
-          SemanticsTypes.Contract -> SemanticsTypes.Contract;
-gtLtEq value1 value2 gtContinuation ltContinuation eqContinuation =
-  SemanticsTypes.If (SemanticsTypes.ValueGT value1 value2) gtContinuation
-    (SemanticsTypes.If (SemanticsTypes.ValueLT value1 value2) ltContinuation
-      eqContinuation);
-
-wait :: Arith.Int -> SemanticsTypes.Contract -> SemanticsTypes.Contract;
-wait timeout cont = SemanticsTypes.When [] timeout cont;
-
-cfd :: CfdArgs_ext () -> SemanticsTypes.Contract;
-cfd args =
+contractForDifference :: CfdArgs_ext () -> SemanticsTypes.Contract;
+contractForDifference args =
   let {
     decreaseInPrice =
       SemanticsTypes.ValueId
@@ -294,5 +318,73 @@ cfd args =
                          counterparty (SemanticsTypes.UseValue increaseInPrice)
                          SemanticsTypes.Close))
                      SemanticsTypes.Close))))));
+
+counterparty :: SemanticsTypes.Party;
+counterparty =
+  SemanticsTypes.Role
+    (Stringa.implode
+      [Stringa.Char True True False False False False True False,
+        Stringa.Char True True True True False True True False,
+        Stringa.Char True False True False True True True False,
+        Stringa.Char False True True True False True True False,
+        Stringa.Char False False True False True True True False,
+        Stringa.Char True False True False False True True False,
+        Stringa.Char False True False False True True True False,
+        Stringa.Char False False False False True False True False,
+        Stringa.Char True False False False False True True False,
+        Stringa.Char False True False False True True True False,
+        Stringa.Char False False True False True True True False,
+        Stringa.Char True False False True True True True False]);
+
+cfdExampleArgs :: CfdArgs_ext ();
+cfdExampleArgs =
+  CfdArgs_ext party counterparty oracle
+    (SemanticsTypes.Constant (Arith.Int_of_integer (10 :: Integer)))
+    (Arith.Int_of_integer (1664812800000 :: Integer))
+    (SemanticsTypes.Constant (Arith.Int_of_integer (10 :: Integer)))
+    (Arith.Int_of_integer (1664816400000 :: Integer))
+    (Arith.Int_of_integer (1664820420000 :: Integer))
+    (Arith.Int_of_integer (1664820520000 :: Integer))
+    (Arith.Int_of_integer (1664821420000 :: Integer))
+    (Arith.Int_of_integer (1664821520000 :: Integer)) ();
+
+cfdExample :: SemanticsTypes.Contract;
+cfdExample = contractForDifference cfdExampleArgs;
+
+cfdExamplePayments :: [SemanticsTypes.Payment];
+cfdExamplePayments =
+  [SemanticsTypes.Payment party (SemanticsTypes.Account counterparty) ada
+     (Arith.Int_of_integer (2 :: Integer)),
+    SemanticsTypes.Payment counterparty (SemanticsTypes.Party counterparty) ada
+      (Arith.Int_of_integer (12 :: Integer)),
+    SemanticsTypes.Payment party (SemanticsTypes.Party party) ada
+      (Arith.Int_of_integer (8 :: Integer))];
+
+cfdExampleTransactions :: [SemanticsTypes.Transaction_ext ()];
+cfdExampleTransactions =
+  [SemanticsTypes.Transaction_ext
+     (Arith.Int_of_integer (1664812600000 :: Integer),
+       Arith.Int_of_integer (1664812700000 :: Integer))
+     [SemanticsTypes.IDeposit party party ada
+        (Arith.Int_of_integer (10 :: Integer))]
+     (),
+    SemanticsTypes.Transaction_ext
+      (Arith.Int_of_integer (1664812900000 :: Integer),
+        Arith.Int_of_integer (1664813100000 :: Integer))
+      [SemanticsTypes.IDeposit counterparty counterparty ada
+         (Arith.Int_of_integer (10 :: Integer))]
+      (),
+    SemanticsTypes.Transaction_ext
+      (Arith.Int_of_integer (1664820420001 :: Integer),
+        Arith.Int_of_integer (1664820500000 :: Integer))
+      [SemanticsTypes.IChoice (priceBeginning oracle)
+         (Arith.Int_of_integer (2 :: Integer))]
+      (),
+    SemanticsTypes.Transaction_ext
+      (Arith.Int_of_integer (1664821420001 :: Integer),
+        Arith.Int_of_integer (1664821510000 :: Integer))
+      [SemanticsTypes.IChoice (priceEnd oracle)
+         (Arith.Int_of_integer (4 :: Integer))]
+      ()];
 
 }

@@ -39,6 +39,7 @@ library
         ArithNumInstance
         MList
         CoreOrphanEq
+        Examples.ContractForDifference
         Examples.Escrow
         Examples.Swap
         MarloweCoreJson

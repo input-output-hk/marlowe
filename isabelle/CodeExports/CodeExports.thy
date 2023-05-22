@@ -103,6 +103,9 @@ export_code
   partialExecutionPathPayments
 
   contractForDifference
+  cfdExample
+  cfdExampleTransactions
+  cfdExamplePayments
 
   \<comment> \<open>Force the export of string implode (works together with the BS code\_printing hint) \<close>
   String.implode

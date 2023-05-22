@@ -11,12 +11,13 @@ theory CodeExports
 
 imports
   Core.Semantics
+  Core.SingleInputTransactions
   Examples.ContractForDifference
   Examples.Escrow
   Examples.Swap
   "HOL-Library.Code_Target_Numeral"
   HOL.String
-
+  Core.TimeRange
 begin
 
 text \<open>We provide some Serialization options to use Haskell native \<^term>\<open>String\<close> instead of our logical
@@ -29,9 +30,9 @@ code_printing
       \<rightharpoonup> (Haskell) "String"
   \<comment> \<open>The next three commands tells the serializer to use the operators provided by\<close>
   \<comment> \<open>the Ord instance instead of the ones that work with the logical representation\<close>
-  | constant "less_eq_BS"
+  | constant "ord_ByteString_inst.less_eq_ByteString"
       \<rightharpoonup> (Haskell) infix 4 "<="
-  | constant "less_BS"
+  | constant "ord_ByteString_inst.less_ByteString"
       \<rightharpoonup> (Haskell) infix 4 "<"
   | constant "HOL.equal :: ByteString \<Rightarrow> ByteString \<Rightarrow> bool"
       \<rightharpoonup> (Haskell) infix 4 "=="
@@ -65,8 +66,9 @@ export_code
   reductionLoop
   reduceContractUntilQuiescent
   applyAllInputs
-  playTrace
   computeTransaction
+  playTrace
+  emptyState
 
    \<comment> \<open> Export utility functions\<close>
   getOutcomes
@@ -74,8 +76,14 @@ export_code
   maxTimeContract
   calculateNonAmbiguousInterval
   validAndPositive_state
+  isQuiescent
+  isClosedAndEmpty
+  maxTransactionsInitialState
+  traceListToSingleInput
 
-  \<comment> \<open> Export examples to be used as oracle specificaiton tests\<close>
+  \<comment> \<open> Export examples to be used as oracle specification tests\<close>
+  escrow
+  EscrowArgs_ext
   escrowExample
   everythingIsAlrightTransactions
   everythingIsAlrightPayments
@@ -86,9 +94,13 @@ export_code
   confirmClaimTransactions
   confirmClaimPayments
 
+  swap
+  SwapParty_ext
   swapExample
-  happyPathTransactions
-  happyPathPayments
+  successfulExecutionPathTransactions
+  successfulExecutionPathPayments
+  partialExecutionPathTransactions
+  partialExecutionPathPayments
 
   contractForDifference
 
@@ -103,6 +115,12 @@ export_code
 
   \<comment> \<open>Force export of Arith.Int constructor\<close>
   int_of_integer
+  integer_of_int
+  integer_of_nat
+
+  \<comment> \<open>Force export of Transaction constructors\<close>
+  inputs
+  interval
 
   \<comment> \<open>Force export of TransactionOutput constructors\<close>
   TransactionOutput
@@ -134,6 +152,7 @@ export_code
   equal_IntervalError_inst.equal_IntervalError
   equal_TransactionError_inst.equal_TransactionError
   equal_TransactionOutput_inst.equal_TransactionOutput
+  equal_ReduceResult_inst.equal_ReduceResult
 
   in Haskell (string_classes)
 

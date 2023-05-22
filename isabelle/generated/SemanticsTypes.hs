@@ -6,10 +6,17 @@ module
                   Observation(..), equal_Observation, equal_Value, Payee(..),
                   equal_Payee, Bound(..), Action(..), Contract(..), Case(..),
                   equal_Action, equal_Contract, Input(..), equal_Input,
-                  IntervalError(..), Environment_ext(..), State_ext(..),
-                  IntervalResult(..), choices, minTime, accounts, boundValues,
-                  choices_update, minTime_update, accounts_update, timeInterval,
-                  boundValues_update, equal_State_ext, equal_IntervalError)
+                  Payment(..), equal_Payment, TransactionWarning(..),
+                  equal_TransactionWarning, IntervalError(..), State_ext(..),
+                  TransactionError(..), TransactionOutputRecord_ext(..),
+                  TransactionOutput(..), Environment_ext(..),
+                  Transaction_ext(..), inBounds, choices, minTime, accounts,
+                  boundValues, inputs, choices_update, minTime_update, interval,
+                  accounts_update, timeInterval, boundValues_update, txOutState,
+                  txOutContract, txOutPayments, txOutWarnings, equal_State_ext,
+                  txOutPayments_update, txOutWarnings_update,
+                  equal_IntervalError, equal_TransactionError,
+                  equal_TransactionOutput, equal_Transaction_ext)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -463,6 +470,18 @@ instance Eq Token where {
   a == b = equal_Token a b;
 };
 
+data Payment = Payment Party Payee Token Arith.Int
+  deriving (Prelude.Read, Prelude.Show);
+
+equal_Payment :: Payment -> Payment -> Bool;
+equal_Payment (Payment x1 x2 x3 x4) (Payment y1 y2 y3 y4) =
+  equal_Party x1 y1 &&
+    equal_Payee x2 y2 && equal_Token x3 y3 && Arith.equal_int x4 y4;
+
+instance Eq Payment where {
+  a == b = equal_Payment a b;
+};
+
 instance Eq ValueId where {
   a == b = equal_ValueId a b;
 };
@@ -471,11 +490,79 @@ instance Eq ChoiceId where {
   a == b = equal_ChoiceId a b;
 };
 
+data TransactionWarning =
+  TransactionNonPositiveDeposit Party Party Token Arith.Int
+  | TransactionNonPositivePay Party Payee Token Arith.Int
+  | TransactionPartialPay Party Payee Token Arith.Int Arith.Int
+  | TransactionShadowing ValueId Arith.Int Arith.Int
+  | TransactionAssertionFailed deriving (Prelude.Read, Prelude.Show);
+
+equal_TransactionWarning :: TransactionWarning -> TransactionWarning -> Bool;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  TransactionAssertionFailed = False;
+equal_TransactionWarning TransactionAssertionFailed
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionShadowing x41 x42 x43) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionPartialPay x31 x32 x33 x34 x35) = False;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionNonPositivePay x21 x22 x23 x24) = False;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionNonPositiveDeposit x11 x12 x13 x14) = False;
+equal_TransactionWarning (TransactionShadowing x41 x42 x43)
+  (TransactionShadowing y41 y42 y43) =
+  equal_ValueId x41 y41 && Arith.equal_int x42 y42 && Arith.equal_int x43 y43;
+equal_TransactionWarning (TransactionPartialPay x31 x32 x33 x34 x35)
+  (TransactionPartialPay y31 y32 y33 y34 y35) =
+  equal_Party x31 y31 &&
+    equal_Payee x32 y32 &&
+      equal_Token x33 y33 && Arith.equal_int x34 y34 && Arith.equal_int x35 y35;
+equal_TransactionWarning (TransactionNonPositivePay x21 x22 x23 x24)
+  (TransactionNonPositivePay y21 y22 y23 y24) =
+  equal_Party x21 y21 &&
+    equal_Payee x22 y22 && equal_Token x23 y23 && Arith.equal_int x24 y24;
+equal_TransactionWarning (TransactionNonPositiveDeposit x11 x12 x13 x14)
+  (TransactionNonPositiveDeposit y11 y12 y13 y14) =
+  equal_Party x11 y11 &&
+    equal_Party x12 y12 && equal_Token x13 y13 && Arith.equal_int x14 y14;
+equal_TransactionWarning TransactionAssertionFailed TransactionAssertionFailed =
+  True;
+
+instance Eq TransactionWarning where {
+  a == b = equal_TransactionWarning a b;
+};
+
 data IntervalError = InvalidInterval (Arith.Int, Arith.Int)
   | IntervalInPastError Arith.Int (Arith.Int, Arith.Int)
-  deriving (Prelude.Read, Prelude.Show);
-
-data Environment_ext a = Environment_ext (Arith.Int, Arith.Int) a
   deriving (Prelude.Read, Prelude.Show);
 
 data State_ext a =
@@ -483,8 +570,27 @@ data State_ext a =
     [(ValueId, Arith.Int)] Arith.Int a
   deriving (Prelude.Read, Prelude.Show);
 
-data IntervalResult = IntervalTrimmed (Environment_ext ()) (State_ext ())
-  | IntervalError IntervalError deriving (Prelude.Read, Prelude.Show);
+data TransactionError = TEAmbiguousTimeIntervalError | TEApplyNoMatchError
+  | TEIntervalError IntervalError | TEUselessTransaction
+  deriving (Prelude.Read, Prelude.Show);
+
+data TransactionOutputRecord_ext a =
+  TransactionOutputRecord_ext [TransactionWarning] [Payment] (State_ext ())
+    Contract a
+  deriving (Prelude.Read, Prelude.Show);
+
+data TransactionOutput = TransactionOutput (TransactionOutputRecord_ext ())
+  | TransactionError TransactionError deriving (Prelude.Read, Prelude.Show);
+
+data Environment_ext a = Environment_ext (Arith.Int, Arith.Int) a
+  deriving (Prelude.Read, Prelude.Show);
+
+data Transaction_ext a = Transaction_ext (Arith.Int, Arith.Int) [Input] a
+  deriving (Prelude.Read, Prelude.Show);
+
+inBounds :: Arith.Int -> [Bound] -> Bool;
+inBounds num =
+  any (\ (Bound l u) -> Arith.less_eq_int l num && Arith.less_eq_int num u);
 
 choices :: forall a. State_ext a -> [(ChoiceId, Arith.Int)];
 choices (State_ext accounts choices boundValues minTime more) = choices;
@@ -498,6 +604,9 @@ accounts (State_ext accounts choices boundValues minTime more) = accounts;
 boundValues :: forall a. State_ext a -> [(ValueId, Arith.Int)];
 boundValues (State_ext accounts choices boundValues minTime more) = boundValues;
 
+inputs :: forall a. Transaction_ext a -> [Input];
+inputs (Transaction_ext interval inputs more) = inputs;
+
 choices_update ::
   forall a.
     ([(ChoiceId, Arith.Int)] -> [(ChoiceId, Arith.Int)]) ->
@@ -509,6 +618,9 @@ minTime_update ::
   forall a. (Arith.Int -> Arith.Int) -> State_ext a -> State_ext a;
 minTime_update minTimea (State_ext accounts choices boundValues minTime more) =
   State_ext accounts choices boundValues (minTimea minTime) more;
+
+interval :: forall a. Transaction_ext a -> (Arith.Int, Arith.Int);
+interval (Transaction_ext interval inputs more) = interval;
 
 accounts_update ::
   forall a.
@@ -528,6 +640,31 @@ boundValues_update boundValuesa
   (State_ext accounts choices boundValues minTime more) =
   State_ext accounts choices (boundValuesa boundValues) minTime more;
 
+txOutState :: forall a. TransactionOutputRecord_ext a -> State_ext ();
+txOutState
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutState;
+
+txOutContract :: forall a. TransactionOutputRecord_ext a -> Contract;
+txOutContract
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutContract;
+
+txOutPayments :: forall a. TransactionOutputRecord_ext a -> [Payment];
+txOutPayments
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutPayments;
+
+txOutWarnings ::
+  forall a. TransactionOutputRecord_ext a -> [TransactionWarning];
+txOutWarnings
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutWarnings;
+
 equal_State_ext :: forall a. (Eq a) => State_ext a -> State_ext a -> Bool;
 equal_State_ext (State_ext accountsa choicesa boundValuesa minTimea morea)
   (State_ext accounts choices boundValues minTime more) =
@@ -536,11 +673,83 @@ equal_State_ext (State_ext accountsa choicesa boundValuesa minTimea morea)
       boundValuesa == boundValues &&
         Arith.equal_int minTimea minTime && morea == more;
 
+txOutPayments_update ::
+  forall a.
+    ([Payment] -> [Payment]) ->
+      TransactionOutputRecord_ext a -> TransactionOutputRecord_ext a;
+txOutPayments_update txOutPaymentsa
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = TransactionOutputRecord_ext txOutWarnings (txOutPaymentsa txOutPayments)
+      txOutState txOutContract more;
+
+txOutWarnings_update ::
+  forall a.
+    ([TransactionWarning] -> [TransactionWarning]) ->
+      TransactionOutputRecord_ext a -> TransactionOutputRecord_ext a;
+txOutWarnings_update txOutWarningsa
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = TransactionOutputRecord_ext (txOutWarningsa txOutWarnings) txOutPayments
+      txOutState txOutContract more;
+
 equal_IntervalError :: IntervalError -> IntervalError -> Bool;
 equal_IntervalError (InvalidInterval x1) (IntervalInPastError x21 x22) = False;
 equal_IntervalError (IntervalInPastError x21 x22) (InvalidInterval x1) = False;
 equal_IntervalError (IntervalInPastError x21 x22) (IntervalInPastError y21 y22)
   = Arith.equal_int x21 y21 && x22 == y22;
 equal_IntervalError (InvalidInterval x1) (InvalidInterval y1) = x1 == y1;
+
+equal_TransactionError :: TransactionError -> TransactionError -> Bool;
+equal_TransactionError (TEIntervalError x3) TEUselessTransaction = False;
+equal_TransactionError TEUselessTransaction (TEIntervalError x3) = False;
+equal_TransactionError TEApplyNoMatchError TEUselessTransaction = False;
+equal_TransactionError TEUselessTransaction TEApplyNoMatchError = False;
+equal_TransactionError TEApplyNoMatchError (TEIntervalError x3) = False;
+equal_TransactionError (TEIntervalError x3) TEApplyNoMatchError = False;
+equal_TransactionError TEAmbiguousTimeIntervalError TEUselessTransaction =
+  False;
+equal_TransactionError TEUselessTransaction TEAmbiguousTimeIntervalError =
+  False;
+equal_TransactionError TEAmbiguousTimeIntervalError (TEIntervalError x3) =
+  False;
+equal_TransactionError (TEIntervalError x3) TEAmbiguousTimeIntervalError =
+  False;
+equal_TransactionError TEAmbiguousTimeIntervalError TEApplyNoMatchError = False;
+equal_TransactionError TEApplyNoMatchError TEAmbiguousTimeIntervalError = False;
+equal_TransactionError (TEIntervalError x3) (TEIntervalError y3) =
+  equal_IntervalError x3 y3;
+equal_TransactionError TEUselessTransaction TEUselessTransaction = True;
+equal_TransactionError TEApplyNoMatchError TEApplyNoMatchError = True;
+equal_TransactionError TEAmbiguousTimeIntervalError TEAmbiguousTimeIntervalError
+  = True;
+
+equal_TransactionOutputRecord_ext ::
+  forall a.
+    (Eq a) => TransactionOutputRecord_ext a ->
+                TransactionOutputRecord_ext a -> Bool;
+equal_TransactionOutputRecord_ext
+  (TransactionOutputRecord_ext txOutWarningsa txOutPaymentsa txOutStatea
+    txOutContracta morea)
+  (TransactionOutputRecord_ext txOutWarnings txOutPayments txOutState
+    txOutContract more)
+  = txOutWarningsa == txOutWarnings &&
+      txOutPaymentsa == txOutPayments &&
+        equal_State_ext txOutStatea txOutState &&
+          equal_Contract txOutContracta txOutContract && morea == more;
+
+equal_TransactionOutput :: TransactionOutput -> TransactionOutput -> Bool;
+equal_TransactionOutput (TransactionOutput x1) (TransactionError x2) = False;
+equal_TransactionOutput (TransactionError x2) (TransactionOutput x1) = False;
+equal_TransactionOutput (TransactionError x2) (TransactionError y2) =
+  equal_TransactionError x2 y2;
+equal_TransactionOutput (TransactionOutput x1) (TransactionOutput y1) =
+  equal_TransactionOutputRecord_ext x1 y1;
+
+equal_Transaction_ext ::
+  forall a. (Eq a) => Transaction_ext a -> Transaction_ext a -> Bool;
+equal_Transaction_ext (Transaction_ext intervala inputsa morea)
+  (Transaction_ext interval inputs more) =
+  intervala == interval && inputsa == inputs && morea == more;
 
 }

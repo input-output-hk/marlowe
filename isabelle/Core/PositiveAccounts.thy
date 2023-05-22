@@ -9,8 +9,7 @@ fun positiveMoneyInAccountOrNoAccount :: "AccountId \<Rightarrow> Token \<Righta
    | Some x \<Rightarrow> x > 0)"
 
 lemma addMoneyToAccountPositve_match :
- "\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
-    money > 0 \<Longrightarrow>
+ "money > 0 \<Longrightarrow>
     newBalance > 0 \<Longrightarrow>
     positiveMoneyInAccountOrNoAccount y tok2 (MList.insert (y, tok2) newBalance accs)"
   apply simp
@@ -18,7 +17,6 @@ lemma addMoneyToAccountPositve_match :
 
 lemma addMoneyToAccountPositive_noMatch :
  "\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
-    money > 0 \<Longrightarrow>
     (accId, tok) \<noteq> (y, tok2) \<Longrightarrow>
     newBalance > 0 \<Longrightarrow>
     positiveMoneyInAccountOrNoAccount y tok2 (MList.insert (accId, tok2) newBalance accs)"
@@ -62,14 +60,6 @@ lemma positiveMoneyInAccountOrNoAccount_sublist_gtZero_different :
    accIdTok \<noteq> (y, tok) \<Longrightarrow> positiveMoneyInAccountOrNoAccount y tok rest"
   apply (simp only:positiveMoneyInAccountOrNoAccount.simps findWithDefault.simps)
   by (metis MList.delete.simps(2) MList.different_delete_lookup)
-
-lemma positiveMoneyInAccountOrNoAccount_sublist_gtZero :
-    "valid_map ((accIdTok, money) # rest) \<Longrightarrow>
-     money > 0 \<Longrightarrow>
-    (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok ((accIdTok, money) # rest)) \<Longrightarrow> positiveMoneyInAccountOrNoAccount y tok2 rest"
-  apply (cases "accIdTok = (y, tok2)")
-  using positiveMoneyInAccountOrNoAccount_valid_zero apply auto[1]
-  using positiveMoneyInAccountOrNoAccount_sublist_gtZero_different by blast
 
 lemma positiveMoneyInAccountOrNoAccount_gtZero_preservation :
   "valid_map ((accIdTok, money) # rest) \<Longrightarrow>
@@ -366,20 +356,11 @@ lemma positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive :
   apply simp
   using positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive_aux2 by auto
 
-theorem accountsArePositive :
-  "valid_state state \<Longrightarrow> (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
-  computeTransaction txIn state cont = TransactionOutput txOut \<Longrightarrow>
-  positiveMoneyInAccountOrNoAccount y tok2 (accounts (txOutState txOut))"
-  using computeTransaction_gtZero by blast
-
 theorem accountsArePositive2 :
     "valid_state state \<Longrightarrow> allAccountsPositiveState state
     \<Longrightarrow> computeTransaction txIn state cont = TransactionOutput txOut
-    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"
-  by (meson accountsArePositive allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2))
-
-lemma valid_state_valid_accounts : "valid_state state \<Longrightarrow> valid_map (accounts state)"
-  by simp
+    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"  
+  by (meson computeTransaction_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2))
 
 theorem accountsArePositive2_trace :
     "valid_state (txOutState txIn) \<Longrightarrow> allAccountsPositiveState (txOutState txIn)
@@ -484,7 +465,7 @@ proof (cases "val = 0")
   ultimately show ?thesis
     (* TODO: this should be easier, we should unify
        positiveMoneyInAccountOrNoAccount and allAccountsPositive to avoid unecesary conversion *)
-    by (metis MList_delete_preserves_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount delete_valid positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive)
+    by (metis MList.delete_valid MList_delete_preserves_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive)    
 next
   note assms
   moreover assume "val \<noteq> 0"

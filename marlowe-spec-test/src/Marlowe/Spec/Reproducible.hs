@@ -3,22 +3,20 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Marlowe.Spec.Reproducible where
-import Test.QuickCheck.Random (mkQCGen, QCGen)
-import Control.Monad.State (StateT, evalStateT, MonadState)
-import Control.Monad.IO.Class (MonadIO(..))
-import qualified System.Random as Gen
-import Control.Monad.State (MonadState (get, put))
-import QuickCheck.GenT (GenT, runGenT)
-import Test.QuickCheck (Testable, Property, arbitrarySizedBoundedIntegral, resize, ioProperty, counterexample)
-import Test.QuickCheck.Gen (Gen(..))
-import Test.Tasty (TestName, TestTree)
-import Test.QuickCheck.Monadic (PropertyM, monadic', run, assert, monitor)
-import Test.Tasty.QuickCheck (testProperty)
-import Test.QuickCheck (Testable(..))
-import Marlowe.Spec.Interpret (InterpretJsonRequest, Request, Response)
-import qualified Data.Aeson as JSON
-import Marlowe.Utils (showAsJson)
 
+import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.State (MonadState (..), StateT, evalStateT, gets)
+import qualified Data.Aeson as JSON
+import Marlowe.Spec.Interpret (InterpretJsonRequest, Request, Response)
+import Marlowe.Utils (showAsJson)
+import QuickCheck.GenT (GenT, runGenT)
+import qualified System.Random as Gen
+import Test.QuickCheck (Property, Testable (..), arbitrarySizedBoundedIntegral, counterexample, ioProperty, resize)
+import Test.QuickCheck.Gen (Gen (..))
+import Test.QuickCheck.Monadic (PropertyM, assert, monadic', monitor, run)
+import Test.QuickCheck.Random (QCGen, mkQCGen)
+import Test.Tasty (TestName, TestTree)
+import Test.Tasty.QuickCheck (testProperty)
 
 newtype ReproducibleTest a = ReproducibleTest (StateT QCGen IO a)
   deriving (Functor, Applicative, Monad, MonadState QCGen, MonadIO)
@@ -31,34 +29,32 @@ runReproducibleTest seed (ReproducibleTest m) = do
 
 generate :: MonadState QCGen m => Gen a -> m a
 generate (MkGen g) = do
-  (oldGen, newGen) <- Gen.split <$> get
+  (oldGen, newGen) <- gets Gen.split
   put newGen
   return (g oldGen 30)
 
-
 generateT :: (MonadState QCGen m, MonadIO m) => GenT IO a -> m a
 generateT gt = do
-  (oldGen, newGen) <- Gen.split <$> get
+  (oldGen, newGen) <- gets Gen.split
   put newGen
   let
     MkGen iog = runGenT gt
   liftIO $ iog oldGen 30
 
-
 assertResponse :: MonadIO m => InterpretJsonRequest -> Request JSON.Value -> Response JSON.Value -> PropertyM m ()
 assertResponse interpret req successResponse = do
-    res <- run $ liftIO $ interpret req
-    monitor (
-        counterexample $
-            "Request: " ++ showAsJson req ++ "\n" ++
-            "Expected: " ++ show successResponse ++ "\n" ++
-            "Actual: " ++ show res
-        )
-    assert $ successResponse == res
+  res <- run $ liftIO $ interpret req
+  monitor (
+      counterexample $
+          "Request: " ++ showAsJson req ++ "\n" ++
+          "Expected: " ++ show successResponse ++ "\n" ++
+          "Actual: " ++ show res
+      )
+  assert $ successResponse == res
 
 reproducibleProperty' :: TestName -> (a -> Property) -> PropertyM ReproducibleTest a -> TestTree
 reproducibleProperty' testName tx prop =
-  testProperty testName $ runProperty <$> arbitrarySeed
+  testProperty testName $ runProperty =<< arbitrarySeed
   where
   arbitrarySeed :: Gen Int
   arbitrarySeed = resize 10000 arbitrarySizedBoundedIntegral
@@ -67,8 +63,7 @@ reproducibleProperty' testName tx prop =
   prop' = tx <$> prop
 
   runProperty ::  Int -> Gen Property
-  runProperty seed = ioProperty <$> runReproducibleTest seed <$> monadic' prop'
-
+  runProperty seed = ioProperty . runReproducibleTest seed <$> monadic' prop'
 
 reproducibleProperty :: Testable a => TestName -> PropertyM ReproducibleTest a -> TestTree
-reproducibleProperty testName prop = reproducibleProperty' testName property prop
+reproducibleProperty testName = reproducibleProperty' testName property

@@ -5,6 +5,9 @@ begin
 (*>*)
 
 chapter \<open>ByteString \label{sec:bytestring}\<close>
+
+section "Definition"
+
 text \<open>Conceptually, a \<^term>\<open>ByteString\<close> is defined as a list of 8-bit words.\<close>
 
 datatype (plugins del: "size") ByteString = ByteString "(8 word) list"
@@ -57,7 +60,7 @@ fun BS :: "string \<Rightarrow> ByteString" where
 text \<open>For example \<^term>\<open>BS ''abc''\<close> is evaluated to @{value "BS ''abc''"}\<close>
 
 
-subsubsection \<open>Size\<close>
+subsection \<open>Size\<close>
 
 instantiation ByteString :: size
 begin
@@ -84,17 +87,10 @@ fun less_eq_BS' :: "(8 word) list \<Rightarrow> (8 word) list \<Rightarrow> bool
    (if h2 < h1 then False
     else (if h1 = h2 then less_eq_BS' t1 t2 else True))"
 
-fun less_eq_BS :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
-  "less_eq_BS (ByteString xs) (ByteString ys) = less_eq_BS' xs ys" 
+definition "a \<le> b = less_eq_BS' (innerListByteString a) (innerListByteString b)"
 
-
-definition "a \<le> b = less_eq_BS a b"
-
-fun less_BS :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
-"less_BS a b = (\<not> (less_eq_BS b a))"
-
-
-definition "a < b = less_BS a b"
+definition less_ByteString :: "ByteString \<Rightarrow> ByteString \<Rightarrow> bool" where
+  "less_ByteString a b \<longleftrightarrow> \<not> (b \<le> a)"
 
 (*<*)
 instance proof
@@ -102,22 +98,14 @@ qed
 (*>*)
 end
 
-text \<open>And we also define some lemmas useful for total order.\<close>
-
-lemma oneLessEqBS' : "\<not> less_eq_BS' bs2 bs1 \<Longrightarrow> less_eq_BS' bs1 bs2"
+text \<open>And we also prove that ByteString has total order.\<close>
 (*<*)
+lemma oneLessEqBS' : "\<not> less_eq_BS' bs2 bs1 \<Longrightarrow> less_eq_BS' bs1 bs2"
   apply (induction bs1 bs2 rule:less_eq_BS'.induct)
   apply simp_all
   by (metis order_less_imp_not_less)
-(*>*)
-
-lemma oneLessEqBS : "\<not> less_eq_BS bs2 bs1 \<Longrightarrow> less_eq_BS bs1 bs2"
-(*<*)
-  by (metis less_eq_BS.elims(3) less_eq_BS.simps oneLessEqBS')
-(*>*)
 
 lemma less_eq_BS_trans' : "less_eq_BS' x y \<Longrightarrow> less_eq_BS' y z \<Longrightarrow> less_eq_BS' x z"
-(*<*)
   apply (induction x z arbitrary:y rule:less_eq_BS'.induct)
     apply auto
   subgoal for hx tx y
@@ -127,15 +115,8 @@ lemma less_eq_BS_trans' : "less_eq_BS' x y \<Longrightarrow> less_eq_BS' y z \<L
   subgoal for h1 t1 h2 t2 y
     by (smt (verit, del_insts) less_eq_BS'.elims(2) list.distinct(1) list.sel(1) not_less_iff_gr_or_eq order_less_trans)
   done
-(*>*)
-
-lemma less_eq_BS_trans : "less_eq_BS x y \<Longrightarrow> less_eq_BS y z \<Longrightarrow> less_eq_BS x z"
-(*<*)
-  by (smt (verit, best) ByteString.exhaust less_eq_BS.simps less_eq_BS_trans')
-(*>*)
 
 lemma byteStringLessEqTwiceEq' : "less_eq_BS' x y \<Longrightarrow> less_eq_BS' y x \<Longrightarrow> x = y"
-(*<*)
   apply (induction x y rule:less_eq_BS'.induct)
   apply auto
   subgoal for h1 t1 h2 t2
@@ -145,14 +126,24 @@ lemma byteStringLessEqTwiceEq' : "less_eq_BS' x y \<Longrightarrow> less_eq_BS' 
   done
 (*>*)
 
-lemma byteStringLessEqTwiceEq : "less_eq_BS x y \<Longrightarrow> less_eq_BS y x \<Longrightarrow> x = y"
+instantiation "ByteString" :: linorder
+begin
+instance
+proof
+  fix x y z :: ByteString
+  show byteStringLinOrder: "x \<le> y \<or> y \<le> x"
+    (*<*)using less_eq_ByteString_def oneLessEqBS' by blast(*>*)
+  show "x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x"
+    (*<*)using byteStringLinOrder less_ByteString_def by presburger(*>*)
+  show "x \<le> x" 
+    (*<*)by (metis less_eq_ByteString_def oneLessEqBS')(*>*)
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+    (*<*)using less_eq_BS_trans' less_eq_ByteString_def by blast(*>*)
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y" 
+    (*<*)by (metis byteStringLessEqTwiceEq' innerListByteString.elims less_eq_ByteString_def)(*>*)
+qed
+end
 (*<*)
-  by (metis ByteString.exhaust byteStringLessEqTwiceEq' less_eq_BS.simps)
-(*>*)
-
-lemma lineaBS : "less_eq_BS x y \<or> less_eq_BS y x"
-(*<*)
-  using oneLessEqBS by blast
 end
 (*>*)
 

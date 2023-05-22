@@ -1,36 +1,34 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Marlowe.Spec.ClientProcess
- ( CliPath(..)
- , TraceCP
- , PoolSize
- , sendJsonRequest
- , parseJsonResponse
- , withClientProcess
- , eval
- )
+  ( CliPath (..),
+    TraceCP,
+    PoolSize,
+    sendJsonRequest,
+    parseJsonResponse,
+    withClientProcess,
+    eval,
+  )
 where
 
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TQueue (TQueue, newTQueue, readTQueue, writeTQueue)
+import Control.Monad (forM, forM_)
+import qualified Data.Aeson as JSON
 import Data.ByteString.Lazy.Char8 (hPutStrLn)
 import qualified Data.ByteString.Lazy.Char8 as C
-import System.Process (CreateProcess(..), StdStream(..), ProcessHandle, proc, createProcess)
-import System.IO (hSetBuffering, hGetLine,BufferMode(..), openFile)
-import qualified Data.Aeson.Types as JSON
-import qualified Data.Aeson as JSON
-import GHC.IO.Handle (Handle)
-import Test.Tasty (TestTree, withResource, askOption)
-import Marlowe.Spec.Interpret (Request(..), Response(..))
 import Data.Data (Typeable)
-import Test.Tasty.Options (IsOption(..), mkOptionCLParser, safeRead)
+import GHC.IO.Handle (Handle)
+import GHC.IO.IOMode (IOMode (..))
+import Marlowe.Spec.Interpret (Request (..), Response (..))
 import Options.Applicative (short)
 import Options.Applicative.Builder (metavar)
-import Control.Concurrent.STM.TQueue (TQueue, newTQueue, readTQueue, writeTQueue )
-import Control.Monad (forM_, forM)
-import Control.Concurrent.STM (atomically)
+import System.IO (BufferMode (..), hGetLine, hSetBuffering, openFile)
+import System.Process (CreateProcess (..), ProcessHandle, StdStream (..), createProcess, proc)
 import System.Timeout (timeout)
-import GHC.IO.IOMode (IOMode(..))
-import Data.Functor (void)
+import Test.Tasty (TestTree, askOption, withResource)
+import Test.Tasty.Options (IsOption (..), mkOptionCLParser, safeRead)
 
 type ClientProcessId = Int
 
@@ -51,34 +49,33 @@ data ClientProcessPool =
 
 sendJsonRequest :: ClientProcess -> Request JSON.Value -> IO ()
 sendJsonRequest cp r = do
-    let
-      encodedReq = JSON.encode r
-      h = stdInH cp
-      debugH = traceH cp
-      pid = cpId cp
+  let
+    encodedReq = JSON.encode r
+    h = stdInH cp
+    debugH = traceH cp
+    pid = cpId cp
 
-    hPutStrLn h "```"
-    hPutStrLn h encodedReq
-    hPutStrLn h "```"
-    debug debugH $ show pid ++ " - Send JSON request: " ++ C.unpack encodedReq
+  hPutStrLn h "```"
+  hPutStrLn h encodedReq
+  hPutStrLn h "```"
+  debug debugH $ show pid ++ " - Send JSON request: " ++ C.unpack encodedReq
 
 parseJsonResponse :: ClientProcess -> IO (Response JSON.Value)
 parseJsonResponse cp = do
-    let
-      h = stdOutH cp
-      debugH = traceH cp
-      pid = cpId cp
-    mLine <- timeout (5000000) $ hGetLine h
-    let
-      res = case mLine of
-        Nothing -> RequestTimeOut
-        Just line -> case JSON.decode $ C.pack line of
-          Nothing -> ResponseFailure  "Could not parse response from the client cli"
-          Just r -> r
+  let
+    h = stdOutH cp
+    debugH = traceH cp
+    pid = cpId cp
+  mLine <- timeout 5000000 $ hGetLine h
+  let
+    res = case mLine of
+      Nothing -> RequestTimeOut
+      Just line -> case JSON.decode $ C.pack line of
+        Nothing -> ResponseFailure  "Could not parse response from the client cli"
+        Just r -> r
 
-    debug debugH $ show pid ++ " - Parse JSON response: " ++ (C.unpack $ JSON.encode res)
-    return res
-
+  debug debugH $ show pid ++ " - Parse JSON response: " ++ C.unpack (JSON.encode res)
+  return res
 
 data CliPath
   = UndefinedCliPath
@@ -91,7 +88,6 @@ instance IsOption CliPath where
   optionName = return "cli-path"
   optionHelp = return "Path to the client application to test"
   optionCLParser = mkOptionCLParser (short 'c' <> metavar "CLI_PATH")
-
 
 newtype TraceCP = TraceCP (Maybe FilePath)
   deriving (Show, Eq, Typeable)
@@ -125,7 +121,7 @@ withThreadProcess clientProcess callback = do
   pure res
 
 debug :: Maybe Handle -> String -> IO ()
-debug mh str = void $ forM mh (\h -> hPutStrLn h $ C.pack str)
+debug mh str = forM_ mh (\h -> hPutStrLn h $ C.pack str)
 
 createThreadProcess :: Int -> FilePath -> Maybe Handle -> IO ClientProcess
 createThreadProcess pid cliPath debugH = do
@@ -156,7 +152,6 @@ withClientProcess testCreator =
           askOption
             (\poolSize ->
               withClientProcess' traceOpt cliPathOpt poolSize
-
             )
         )
     )
@@ -197,4 +192,3 @@ eval getCPPool req = do
       sendJsonRequest cp req
       parseJsonResponse cp
     )
-

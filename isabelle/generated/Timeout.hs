@@ -1,6 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module ByteString(less_eq_ByteString) where {
+module Timeout(isClosedAndEmpty) where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -8,8 +8,14 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   zip, null, takeWhile, dropWhile, all, any, Integer, negate, abs, divMod,
   String, Bool(True, False), Maybe(Nothing, Just));
 import qualified Prelude;
+import qualified SemanticsTypes;
+import qualified Arith;
 
-less_eq_ByteString :: String -> String -> Bool;
-less_eq_ByteString a b = a <= b;
+isClosedAndEmpty :: SemanticsTypes.TransactionOutput -> Bool;
+isClosedAndEmpty (SemanticsTypes.TransactionOutput txOut) =
+  SemanticsTypes.equal_Contract (SemanticsTypes.txOutContract txOut)
+    SemanticsTypes.Close &&
+    null (SemanticsTypes.accounts (SemanticsTypes.txOutState txOut));
+isClosedAndEmpty (SemanticsTypes.TransactionError v) = False;
 
 }

@@ -289,8 +289,8 @@ For example, for this request
 
 ```json
 {
-    "request": "evalValue",
-    "environment": {"timeInterval": [10, 20] },
+    "request": "eval-value",
+    "environment": {"timeInterval": {"from": 10, "to": 20} },
     "state": { "accounts": [], "boundValues": [], "choices": [], "minTime": 5},
     "value": "time_interval_start"
 }
@@ -300,5 +300,45 @@ a valid response could be
 ```json
 {
   "request-response": 10
+}
+```
+
+### Eval Observation
+
+The request is encoded as
+
+```json
+{
+    "request": "eval-observation",
+    "environment": <Environment serialized>,
+    "state": <State serialized>,
+    "observation": <Observation serialized>
+}
+```
+
+
+#### Example
+For example, for this request
+
+```json
+{
+    "request": "eval-observation",
+    "environment": {"timeInterval": {"from": 10, "to": 20} },
+    "state": { "accounts": [], "boundValues": [], "choices": [], "minTime": 5},
+    "observation": {
+      "chose_something_for": {
+        "choice_name": "ada price",
+        "choice_owner": {
+            "address": "example address"
+        }
+      }
+    }
+}
+```
+a valid response could be
+
+```json
+{
+  "request-response": false
 }
 ```

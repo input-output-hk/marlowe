@@ -34,12 +34,12 @@ fun bToSet :: "OptBoundTimeInterval => POSIXTime set" where
  | "bToSet (Bounded l, Bounded r) = {l..r}"
 
 
-section "Interval intesection"
+section "Interval intersection"
 
 text
 \<open>
 The interval intersection is achieved by calculating the maximum lower bound and the minimum
-higher bound, favouring Bounded to Unbounded endpoits.
+higher bound, favouring Bounded to Unbounded endpoints.
 \<close>
 fun maxLow :: "BEndpoint \<Rightarrow> BEndpoint \<Rightarrow> BEndpoint" where
   "maxLow Unbounded y = y"

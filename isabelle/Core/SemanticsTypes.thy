@@ -34,7 +34,7 @@ datatype Party =
   | Role RoleName
 
 text \<open>
-An address party is defined by a Blockhain specific \<^term>\<open>Address\<close> \secref{sec:blockchain-agnostic} and it cannot be traded
+An address party is defined by a blockchain specific \<^term>\<open>Address\<close> \secref{sec:blockchain-agnostic} and it cannot be traded
 (it is fixed for the lifetime of a contract).
 \<close>
 
@@ -394,7 +394,7 @@ datatype TransactionWarning
   \<comment> \<open>A Pay of a value lower or equal to 0 was asked\<close>
   \<comment> \<open>The contract won't produce any payment and continue\<close>
   | TransactionNonPositivePay AccountId Payee Token int
-  \<comment> \<open>A payment is partially fullfilled as more assets \<close>
+  \<comment> \<open>A payment is partially fulfilled as more assets \<close>
   \<comment> \<open>than available were required\<close>
   | TransactionPartialPay AccountId Payee Token int int
   \<comment> \<open>A variable already bound in the state is being overwritten\<close>

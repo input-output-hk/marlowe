@@ -51,7 +51,7 @@ Marlowe \<^term>\<open>Contract\<close>s describe a series of sequential steps. 
 @{term "Pay a p t v c"} means ``make a payment of @{term v} number of tokens @{term t} to the party
 @{term p} from the account @{term a}, and then follow the contract @{term c}''. We call @{term c} the
 continuation of the contract. Strictly speaking the \<^term>\<open>Contract\<close> builds a tree structure with \<^term>\<open>Close\<close>
-\<^term>\<open>Contract\<close>s in the leafs and the branches represent all possible paths of a \<^term>\<open>Contract\<close>.\<close>
+\<^term>\<open>Contract\<close>s in the leaves and the branches represent all possible paths of a \<^term>\<open>Contract\<close>.\<close>
 
 subsection \<open>Data types\<close>
 text \<open>The \<^term>\<open>Value\<close>s and \<^term>\<open>Observation\<close>s \secref{sec:values-and-observations} are restricted to 

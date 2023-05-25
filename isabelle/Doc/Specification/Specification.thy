@@ -12,7 +12,7 @@ section \<open>Introduction\<close>
 text
 \<open>
 Marlowe is a domain-specific language (DSL) for multi-party financial contracts. The language and
-it's operational semantics are formalized in the Isabelle proof-assistant.
+its operational semantics are formalized in the Isabelle proof assistant.
 \<close>
 
 text

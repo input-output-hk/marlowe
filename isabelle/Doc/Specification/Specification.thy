@@ -29,7 +29,7 @@ With Marlowe we have a strong focus on operational semantics, as the goal was to
 can also run on a blockchain \secref{sec:blockchain-agnostic}.\<close>
 
 text \<open>
-Smart contracts are immutable, that means that the assets deposited into a contract will inevitably follow
+Smart contracts are immutable, which means that the assets deposited into a contract will inevitably follow
 the contract logic. In order to reduce the probability of unintended behaviour, the Marlowe DSL is designed
 with simplicity in mind. Without loops, recursion, or other features that general purposes smart-contract
 languages (E.g: Plutus, Solidity) have, it is easier to make certain claims. Each Marlowe contract can be

@@ -12,6 +12,7 @@ theory CodeExports
 imports
   Core.Semantics
   Core.SingleInputTransactions
+  Examples.ContractForDifference
   Examples.Escrow
   Examples.Swap
   "HOL-Library.Code_Target_Numeral"
@@ -49,6 +50,9 @@ code_identifier
 
 code_identifier
   code_module Escrow \<rightharpoonup> (Haskell) Examples.Escrow
+
+code_identifier
+  code_module ContractForDifference \<rightharpoonup> (Haskell) Examples.ContractForDifference
 
 text \<open>We export all the constants in one statement, because they don't add up, if you export two times,
 the second export will overwrite the first one.\<close>
@@ -97,6 +101,11 @@ export_code
   successfulExecutionPathPayments
   partialExecutionPathTransactions
   partialExecutionPathPayments
+
+  contractForDifference
+  cfdExample
+  cfdExampleTransactions
+  cfdExamplePayments
 
   \<comment> \<open>Force the export of string implode (works together with the BS code\_printing hint) \<close>
   String.implode

@@ -54,7 +54,7 @@ record CfdArgs =
   secondWindowBeginning       :: Timeout
   secondWindowDeadline        :: Timeout
 
-definition contractForDifference :: "CfdArgs \<Rightarrow> Contract" where
+fun contractForDifference :: "CfdArgs \<Rightarrow> Contract" where
   "contractForDifference args = (
       let decreaseInPrice = ValueId (BS ''Decrease in price'');
           increaseInPrice = ValueId (BS ''Increase in price'');
@@ -135,7 +135,7 @@ proposition
      \<and> txOutPayments txOut = cfdExamplePayments
      \<and> txOutWarnings txOut = []"
      apply (code_simp)
-     apply (auto simp add: ada_def contractForDifference_def
+     apply (auto simp add: ada_def
               cfdExampleArgs_def cfdExampleTransactions_def cfdExamplePayments_def
               party_def counterparty_def oracle_def)
      done

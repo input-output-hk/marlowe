@@ -8,9 +8,9 @@ This repository contains the specification of Marlowe, a domain-specific languag
 
 ## Learning about Marlowe and its ecosystem
 
-The [Marlowe tutorials](https://play.marlowe.iohk.io/doc/marlowe/tutorials/index.html) introduce Marlowe and the Marlowe Playground.
+The [Marlowe tutorials](https://docs.marlowe.iohk.io/tutorials) introduce Marlowe and the Marlowe Playground.
 
-The Cardano Docs has a [section on Marlowe](https://docs.cardano.org/marlowe/learn-about-marlowe) that explains what is marlowe and the different tools available.
+The [Marlowe website](https://marlowe.iohk.io/) and [Marlowe docs site](https://docs.marlowe.iohk.io/docs/introduction) explain what Marlowe is and the different tools available.
 
 ## Versions of Marlowe
 

@@ -1,5 +1,5 @@
 theory SmallStepF
-imports Main Util.MList Util.SList ListTools Semantics "HOL-Library.Product_Lexorder" "HOL.Product_Type" "HOL-IMP.Star" PositiveAccounts
+imports Main Util.MList Util.SList Semantics "HOL-Library.Product_Lexorder" "HOL.Product_Type" "HOL-IMP.Star" PositiveAccounts
 begin
 
 type_synonym Configuration = "Contract * State * Environment * (ReduceWarning list) * (Payment list)"
@@ -396,17 +396,41 @@ next
 
 next
   case (When_ReduceNoPayment x41 timeout x43)
-  then show ?thesis using assms 
+  (* TODO: simplify this *) 
+  obtain startTime endTime where 0: "(startTime, endTime) = timeInterval env"
+    by (metis surj_pair)
+
+  obtain startTime endTime where 01: "timeInterval env = (startTime, endTime)"
+    by (metis surj_pair)
+
+  have 1: "reduceContractStep env prevState (When x41 timeout x43) = 
+             Reduced newWarning ReduceNoPayment newState newCont \<Longrightarrow> endTime >= timeout"
+    apply (simp only: reduceContractStep.simps)
+    apply (simp only: 01)
+    apply (cases "endTime < timeout")
+     apply (cases "timeout \<le> startTime")
+    by auto
+
+ 
+  have 3: "reduceContractStep env prevState (When x41 timeout x43) = 
+             Reduced newWarning ReduceNoPayment newState newCont \<Longrightarrow> timeout \<le> startTime" 
+    apply (cases "endTime < timeout")
+     apply auto
+    using "1" apply force    
+    apply (cases "timeout \<le> startTime")
+    apply blast
+    by (simp add: "01")
+  
+  then show ?thesis using assms
+    using assms 0 1 When_ReduceNoPayment 
+    apply (simp only: reduceContractStep.simps)
+    apply (simp only: 01)
+  
     apply auto
-    sorry
-(*    subgoal premises ps proof (cases "slotInterval env")
-      case (Pair ss es)
-      then show ?thesis using ps apply auto
-        apply (cases "es < timeout", auto)
-        apply (cases "timeout \<le> ss", auto)
-        by (smt WhenTimeout append_Nil2)
-    qed
-    done*)
+
+    using "01" by blast
+    
+
 (*Removed LetC and UseC cases*)
 next
   (* TODO: rename variables *)
@@ -414,13 +438,12 @@ next
   then show ?thesis using assms apply auto
   by (smt ReduceStepResult.distinct(1) ReduceStepResult.distinct(3) ReduceStepResult.inject Pair_inject ReduceEffect.distinct(1) fixInterval.cases old.prod.case)
 next
-  case (Let_ReduceNoPayment vid x52 x53)
-  then show ?thesis using assms apply auto
-    sorry    
-(*
-    apply (cases "lookup vid (boundValues prevState)", auto)
-     apply (metis LetNoShadow append_Nil2)
-    by (metis (no_types, lifting) ReduceStepResult.inject LetShadow State.unfold_congs(3) append_Nil2)*)
+  case (Let_ReduceNoPayment vid val contLet)
+
+  with Let_ReduceNoPayment show ?thesis using assms     
+    apply (cases "lookup vid (boundValues prevState)")
+    by (auto simp add: Let_def)
+
 next
   case (Let_ReduceWithPayment vid x52 x53 x2)
   then show ?thesis using assms 

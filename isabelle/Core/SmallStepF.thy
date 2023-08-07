@@ -452,141 +452,6 @@ next
     by (meson ReduceStepResult.inject ReduceEffect.distinct(1))
 qed auto
 
-lemma reduceStepIsSmallStepReductionNoPayment:
-assumes "reduceContractStep env state contract = Reduced warning ReduceNoPayment newState continueContract"
-shows "(contract, state, env, initialWarnings, initialPayments) \<rightarrow> (continueContract, newState, env, initialWarnings @ [warning], initialPayments)"
-proof (cases contract)
-  case Close
-  then show ?thesis using assms apply auto
-    by (cases "refundOne (accounts state)", auto)
-next
-  case (Pay accId payee token val cont)
-  then show ?thesis using assms apply auto
-    apply (cases "evalValue env state val \<le> 0", auto)
-    subgoal premises ps proof (cases "lookup (accId, token) (accounts state)")
-      case None
-      moreover have "(min 0 (evalValue env state val)) = 0" using ps by auto
-      ultimately show ?thesis using ps apply auto
-        subgoal premises ps proof (cases "giveMoney payee token 0 (MList.delete (accId, token) (accounts state))")
-          case (Pair payment finalAccs)
-          moreover from ps have "(Contract.Pay accId payee token val continueContract, state, env,
-                     initialWarnings, initialPayments) \<rightarrow>
-                   (continueContract, state\<lparr>accounts := finalAccs\<rparr>, env,
-                    initialWarnings @ [ReducePartialPay accId payee token 0 (evalValue env state val)],
-                    initialPayments @ [])" using ps calculation by auto
-          ultimately show ?thesis using ps by simp
-        qed
-        done
-    next
-      case (Some availableBal)
-      moreover have "availableBal \<le> evalValue env state val \<Longrightarrow> min availableBal (evalValue env state val) = availableBal" by simp
-      moreover have "\<not>(availableBal \<le> evalValue env state val) \<Longrightarrow> min availableBal (evalValue env state val) = (evalValue env state val)" by simp
-      ultimately show ?thesis using ps apply auto
-        apply (cases "availableBal \<le> evalValue env state val", auto)
-        subgoal premises ps proof (cases "giveMoney payee token availableBal (MList.delete (accId, token) (accounts state))")
-          case (Pair payment finalAccs)
-          then show ?thesis using ps by (cases "availableBal < (evalValue env state val)", auto)
-        qed
-        subgoal premises ps proof (cases "giveMoney payee token (evalValue env state val) (MList.insert (accId, token) (availableBal - (evalValue env state val)) (accounts state))")
-          case (Pair payment finalAccs)
-          then show ?thesis using ps by auto
-        qed
-        done
-    qed
-    done
-next
-  case (If x31 x32 x33)
-  then show ?thesis using assms by auto
-next
-  case (When x41 timeout x43)
-  then show ?thesis using assms apply auto
-    subgoal premises ps proof (cases "slotInterval env")
-      case (Pair ss es)
-      then show ?thesis using ps apply auto
-        apply (cases "es < timeout", auto)
-        by (cases "timeout \<le> ss", auto)
-    qed
-    done
-next
-  case (Let vid x52 x53)
-  then show ?thesis using assms apply auto
-    apply (cases "lookup vid (boundValues state)", auto)
-    by (metis (no_types, lifting) ReduceStepResult.inject LetShadow State.unfold_congs(3))
-next
-  case (Assert x61 x62)
-  then show ?thesis using assms by auto
-qed
-
-lemma reduceStepIsSmallStepReductionWithPayment:
-assumes "reduceContractStep env state contract = Reduced warning (ReduceWithPayment payment) newState continueContract"
-shows "(contract, state, env, initialWarnings, initialPayments) \<rightarrow> (continueContract, newState, env, initialWarnings @ [warning], initialPayments @ [payment])"
-proof (cases contract)
-  case (Close)
-  then show ?thesis using assms by (cases "refundOne (accounts state)", auto)
-next
-  case (Pay accId payee token val cont)
-  then show ?thesis using assms apply auto
-    apply (cases "evalValue env state val \<le> 0", auto)
-    subgoal premises ps proof (cases "lookup (accId, token) (accounts state)")
-      case None
-      moreover from ps have "min 0 (evalValue env state val) = 0" by simp
-      ultimately show ?thesis using ps apply auto
-        subgoal premises ps proof (cases "giveMoney payee token 0 (MList.delete (accId, token) (accounts state))")
-          case (Pair reduceEffect finalAccs)
-          moreover from ps calculation have "(Contract.Pay accId payee token val continueContract, state, env,
-                              initialWarnings, initialPayments) \<rightarrow>
-                             (continueContract, state\<lparr>accounts := finalAccs\<rparr>, env,
-                              initialWarnings @ [ReducePartialPay accId payee token 0 (evalValue env state val)],
-                              initialPayments @ [payment])" by auto
-          ultimately show ?thesis using ps by auto
-        qed
-        done
-    next
-      case (Some bal)
-      then show ?thesis using ps apply auto
-        apply (cases "bal \<le> evalValue env state val", auto)
-        subgoal premises ps proof -
-          from ps have "min bal (evalValue env state val) = bal" by simp
-          then show ?thesis using ps apply auto
-            subgoal premises ps proof (cases "giveMoney payee token bal (MList.delete (accId, token) (accounts state))")
-              case (Pair reduceEffect finalAccs)
-              then show ?thesis using ps by (cases "bal < evalValue env state val", auto)
-            qed
-            done
-        qed
-        subgoal premises ps proof -
-          from ps have "min bal (evalValue env state val) = evalValue env state val" by simp
-          then show ?thesis using ps apply auto
-            subgoal premises ps proof (cases "giveMoney payee token (evalValue env state val) (MList.insert (accId, token) (bal - (evalValue env state val)) (accounts state))")
-              case (Pair reduceEffect finalAccs)
-              moreover from ps calculation have "(Contract.Pay accId payee token val continueContract, state, env,
-                                  initialWarnings, initialPayments) \<rightarrow>
-                                 (continueContract, state\<lparr>accounts := finalAccs\<rparr>, env,
-                                  initialWarnings @ [ReduceNoWarning], initialPayments @ [payment])" by auto
-              then show ?thesis using ps by (auto, meson)
-            qed
-            done
-        qed
-        done
-    qed
-    done
-next
-  case (If x31 x32 x33)
-  then show ?thesis using assms by auto
-next
-  case (When x41 x42 x43)
-  then show ?thesis using assms apply auto
-  by (smt ReduceStepResult.distinct(1) ReduceStepResult.distinct(3) ReduceStepResult.inject Pair_inject ReduceEffect.distinct(1) fixInterval.cases old.prod.case)
-next
-  case (Let vid x52 x53)
-  then show ?thesis using assms apply auto
-    apply (cases "lookup vid (boundValues state)", auto)
-    by (meson ReduceStepResult.inject ReduceEffect.distinct(1))
-next
-  case (Assert x61 x62)
-  then show ?thesis using assms by auto
-qed
-
 (*BEGIN proof Small Step in Marlowe implies that there is a Reduced Step*)
 
 lemma smallStepReductionAddsOneWarning:
@@ -614,17 +479,22 @@ next
   then show ?thesis using assms by auto
 qed
 
+
 lemma smallStepReductionImpReduceStep:
 assumes "cs = (contract, state, env, initialWarnings, initialPayments) \<and>
     cs' = (continueContract, newState, newEnv, initialWarnings @ [warning], newPayments) \<and>
     cs \<rightarrow> cs'"
 shows "\<exists> paymentReduceResult . reduceContractStep env state contract = Reduced warning paymentReduceResult newState continueContract"
+(* TODO: Simplify this *)
 proof (cases contract)
   case Close
   then show ?thesis using assms by auto
 next
   case (Pay accId payee token val cont)
-  then show ?thesis using assms by (auto simp add: min.strict_order_iff min.absorb_iff2)
+
+  then show ?thesis using assms
+      apply auto
+    by metis+    
 next
   case (If x31 x32 x33)
   then show ?thesis using assms by auto
@@ -645,37 +515,21 @@ assumes "cs = (contract, state, env, initialWarnings, initialPayments) \<and>
     cs' = (continueContract, newState, newEnv, initialWarnings @ [warning], newPayments) \<and>
     cs \<rightarrow> cs'"
 shows "newPayments = initialPayments \<or> (\<exists>newPayment . newPayments = initialPayments @ [newPayment])"
-proof (cases contract)
-  case Close
-  then show ?thesis using assms by auto
-next
-  case (Pay x21 x22 x23 x24 x25)
-  then show ?thesis using assms by auto
-next
-  case (If x31 x32 x33)
-  then show ?thesis using assms by auto
-next
-  case (When x41 x42 x43)
-  then show ?thesis using assms by auto
-next
-  case (Let x51 x52 x53)
-  then show ?thesis using assms by auto
-next
-  case (Assert x61 x62)
-  then show ?thesis using assms by auto
-qed
+  using assms by (cases contract) auto
 
 lemma smallStepReductionImpReduceStepNoPayment:
 assumes "cs = (contract, state, env, initialWarnings, initialPayments) \<and>
     cs' = (continueContract, newState, newEnv, initialWarnings @ [warning], initialPayments) \<and>
     cs \<rightarrow> cs'"
 shows "reduceContractStep env state contract = Reduced warning ReduceNoPayment newState continueContract"
+(* TODO: simplify *)
 proof (cases contract)
   case Close
   then show ?thesis using assms by auto
 next
   case (Pay accId payee token val cont)
-  then show ?thesis using assms by (auto simp add: min.strict_order_iff min.absorb_iff2)
+  then show ?thesis using assms
+    by auto 
 next
   case (If x31 x32 x33)
   then show ?thesis using assms by auto
@@ -701,7 +555,8 @@ proof (cases contract)
   then show ?thesis using assms by auto
 next
   case (Pay accId payee token val cont)
-  then show ?thesis using assms by (auto simp add: min.strict_order_iff min.absorb_iff2)
+  then show ?thesis using assms 
+    by auto metis+
 next
   case (If x31 x32 x33)
   then show ?thesis using assms by auto

@@ -262,7 +262,7 @@ fun effectAsPaymentList :: "ReduceEffect \<Rightarrow> Payment list" where
 
 thm Contract.exhaust
 
-thm PayInternalTransfer[of env2 state2]
+thm PayInternalTransfer[of env2 state2] (*TODO: delete *)
 lemma reduceStepIsSmallStepReduction:
   assumes "reduceContractStep env prevState prevCont = 
              Reduced newWarning paymentReduceResult newState newCont"
@@ -303,7 +303,7 @@ next
     with assms Pay_ReduceWithPayment  show ?thesis by auto
   next
     case False
-    then obtain moneyToPay availableSrcMoney accsWithoutSrc paidMoney where 0:
+    then obtain moneyToPay availableSrcMoney accsWithoutSrc paidMoney where 0[simp]:
       "moneyToPay = evalValue env prevState val"
       "availableSrcMoney = moneyInAccount srcAccId token (accounts prevState)"
       "paidMoney = min availableSrcMoney moneyToPay"
@@ -311,24 +311,17 @@ next
       by simp_all
     have 9: "cont = newCont" 
       using assms Pay_ReduceWithPayment(1) False 
-      apply (cases "payee")
-      by (auto simp add: Let_def )
+      by  (cases "payee") (auto simp add: Let_def )
       
     have 4: "payment = Payment srcAccId payee token paidMoney" 
-      using assms False 0 Pay_ReduceWithPayment
-        (* TODO: simplify *)
-      apply (simp only: reduceContractStep.simps )
-      
-      apply (simp only: False Let_def if_False)
-      apply (simp only: giveMoney.simps)
-      apply (cases payee)
-      by auto
+      using assms False Pay_ReduceWithPayment
+      by (simp add: Let_def)
 
     with False have 5: "moneyToPay > 0" 
-      by (simp add: "0"(1))
+      by simp 
 
     have 7: "paymentReduceResult = ReduceWithPayment (Payment srcAccId payee token paidMoney)"
-      using assms  Pay_ReduceWithPayment 4
+      using assms Pay_ReduceWithPayment 4
       by force
     have 8: "newWarning = (if paidMoney < moneyToPay
               then ReducePartialPay srcAccId payee token paidMoney moneyToPay
@@ -342,21 +335,12 @@ next
           "finalAccs = addMoneyToAccount dstAccId token paidMoney accsWithoutSrc"
         by simp
 
-      (* TODO: simplify *)
+
       have 10: "newState= prevState\<lparr>accounts := finalAccs\<rparr>"
         using assms Pay_ReduceWithPayment(1)
-        apply (simp only: reduceContractStep.simps)
-        apply (simp only: Let_def)
-        apply (simp only: False)
-        apply (simp only: if_False)
-        apply (simp only: giveMoney.simps)
-        apply (simp only: Let_def)
-        apply (simp only: Account)
-        apply (simp only: Payee.case)
+        apply (simp add: Let_def False Account )
+        using 6 by force
 
-        using "0"(1) "0"(2) "0"(3) "0"(4) "6" by force
-
-      thm  PayInternalTransfer[of env prevState val moneyToPay srcAccId token availableSrcMoney paidMoney dstAccId payee accsWithoutSrc finalAccs newCont prevWarnings prevPayments ]
       show ?thesis
         apply (subst 7)
         apply (subst 8)
@@ -393,59 +377,38 @@ next
     qed
   qed
 
-
 next
-  case (When_ReduceNoPayment x41 timeout x43)
-  (* TODO: simplify this *) 
-  obtain startTime endTime where 0: "(startTime, endTime) = timeInterval env"
-    by (metis surj_pair)
-
-  obtain startTime endTime where 01: "timeInterval env = (startTime, endTime)"
-    by (metis surj_pair)
-
-  have 1: "reduceContractStep env prevState (When x41 timeout x43) = 
-             Reduced newWarning ReduceNoPayment newState newCont \<Longrightarrow> endTime >= timeout"
-    apply (simp only: reduceContractStep.simps)
-    apply (simp only: 01)
-    apply (cases "endTime < timeout")
-     apply (cases "timeout \<le> startTime")
-    by auto
-
+  case (When_ReduceNoPayment _ timeout _)
  
-  have 3: "reduceContractStep env prevState (When x41 timeout x43) = 
-             Reduced newWarning ReduceNoPayment newState newCont \<Longrightarrow> timeout \<le> startTime" 
-    apply (cases "endTime < timeout")
-     apply auto
-    using "1" apply force    
-    apply (cases "timeout \<le> startTime")
-    apply blast
-    by (simp add: "01")
+  note assms
+  moreover obtain startTime endTime where "timeInterval env = (startTime, endTime)"
+    by (metis surj_pair)
   
-  then show ?thesis using assms
-    using assms 0 1 When_ReduceNoPayment 
-    apply (simp only: reduceContractStep.simps)
-    apply (simp only: 01)
-  
-    apply auto
+  moreover have "endTime >= timeout"
+    using When_ReduceNoPayment calculation
+          linorder_not_less by force
 
-    using "01" by blast
+  moreover have "timeout \<le> startTime"
+    by (smt (verit, del_insts) Semantics.ReduceStepResult.distinct(3) Semantics.reduceContractStep.simps(4) When_ReduceNoPayment(1) assms calculation(2) calculation(3) case_prod_conv)
+
+  ultimately show ?thesis using assms
+    by (simp add: When_ReduceNoPayment(1))     
     
-
 (*Removed LetC and UseC cases*)
 next
-  (* TODO: rename variables *)
-  case (When_ReduceWithPayment x41 x42 x43 x2)
+  (* There is no way that a reduce contract step can yield a payment on a When *)
+  case (When_ReduceWithPayment _ _ _ _)
   then show ?thesis using assms apply auto
   by (smt ReduceStepResult.distinct(1) ReduceStepResult.distinct(3) ReduceStepResult.inject Pair_inject ReduceEffect.distinct(1) fixInterval.cases old.prod.case)
 next
-  case (Let_ReduceNoPayment vid val contLet)
+  case (Let_ReduceNoPayment vid _ _)
 
   with Let_ReduceNoPayment show ?thesis using assms     
     apply (cases "lookup vid (boundValues prevState)")
     by (auto simp add: Let_def)
 
 next
-  case (Let_ReduceWithPayment vid x52 x53 x2)
+  case (Let_ReduceWithPayment vid _ _ _)
   then show ?thesis using assms 
     apply auto
     apply (cases "lookup vid (boundValues prevState)", auto)
@@ -459,56 +422,22 @@ assumes "cs = (contract, state, env, initialWarnings, initialPayments) \<and>
     cs' = (continueContract, newState, newEnv, newWarnings, newPayments) \<and>
     cs \<rightarrow> cs'"
 shows "\<exists>newWarning . newWarnings = initialWarnings @ [newWarning]"
-proof (cases contract)
-  case Close
-  then show ?thesis using assms by auto
-next
-  case (Pay accId payee token val cont)
-  then show ?thesis using assms by auto
-next
-  case (If x31 x32 x33)
-  then show ?thesis using assms by auto
-next
-  case (When cases timeout cont)
-  then show ?thesis using assms by auto
-next
-  case (Let x51 x52 x53)
-  then show ?thesis using assms by auto
-next
-  case (Assert x61 x62)
-  then show ?thesis using assms by auto
-qed
-
+  using assms by (cases contract) auto
 
 lemma smallStepReductionImpReduceStep:
 assumes "cs = (contract, state, env, initialWarnings, initialPayments) \<and>
     cs' = (continueContract, newState, newEnv, initialWarnings @ [warning], newPayments) \<and>
     cs \<rightarrow> cs'"
 shows "\<exists> paymentReduceResult . reduceContractStep env state contract = Reduced warning paymentReduceResult newState continueContract"
-(* TODO: Simplify this *)
-proof (cases contract)
-  case Close
-  then show ?thesis using assms by auto
-next
+using assms proof (cases contract)
   case (Pay accId payee token val cont)
-
   then show ?thesis using assms
-      apply auto
-    by metis+    
-next
-  case (If x31 x32 x33)
-  then show ?thesis using assms by auto
-next
-  case (When cases timeout cont)
-  then show ?thesis using assms by auto
+    by auto metis+    
 next
   case (Let x51 x52 x53)
   then show ?thesis using assms apply auto
     by metis
-next
-  case (Assert x61 x62)
-  then show ?thesis using assms by auto
-qed
+qed auto
 
 lemma smallStepReductionGivesOnePaymentMax:
 assumes "cs = (contract, state, env, initialWarnings, initialPayments) \<and>
@@ -522,53 +451,20 @@ assumes "cs = (contract, state, env, initialWarnings, initialPayments) \<and>
     cs' = (continueContract, newState, newEnv, initialWarnings @ [warning], initialPayments) \<and>
     cs \<rightarrow> cs'"
 shows "reduceContractStep env state contract = Reduced warning ReduceNoPayment newState continueContract"
-(* TODO: simplify *)
-proof (cases contract)
-  case Close
-  then show ?thesis using assms by auto
-next
-  case (Pay accId payee token val cont)
-  then show ?thesis using assms
-    by auto 
-next
-  case (If x31 x32 x33)
-  then show ?thesis using assms by auto
-next
-  case (When cases timeout cont)
-  then show ?thesis using assms by auto
-next
+using assms proof (cases contract)
   case (Let x51 x52 x53)
-  then show ?thesis using assms apply auto
-    by metis
-next
-  case (Assert x61 x62)
-  then show ?thesis using assms by auto
-qed
+  then show ?thesis using assms by auto metis
+qed auto
 
 lemma smallStepReductionImpReduceStepWithPayment:
 assumes "cs = (contract, state, env, initialWarnings, initialPayments) \<and>
     cs' = (continueContract, newState, newEnv, initialWarnings @ [warning], initialPayments @ [newPayment]) \<and>
     cs \<rightarrow> cs'"
 shows "reduceContractStep env state contract = Reduced warning (ReduceWithPayment newPayment) newState continueContract"
-proof (cases contract)
-  case Close
-  then show ?thesis using assms by auto
-next
+using assms proof (cases contract)
   case (Pay accId payee token val cont)
   then show ?thesis using assms 
     by auto metis+
-next
-  case (If x31 x32 x33)
-  then show ?thesis using assms by auto
-next
-  case (When cases timeout cont)
-  then show ?thesis using assms by auto
-next
-  case (Let x51 x52 x53)
-  then show ?thesis using assms by auto
-next
-  case (Assert x61 x62)
-  then show ?thesis using assms by auto
-qed
+qed auto
 
 end

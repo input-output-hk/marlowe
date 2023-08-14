@@ -9,7 +9,8 @@ cabal-version:          >= 1.10
 
 executable marlowe
     default-language:   Haskell2010
-    build-depends:      base >= 4.9 && < 5,
+    build-depends:      array,
+                        base >= 4.9 && < 5,
                         base16-bytestring >= 1 && < 2,
                         bytestring >= 0.10.12 && < 0.12,
                         containers >= 0.6.5 && < 0.7,
@@ -33,6 +34,10 @@ executable marlowe
                         Language.Marlowe.Semantics.Types
                         Language.Marlowe.Semantics.Deserialisation
                         Language.Marlowe.Semantics.Serialisation
+                        Language.Marlowe.Syntax.AbsMarlowe
+                        Language.Marlowe.Syntax.LexMarlowe
+                        Language.Marlowe.Syntax.ParMarlowe
+                        Language.Marlowe.Syntax.Translate
                         Language.Marlowe.ExtendedBuilder
                         Language.Marlowe.Serialisation
                         Language.Marlowe.Deserialisation

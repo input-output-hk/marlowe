@@ -1,6 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
-module Language.Marlowe.Syntax.ToCore where
+
+module Language.Marlowe.Syntax.Translate where
 
 import Language.Marlowe.Syntax.AbsMarlowe
 import qualified Language.Marlowe.Semantics.Types as S

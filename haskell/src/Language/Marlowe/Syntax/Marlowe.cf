@@ -1,62 +1,72 @@
-Close. Contract ::= "Close" ;
-Pay. Contract ::= "Pay" Party Payee Token Value Contract ;
-If. Contract ::= "If" Observation Contract Contract ;
-When. Contract ::= "When" [Case] Timeout Contract ;
-Let. Contract ::= "Let" ValueId Value Contract ;
+-- Marlowe Contract
+
+Close. Contract  ::= "Close" ;
+Pay. Contract    ::= "Pay" Party Payee Token Value Contract ;
+If. Contract     ::= "If" Observation Contract Contract ;
+When. Contract   ::= "When" "[" [Case] "]" Timeout Contract ;
+Let. Contract    ::= "Let" ValueId Value Contract ;
 Assert. Contract ::= "Assert" Observation Contract ;
+_. Contract      ::= "(" Contract ")" ;
 
-_. Contract ::= "(" Contract ")" ;
-
-Case. Case ::= "Case" Action Contract ;
-MerkleizedCase. Case ::= "MerkleizedCase" Action String ;
-terminator Case "." ;
-
-Token. Token ::= "Token" String String ;
-ChoiceId. ChoiceId ::= "ChoiceId" String Party ;
-ValueId. ValueId ::= String ;
-
-AvailableMoney. Value ::= "AvailableMoney" Party Token ;
-Constant. Value ::= "Constant" Integer ;
-NegValue. Value ::= "NegValue" Value ;
-AddValue. Value ::= "AddValue" Value Value ;
-SubValue. Value ::= "SubValue" Value Value ;
-MulValue. Value ::= "MulValue" Value Value ;
-DivValue. Value ::= "DivValue" Value Value ;
-ChoiceValue. Value ::= "ChoiceValue" ChoiceId ;
-TimeIntervalStart. Value ::= "TimeIntervalStart" ;
-TimeIntervalEnd. Value ::= "TimeIntervalEnd" ;
-UseValue. Value ::= "UseValue" ValueId ;
-Cond. Value ::= "Cond" Observation Value Value ;
-
-_. Value ::= "(" Value ")" ;
-
-AndObs. Observation ::=  "AndObs" Observation Observation ;
-OrObs. Observation ::= "OrObs" Observation Observation ;
-NotObs. Observation ::=  "NotObs" Observation ;
-ChoseSomething. Observation ::=  "ChoseSomething" ChoiceId ;
-ValueGE. Observation ::= "ValueGE" Value Value ;
-ValueGT. Observation ::= "ValueGT" Value Value ;
-ValueLT. Observation ::= "ValueLT" Value Value ;
-ValueLE. Observation ::= "ValueLE" Value Value ;
-ValueEQ. Observation ::= "ValueEQ" Value Value ;
-TrueObs. Observation ::= "TrueObs" ;
-FalseObs. Observation ::= "FalseObs" ;
-
-_. Observation ::= "(" Observation ")" ;
-
-Address. Party ::= "Address" String ;
-Role. Party ::= "Role" String ;
-
--- TODO: AccountId type alias
-
-Account. Payee ::= "Account" Party ;
-Party. Payee ::= "Party" Party ;
-
-Timeout. Timeout ::= "Timeout" Integer ;
-
-Bound. Bound ::= Integer Integer ;
-terminator Bound "." ;
+Case. Case            ::= "Case" Action Contract ;
+MerkleizedCase. Case  ::= "MerkleizedCase" Action String ;
+separator Case "," ;
+terminator Case "" ;
 
 Deposit. Action ::= "Deposit" Party Party Token Value ;
-Choice. Action ::= "Choice" ChoiceId [Bound] ;
-Notify. Action ::= "Notify" Observation ;
+Choice. Action  ::= "Choice" ChoiceId "[" [Bound] "]" ;
+Notify. Action  ::= "Notify" Observation ;
+_. Action       ::= "(" Action ")" ;
+
+-- Expression language
+
+AvailableMoney. Value    ::= "AvailableMoney" Party Token ;
+Constant. Value          ::= "Constant" Integer ;
+NegValue. Value          ::= "NegValue" Value ;
+AddValue. Value          ::= "AddValue" Value Value ;
+SubValue. Value          ::= "SubValue" Value Value ;
+MulValue. Value          ::= "MulValue" Value Value ;
+DivValue. Value          ::= "DivValue" Value Value ;
+ChoiceValue. Value       ::= "ChoiceValue" ChoiceId ;
+TimeIntervalStart. Value ::= "TimeIntervalStart" ;
+TimeIntervalEnd. Value   ::= "TimeIntervalEnd" ;
+UseValue. Value          ::= "UseValue" ValueId ;
+Cond. Value              ::= "Cond" Observation Value Value ;
+_. Value                 ::= "(" Value ")" ;
+
+AndObs. Observation         ::= "AndObs" Observation Observation ;
+OrObs. Observation          ::= "OrObs" Observation Observation ;
+NotObs. Observation         ::= "NotObs" Observation ;
+ChoseSomething. Observation ::= "ChoseSomething" ChoiceId ;
+ValueGE. Observation        ::= "ValueGE" Value Value ;
+ValueGT. Observation        ::= "ValueGT" Value Value ;
+ValueLT. Observation        ::= "ValueLT" Value Value ;
+ValueLE. Observation        ::= "ValueLE" Value Value ;
+ValueEQ. Observation        ::= "ValueEQ" Value Value ;
+TrueObs. Observation        ::= "TrueObs" ;
+FalseObs. Observation       ::= "FalseObs" ;
+_. Observation              ::= "(" Observation ")" ;
+
+
+Address. Party ::= "Address" String ;
+Role. Party    ::= "Role" String ;
+_. Party       ::= "(" Party ")" ;
+
+Account. Payee ::= "Account" Party ;
+Party. Payee   ::= "Party" Party ;
+
+-- TODO: type alias for AccountId
+
+Timeout. Timeout ::= Integer ;
+
+Bound. Bound ::= "Bound" Integer Integer ;
+separator Bound "," ;
+terminator Bound "" ;
+
+Token. Token ::= "Token" String String ;
+_. Token     ::= "(" Token ")" ;
+
+ChoiceId. ChoiceId ::= "ChoiceId" String Party ;
+_. ChoiceId        ::= "(" ChoiceId ")" ;
+
+ValueId. ValueId ::= String ;

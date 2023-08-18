@@ -178,6 +178,7 @@ Payee :: { Language.Marlowe.Syntax.AbsMarlowe.Payee }
 Payee
   : 'Account' Party { Language.Marlowe.Syntax.AbsMarlowe.Account $2 }
   | 'Party' Party { Language.Marlowe.Syntax.AbsMarlowe.Party $2 }
+  | '(' Payee ')' { $2 }
 
 Timeout :: { Language.Marlowe.Syntax.AbsMarlowe.Timeout }
 Timeout : Integer { Language.Marlowe.Syntax.AbsMarlowe.Timeout $1 }

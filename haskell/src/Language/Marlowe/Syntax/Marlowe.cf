@@ -54,6 +54,7 @@ _. Party       ::= "(" Party ")" ;
 
 Account. Payee ::= "Account" Party ;
 Party. Payee   ::= "Party" Party ;
+_. Payee       ::= "(" Payee ")" ;
 
 -- TODO: type alias for AccountId
 

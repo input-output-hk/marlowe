@@ -46,7 +46,7 @@
           };
 
           latex = (pkgs.texlive.combine {
-            inherit (pkgs.texlive) scheme-basic ulem collection-fontsrecommended mathpartir stmaryrd polytable lazylist;
+            inherit (pkgs.texlive) scheme-basic ulem collection-fontsrecommended mathpartir stmaryrd polytable lazylist ucs;
           });
 
           project = pkgs.haskell-nix.cabalProject' {
@@ -67,11 +67,13 @@
                 build-marlowe-proofs
                 edit-marlowe-proofs
                 build-marlowe-docs
+                generate-marlowe-language-specification
               ]
               ) ++
               (with pkgs; [
                 nil
                 haskellPackages.lhs2tex
+                haskellPackages.BNFC
               ]) ++
               [ latex formatting.fix-nix-fmt ];
           };

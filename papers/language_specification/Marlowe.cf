@@ -1,4 +1,4 @@
--- Marlowe Contract
+-- Rules
 
 Close. Contract  ::= "Close" ;
 Pay. Contract    ::= "Pay" Party Payee Token Value Contract ;
@@ -12,12 +12,14 @@ Case. Case            ::= "Case" Action Contract ;
 MerkleizedCase. Case  ::= "MerkleizedCase" Action String ;
 separator Case "," ;
 
+-- Input
+
 Deposit. Action ::= "Deposit" Party Party Token Value ;
 Choice. Action  ::= "Choice" ChoiceId "[" [Bound] "]" ;
 Notify. Action  ::= "Notify" Observation ;
 _. Action       ::= "(" Action ")" ;
 
--- Expression language
+-- Arithmetic
 
 AvailableMoney. Value    ::= "AvailableMoney" Party Token ;
 Constant. Value          ::= "Constant" Integer ;
@@ -33,6 +35,8 @@ UseValue. Value          ::= "UseValue" ValueId ;
 Cond. Value              ::= "Cond" Observation Value Value ;
 _. Value                 ::= "(" Value ")" ;
 
+-- Logic
+
 AndObs. Observation         ::= "AndObs" Observation Observation ;
 OrObs. Observation          ::= "OrObs" Observation Observation ;
 NotObs. Observation         ::= "NotObs" Observation ;
@@ -46,26 +50,37 @@ TrueObs. Observation        ::= "TrueObs" ;
 FalseObs. Observation       ::= "FalseObs" ;
 _. Observation              ::= "(" Observation ")" ;
 
+-- Assets
+
+Token. Token ::= "Token" String String ;
+_. Token     ::= "(" Token ")" ;
+
+-- Participants
 
 Address. Party ::= "Address" String ;
 Role. Party    ::= "Role" String ;
 _. Party       ::= "(" Party ")" ;
 
+-- Accounting
+
 Account. Payee ::= "Account" Party ;
 Party. Payee   ::= "Party" Party ;
 _. Payee       ::= "(" Payee ")" ;
 
--- TODO: type alias for AccountId
-
-Timeout. Timeout ::= Integer ;
-
-Bound. Bound ::= "Bound" Integer Integer ;
-separator Bound "," ;
-
-Token. Token ::= "Token" String String ;
-_. Token     ::= "(" Token ")" ;
+-- Choice Ids
 
 ChoiceId. ChoiceId ::= "ChoiceId" String Party ;
 _. ChoiceId        ::= "(" ChoiceId ")" ;
 
+-- Value Ids
+
 ValueId. ValueId ::= String ;
+
+-- Bounds
+
+Bound. Bound ::= "Bound" Integer Integer ;
+separator Bound "," ;
+
+-- Timeouts
+
+Timeout. Timeout ::= Integer ;

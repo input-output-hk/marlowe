@@ -11,7 +11,6 @@ _. Contract      ::= "(" Contract ")" ;
 Case. Case            ::= "Case" Action Contract ;
 MerkleizedCase. Case  ::= "MerkleizedCase" Action String ;
 separator Case "," ;
-terminator Case "" ;
 
 Deposit. Action ::= "Deposit" Party Party Token Value ;
 Choice. Action  ::= "Choice" ChoiceId "[" [Bound] "]" ;
@@ -62,7 +61,6 @@ Timeout. Timeout ::= Integer ;
 
 Bound. Bound ::= "Bound" Integer Integer ;
 separator Bound "," ;
-terminator Bound "" ;
 
 Token. Token ::= "Token" String String ;
 _. Token     ::= "(" Token ")" ;

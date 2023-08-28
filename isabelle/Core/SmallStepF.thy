@@ -2,6 +2,7 @@ theory SmallStepF
 imports Main Util.MList Util.SList Semantics "HOL-Library.Product_Lexorder" "HOL.Product_Type" "HOL-IMP.Star" PositiveAccounts
 begin
 
+section "Reduce contract step"
 type_synonym Configuration = "Contract * State * Environment * (ReduceWarning list) * (Payment list)"
 
 inductive
@@ -466,5 +467,84 @@ using assms proof (cases contract)
   then show ?thesis using assms 
     by auto metis+
 qed auto
+
+section \<open>reduceContractUntilQuiescent\<close>
+(*
+inductive reduceUntilQuiescentBigStep :: "Configuration \<Rightarrow> Configuration \<Rightarrow> bool"  (infix "\<Rightarrow>\<^sub>r\<^sub>u\<^sub>q" 55)
+  where 
+*)
+
+(*
+lemma "reduceUntilQuiescentBigStep_transitive" :
+  assumes "c1 \<Rightarrow>\<^sub>r\<^sub>u\<^sub>q c2" and "c2 \<Rightarrow>\<^sub>r\<^sub>u\<^sub>q c3" 
+  shows "c1 \<Rightarrow>\<^sub>r\<^sub>u\<^sub>q c3" 
+  sorry
+*)
+inductive reduceUntilQuiescentBigStep :: "Configuration \<Rightarrow> Configuration \<Rightarrow> bool"  (infix "\<Rightarrow>\<^sub>r\<^sub>u\<^sub>q" 55)
+  where 
+SmallStepImpliesBigStep: "cs1 \<rightarrow> cs2 \<Longrightarrow> cs1 \<Rightarrow>\<^sub>r\<^sub>u\<^sub>q cs2"
+| SmallStepTransitiveClosure: "\<lbrakk> cs1 \<rightarrow> cs2; cs2 \<Rightarrow>\<^sub>r\<^sub>u\<^sub>q cs3 \<rbrakk> \<Longrightarrow> cs1 \<Rightarrow>\<^sub>r\<^sub>u\<^sub>q cs3"
+
+
+lemma "reduceUntilQuiescentIsBigStepReduction" : 
+  assumes "reduceContractUntilQuiescent env prevState prevCont = ContractQuiescent reduced newWarnings newPayments newState newCont" 
+  shows "(prevCont
+         , prevState
+         , env
+         , prevWarnings
+         , prevPayments
+        ) \<Rightarrow>\<^sub>r\<^sub>u\<^sub>q  
+          ( newCont
+          , newState
+          , env 
+          , prevWarnings @ newWarnings
+          , prevPayments @ newPayments
+          )"
+  using assms proof (induction reduced env prevState prevCont prevWarnings prevPayments rule:  reductionLoop.induct)
+  case (1 indReduced indEnv indState indCont indWarnings indPayments)
+  have 3: "env = indEnv"
+    
+    sorry
+  obtain rWarning rEffect rNewState rCont where 2: "reduceContractStep indEnv indState indCont = Reduced rWarning rEffect rNewState rCont"
+    
+    sorry
+  from 1 2 show ?case
+    
+    sorry
+qed
+thm reductionLoop.induct
+
+(*
+
+  then show ?case proof (induction "accounts prevState")
+    case Nil
+    then show ?case 
+      sorry
+  next
+    case (Cons a x)
+    then show ?case sorry
+  qed  *)
+(* case (Assert obs newCont')
+  (* 
+    newCont' = newCont
+    prevState = newState
+    newPayments = []
+    newWarnings = 
+  *)
+  have 0: "(Assert obs newCont', prevState, env, prevWarnings, prevPayments) \<rightarrow> (newCont', prevState, env, prevWarnings, prevPayments)"
+    sorry
+  have 1: "newCont' = newCont" 
+    sorry
+  have 2: "prevState = newState"
+    sorry
+  have 3: "newPayments = []"
+    sorry
+  have 4: "newWarnings = []"
+    sorry
+  with Assert 0  show ?case 
+    by blast*)
+  
+section \<open>Apply inputs\<close>
+
 
 end

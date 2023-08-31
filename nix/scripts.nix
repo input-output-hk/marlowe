@@ -24,7 +24,6 @@
     isabelle build -v -b -d isabelle StaticAnalysis
   '';
 
-
   build-marlowe-docs = writeShellScriptBinInRepoRoot "build-marlowe-docs" ''
     echo "Generating Literate Haskell Tex"
     lhs2TeX isabelle/haskell/MarloweCoreJson.lhs | sed '1,/PATTERN FOR SED/d' > isabelle/Doc/Specification/document/marlowe-core-json.tex
@@ -33,8 +32,15 @@
     isabelle document -v -V -d isabelle -P papers Cheatsheet
     isabelle document -v -V -d isabelle -P papers Specification
   '';
+
   edit-marlowe-proofs = writeShellScriptBinInRepoRoot "edit-marlowe-proofs" ''
     cd isabelle
     isabelle jedit -d . -u Doc/Specification/Specification.thy
+  '';
+
+  generate-marlowe-language-specification = writeShellScriptBinInRepoRoot "generate-marlowe-language-specification" ''
+    ROOT=papers/language_specification
+    bnfc --latex -o $ROOT $ROOT/Marlowe.cf
+    pdflatex --output-directory $ROOT $ROOT/Marlowe.tex
   '';
 }

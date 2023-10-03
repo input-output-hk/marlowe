@@ -149,6 +149,7 @@ CloseRefund:
   (Assert obs cont, s, env, warns, payments) \<rightarrow>
   (cont, s, env, warns @ [ReduceAssertionFailed], payments)"
 thm PayInternalTransfer[of env s2 v m sc t asr pm dstAccId payee accsWithoutSrc finalAccs cont2 prevWarnings prevPayments ]
+thm PayInternalTransfer
 abbreviation
   small_step_reduces :: "Configuration \<Rightarrow> Configuration \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
   where "x \<rightarrow>* y == star small_step_reduce x y"
@@ -482,7 +483,7 @@ lemma "reduceUntilQuiescentBigStep_transitive" :
 *)
 inductive reduceUntilQuiescentBigStep :: "Configuration \<Rightarrow> Configuration \<Rightarrow> bool"  (infix "\<Rightarrow>\<^sub>r\<^sub>u\<^sub>q" 55)
   where 
-SmallStepImpliesBigStep: "cs1 \<rightarrow> cs2 \<Longrightarrow> cs1 \<Rightarrow>\<^sub>r\<^sub>u\<^sub>q cs2"
+ SmallStepImpliesBigStep: "\<lbrakk>cs1 \<rightarrow> cs2; finalConfiguration cs2 \<rbrakk> \<Longrightarrow> cs1 \<Rightarrow>\<^sub>r\<^sub>u\<^sub>q cs2"
 | SmallStepTransitiveClosure: "\<lbrakk> cs1 \<rightarrow> cs2; cs2 \<Rightarrow>\<^sub>r\<^sub>u\<^sub>q cs3 \<rbrakk> \<Longrightarrow> cs1 \<Rightarrow>\<^sub>r\<^sub>u\<^sub>q cs3"
 
 
@@ -502,15 +503,33 @@ lemma "reduceUntilQuiescentIsBigStepReduction" :
           )"
   using assms proof (induction reduced env prevState prevCont prevWarnings prevPayments rule:  reductionLoop.induct)
   case (1 indReduced indEnv indState indCont indWarnings indPayments)
+ 
   have 3: "env = indEnv"
     
     sorry
   obtain rWarning rEffect rNewState rCont where 2: "reduceContractStep indEnv indState indCont = Reduced rWarning rEffect rNewState rCont"
     
     sorry
-  from 1 2 show ?case
-    
+ 
+  have 4: "(indCont, indState, indEnv, indWarnings, indPayments ) \<rightarrow> 
+            (rCont, rNewState, indEnv, indWarnings @ [rWarning], indPayments @ effectAsPaymentList rEffect)"
+    by (simp add: "2" "3" reduceStepIsSmallStepReduction)
+  have 5: "finalConfiguration (rCont, rNewState, env, indWarnings @ [rWarning], indPayments @ effectAsPaymentList rEffect)"
     sorry
+  have 6: " newWarnings = [rWarning] "
+    sorry
+  have 7: "newPayments = effectAsPaymentList rEffect"
+    sorry
+  have 8: "rCont = newCont"
+    sorry
+  have 9: "rNewState = newState" 
+    sorry
+
+  thm SmallStepImpliesBigStep[of "(indCont, indState, indEnv, indWarnings, indPayments)" "(rCont, rNewState, indEnv, indWarnings @ [rWarning], indPayments @ effectAsPaymentList rEffect)"]
+  from 1 2 3 4 5 6 7 8 9 show ?case
+    using SmallStepImpliesBigStep[of "(indCont, indState, indEnv, indWarnings, indPayments)" "(rCont, rNewState, indEnv, indWarnings @ [rWarning], indPayments @ effectAsPaymentList rEffect)"]
+    by fastforce
+
 qed
 thm reductionLoop.induct
 

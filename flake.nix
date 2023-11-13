@@ -51,7 +51,7 @@
 
           project = pkgs.haskell-nix.cabalProject' {
             src = ./.;
-            compiler-nix-name = "ghc924";
+            compiler-nix-name = "ghc928";
             inherit evalSystem;
             shell.tools.cabal = { inherit evalSystem; };
             shell.tools.haskell-language-server = { inherit evalSystem; };

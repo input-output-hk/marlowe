@@ -16,7 +16,7 @@ executable marlowe
                         cryptohash >= 0.11.9 && < 0.12,
                         QuickCheck >= 2.14 && < 3,
                         mtl >= 2.2 && < 3,
-                        sbv >= 9.0,
+                        sbv >= 9.0 && < 10,
                         tasty >= 1.4.2 && < 1.5,
                         tasty-hunit >= 0.10 && < 0.11,
                         tasty-smallcheck >= 0.8 && < 0.9,

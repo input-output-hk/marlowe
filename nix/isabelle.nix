@@ -35,11 +35,7 @@ let
     installPhase = ''
       export HOME=$TMP 
 
-      mkdir -p $out 
-      cd $out
-      cp -R $src isabelle
-      chmod -R 775 isabelle
-      ROOT=.
+      unpackPhase
 
       mv isabelle/generated isabelle/generated-old
 
@@ -52,6 +48,8 @@ let
       fi
     
       build-marlowe-docs
+
+      touch $out
     '';
   };
 in

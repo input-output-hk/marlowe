@@ -1,26 +1,23 @@
 { repoRoot, inputs, pkgs, lib, system }:
 
-cabalProject:
-
-let
-
-  isabelle = import ./isabelle.nix { inherit repoRoot inputs pkgs lib system; };
-
-in
+_cabalProject:
 
 {
   name = "marlowe";
+
   welcomeMessage = ''
     Welcome to Marlowe!
 
     Tests:
-      • isabelle-test
+      • run-isabelle-test
       • cabal test all
+
     Scripts:
       • build-marlowe-proofs
       • edit-marlowe-proofs
       • build-marlowe-docs
       • generate-marlowe-language-specification
+
     Tools:
       • bnfc
       • isabelle
@@ -28,21 +25,27 @@ in
       • lhs2tex
       • nettools
       • nil
-      • perl'';
+      • perl
+  '';
+
   packages = [
-    isabelle.isabelle-test
-    isabelle.scripts.build-marlowe-proofs
-    isabelle.scripts.edit-marlowe-proofs
-    isabelle.scripts.build-marlowe-docs
-    isabelle.scripts.generate-marlowe-language-specification
-    isabelle.isabelle
-    isabelle.latex
-    isabelle.perl
-    isabelle.nettools
-    pkgs.nil
+    repoRoot.nix.isabelle.isabelle
+    repoRoot.nix.isabelle.latex-environment
+    repoRoot.nix.isabelle.perl
+    repoRoot.nix.isabelle.nettools
+
+    repoRoot.nix.scripts.run-isabelle-test
+    repoRoot.nix.scripts.build-marlowe-proofs
+    repoRoot.nix.scripts.edit-marlowe-proofs
+    repoRoot.nix.scripts.build-marlowe-docs
+    repoRoot.nix.scripts.generate-marlowe-language-specification
+
     pkgs.haskellPackages.lhs2tex
     pkgs.haskellPackages.BNFC
+
+    pkgs.nil
   ];
+
   preCommit = {
     nixpkgs-fmt.enable = true;
   };

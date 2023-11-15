@@ -1,4 +1,13 @@
-{ pkgs, writeShellScriptBinInRepoRoot }:
+{ repoRoot, inputs, pkgs, lib, system }:
+
+let
+
+  writeShellScriptBinInRepoRoot = name: script: pkgs.writeShellScriptBin name ''
+    cd `${pkgs.git}/bin/git rev-parse --show-toplevel`
+    ${script}
+  '';
+
+in
 {
   build-marlowe-proofs = writeShellScriptBinInRepoRoot "build-marlowe-proofs" ''
     echo "Building Marlowe proofs"
@@ -42,5 +51,9 @@
     ROOT=papers/language_specification
     bnfc --latex -o $ROOT $ROOT/Marlowe.cf
     pdflatex --output-directory $ROOT $ROOT/Marlowe.tex
+  '';
+
+  run-isabelle-test = writeShellScriptBinInRepoRoot "run-isabelle-test" ''
+    nix build .#isabelle-test "$@"
   '';
 }

@@ -4,7 +4,7 @@ module Language.Marlowe.Analysis.FSMap where
 import Prelude hiding (all, lookup)
 import Data.SBV
 import Data.SBV.Tuple as ST
-import Data.SBV.List as SL
+import Data.SBV.List as SL hiding (all)
 import Data.SBV.Maybe as SM
 
 type NMap a b = [(a, b)]

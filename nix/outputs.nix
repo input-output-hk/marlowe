@@ -11,5 +11,5 @@
 
   (lib.optionalAttrs pkgs.stdenv.isLinux {
     hydraJobs.packages = repoRoot.nix.isabelle.isabelle-test;
-  }
-    ]
+  })
+]

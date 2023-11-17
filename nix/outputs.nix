@@ -7,6 +7,9 @@
 
   {
     packages.isabelle-test = repoRoot.nix.isabelle.isabelle-test;
-    hydraJobs.packages.isabelle-test = repoRoot.nix.isabelle.isabelle-test;
   }
-]
+
+  (lib.optionalAttrs pkgs.stdenv.isLinux {
+    hydraJobs.packages = repoRoot.nix.isabelle.isabelle-test;
+  }
+    ]

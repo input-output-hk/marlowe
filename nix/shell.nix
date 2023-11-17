@@ -44,6 +44,7 @@ _cabalProject:
     pkgs.haskellPackages.BNFC
 
     pkgs.nil
+    pkgs.tk
   ];
 
   preCommit = {

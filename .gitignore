@@ -11,6 +11,7 @@ stack.yaml.lock
 .vscode/
 .history/
 dist-newstyle
+result
 
 # Temp files from isabelle
 isabelle/**/*~

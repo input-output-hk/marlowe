@@ -4,7 +4,7 @@
 
   inputs = {
     iogx = {
-      url = "github:input-output-hk/iogx?ref=custom-precommit-hooks";
+      url = "github:input-output-hk/iogx";
     };
     isabelle-nixpkgs.url = "nixpkgs/nixos-22.05";
   };

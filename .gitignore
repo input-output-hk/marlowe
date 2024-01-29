@@ -10,6 +10,7 @@ stack.yaml.lock
 .stack-work/
 .vscode/
 .history/
+.direnv
 dist-newstyle
 result
 

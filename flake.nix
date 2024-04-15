@@ -6,14 +6,14 @@
     iogx = {
       url = "github:input-output-hk/iogx";
     };
-    isabelle-nixpkgs.url = "nixpkgs/nixos-22.05";
+    isabelle-nixpkgs.url = "nixpkgs/nixos-23.11";
   };
 
   outputs = inputs: inputs.iogx.lib.mkFlake {
     inherit inputs;
     repoRoot = ./.;
     outputs = import ./nix/outputs.nix;
-    systems = [ "x86_64-linux" "x86_64-darwin" ];
+    systems = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ];
   };
 
   nixConfig = {

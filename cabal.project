@@ -6,3 +6,9 @@ packages: isabelle
 write-ghc-environment-files: never
 tests: true
 test-show-details: streaming
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/marlowe-agda
+  tag: 84a66ee8919182d0a442fa6601d877ed9c28708c
+  --sha256: 0ymd5x7k7cklmxbhrgh3l20spgl1z78v6lq3y2rl6qrnlrv44f1j

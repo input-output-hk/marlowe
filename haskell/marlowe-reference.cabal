@@ -20,7 +20,7 @@ executable marlowe
                         tasty ^>= 1.5.1,
                         tasty-hunit >= 0.10 && < 0.11,
                         tasty-smallcheck >= 0.8 && < 0.9,
-                        tasty-quickcheck >= 0.10 && < 0.11,
+                        tasty-quickcheck ^>= 0.11,
                         text >= 1.2.4,
                         template-haskell >= 2.18 && < 3,
                         time >= 1.11 && < 2,

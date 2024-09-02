@@ -54,7 +54,7 @@ library
         bytestring >= 0.10.12 && < 0.12,
         containers,
         marlowe ==0.1.0.1,
-        tasty ^>= 1.5.1,
+        tasty ^>= 1.5,
         tasty-hunit >= 0.10 && < 0.11,
         process >= 1.6.13 && < 1.7,
         text >= 1.2.4,

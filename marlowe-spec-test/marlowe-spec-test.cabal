@@ -63,7 +63,7 @@ library
         QuickCheck >= 2.14 && < 3,
         tasty-quickcheck >= 0.10 && <= 0.12,
         stm >= 2.5 && < 2.6,
-        random >= 1.2 && < 1.3,
+        random >= 1.3,
         mtl >= 2.2 && < 3,
 
 executable marlowe-spec

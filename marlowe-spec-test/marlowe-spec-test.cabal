@@ -1,6 +1,6 @@
 cabal-version:      3.4
 name:               marlowe-spec-test
-version:            0.1.0.2
+version:            0.1.0.3
 
 -- A short (one-line) description of the package.
 synopsis: Marlowe spec compliance utility tool
